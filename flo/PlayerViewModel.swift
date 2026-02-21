@@ -310,21 +310,23 @@ class PlayerViewModel: ObservableObject {
   private func initNowPlayingInfo(
     title: String, artist: String, playbackDuration: Double
   ) {
+    // Set title/artist/duration immediately so Now Playing is never empty
+    var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
+    nowPlayingInfo[MPMediaItemPropertyTitle] = title
+    nowPlayingInfo[MPMediaItemPropertyArtist] = artist
+    nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = playbackDuration
+    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+
+    // Load artwork asynchronously and merge it in
     DispatchQueue.global().async {
       let artwork = self.makeNowPlayingArtwork()
 
       DispatchQueue.main.async {
-        var nowPlayingInfo = [String: Any]()
-
-        nowPlayingInfo[MPMediaItemPropertyTitle] = title
-        nowPlayingInfo[MPMediaItemPropertyArtist] = artist
-        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = playbackDuration
-
         if let artwork = artwork {
-          nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+          var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
+          info[MPMediaItemPropertyArtwork] = artwork
+          MPNowPlayingInfoCenter.default().nowPlayingInfo = info
         }
-
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
       }
     }
   }
