@@ -7,7 +7,10 @@
 
 import Alamofire
 import Foundation
-import Pulse
+
+#if canImport(PulseUI)
+  import Pulse
+#endif
 
 class AuthService {
   static let shared = AuthService()
@@ -77,11 +80,13 @@ class AuthService {
           )
 
           // FIXME: move to general Logger
-          LoggerStore.shared.storeMessage(
-            label: "AuthService.login",
-            level: .debug,
-            message: debugResponse
-          )
+          #if canImport(PulseUI)
+            LoggerStore.shared.storeMessage(
+              label: "AuthService.login",
+              level: .debug,
+              message: debugResponse
+            )
+          #endif
           completion(AuthResult(result: result))
         }
       }
