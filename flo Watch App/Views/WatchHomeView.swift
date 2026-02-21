@@ -27,6 +27,9 @@ struct WatchHomeView: View {
         NavigationLink(destination: WatchPlaylistsListView()) {
           Label("Playlists", systemImage: "music.note.list")
         }
+        NavigationLink(destination: WatchRadiosView()) {
+          Label("Radios", systemImage: "dot.radiowaves.up.forward")
+        }
       }
 
       Section("Offline") {

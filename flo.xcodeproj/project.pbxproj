@@ -17,6 +17,10 @@
 		B0BAAAA92F3213AF002A5FBB /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
 		B0BAAAAB2F3214F7002A5FBB /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
 		B0BAAAAD2F3216A0002A5FBB /* RadioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAC2F321697002A5FBB /* RadioService.swift */; };
+		0A1B2C3D4E5F6A7B8C9D0E1F /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
+		0A2B3C4D5E6F7A8B9C0D1E2F /* RadioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAC2F321697002A5FBB /* RadioService.swift */; };
+		0A3B4C5D6E7F8A9B0C1D2E3F /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
+		0A4B5C6D7E8F9A0B1C2D3E4F /* WatchRadiosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A5B6C7D8E9F0A1B2C3D4E5F /* WatchRadiosView.swift */; };
 		097763560166B559CC3554F9 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */; };
 		097DA1E18629F39C1C9615A9 /* WatchQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D12A88F1F4331250EAC2F /* WatchQueueView.swift */; };
 		0E1124832632321863923A2D /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134522C15BE0C00CCF2EB /* Strings.swift */; };
@@ -313,6 +317,7 @@
 		C4FE524C2C14E71B0053763A /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
 		C907533AAA89EA09D23A5B1A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		D05D12A88F1F4331250EAC2F /* WatchQueueView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchQueueView.swift; sourceTree = "<group>"; };
+		0A5B6C7D8E9F0A1B2C3D4E5F /* WatchRadiosView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
 		D31807F080421C27DD094A3C /* WatchAlbumArtView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumArtView.swift; sourceTree = "<group>"; };
 		E15329B2E69CD405EE1FA1DA /* WatchContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
 		E1D07B929800509A9082615D /* WatchArtistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchArtistDetailView.swift; sourceTree = "<group>"; };
@@ -418,6 +423,7 @@
 				44BE9700C568E33D05CF3241 /* WatchPlaylistDetailView.swift */,
 				A4524E9ACA2B1D268A0EE938 /* WatchDownloadsView.swift */,
 				B900EB966261C96243C3B96D /* WatchSettingsView.swift */,
+				0A5B6C7D8E9F0A1B2C3D4E5F /* WatchRadiosView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -813,6 +819,10 @@
 				BA1D885946946F842BF56D0E /* AlbumViewModel.swift in Sources */,
 				8DE61FDF6757FDAC853CDDBF /* FloooViewModel.swift in Sources */,
 				437E40842848FEAE96E64293 /* flo.xcdatamodeld in Sources */,
+				0A1B2C3D4E5F6A7B8C9D0E1F /* Radio.swift in Sources */,
+				0A2B3C4D5E6F7A8B9C0D1E2F /* RadioService.swift in Sources */,
+				0A3B4C5D6E7F8A9B0C1D2E3F /* RadiosViewModel.swift in Sources */,
+				0A4B5C6D7E8F9A0B1C2D3E4F /* WatchRadiosView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

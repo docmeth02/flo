@@ -45,6 +45,11 @@ class WatchPlayerViewModel: ObservableObject {
     return self.queue[self.activeQueueIdx]
   }
 
+  var isLiveRadio: Bool {
+    guard hasNowPlaying() else { return false }
+    return nowPlaying.duration.isInfinite || nowPlaying.duration.isNaN
+  }
+
   var isPlayFromSource: Bool {
     return self._playFromLocal
       || UserDefaultsManager.maxBitRate == TranscodingSettings.sourceBitRate
@@ -295,6 +300,9 @@ class WatchPlayerViewModel: ObservableObject {
 
     commandCenter.changePlaybackPositionCommand.isEnabled = true
     commandCenter.changePlaybackPositionCommand.addTarget { event in
+      if self.isLiveRadio {
+        return .commandFailed
+      }
       if let event = event as? MPChangePlaybackPositionCommandEvent {
         let progress = event.positionTime / self.totalDuration
         self.seek(to: progress)
@@ -344,6 +352,8 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   func seek(to progress: Double) {
+    if isLiveRadio { return }
+
     let newTime = CMTime(
       seconds: progress * totalDuration, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
 
@@ -379,6 +389,95 @@ class WatchPlayerViewModel: ObservableObject {
 
     let queue = PlaybackService.shared.addToQueue(item: shuffledItem, isFromLocal: isFromLocal)
     self.addToQueue(idx: 0, item: queue)
+  }
+
+  func playRadioItem(radio: Radio) {
+    guard let radioUrl = Self.normalizedRadioURL(from: radio.streamUrl) else {
+      return
+    }
+
+    let item = radio.toPlayable()
+    let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: false)
+
+    self.activeQueueIdx = 0
+    self.queue = queue
+    self.isLocallySaved = false
+    self._playFromLocal = false
+
+    if let timeObserverToken = timeObserverToken {
+      player?.removeTimeObserver(timeObserverToken)
+      self.timeObserverToken = nil
+    }
+
+    self.playerItem = AVPlayerItem(url: radioUrl)
+    self.player?.replaceCurrentItem(with: self.playerItem)
+
+    self.playerItemObservation = self.playerItem?.publisher(for: \.status)
+      .sink { [weak self] status in
+        guard let self = self else { return }
+        switch status {
+        case .readyToPlay:
+          DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            self.isMediaLoading = false
+            self.isMediaFailed = false
+          }
+        case .failed:
+          self.isMediaLoading = false
+          self.isMediaFailed = true
+        case .unknown:
+          self.isMediaLoading = false
+        @unknown default:
+          self.isMediaLoading = true
+        }
+      }
+
+    self.isMediaLoading = true
+    self.isMediaFailed = false
+    self.totalDuration = self.nowPlaying.duration
+    self.progress = 0.0
+    self.currentTimeString = "00:00"
+    self.totalTimeString = "00:00"
+
+    self.addPeriodicTimeObserver()
+    self.play()
+
+    self.initNowPlayingInfo(
+      title: item.name,
+      artist: item.artist,
+      playbackDuration: 0)
+    PlaybackService.shared.clearQueue()
+    UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
+  }
+
+  private static func normalizedRadioURL(from streamUrl: String) -> URL? {
+    let trimmedUrl = streamUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedUrl.isEmpty else { return nil }
+
+    if let url = URL(string: trimmedUrl), url.scheme != nil {
+      return url
+    }
+
+    if let encoded = trimmedUrl.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed),
+      let url = URL(string: encoded),
+      url.scheme != nil
+    {
+      return url
+    }
+
+    let withScheme = "https://\(trimmedUrl)"
+
+    if let url = URL(string: withScheme), url.host != nil {
+      return url
+    }
+
+    if let encoded = withScheme.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed),
+      let url = URL(string: encoded),
+      url.host != nil
+    {
+      return url
+    }
+
+    return nil
   }
 
   func shuffleCurrentQueue() {
