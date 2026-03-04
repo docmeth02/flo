@@ -13,6 +13,7 @@
 		B0AD2E742F4B037C00577062 /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		B0AD2E762F4B2B6900577062 /* ArtistRadio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */; };
 		B0AD2E772F4B2B6900577062 /* ArtistRadio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */; };
+		A1B2C3D4E5F6A7B800577062 /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		B0BAAAA62F31F0A0002A5FBB /* RadiosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA52F31F0A0002A5FBB /* RadiosView.swift */; };
 		B0BAAAA92F3213AF002A5FBB /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
 		B0BAAAAB2F3214F7002A5FBB /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
@@ -823,6 +824,8 @@
 				0A2B3C4D5E6F7A8B9C0D1E2F /* RadioService.swift in Sources */,
 				0A3B4C5D6E7F8A9B0C1D2E3F /* RadiosViewModel.swift in Sources */,
 				0A4B5C6D7E8F9A0B1C2D3E4F /* WatchRadiosView.swift in Sources */,
+				B0AD2E772F4B2B6900577062 /* ArtistRadio.swift in Sources */,
+				A1B2C3D4E5F6A7B800577062 /* ArtistDetailViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -927,6 +930,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "flo Watch App/Info.plist";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.penerbangwalet.flo;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -960,6 +964,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "flo Watch App/Info.plist";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.penerbangwalet.flo;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

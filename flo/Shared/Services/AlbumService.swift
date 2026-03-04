@@ -23,6 +23,7 @@ class AlbumService {
   }
 
   func getStreamUrl(id: String) -> String {
+    #if os(iOS)
     if let localStream = CoreDataManager.shared.getRecordByKey(
       entity: SongEntity.self, key: \SongEntity.mediaFileId, value: id
     ).first,
@@ -33,6 +34,7 @@ class AlbumService {
     {
       return fileUrl.absoluteString
     }
+    #endif
 
     return buildRemoteStreamUrl(id: id)
   }
@@ -55,9 +57,13 @@ class AlbumService {
   }
 
   func getDownloadedAlbum(completion: @escaping (Result<[Album], Error>) -> Void) {
-    completion(
+    #if os(iOS)
+      completion(
       .success(
         CoreDataManager.shared.getRecordsByEntity(entity: PlaylistEntity.self).map(Album.init)))
+    #else
+      completion(.success([]))
+    #endif
   }
 
   func getAlbum(completion: @escaping (Result<[Album], Error>) -> Void) {
@@ -198,12 +204,16 @@ class AlbumService {
   }
 
   func getSongsByAlbumId(albumId: String, limit: Int = 0) -> [Song] {
+    #if os(iOS)
     let sortByTrackNumber = NSSortDescriptor(key: "trackNumber", ascending: true)
 
     return CoreDataManager.shared.getRecordByKey(
       entity: SongEntity.self, key: \SongEntity.albumId, value: albumId,
       sortDescriptors: [sortByTrackNumber]
     ).map(Song.init)
+    #else
+    return []
+    #endif
   }
 
   func getAlbumCover(
@@ -285,6 +295,7 @@ class AlbumService {
     }
   }
 
+  #if os(iOS)
   func saveDownload(
     albumId: String, albumName: String?, song: Song, status: String, isFromPlaylist: Bool = false
   ) {
@@ -509,4 +520,5 @@ class AlbumService {
       }
     }
   }
+  #endif
 }

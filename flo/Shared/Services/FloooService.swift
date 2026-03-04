@@ -143,7 +143,7 @@ class FloooService {
     var params: [String: Any] = ["submission": String(submission), "id": songId]
 
     if submission {
-      params["time"] = Int(Date().timeIntervalSince1970 * 1000)
+      params["time"] = Int64(Date().timeIntervalSince1970 * 1000)
     }
 
     APIManager.shared.SubsonicEndpointRequest(
