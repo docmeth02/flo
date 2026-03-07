@@ -78,7 +78,10 @@ struct WatchLoginView: View {
 
       SecureField("Password", text: $viewModel.password)
 
-      Button(action: viewModel.login) {
+      Button(action: {
+        viewModel.experimentalSaveLoginInfo = true
+        viewModel.login()
+      }) {
         if viewModel.isSubmitting {
           ProgressView()
         } else {
@@ -92,12 +95,22 @@ struct WatchLoginView: View {
   }
 
   private func refreshAuth() {
-    // Check if credentials already exist in shared Keychain
-    if let _ = try? KeychainManager.getAuthCreds() {
-      // Re-init the auth view model to pick up shared credentials
+    if let jsonString = try? KeychainManager.getAuthCreds(),
+      let jsonData = jsonString.data(using: .utf8),
+      let data = try? JSONDecoder().decode(UserAuth.self, from: jsonData)
+    {
       let serverURL = UserDefaultsManager.serverBaseURL
       if !serverURL.isEmpty {
         viewModel.serverUrl = serverURL
+        viewModel.username = data.username
+
+        if UserDefaultsManager.saveLoginInfo,
+          let password = try? KeychainManager.getAuthPassword(), !password.isEmpty
+        {
+          viewModel.password = password
+          viewModel.experimentalSaveLoginInfo = true
+        }
+
         viewModel.login()
       }
     }

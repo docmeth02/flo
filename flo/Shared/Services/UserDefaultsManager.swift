@@ -8,6 +8,19 @@
 import Foundation
 
 class UserDefaultsManager {
+  private static let sharedDefaults =
+    UserDefaults(suiteName: "group.com.penerbangwalet.flo") ?? UserDefaults.standard
+
+  private static func migrateIfNeeded(_ key: String) {
+    let migrationKey = "migrated_\(key)"
+    if !sharedDefaults.bool(forKey: migrationKey) {
+      if let value = UserDefaults.standard.object(forKey: key) {
+        sharedDefaults.set(value, forKey: key)
+      }
+      sharedDefaults.set(true, forKey: migrationKey)
+    }
+  }
+
   static func getAll() -> [String: Any] {
     var result = [String: Any]()
 
@@ -21,7 +34,8 @@ class UserDefaultsManager {
     ]
 
     for key in keys {
-      if let value = UserDefaults.standard.object(forKey: key) {
+      let store = (key == UserDefaultsKeys.serverURL) ? sharedDefaults : UserDefaults.standard
+      if let value = store.object(forKey: key) {
         result[key] = value
       }
     }
@@ -31,14 +45,16 @@ class UserDefaultsManager {
 
   static func removeObject(key: String) {
     UserDefaults.standard.removeObject(forKey: key)
+    sharedDefaults.removeObject(forKey: key)
   }
 
   static var serverBaseURL: String {
     get {
-      return UserDefaults.standard.string(forKey: UserDefaultsKeys.serverURL) ?? ""
+      migrateIfNeeded(UserDefaultsKeys.serverURL)
+      return sharedDefaults.string(forKey: UserDefaultsKeys.serverURL) ?? ""
     }
     set {
-      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.serverURL)
+      sharedDefaults.set(newValue, forKey: UserDefaultsKeys.serverURL)
     }
   }
 
@@ -101,11 +117,12 @@ class UserDefaultsManager {
 
   static var saveLoginInfo: Bool {
     get {
-      return UserDefaults.standard.bool(forKey: UserDefaultsKeys.saveLoginInfo)
+      migrateIfNeeded(UserDefaultsKeys.saveLoginInfo)
+      return sharedDefaults.bool(forKey: UserDefaultsKeys.saveLoginInfo)
     }
 
     set {
-      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.saveLoginInfo)
+      sharedDefaults.set(newValue, forKey: UserDefaultsKeys.saveLoginInfo)
     }
   }
 
