@@ -127,12 +127,13 @@ struct WatchNowPlayingView: View {
         }
 
         // Shuffle, Heart & Repeat
-        HStack(spacing: 20) {
+        HStack(spacing: 16) {
           Button(action: {
             playerViewModel.shuffleCurrentQueue()
           }) {
             Image(systemName: "shuffle")
-              .font(.system(size: 12))
+              .font(.system(size: 15))
+              .frame(width: 36, height: 36)
               .foregroundColor(playerViewModel.isShuffling ? .accentColor : .secondary)
           }
           .buttonStyle(.plain)
@@ -142,7 +143,8 @@ struct WatchNowPlayingView: View {
             WKInterfaceDevice.current().play(.click)
           }) {
             Image(systemName: playerViewModel.isStarred ? "heart.fill" : "heart")
-              .font(.system(size: 12))
+              .font(.system(size: 15))
+              .frame(width: 36, height: 36)
               .foregroundColor(playerViewModel.isStarred ? .red : .secondary)
           }
           .buttonStyle(.plain)
@@ -155,7 +157,8 @@ struct WatchNowPlayingView: View {
               systemName: playerViewModel.playbackMode == PlaybackMode.repeatOnce
                 ? "repeat.1" : "repeat"
             )
-            .font(.system(size: 12))
+            .font(.system(size: 15))
+            .frame(width: 36, height: 36)
             .foregroundColor(
               playerViewModel.playbackMode != PlaybackMode.defaultPlayback
                 ? .accentColor : .secondary)
