@@ -10,23 +10,23 @@ struct WatchNowPlayingView: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
 
   var body: some View {
-    VStack(spacing: 6) {
+    VStack(spacing: 4) {
       // Album art
       WatchAlbumArtView(
         url: playerViewModel.getAlbumCoverArt(),
-        size: 85
+        size: 75
       )
       .clipShape(RoundedRectangle(cornerRadius: 10))
 
       // Song title
       Text(playerViewModel.nowPlaying.songName ?? "Unknown")
-        .font(.system(size: 14, weight: .bold))
+        .font(.system(size: 13, weight: .bold))
         .lineLimit(1)
         .multilineTextAlignment(.center)
 
       // Artist name
       Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
-        .font(.system(size: 12))
+        .font(.system(size: 11))
         .foregroundColor(.secondary)
         .lineLimit(1)
 
@@ -49,8 +49,8 @@ struct WatchNowPlayingView: View {
           WKInterfaceDevice.current().play(.success)
         }) {
           Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
-            .font(.system(size: 22))
-            .frame(width: 50, height: 50)
+            .font(.system(size: 20))
+            .frame(width: 44, height: 44)
             .foregroundColor(.accentColor)
             .background(
               Circle()
@@ -60,7 +60,7 @@ struct WatchNowPlayingView: View {
         .buttonStyle(.plain)
       } else {
         // Progress bar with time labels
-        VStack(spacing: 2) {
+        VStack(spacing: 1) {
           ProgressView(value: playerViewModel.progress.isFinite ? playerViewModel.progress : 0)
             .tint(.accentColor)
 
@@ -77,13 +77,13 @@ struct WatchNowPlayingView: View {
         .padding(.horizontal, 2)
 
         // Playback controls
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
           Button(action: {
             playerViewModel.prevSong()
           }) {
             Image(systemName: "backward.fill")
-              .font(.system(size: 16))
-              .frame(width: 40, height: 40)
+              .font(.system(size: 14))
+              .frame(width: 36, height: 36)
               .foregroundColor(.accentColor)
               .background(
                 Circle()
@@ -101,8 +101,8 @@ struct WatchNowPlayingView: View {
             WKInterfaceDevice.current().play(.success)
           }) {
             Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
-              .font(.system(size: 22))
-              .frame(width: 50, height: 50)
+              .font(.system(size: 20))
+              .frame(width: 44, height: 44)
               .foregroundColor(.accentColor)
               .background(
                 Circle()
@@ -115,8 +115,8 @@ struct WatchNowPlayingView: View {
             playerViewModel.nextSong()
           }) {
             Image(systemName: "forward.fill")
-              .font(.system(size: 16))
-              .frame(width: 40, height: 40)
+              .font(.system(size: 14))
+              .frame(width: 36, height: 36)
               .foregroundColor(.accentColor)
               .background(
                 Circle()
