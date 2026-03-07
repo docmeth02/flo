@@ -136,6 +136,20 @@ class UserDefaultsManager {
     }
   }
 
+  static var streamCacheMaxSize: Int64 {
+    get {
+      let stored = UserDefaults.standard.object(forKey: UserDefaultsKeys.streamCacheMaxSize)
+      #if os(watchOS)
+      return (stored as? Int64) ?? 524_288_000  // default 500 MB on watchOS
+      #else
+      return (stored as? Int64) ?? 0  // default off on iOS
+      #endif
+    }
+    set {
+      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.streamCacheMaxSize)
+    }
+  }
+
   static var floPlus: Bool {
     get {
       return UserDefaults.standard.bool(forKey: UserDefaultsKeys.floPlus)

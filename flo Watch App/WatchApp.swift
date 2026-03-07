@@ -17,6 +17,8 @@ struct FloWatchApp: App {
     } catch {
       print("Failed to set audio session category: \(error)")
     }
+
+    StreamCacheManager.shared.reconcile()
   }
 
   var body: some Scene {

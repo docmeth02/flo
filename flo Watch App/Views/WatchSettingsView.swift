@@ -12,6 +12,8 @@ struct WatchSettingsView: View {
   @State private var selectedBitRate: String = UserDefaultsManager.maxBitRate
   @State private var showLogoutAlert = false
   @State private var showClearAlert = false
+  @State private var showClearCacheAlert = false
+  @State private var selectedCacheSize: Int64 = UserDefaultsManager.streamCacheMaxSize
 
   private let watchBitRates = ["0", "32", "64", "96", "128"]
   private let bitRateLabels = [
@@ -44,6 +46,32 @@ struct WatchSettingsView: View {
         }
         .onChange(of: selectedBitRate) { newValue in
           UserDefaultsManager.maxBitRate = newValue
+        }
+      }
+
+      Section("Streaming Cache") {
+        Picker("Limit", selection: $selectedCacheSize) {
+          Text("Off").tag(Int64(0))
+          Text("250 MB").tag(Int64(262_144_000))
+          Text("500 MB").tag(Int64(524_288_000))
+          Text("1 GB").tag(Int64(1_073_741_824))
+        }
+        .onChange(of: selectedCacheSize) { newValue in
+          UserDefaultsManager.streamCacheMaxSize = newValue
+        }
+
+        VStack(alignment: .leading, spacing: 2) {
+          Text("Cache Used")
+            .customFont(.caption2)
+            .foregroundColor(.secondary)
+          Text(floooViewModel.streamCacheSize)
+            .customFont(.caption1)
+        }
+
+        Button(role: .destructive, action: {
+          showClearCacheAlert = true
+        }) {
+          Label("Clear Cache", systemImage: "trash")
         }
       }
 
@@ -92,6 +120,15 @@ struct WatchSettingsView: View {
       }
     } message: {
       Text("You will need to sign in again.")
+    }
+    .alert("Clear Cache?", isPresented: $showClearCacheAlert) {
+      Button("Cancel", role: .cancel) {}
+      Button("Clear", role: .destructive) {
+        StreamCacheManager.shared.clearCache()
+        floooViewModel.getLocalStorageInformation()
+      }
+    } message: {
+      Text("All cached streams will be removed.")
     }
     .alert("Clear Downloads?", isPresented: $showClearAlert) {
       Button("Cancel", role: .cancel) {}

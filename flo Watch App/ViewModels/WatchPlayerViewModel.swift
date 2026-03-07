@@ -40,6 +40,7 @@ class WatchPlayerViewModel: ObservableObject {
   private var unshuffledQueue: [QueueEntity] = []
 
   private var scrobbleThreshold = 0.5
+  private var hasTriggeredCache: Bool = false
 
   var nowPlaying: QueueEntity {
     return self.queue[self.activeQueueIdx]
@@ -133,6 +134,10 @@ class WatchPlayerViewModel: ObservableObject {
 
   func setNowPlaying(playAudio: Bool = true) {
     self.isLocallySaved = false
+    self.hasTriggeredCache = false
+
+    StreamCacheManager.shared.cancelAllInFlight()
+    StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: self.nowPlaying.id ?? "")
 
     if let timeObserverToken = timeObserverToken {
       player?.removeTimeObserver(timeObserverToken)
@@ -205,6 +210,16 @@ class WatchPlayerViewModel: ObservableObject {
       self.currentTimeString = timeString(for: currentTime)
 
       UserDefaultsManager.nowPlayingProgress = self.progress
+
+      if !self.hasTriggeredCache && currentTime >= 10.0 && !self.isLiveRadio {
+        self.hasTriggeredCache = true
+        if let nextIdx = self.nextQueueIdxForPreCache(),
+          let nextId = self.queue[nextIdx].id, !nextId.isEmpty
+        {
+          StreamCacheManager.shared.cacheSong(
+            mediaFileId: nextId, originalSuffix: self.queue[nextIdx].suffix)
+        }
+      }
 
       if !self.isLocallySaved && self.progress >= 0.5 {
         Task {
@@ -570,6 +585,22 @@ class WatchPlayerViewModel: ObservableObject {
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
 
     self.queue = []
+  }
+
+  private func nextQueueIdxForPreCache() -> Int? {
+    if queue.count <= 1 { return nil }
+
+    if playbackMode == PlaybackMode.repeatOnce {
+      return nil
+    }
+
+    if playbackMode == PlaybackMode.repeatAlbum {
+      return activeQueueIdx + 1 >= queue.count ? 0 : activeQueueIdx + 1
+    }
+
+    let nextIdx = activeQueueIdx + 1
+    guard nextIdx < queue.count else { return nil }
+    return nextIdx
   }
 
   deinit {

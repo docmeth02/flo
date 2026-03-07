@@ -20,6 +20,8 @@ struct FloApp: App {
       print(error)
     }
 
+    StreamCacheManager.shared.reconcile()
+
     #if os(iOS)
       WatchConnectivityManager.shared.start()
     #endif
