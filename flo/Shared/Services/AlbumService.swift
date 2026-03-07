@@ -295,7 +295,6 @@ class AlbumService {
     }
   }
 
-  #if os(iOS)
   func saveDownload(
     albumId: String, albumName: String?, song: Song, status: String, isFromPlaylist: Bool = false
   ) {
@@ -520,5 +519,4 @@ class AlbumService {
       }
     }
   }
-  #endif
 }
