@@ -10,6 +10,7 @@ struct WatchContentView: View {
   @StateObject private var playerViewModel = WatchPlayerViewModel()
   @StateObject private var albumViewModel = AlbumViewModel()
   @StateObject private var floooViewModel = FloooViewModel()
+  @StateObject private var downloadViewModel = DownloadViewModel()
 
   var body: some View {
     Group {
@@ -25,5 +26,6 @@ struct WatchContentView: View {
     .environmentObject(playerViewModel)
     .environmentObject(albumViewModel)
     .environmentObject(floooViewModel)
+    .environmentObject(downloadViewModel)
   }
 }

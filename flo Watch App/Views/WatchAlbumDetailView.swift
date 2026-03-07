@@ -8,18 +8,28 @@ import SwiftUI
 struct WatchAlbumDetailView: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
   @EnvironmentObject var albumViewModel: AlbumViewModel
+  @EnvironmentObject var downloadViewModel: DownloadViewModel
 
   let album: Album
 
   @State private var localAlbum: Album?
   @State private var showNowPlaying = false
+  @State private var downloaded = false
 
   private var displayAlbum: Album {
     localAlbum ?? album
   }
 
   private var isDownloaded: Bool {
-    AlbumService.shared.checkIfAlbumDownloaded(albumID: album.id)
+    downloaded
+  }
+
+  private var isDownloading: Bool {
+    downloadViewModel.isDownloading(album.name)
+  }
+
+  private var downloadProgress: Double {
+    downloadViewModel.getDownloadedTrackProgress(albumName: album.name)
   }
 
   var body: some View {
@@ -89,6 +99,50 @@ struct WatchAlbumDetailView: View {
           }
           .padding(.vertical, 2)
         }
+
+        Divider()
+
+        // Download button
+        if isDownloading {
+          VStack(spacing: 4) {
+            ProgressView(value: downloadProgress, total: 100)
+              .tint(.accentColor)
+            HStack {
+              Text("\(Int(downloadProgress))%")
+                .customFont(.caption2)
+                .foregroundColor(.secondary)
+              Spacer()
+              Button(action: {
+                downloadViewModel.cancelCurrentAlbumDownload(albumName: album.name)
+              }) {
+                Label("Cancel", systemImage: "xmark.circle")
+                  .customFont(.caption2)
+              }
+              .buttonStyle(.plain)
+              .foregroundColor(.red)
+            }
+          }
+          .padding(.vertical, 4)
+        } else if isDownloaded {
+          Button(action: {
+            albumViewModel.removeDownloadedAlbum(album: album)
+            downloaded = false
+          }) {
+            Label("Remove Download", systemImage: "trash")
+              .customFont(.caption2)
+          }
+          .foregroundColor(.red)
+          .padding(.vertical, 4)
+        } else {
+          Button(action: {
+            albumViewModel.downloadAlbum(displayAlbum)
+            downloadViewModel.addItem(displayAlbum)
+          }) {
+            Label("Download", systemImage: "arrow.down.circle")
+              .customFont(.caption2)
+          }
+          .padding(.vertical, 4)
+        }
       }
       .padding(.horizontal)
     }
@@ -98,6 +152,13 @@ struct WatchAlbumDetailView: View {
     .navigationTitle(album.name)
     .onAppear {
       loadAlbumDetail()
+      downloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: album.id)
+    }
+    .onReceive(downloadViewModel.$downloadWatcher) { newValue in
+      if newValue {
+        downloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: album.id)
+        downloadViewModel.downloadWatcher = false
+      }
     }
   }
 

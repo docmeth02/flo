@@ -85,17 +85,15 @@ struct Album: Codable, Identifiable, Playable {
     self.minYear = minYear
   }
 
-  #if os(iOS)
-    init(from playlist: PlaylistEntity) {
-      self.id = playlist.id ?? UUID().uuidString
-      self.name = playlist.name ?? "Unknown Album"
-      self.albumArtist = playlist.albumArtist ?? playlist.artistName ?? "Unknown Artist"
-      self.artist = playlist.artistName ?? "Unknown Artist"
-      self.genre = playlist.genre ?? "Unknown Genre"
-      self.minYear = Int(playlist.minYear)
-      self.albumCover = playlist.albumCover ?? ""
-    }
-  #endif
+  init(from playlist: PlaylistEntity) {
+    self.id = playlist.id ?? UUID().uuidString
+    self.name = playlist.name ?? "Unknown Album"
+    self.albumArtist = playlist.albumArtist ?? playlist.artistName ?? "Unknown Artist"
+    self.artist = playlist.artistName ?? "Unknown Artist"
+    self.genre = playlist.genre ?? "Unknown Genre"
+    self.minYear = Int(playlist.minYear)
+    self.albumCover = playlist.albumCover ?? ""
+  }
 
   init(from playlist: Playlist) {
     self.id = playlist.id

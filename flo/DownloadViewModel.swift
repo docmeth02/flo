@@ -164,10 +164,13 @@ class DownloadViewModel: ObservableObject {
 
     Task(priority: .background) {
       do {
+        let bitrateValue = Int(UserDefaultsManager.maxBitRate) ?? 0
+
         let downloadRequest = AlbumService.shared.downloadNew(
           artistName: item.isPlaylist ? "Various Artists" : item.song.artist,
           albumName: item.album,
           id: item.id,
+          bitrate: bitrateValue,
           trackNumber: item.song.trackNumber.description,
           title: item.song.title,
           suffix: item.song.suffix,

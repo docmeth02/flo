@@ -153,6 +153,7 @@
 		C4D7F84F2C7F2C5D00165EFD /* PlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */; };
 		C4DE89182C2FFBC900E078CC /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */; };
 		C4DFFA212D32E76E003B9C4E /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
+		C4DFFA222D32E76E003B9C4F /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
 		C4E8D95C2B763BA900C2353E /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E8D95B2B763BA900C2353E /* App.swift */; };
 		C4E8D95E2B763BA900C2353E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E8D95D2B763BA900C2353E /* ContentView.swift */; };
 		C4E8D9602B763BAB00C2353E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4E8D95F2B763BAB00C2353E /* Assets.xcassets */; };
@@ -786,6 +787,7 @@
 				D235EA9AC4ADBA9E159A73C7 /* WatchPlaylistDetailView.swift in Sources */,
 				F30F820892097E4E907E6363 /* WatchDownloadsView.swift in Sources */,
 				604413A3C487B4DA0E254DB2 /* WatchSettingsView.swift in Sources */,
+				C4DFFA222D32E76E003B9C4F /* DownloadViewModel.swift in Sources */,
 				B46A893EAE4F5312B01A6DF7 /* WatchPlayerViewModel.swift in Sources */,
 				3CEDB29C7DB1BA0E52DF3583 /* WatchSessionManager.swift in Sources */,
 				7378E3332D148A9A8B2BB208 /* NowPlayingIndicator.swift in Sources */,
