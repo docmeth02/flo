@@ -38,6 +38,8 @@ struct TrackRowView: View {
             .foregroundColor(.secondary)
             .lineLimit(1)
         }
+
+        Spacer()
       }
     }
     .buttonStyle(.plain)
