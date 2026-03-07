@@ -41,6 +41,44 @@ class AlbumService {
     return buildRemoteStreamUrl(id: id)
   }
 
+  func isStarred(songId: String, completion: @escaping (Bool) -> Void) {
+    let params: [String: Any] = [
+      "_start": 0, "_end": 1, "id": songId,
+    ]
+
+    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
+      (response: DataResponse<[Song], AFError>) in
+      switch response.result {
+      case .success(let songs):
+        completion(songs.first?.starred ?? false)
+      case .failure:
+        completion(false)
+      }
+    }
+  }
+
+  func starSong(id: String, completion: @escaping (Bool) -> Void) {
+    let url =
+      "\(UserDefaultsManager.serverBaseURL)\(API.SubsonicEndpoint.star)\(AuthService.shared.getCreds(key: "subsonicToken"))&id=\(id)"
+
+    APIManager.shared.session.request(url)
+      .validate(statusCode: 200..<300)
+      .response { response in
+        completion(response.error == nil)
+      }
+  }
+
+  func unstarSong(id: String, completion: @escaping (Bool) -> Void) {
+    let url =
+      "\(UserDefaultsManager.serverBaseURL)\(API.SubsonicEndpoint.unstar)\(AuthService.shared.getCreds(key: "subsonicToken"))&id=\(id)"
+
+    APIManager.shared.session.request(url)
+      .validate(statusCode: 200..<300)
+      .response { response in
+        completion(response.error == nil)
+      }
+  }
+
   func getSongFromAlbum(id: String, completion: @escaping (Result<[Song], Error>) -> Void) {
     // FIXME: get all songs for now
     let params: [String: Any] = [

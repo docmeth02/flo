@@ -31,6 +31,7 @@ class WatchPlayerViewModel: ObservableObject {
   @Published var totalTimeString: String = "00:00"
 
   @Published var _playFromLocal: Bool = false
+  @Published var isStarred: Bool = false
 
   private var isLocallySaved: Bool = false
   private var isFinished: Bool = false
@@ -194,6 +195,16 @@ class WatchPlayerViewModel: ObservableObject {
       playbackDuration: self.totalDuration)
 
     FloooViewModel.shared.setNowPlayingToScrobbleServer(nowPlaying: self.nowPlaying)
+
+    self.isStarred = false
+    if let songId = self.nowPlaying.id, !songId.isEmpty {
+      AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
+        DispatchQueue.main.async {
+          guard self?.nowPlaying.id == songId else { return }
+          self?.isStarred = starred
+        }
+      }
+    }
   }
 
   private func addPeriodicTimeObserver() {
@@ -585,6 +596,23 @@ class WatchPlayerViewModel: ObservableObject {
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
 
     self.queue = []
+  }
+
+  func toggleStar() {
+    guard let songId = self.nowPlaying.id, !songId.isEmpty else { return }
+
+    let shouldStar = !self.isStarred
+    self.isStarred = shouldStar
+
+    let action = shouldStar ? AlbumService.shared.starSong : AlbumService.shared.unstarSong
+    action(songId) { [weak self] success in
+      if !success {
+        DispatchQueue.main.async {
+          guard self?.nowPlaying.id == songId else { return }
+          self?.isStarred = !shouldStar
+        }
+      }
+    }
   }
 
   private func nextQueueIdxForPreCache() -> Int? {
