@@ -14,7 +14,8 @@ struct WatchNowPlayingView: View {
       // Album art
       WatchAlbumArtView(
         url: playerViewModel.getAlbumCoverArt(),
-        size: 75
+        size: 75,
+        albumId: playerViewModel.nowPlaying.albumId ?? ""
       )
       .clipShape(RoundedRectangle(cornerRadius: 10))
 

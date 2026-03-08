@@ -48,7 +48,8 @@ struct WatchDownloadsView: View {
               WatchAlbumArtView(
                 url: albumViewModel.getAlbumCoverArt(
                   id: album.id, artistName: album.artist, albumName: album.name),
-                size: 36
+                size: 36,
+                albumId: album.id
               )
               .clipShape(RoundedRectangle(cornerRadius: 4))
 

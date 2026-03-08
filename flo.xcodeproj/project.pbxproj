@@ -25,6 +25,7 @@
 		097763560166B559CC3554F9 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */; };
 		0B1A2B3C4D5E6F7A8B9C0D1E /* StreamCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B2A3B4C5D6E7F8A9B0C1D2E /* StreamCacheManager.swift */; };
 		0C1A2B3C4D5E6F7A8B9C0D1E /* LibraryCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */; };
+		0D1A2B3C4D5E6F7A8B9C0D1E /* CoverArtCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */; };
 		097DA1E18629F39C1C9615A9 /* WatchQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D12A88F1F4331250EAC2F /* WatchQueueView.swift */; };
 		0E1124832632321863923A2D /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134522C15BE0C00CCF2EB /* Strings.swift */; };
 		169F90289CA99D195434F17E /* AccountLinkStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD542D329C8500644E68 /* AccountLinkStatus.swift */; };
@@ -156,6 +157,7 @@
 		C4DE89182C2FFBC900E078CC /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */; };
 		0B3A4B5C6D7E8F9A0B1C2D3E /* StreamCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B2A3B4C5D6E7F8A9B0C1D2E /* StreamCacheManager.swift */; };
 		0C3A4B5C6D7E8F9A0B1C2D3E /* LibraryCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */; };
+		0D3A4B5C6D7E8F9A0B1C2D3E /* CoverArtCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */; };
 		C4DFFA212D32E76E003B9C4E /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
 		C4DFFA222D32E76E003B9C4F /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
 		C4E8D95C2B763BA900C2353E /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E8D95B2B763BA900C2353E /* App.swift */; };
@@ -313,6 +315,7 @@
 		C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
 		0B2A3B4C5D6E7F8A9B0C1D2E /* StreamCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamCacheManager.swift; sourceTree = "<group>"; };
 		0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCacheManager.swift; sourceTree = "<group>"; };
+		0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverArtCacheManager.swift; sourceTree = "<group>"; };
 		C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadViewModel.swift; sourceTree = "<group>"; };
 		C4E8D9582B763BA900C2353E /* flo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = flo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C4E8D95B2B763BA900C2353E /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
@@ -574,6 +577,7 @@
 				C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */,
 				0B2A3B4C5D6E7F8A9B0C1D2E /* StreamCacheManager.swift */,
 				0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */,
+				0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */,
 				C401D0992C5AED9F009F91C7 /* LocalFileManager.swift */,
 				C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */,
 				B0BAAAAC2F321697002A5FBB /* RadioService.swift */,
@@ -827,6 +831,7 @@
 				097763560166B559CC3554F9 /* CoreDataManager.swift in Sources */,
 				0B1A2B3C4D5E6F7A8B9C0D1E /* StreamCacheManager.swift in Sources */,
 				0C1A2B3C4D5E6F7A8B9C0D1E /* LibraryCacheManager.swift in Sources */,
+				0D1A2B3C4D5E6F7A8B9C0D1E /* CoverArtCacheManager.swift in Sources */,
 				A1CDAC159C0A61FD8EFB5B41 /* LocalFileManager.swift in Sources */,
 				E28EFA0EADE6BB20D710C334 /* KeychainManager.swift in Sources */,
 				5880A641F3054635E0E30B4B /* UserDefaultsManager.swift in Sources */,
@@ -909,6 +914,7 @@
 				C4DE89182C2FFBC900E078CC /* CoreDataManager.swift in Sources */,
 				0B3A4B5C6D7E8F9A0B1C2D3E /* StreamCacheManager.swift in Sources */,
 				0C3A4B5C6D7E8F9A0B1C2D3E /* LibraryCacheManager.swift in Sources */,
+				0D3A4B5C6D7E8F9A0B1C2D3E /* CoverArtCacheManager.swift in Sources */,
 				C46C85C42C07114200903F54 /* LoginView.swift in Sources */,
 				C41470BB2CE6580B008BDCE8 /* Artist.swift in Sources */,
 				C4D7F84F2C7F2C5D00165EFD /* PlaybackService.swift in Sources */,

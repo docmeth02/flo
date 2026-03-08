@@ -8,6 +8,7 @@ import SwiftUI
 struct WatchAlbumArtView: View {
   let url: String
   var size: CGFloat = 36
+  var albumId: String = ""
 
   var body: some View {
     if url.hasPrefix("/"), let uiImage = UIImage(contentsOfFile: url) {
@@ -30,6 +31,11 @@ struct WatchAlbumArtView: View {
             .frame(width: size, height: size)
         @unknown default:
           placeholderView
+        }
+      }
+      .task {
+        if !albumId.isEmpty {
+          CoverArtCacheManager.shared.cacheIfNeeded(albumId: albumId)
         }
       }
     } else {

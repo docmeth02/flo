@@ -15,7 +15,8 @@ struct WatchAlbumsListView: View {
           HStack(spacing: 8) {
             WatchAlbumArtView(
               url: albumViewModel.getAlbumCoverArt(id: album.id),
-              size: 36
+              size: 36,
+              albumId: album.id
             )
             .clipShape(RoundedRectangle(cornerRadius: 4))
 
