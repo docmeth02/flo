@@ -117,11 +117,25 @@ class AlbumViewModel: ObservableObject {
   }
 
   func fetchStarredSongs() {
+    #if os(watchOS)
+    if starredSongs.isEmpty,
+      let cached = LibraryCacheManager.shared.load([Song].self, forKey: "starredSongs")
+    {
+      self.starredSongs = cached
+    }
+    #endif
     AlbumService.shared.getStarredSongs { result in
       DispatchQueue.main.async {
         switch result {
         case .success(let songs):
           self.starredSongs = songs
+          #if os(watchOS)
+          if !songs.isEmpty {
+            DispatchQueue.global(qos: .utility).async {
+              LibraryCacheManager.shared.save(songs, forKey: "starredSongs")
+            }
+          }
+          #endif
         case .failure(let error):
           self.error = error
         }
@@ -289,6 +303,13 @@ class AlbumViewModel: ObservableObject {
   }
 
   func fetchAlbums() {
+    #if os(watchOS)
+    if albums.isEmpty,
+      let cached = LibraryCacheManager.shared.load([Album].self, forKey: "albums")
+    {
+      self.albums = cached
+    }
+    #endif
     isLoading = true
     AlbumService.shared.getAlbum { result in
       DispatchQueue.main.async {
@@ -296,6 +317,13 @@ class AlbumViewModel: ObservableObject {
         switch result {
         case .success(let albums):
           self.albums = albums
+          #if os(watchOS)
+          if !albums.isEmpty {
+            DispatchQueue.global(qos: .utility).async {
+              LibraryCacheManager.shared.save(albums, forKey: "albums")
+            }
+          }
+          #endif
         case .failure(let error):
           print("error>>>>", error)
           self.error = error
@@ -340,11 +368,25 @@ class AlbumViewModel: ObservableObject {
   }
 
   func getPlaylists() {
+    #if os(watchOS)
+    if playlists.isEmpty,
+      let cached = LibraryCacheManager.shared.load([Playlist].self, forKey: "playlists")
+    {
+      self.playlists = cached
+    }
+    #endif
     AlbumService.shared.getPlaylists { result in
       DispatchQueue.main.async {
         switch result {
         case .success(let playlists):
           self.playlists = playlists
+          #if os(watchOS)
+          if !playlists.isEmpty {
+            DispatchQueue.global(qos: .utility).async {
+              LibraryCacheManager.shared.save(playlists, forKey: "playlists")
+            }
+          }
+          #endif
         case .failure(let error):
           self.error = error
         }
@@ -353,11 +395,25 @@ class AlbumViewModel: ObservableObject {
   }
 
   func getArtists() {
+    #if os(watchOS)
+    if artists.isEmpty,
+      let cached = LibraryCacheManager.shared.load([Artist].self, forKey: "artists")
+    {
+      self.artists = cached
+    }
+    #endif
     AlbumService.shared.getArtists { result in
       DispatchQueue.main.async {
         switch result {
         case .success(let artists):
           self.artists = artists
+          #if os(watchOS)
+          if !artists.isEmpty {
+            DispatchQueue.global(qos: .utility).async {
+              LibraryCacheManager.shared.save(artists, forKey: "artists")
+            }
+          }
+          #endif
         case .failure(let error):
           self.error = error
         }
