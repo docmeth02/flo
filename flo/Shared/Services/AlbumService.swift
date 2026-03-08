@@ -79,6 +79,20 @@ class AlbumService {
       }
   }
 
+  func getStarredSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
+    APIManager.shared.SubsonicEndpointRequest(
+      endpoint: API.SubsonicEndpoint.getStarred2, parameters: nil
+    ) {
+      (response: DataResponse<Starred2Response, AFError>) in
+      switch response.result {
+      case .success(let starred):
+        completion(.success(starred.songs))
+      case .failure(let error):
+        completion(.failure(error))
+      }
+    }
+  }
+
   func getSongFromAlbum(id: String, completion: @escaping (Result<[Song], Error>) -> Void) {
     // FIXME: get all songs for now
     let params: [String: Any] = [

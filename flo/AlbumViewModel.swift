@@ -12,6 +12,7 @@ class AlbumViewModel: ObservableObject {
   @Published var playlists: [Playlist] = []
   @Published var playlist: Playlist = Playlist()
   @Published var songs: [Song] = []
+  @Published var starredSongs: [Song] = []
   @Published var artistAlbums: [Album] = []
   @Published var albums: [Album] = []
   @Published var album: Album = Album()
@@ -108,6 +109,19 @@ class AlbumViewModel: ObservableObject {
         case .success(let songs):
           self.songs = songs
 
+        case .failure(let error):
+          self.error = error
+        }
+      }
+    }
+  }
+
+  func fetchStarredSongs() {
+    AlbumService.shared.getStarredSongs { result in
+      DispatchQueue.main.async {
+        switch result {
+        case .success(let songs):
+          self.starredSongs = songs
         case .failure(let error):
           self.error = error
         }

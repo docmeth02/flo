@@ -18,6 +18,9 @@ struct WatchHomeView: View {
       }
 
       Section("Library") {
+        NavigationLink(destination: WatchStarredSongsView()) {
+          Label("Liked Songs", systemImage: "heart.fill")
+        }
         NavigationLink(destination: WatchArtistsListView()) {
           Label("Artists", systemImage: "music.mic")
         }

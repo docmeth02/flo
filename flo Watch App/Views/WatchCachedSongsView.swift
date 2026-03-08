@@ -25,7 +25,7 @@ struct WatchCachedSongsView: View {
           artist: song.artist,
           isPlaying: isCurrentlyPlaying
         ) {
-          let cached = CachedSongsPlayable(songs: songs)
+          let cached = SongCollection(id: "cached-songs", name: "Cached", songs: songs)
           playerViewModel.playBySong(idx: idx, item: cached, isFromLocal: true)
           showNowPlaying = true
         }
