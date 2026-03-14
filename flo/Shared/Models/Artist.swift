@@ -19,7 +19,8 @@ struct Artist: Codable, Hashable, Identifiable {
   let id, name: String
   let orderArtistName: String
   let stats: ArtistStats?
-  let size, albumCount, songCount: Int
+  let size: Int64
+  let albumCount, songCount: Int
   let missing: Bool
   let createdAt, updatedAt: String
   let sortArtistName: String?
@@ -48,7 +49,7 @@ struct Artist: Codable, Hashable, Identifiable {
     self.name = try container.decode(String.self, forKey: .name)
     self.orderArtistName = try container.decodeIfPresent(String.self, forKey: .orderArtistName) ?? ""
     self.stats = try container.decodeIfPresent(ArtistStats.self, forKey: .stats)
-    self.size = try container.decodeIfPresent(Int.self, forKey: .size) ?? 0
+    self.size = try container.decodeIfPresent(Int64.self, forKey: .size) ?? 0
     self.albumCount = try container.decodeIfPresent(Int.self, forKey: .albumCount) ?? 0
     self.songCount = try container.decodeIfPresent(Int.self, forKey: .songCount) ?? 0
     self.missing = try container.decodeIfPresent(Bool.self, forKey: .missing) ?? false
@@ -77,5 +78,6 @@ struct ArtistStats: Codable {
 
 // MARK: - Albumartist
 struct Albumartist: Codable {
-  let songCount, albumCount, size: Int
+  let songCount, albumCount: Int
+  let size: Int64
 }
