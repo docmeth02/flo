@@ -421,6 +421,92 @@ class AlbumViewModel: ObservableObject {
     }
   }
 
+  #if os(watchOS)
+  @MainActor
+  func refreshAlbums() async {
+    isLoading = true
+    defer { isLoading = false }
+    await withCheckedContinuation { continuation in
+      AlbumService.shared.getAlbum { result in
+        DispatchQueue.main.async {
+          if case .success(let albums) = result {
+            self.albums = albums
+            if !albums.isEmpty {
+              DispatchQueue.global(qos: .utility).async {
+                LibraryCacheManager.shared.save(albums, forKey: "albums")
+              }
+            }
+          }
+          continuation.resume()
+        }
+      }
+    }
+  }
+
+  @MainActor
+  func refreshArtists() async {
+    isLoading = true
+    defer { isLoading = false }
+    await withCheckedContinuation { continuation in
+      AlbumService.shared.getArtists { result in
+        DispatchQueue.main.async {
+          if case .success(let artists) = result {
+            self.artists = artists
+            if !artists.isEmpty {
+              DispatchQueue.global(qos: .utility).async {
+                LibraryCacheManager.shared.save(artists, forKey: "artists")
+              }
+            }
+          }
+          continuation.resume()
+        }
+      }
+    }
+  }
+
+  @MainActor
+  func refreshPlaylists() async {
+    isLoading = true
+    defer { isLoading = false }
+    await withCheckedContinuation { continuation in
+      AlbumService.shared.getPlaylists { result in
+        DispatchQueue.main.async {
+          if case .success(let playlists) = result {
+            self.playlists = playlists
+            if !playlists.isEmpty {
+              DispatchQueue.global(qos: .utility).async {
+                LibraryCacheManager.shared.save(playlists, forKey: "playlists")
+              }
+            }
+          }
+          continuation.resume()
+        }
+      }
+    }
+  }
+
+  @MainActor
+  func refreshStarredSongs() async {
+    isLoading = true
+    defer { isLoading = false }
+    await withCheckedContinuation { continuation in
+      AlbumService.shared.getStarredSongs { result in
+        DispatchQueue.main.async {
+          if case .success(let songs) = result {
+            self.starredSongs = songs
+            if !songs.isEmpty {
+              DispatchQueue.global(qos: .utility).async {
+                LibraryCacheManager.shared.save(songs, forKey: "starredSongs")
+              }
+            }
+          }
+          continuation.resume()
+        }
+      }
+    }
+  }
+  #endif
+
   func fetchDownloadedAlbums() {
     AlbumService.shared.getDownloadedAlbum { result in
       DispatchQueue.main.async {

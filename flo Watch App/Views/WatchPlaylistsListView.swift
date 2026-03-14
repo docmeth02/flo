@@ -28,6 +28,22 @@ struct WatchPlaylistsListView: View {
       }
     }
     .navigationTitle("Playlists")
+    .refreshable {
+      await albumViewModel.refreshPlaylists()
+    }
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) {
+        if albumViewModel.isLoading {
+          ProgressView()
+        } else {
+          Button {
+            Task { await albumViewModel.refreshPlaylists() }
+          } label: {
+            Image(systemName: "arrow.clockwise")
+          }
+        }
+      }
+    }
     .onAppear {
       albumViewModel.getPlaylists()
     }

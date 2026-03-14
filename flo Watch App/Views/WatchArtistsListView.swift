@@ -19,6 +19,22 @@ struct WatchArtistsListView: View {
       }
     }
     .navigationTitle("Artists")
+    .refreshable {
+      await albumViewModel.refreshArtists()
+    }
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) {
+        if albumViewModel.isLoading {
+          ProgressView()
+        } else {
+          Button {
+            Task { await albumViewModel.refreshArtists() }
+          } label: {
+            Image(systemName: "arrow.clockwise")
+          }
+        }
+      }
+    }
     .onAppear {
       albumViewModel.getArtists()
     }

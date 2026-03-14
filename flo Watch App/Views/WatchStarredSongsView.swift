@@ -38,6 +38,22 @@ struct WatchStarredSongsView: View {
       }
     }
     .navigationTitle("Liked Songs")
+    .refreshable {
+      await albumViewModel.refreshStarredSongs()
+    }
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) {
+        if albumViewModel.isLoading {
+          ProgressView()
+        } else {
+          Button {
+            Task { await albumViewModel.refreshStarredSongs() }
+          } label: {
+            Image(systemName: "arrow.clockwise")
+          }
+        }
+      }
+    }
     .navigationDestination(isPresented: $showNowPlaying) {
       WatchNowPlayingView()
     }

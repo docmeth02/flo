@@ -35,6 +35,22 @@ struct WatchAlbumsListView: View {
       }
     }
     .navigationTitle("Albums")
+    .refreshable {
+      await albumViewModel.refreshAlbums()
+    }
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) {
+        if albumViewModel.isLoading {
+          ProgressView()
+        } else {
+          Button {
+            Task { await albumViewModel.refreshAlbums() }
+          } label: {
+            Image(systemName: "arrow.clockwise")
+          }
+        }
+      }
+    }
     .onAppear {
       albumViewModel.fetchAlbums()
     }
