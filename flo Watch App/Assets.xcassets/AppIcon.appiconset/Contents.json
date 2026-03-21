@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "flo.png",
       "idiom" : "watch",
       "platform" : "watchOS",
       "scale" : "2x",

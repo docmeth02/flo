@@ -16,7 +16,14 @@ struct WatchContentView: View {
     Group {
       if authViewModel.isLoggedIn {
         NavigationStack {
-          WatchHomeView()
+          TabView {
+            WatchHomeView()
+
+            if playerViewModel.hasNowPlaying() {
+              WatchNowPlayingView()
+            }
+          }
+          .tabViewStyle(.page)
         }
       } else {
         WatchLoginView(viewModel: authViewModel)
