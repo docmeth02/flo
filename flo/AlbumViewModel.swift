@@ -99,6 +99,11 @@ class AlbumViewModel: ObservableObject {
   }
 
   func fetchAllSongs() {
+    if songs.isEmpty,
+      let cached = LibraryCacheManager.shared.load([Song].self, forKey: "songs")
+    {
+      self.songs = cached
+    }
     AlbumService.shared.getAllSongs { result in
       self.isLoading = true
 
@@ -108,6 +113,11 @@ class AlbumViewModel: ObservableObject {
         switch result {
         case .success(let songs):
           self.songs = songs
+          if !songs.isEmpty {
+            DispatchQueue.global(qos: .utility).async {
+              LibraryCacheManager.shared.save(songs, forKey: "songs")
+            }
+          }
 
         case .failure(let error):
           self.error = error

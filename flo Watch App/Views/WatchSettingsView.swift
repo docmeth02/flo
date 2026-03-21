@@ -37,6 +37,15 @@ struct WatchSettingsView: View {
         }
       }
 
+      Section("Playback") {
+        Toggle(
+          "Keep Playing",
+          isOn: Binding(
+            get: { UserDefaultsManager.keepPlaying },
+            set: { UserDefaultsManager.keepPlaying = $0 }
+          ))
+      }
+
       Section("Streaming") {
         Picker("Bitrate", selection: $selectedBitRate) {
           ForEach(watchBitRates, id: \.self) { rate in
