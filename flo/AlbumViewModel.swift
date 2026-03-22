@@ -173,7 +173,6 @@ class AlbumViewModel: ObservableObject {
   func fetchStarredSongs() {
     fetchCached(current: starredSongs, cacheKey: .starredSongs,
       assign: { self.starredSongs = $0 }, request: AlbumService.shared.getStarredSongs)
-    }
   }
 
   func getAlbumInfo() {
