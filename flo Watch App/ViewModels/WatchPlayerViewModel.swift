@@ -596,7 +596,6 @@ class WatchPlayerViewModel: ObservableObject {
 
     let recommendations = SmartPlaybackService.shared.generateRecommendations(
       count: 10,
-      context: self.hasNowPlaying() ? self.nowPlaying : nil,
       currentQueue: self.queue,
       allSongs: allSongs,
       albums: albums

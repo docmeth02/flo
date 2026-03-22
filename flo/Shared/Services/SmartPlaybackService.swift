@@ -9,18 +9,13 @@ import Foundation
 class SmartPlaybackService {
   static let shared = SmartPlaybackService()
 
+  private let blacklistDurationMinutes = 30
+
   private init() {}
 
   /// Generate song recommendations based on on-device listening data.
-  /// - Parameters:
-  ///   - count: Number of songs to return
-  ///   - context: Last played song for contextual continuity (nil for broad shuffle)
-  ///   - currentQueue: Current queue items to exclude from results
-  ///   - allSongs: Full song library
-  ///   - albums: Album list (for genre data)
   func generateRecommendations(
     count: Int,
-    context: QueueEntity? = nil,
     currentQueue: [QueueEntity] = [],
     allSongs: [Song],
     albums: [Album] = []
@@ -30,21 +25,24 @@ class SmartPlaybackService {
     let history = CoreDataManager.shared.getRecordsByEntity(entity: HistoryEntity.self)
     let artistFreqs = getArtistFrequencies(history: history)
     let recentArtists = getRecentArtists(history: history, days: 14)
-    let allGenres = getTopGenres(albums: albums, artistFreqs: artistFreqs)
-    let topGenreEntries = allGenres.sorted { $0.value > $1.value }.prefix(5)
+    let recentAlbumIds = getRecentAlbumIds(history: history, days: 14)
+    let topGenreEntries = getTopGenres(albums: albums, artistFreqs: artistFreqs)
+      .sorted { $0.value > $1.value }.prefix(5)
     let topGenres = Dictionary(uniqueKeysWithValues: topGenreEntries.map { ($0.key, $0.value) })
     let albumGenreMap = buildAlbumGenreMap(albums: albums)
 
     let queueIds = Set(currentQueue.compactMap { $0.id })
-    let recentlyPlayedIds = getRecentlyPlayedIds(history: history, minutes: 30)
+    let blacklistedIds = getBlacklistedSongIds(history: history, minutes: blacklistDurationMinutes)
 
     let maxArtistFreq = Double(artistFreqs.values.max() ?? 1)
 
     var scored: [(Song, Double)] = []
 
     for song in allSongs {
-      if queueIds.contains(song.id) || queueIds.contains(song.mediaFileId) { continue }
-      if recentlyPlayedIds.contains(song.title) { continue }
+      let songId = song.mediaFileId.isEmpty ? song.id : song.mediaFileId
+      if queueIds.contains(song.id) || queueIds.contains(songId) { continue }
+      if blacklistedIds.contains(songId)
+        || blacklistedIds.contains("\(song.title)|\(song.artist)") { continue }
 
       var score = 0.0
 
@@ -57,9 +55,12 @@ class SmartPlaybackService {
         score += 0.25
       }
 
-      // Recency boost (0.20)
+      // Recency boost (0.20 total: 0.10 artist + 0.10 album)
       if recentArtists.contains(song.artist) {
-        score += 0.20
+        score += 0.10
+      }
+      if recentAlbumIds.contains(song.albumId) {
+        score += 0.10
       }
 
       // Genre match (0.15)
@@ -70,16 +71,6 @@ class SmartPlaybackService {
 
       // Random factor (0.10)
       score += Double.random(in: 0...0.10)
-
-      // Context boost: same artist/album/genre as last played
-      if let ctx = context {
-        if song.artist == (ctx.artistName ?? "") {
-          score += 0.15
-        }
-        if song.albumId == (ctx.albumId ?? "") {
-          score += 0.10
-        }
-      }
 
       scored.append((song, score))
     }
@@ -115,12 +106,26 @@ class SmartPlaybackService {
     return artists
   }
 
-  private func getRecentlyPlayedIds(history: [HistoryEntity], minutes: Int) -> Set<String> {
+  private func getRecentAlbumIds(history: [HistoryEntity], days: Int) -> Set<String> {
+    let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+    var albumIds: Set<String> = []
+    for entry in history {
+      if let ts = entry.timestamp, ts >= cutoff, let albumId = entry.albumId, !albumId.isEmpty {
+        albumIds.insert(albumId)
+      }
+    }
+    return albumIds
+  }
+
+  private func getBlacklistedSongIds(history: [HistoryEntity], minutes: Int) -> Set<String> {
     let cutoff = Calendar.current.date(byAdding: .minute, value: -minutes, to: Date()) ?? Date()
     var ids: Set<String> = []
     for entry in history {
-      if let ts = entry.timestamp, ts >= cutoff, let name = entry.trackName {
-        ids.insert(name)
+      guard let ts = entry.timestamp, ts >= cutoff else { continue }
+      if let songId = entry.songId, !songId.isEmpty {
+        ids.insert(songId)
+      } else if let trackName = entry.trackName, let artistName = entry.artistName {
+        ids.insert("\(trackName)|\(artistName)")
       }
     }
     return ids

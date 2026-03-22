@@ -22,7 +22,7 @@ class FloooService {
     currentSession.artistName = payload.artistName
     currentSession.trackName = payload.songName
     currentSession.albumName = payload.albumName
-    currentSession.artistName = payload.artistName
+    currentSession.songId = payload.id
     currentSession.timestamp = Date()
 
     CoreDataManager.shared.saveRecord()

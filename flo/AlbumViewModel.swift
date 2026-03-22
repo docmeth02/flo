@@ -98,27 +98,36 @@ class AlbumViewModel: ObservableObject {
     }
   }
 
-  func fetchAllSongs() {
-    if songs.isEmpty,
-      let cached = LibraryCacheManager.shared.load([Song].self, forKey: "songs")
+  // MARK: - Generic cache helpers
+
+  private enum CacheKey: String {
+    case albums, artists, playlists, songs, starredSongs
+  }
+
+  private func fetchCached<T: Codable>(
+    current: [T],
+    cacheKey: CacheKey,
+    showsLoading: Bool = false,
+    assign: @escaping ([T]) -> Void,
+    request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void
+  ) {
+    if current.isEmpty,
+      let cached = LibraryCacheManager.shared.load([T].self, forKey: cacheKey.rawValue)
     {
-      self.songs = cached
+      assign(cached)
     }
-    AlbumService.shared.getAllSongs { result in
-      self.isLoading = true
-
+    if showsLoading { isLoading = true }
+    request { result in
       DispatchQueue.main.async {
-        self.isLoading = false
-
+        if showsLoading { self.isLoading = false }
         switch result {
-        case .success(let songs):
-          self.songs = songs
-          if !songs.isEmpty {
+        case .success(let items):
+          assign(items)
+          if !items.isEmpty {
             DispatchQueue.global(qos: .utility).async {
-              LibraryCacheManager.shared.save(songs, forKey: "songs")
+              LibraryCacheManager.shared.save(items, forKey: cacheKey.rawValue)
             }
           }
-
         case .failure(let error):
           self.error = error
         }
@@ -126,30 +135,44 @@ class AlbumViewModel: ObservableObject {
     }
   }
 
-  func fetchStarredSongs() {
-    #if os(watchOS)
-    if starredSongs.isEmpty,
-      let cached = LibraryCacheManager.shared.load([Song].self, forKey: "starredSongs")
-    {
-      self.starredSongs = cached
-    }
-    #endif
-    AlbumService.shared.getStarredSongs { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let songs):
-          self.starredSongs = songs
-          #if os(watchOS)
-          if !songs.isEmpty {
-            DispatchQueue.global(qos: .utility).async {
-              LibraryCacheManager.shared.save(songs, forKey: "starredSongs")
+  @MainActor
+  private func refreshCached<T: Codable>(
+    cacheKey: CacheKey,
+    assign: @escaping ([T]) -> Void,
+    request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void
+  ) async {
+    isLoading = true
+    defer { isLoading = false }
+    await withCheckedContinuation { continuation in
+      request { result in
+        DispatchQueue.main.async {
+          switch result {
+          case .success(let items):
+            assign(items)
+            if !items.isEmpty {
+              DispatchQueue.global(qos: .utility).async {
+                LibraryCacheManager.shared.save(items, forKey: cacheKey.rawValue)
+              }
             }
+          case .failure(let error):
+            self.error = error
           }
-          #endif
-        case .failure(let error):
-          self.error = error
+          continuation.resume()
         }
       }
+    }
+  }
+
+  // MARK: - Fetch methods
+
+  func fetchAllSongs() {
+    fetchCached(current: songs, cacheKey: .songs,
+      assign: { self.songs = $0 }, request: AlbumService.shared.getAllSongs)
+  }
+
+  func fetchStarredSongs() {
+    fetchCached(current: starredSongs, cacheKey: .starredSongs,
+      assign: { self.starredSongs = $0 }, request: AlbumService.shared.getStarredSongs)
     }
   }
 
@@ -313,33 +336,8 @@ class AlbumViewModel: ObservableObject {
   }
 
   func fetchAlbums() {
-    #if os(watchOS)
-    if albums.isEmpty,
-      let cached = LibraryCacheManager.shared.load([Album].self, forKey: "albums")
-    {
-      self.albums = cached
-    }
-    #endif
-    isLoading = true
-    AlbumService.shared.getAlbum { result in
-      DispatchQueue.main.async {
-        self.isLoading = false
-        switch result {
-        case .success(let albums):
-          self.albums = albums
-          #if os(watchOS)
-          if !albums.isEmpty {
-            DispatchQueue.global(qos: .utility).async {
-              LibraryCacheManager.shared.save(albums, forKey: "albums")
-            }
-          }
-          #endif
-        case .failure(let error):
-          print("error>>>>", error)
-          self.error = error
-        }
-      }
-    }
+    fetchCached(current: albums, cacheKey: .albums, showsLoading: true,
+      assign: { self.albums = $0 }, request: AlbumService.shared.getAlbum)
   }
 
   func fetchAlbumsByArtist(id: String) {
@@ -378,144 +376,36 @@ class AlbumViewModel: ObservableObject {
   }
 
   func getPlaylists() {
-    #if os(watchOS)
-    if playlists.isEmpty,
-      let cached = LibraryCacheManager.shared.load([Playlist].self, forKey: "playlists")
-    {
-      self.playlists = cached
-    }
-    #endif
-    AlbumService.shared.getPlaylists { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let playlists):
-          self.playlists = playlists
-          #if os(watchOS)
-          if !playlists.isEmpty {
-            DispatchQueue.global(qos: .utility).async {
-              LibraryCacheManager.shared.save(playlists, forKey: "playlists")
-            }
-          }
-          #endif
-        case .failure(let error):
-          self.error = error
-        }
-      }
-    }
+    fetchCached(current: playlists, cacheKey: .playlists,
+      assign: { self.playlists = $0 }, request: AlbumService.shared.getPlaylists)
   }
 
   func getArtists() {
-    #if os(watchOS)
-    if artists.isEmpty,
-      let cached = LibraryCacheManager.shared.load([Artist].self, forKey: "artists")
-    {
-      self.artists = cached
-    }
-    #endif
-    AlbumService.shared.getArtists { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let artists):
-          self.artists = artists
-          #if os(watchOS)
-          if !artists.isEmpty {
-            DispatchQueue.global(qos: .utility).async {
-              LibraryCacheManager.shared.save(artists, forKey: "artists")
-            }
-          }
-          #endif
-        case .failure(let error):
-          self.error = error
-        }
-      }
-    }
+    fetchCached(current: artists, cacheKey: .artists,
+      assign: { self.artists = $0 }, request: AlbumService.shared.getArtists)
   }
 
-  #if os(watchOS)
-  @MainActor
-  func refreshAlbums() async {
-    isLoading = true
-    defer { isLoading = false }
-    await withCheckedContinuation { continuation in
-      AlbumService.shared.getAlbum { result in
-        DispatchQueue.main.async {
-          if case .success(let albums) = result {
-            self.albums = albums
-            if !albums.isEmpty {
-              DispatchQueue.global(qos: .utility).async {
-                LibraryCacheManager.shared.save(albums, forKey: "albums")
-              }
-            }
-          }
-          continuation.resume()
-        }
-      }
-    }
+  // MARK: - Async refresh variants
+
+  @MainActor func refreshAlbums() async {
+    await refreshCached(cacheKey: .albums, assign: { self.albums = $0 },
+      request: AlbumService.shared.getAlbum)
   }
 
-  @MainActor
-  func refreshArtists() async {
-    isLoading = true
-    defer { isLoading = false }
-    await withCheckedContinuation { continuation in
-      AlbumService.shared.getArtists { result in
-        DispatchQueue.main.async {
-          if case .success(let artists) = result {
-            self.artists = artists
-            if !artists.isEmpty {
-              DispatchQueue.global(qos: .utility).async {
-                LibraryCacheManager.shared.save(artists, forKey: "artists")
-              }
-            }
-          }
-          continuation.resume()
-        }
-      }
-    }
+  @MainActor func refreshArtists() async {
+    await refreshCached(cacheKey: .artists, assign: { self.artists = $0 },
+      request: AlbumService.shared.getArtists)
   }
 
-  @MainActor
-  func refreshPlaylists() async {
-    isLoading = true
-    defer { isLoading = false }
-    await withCheckedContinuation { continuation in
-      AlbumService.shared.getPlaylists { result in
-        DispatchQueue.main.async {
-          if case .success(let playlists) = result {
-            self.playlists = playlists
-            if !playlists.isEmpty {
-              DispatchQueue.global(qos: .utility).async {
-                LibraryCacheManager.shared.save(playlists, forKey: "playlists")
-              }
-            }
-          }
-          continuation.resume()
-        }
-      }
-    }
+  @MainActor func refreshPlaylists() async {
+    await refreshCached(cacheKey: .playlists, assign: { self.playlists = $0 },
+      request: AlbumService.shared.getPlaylists)
   }
 
-  @MainActor
-  func refreshStarredSongs() async {
-    isLoading = true
-    defer { isLoading = false }
-    await withCheckedContinuation { continuation in
-      AlbumService.shared.getStarredSongs { result in
-        DispatchQueue.main.async {
-          if case .success(let songs) = result {
-            self.starredSongs = songs
-            if !songs.isEmpty {
-              DispatchQueue.global(qos: .utility).async {
-                LibraryCacheManager.shared.save(songs, forKey: "starredSongs")
-              }
-            }
-          }
-          continuation.resume()
-        }
-      }
-    }
+  @MainActor func refreshStarredSongs() async {
+    await refreshCached(cacheKey: .starredSongs, assign: { self.starredSongs = $0 },
+      request: AlbumService.shared.getStarredSongs)
   }
-  #endif
 
   func fetchDownloadedAlbums() {
     AlbumService.shared.getDownloadedAlbum { result in
