@@ -414,6 +414,11 @@ class AlbumViewModel: ObservableObject {
       request: AlbumService.shared.getAllSongs)
   }
 
+  @MainActor func refreshStarredSongs() async {
+    await refreshCached(cacheKey: .starredSongs, assign: { self.starredSongs = $0 },
+      request: AlbumService.shared.getStarredSongs)
+  }
+
   func fetchDownloadedAlbums() {
     AlbumService.shared.getDownloadedAlbum { result in
       DispatchQueue.main.async {

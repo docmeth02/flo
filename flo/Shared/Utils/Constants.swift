@@ -62,6 +62,7 @@ enum UserDefaultsKeys {
   static let LRCLIBServerURL = "LRCLIBServerURL"
   static let floPlus = "floPlus"
   static let streamCacheMaxSize = "streamCacheMaxSize"
+  static let keepPlaying = "keepPlaying"
 }
 
 enum KeychainKeys {

@@ -342,6 +342,21 @@ struct PreferencesView: View {
         }
 
         // TODO: finish this later
+        Section(header: Text("Playback")) {
+          VStack(alignment: .leading, spacing: 4) {
+            Toggle(
+              "Keep Playing",
+              isOn: Binding(
+                get: { UserDefaultsManager.keepPlaying },
+                set: { UserDefaultsManager.keepPlaying = $0 }
+              ))
+
+            Text(
+              "Automatically play recommended songs when the queue ends."
+            ).font(.caption).foregroundColor(.gray)
+          }
+        }
+
         Section(header: Text("Experimental")) {
           VStack(alignment: .leading, spacing: 4) {
             Toggle(
