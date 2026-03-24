@@ -626,7 +626,7 @@ class PlayerViewModel: ObservableObject {
     if self.queue.count == 1 {
       // klo kaga repeat, stop
       if self.playbackMode == PlaybackMode.defaultPlayback {
-        self.stop()
+        self.autoPlayOrStop()
       } else {
         // klo repeat, ulang
         self.setNowPlaying()
@@ -654,8 +654,8 @@ class PlayerViewModel: ObservableObject {
         // ni udah di lagu terakhir blm?
         // harusnya bisa pakai >= gasi?
         if self.activeQueueIdx + 1 > self.queue.count - 1 {
-          // klo iya, stop
-          self.stop()
+          // klo iya, auto-play or stop
+          self.autoPlayOrStop()
         } else {
           // klo bukan, lanjut
           self.activeQueueIdx = self.activeQueueIdx + 1
@@ -852,6 +852,34 @@ class PlayerViewModel: ObservableObject {
         }
       }
     }
+  }
+
+  private func autoPlayOrStop() {
+    guard UserDefaultsManager.keepPlaying else {
+      self.stop()
+      return
+    }
+
+    let allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
+    let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
+
+    let recommendations = SmartPlaybackService.shared.generateRecommendations(
+      count: 10,
+      currentQueue: self.queue,
+      allSongs: allSongs,
+      albums: albums
+    )
+
+    guard !recommendations.isEmpty else {
+      self.stop()
+      return
+    }
+
+    let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: recommendations)
+    PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false)
+    self.queue = PlaybackService.shared.getQueue()
+    self.activeQueueIdx = 0
+    self.setNowPlaying()
   }
 
   deinit {

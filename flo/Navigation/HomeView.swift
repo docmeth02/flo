@@ -146,16 +146,47 @@ struct HomeView: View {
               )
             }
 
-            HStack(spacing: 16) {
-              StatCard(
-                title: "Experimental",
-                value: "More data is cooking soon",
-                icon: "chart.pie",
-                color: .indigo,
-                isWide: false,
-                showArrow: false
-              )
+            Button(action: {
+              var allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
+              let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
+
+              if allSongs.isEmpty {
+                AlbumService.shared.getAllSongs { result in
+                  DispatchQueue.main.async {
+                    if case .success(let songs) = result {
+                      allSongs = songs
+                      LibraryCacheManager.shared.save(songs, forKey: "songs")
+                    }
+                    let recommendations = SmartPlaybackService.shared.generateRecommendations(
+                      count: 20, allSongs: allSongs, albums: albums)
+                    if !recommendations.isEmpty {
+                      let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: recommendations)
+                      PlayerViewModel.shared.playItem(item: mix, isFromLocal: false)
+                    }
+                  }
+                }
+              } else {
+                let recommendations = SmartPlaybackService.shared.generateRecommendations(
+                  count: 20, allSongs: allSongs, albums: albums)
+                if !recommendations.isEmpty {
+                  let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: recommendations)
+                  PlayerViewModel.shared.playItem(item: mix, isFromLocal: false)
+                }
+              }
+            }) {
+              HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                  .font(.title2)
+                Text("Play Something")
+                  .font(.headline)
+              }
+              .foregroundColor(.white)
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, 14)
+              .background(Color.accentColor)
+              .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+
             Text(
               "This stat is generated on-device (once every session) and no data is stored or shared with a third party — #selfhosting, baby!"
             )
