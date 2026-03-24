@@ -4,6 +4,7 @@
         <attribute name="albumId" optional="YES" attributeType="String"/>
         <attribute name="albumName" optional="YES" attributeType="String"/>
         <attribute name="artistName" optional="YES" attributeType="String"/>
+        <attribute name="songId" optional="YES" attributeType="String"/>
         <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="trackName" optional="YES" attributeType="String"/>
     </entity>

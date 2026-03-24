@@ -129,6 +129,15 @@ class UserDefaultsManager {
     }
   }
 
+  static var keepPlaying: Bool {
+    get {
+      return UserDefaults.standard.bool(forKey: UserDefaultsKeys.keepPlaying)
+    }
+    set {
+      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.keepPlaying)
+    }
+  }
+
   static var floPlus: Bool {
     get {
       return UserDefaults.standard.bool(forKey: UserDefaultsKeys.floPlus)
