@@ -32,7 +32,7 @@ class SmartPlaybackService {
     let albumGenreMap = buildAlbumGenreMap(albums: albums)
 
     let queueIds = Set(currentQueue.compactMap { $0.id })
-    let blacklistedIds = getBlacklistedSongIds(history: history, minutes: blacklistDurationMinutes)
+    let blacklist = getBlacklist(history: history, minutes: blacklistDurationMinutes)
 
     let maxArtistFreq = Double(artistFreqs.values.max() ?? 1)
 
@@ -41,8 +41,7 @@ class SmartPlaybackService {
     for song in allSongs {
       let songId = song.mediaFileId.isEmpty ? song.id : song.mediaFileId
       if queueIds.contains(song.id) || queueIds.contains(songId) { continue }
-      if blacklistedIds.contains(songId)
-        || blacklistedIds.contains("\(song.title)|\(song.artist)") { continue }
+      if isBlacklisted(song: song, blacklist: blacklist) { continue }
 
       var score = 0.0
 
@@ -117,18 +116,71 @@ class SmartPlaybackService {
     return albumIds
   }
 
-  private func getBlacklistedSongIds(history: [HistoryEntity], minutes: Int) -> Set<String> {
+  private struct Blacklist {
+    let songIds: Set<String>
+    let normalizedTitles: Set<String>
+  }
+
+  private func getBlacklist(history: [HistoryEntity], minutes: Int) -> Blacklist {
     let cutoff = Calendar.current.date(byAdding: .minute, value: -minutes, to: Date()) ?? Date()
     var ids: Set<String> = []
+    var normalized: Set<String> = []
     for entry in history {
       guard let ts = entry.timestamp, ts >= cutoff else { continue }
       if let songId = entry.songId, !songId.isEmpty {
         ids.insert(songId)
-      } else if let trackName = entry.trackName, let artistName = entry.artistName {
-        ids.insert("\(trackName)|\(artistName)")
+      }
+      if let trackName = entry.trackName, let artistName = entry.artistName {
+        let key = "\(normalizeTitle(trackName))|\(artistName.lowercased())"
+        normalized.insert(key)
       }
     }
-    return ids
+    return Blacklist(songIds: ids, normalizedTitles: normalized)
+  }
+
+  private func isBlacklisted(song: Song, blacklist: Blacklist) -> Bool {
+    let songId = song.mediaFileId.isEmpty ? song.id : song.mediaFileId
+    if blacklist.songIds.contains(songId) { return true }
+
+    let normalizedSong = normalizeTitle(song.title)
+    let artistKey = "\(normalizedSong)|\(song.artist.lowercased())"
+
+    // Exact normalized match
+    if blacklist.normalizedTitles.contains(artistKey) { return true }
+
+    // Prefix match: if either normalized title is a prefix of the other (same artist)
+    for blTitle in blacklist.normalizedTitles {
+      let parts = blTitle.split(separator: "|", maxSplits: 1)
+      guard parts.count == 2 else { continue }
+      let blNorm = String(parts[0])
+      let blArtist = String(parts[1])
+      guard blArtist == song.artist.lowercased() else { continue }
+      if blNorm.count >= 4 && normalizedSong.count >= 4 {
+        if normalizedSong.hasPrefix(blNorm) || blNorm.hasPrefix(normalizedSong) {
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
+  /// Normalize a track title by stripping live/remaster/acoustic tags, parentheticals, brackets, etc.
+  private func normalizeTitle(_ title: String) -> String {
+    var t = title.lowercased()
+    // Remove content in parentheses and brackets: (Live...), [Remastered], (2024), etc.
+    t = t.replacingOccurrences(
+      of: #"[\(\[][^\)\]]*[\)\]]"#, with: "", options: .regularExpression)
+    // Remove common trailing suffixes after dash: " - live", " - remastered", " - acoustic", etc.
+    t = t.replacingOccurrences(
+      of: #"\s*[-–—]\s*(live|remaster(ed)?|acoustic|bonus(\s+track)?|demo|remix|edit|deluxe|radio).*$"#,
+      with: "", options: .regularExpression)
+    // Remove feat./ft. and everything after
+    t = t.replacingOccurrences(
+      of: #"\s*(feat\.?|ft\.?).*$"#, with: "", options: .regularExpression)
+    // Trim whitespace
+    t = t.trimmingCharacters(in: .whitespacesAndNewlines)
+    return t
   }
 
   private func getTopGenres(albums: [Album], artistFreqs: [String: Int]) -> [String: Int] {
