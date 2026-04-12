@@ -42,7 +42,6 @@ struct WatchNowPlayingView: View {
     }
     .navigationBarTitleDisplayMode(.inline)
     .navigationTitle("")
-    .toolbar(.hidden, for: .tabBar)
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
         if !playerViewModel.isLiveRadio {
