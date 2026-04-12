@@ -46,6 +46,14 @@ class CarPlayCoordinator {
   // MARK: - Library Tab
 
   private func makeLibraryTab() -> CPListTemplate {
+    let playSomethingItem = CPListItem(
+      text: String(localized: "Play Something"),
+      detailText: nil,
+      image: UIImage(systemName: "sparkles")?.withRenderingMode(.alwaysTemplate))
+    playSomethingItem.handler = { [weak self] _, completion in
+      self?.playSmartShuffle(completion: completion)
+    }
+
     let albumsItem = CPListItem(
       text: String(localized: "Albums"), detailText: nil,
       image: UIImage(systemName: "square.stack")?.withRenderingMode(.alwaysTemplate))
@@ -70,11 +78,60 @@ class CarPlayCoordinator {
       completion()
     }
 
-    let section = CPListSection(items: [albumsItem, artistsItem, songsItem])
+    let section = CPListSection(items: [playSomethingItem, albumsItem, artistsItem, songsItem])
     let template = CPListTemplate(title: String(localized: "Library"), sections: [section])
     template.tabImage = UIImage(systemName: "square.grid.2x2")
 
     return template
+  }
+
+  // MARK: - Smart Shuffle
+
+  private func playSmartShuffle(completion: @escaping () -> Void) {
+    var allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
+    let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
+
+    if allSongs.isEmpty {
+      AlbumService.shared.getAllSongs { [weak self] result in
+        DispatchQueue.main.async {
+          guard let self = self else {
+            completion()
+            return
+          }
+          if case .success(let songs) = result {
+            allSongs = songs
+            LibraryCacheManager.shared.save(songs, forKey: "songs")
+          }
+          self.startSmartPlayback(allSongs: allSongs, albums: albums)
+          completion()
+        }
+      }
+    } else {
+      DispatchQueue.main.async { [weak self] in
+        guard let self = self else {
+          completion()
+          return
+        }
+        self.startSmartPlayback(allSongs: allSongs, albums: albums)
+        completion()
+      }
+    }
+  }
+
+  private func startSmartPlayback(allSongs: [Song], albums: [Album]) {
+    let recommendations = SmartPlaybackService.shared.generateRecommendations(
+      count: 20, allSongs: allSongs, albums: albums)
+
+    guard !recommendations.isEmpty else {
+      showErrorTemplate(
+        title: String(localized: "Nothing to Play"),
+        message: String(localized: "Open the app to sync your library first."))
+      return
+    }
+
+    let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: recommendations)
+    playerVM.playItem(item: mix, isFromLocal: false)
+    showNowPlaying()
   }
 
   // MARK: - Albums
