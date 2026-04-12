@@ -37,24 +37,25 @@ struct WatchNowPlayingView: View {
     }
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
-      ToolbarItem(placement: .topBarLeading) {
-        if !playerViewModel.isLiveRadio {
-          NavigationLink(destination: WatchQueueView()) {
-            Image(systemName: "list.bullet")
-          }
-        }
-      }
       ToolbarItem(placement: .topBarTrailing) {
-        Button {
-          Task {
-            let session = AVAudioSession.sharedInstance()
-            try? session.setCategory(.playback, mode: .default, policy: .longFormAudio)
-            session.activate(options: []) { _, _ in }
+        HStack(spacing: 8) {
+          Button {
+            Task {
+              let session = AVAudioSession.sharedInstance()
+              try? session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+              session.activate(options: []) { _, _ in }
+            }
+          } label: {
+            Image(systemName: "airplayaudio")
           }
-        } label: {
-          Image(systemName: "airplayaudio")
+          .accessibilityLabel("Choose Audio Output")
+
+          if !playerViewModel.isLiveRadio {
+            NavigationLink(destination: WatchQueueView()) {
+              Image(systemName: "list.bullet")
+            }
+          }
         }
-        .accessibilityLabel("Choose Audio Output")
       }
     }
   }
