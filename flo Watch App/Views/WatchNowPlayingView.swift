@@ -3,7 +3,6 @@
 //  flo Watch App
 //
 
-import AVFoundation
 import SwiftUI
 import WatchKit
 
@@ -42,24 +41,13 @@ struct WatchNowPlayingView: View {
       }
     }
     .navigationBarTitleDisplayMode(.inline)
+    .navigationTitle("")
+    .toolbar(.hidden, for: .tabBar)
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
-        HStack(spacing: 8) {
-          Button {
-            Task {
-              let session = AVAudioSession.sharedInstance()
-              try? session.setCategory(.playback, mode: .default, policy: .longFormAudio)
-              session.activate(options: []) { _, _ in }
-            }
-          } label: {
-            Image(systemName: "airplayaudio")
-          }
-          .accessibilityLabel("Choose Audio Output")
-
-          if !playerViewModel.isLiveRadio {
-            NavigationLink(destination: WatchQueueView()) {
-              Image(systemName: "list.bullet")
-            }
+        if !playerViewModel.isLiveRadio {
+          NavigationLink(destination: WatchQueueView()) {
+            Image(systemName: "list.bullet")
           }
         }
       }
