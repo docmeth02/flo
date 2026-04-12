@@ -10,7 +10,7 @@ import SwiftUI
 import WatchKit
 
 class WatchPlayerViewModel: ObservableObject {
-  private var player: AVPlayer?
+  private(set) var player: AVPlayer?
   private var playerItem: AVPlayerItem?
   private var timeObserverToken: Any?
 

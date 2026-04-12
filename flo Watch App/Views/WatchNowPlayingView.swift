@@ -3,36 +3,93 @@
 //  flo Watch App
 //
 
+import AVFoundation
 import SwiftUI
 import WatchKit
 
 struct WatchNowPlayingView: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
 
+  @State private var volume: Double = 0.7
+  @FocusState private var crownFocused: Bool
+
   var body: some View {
-    VStack(spacing: 4) {
-      // Album art
-      WatchAlbumArtView(
-        url: playerViewModel.getAlbumCoverArt(),
-        size: 75,
-        albumId: playerViewModel.nowPlaying.albumId ?? ""
-      )
-      .clipShape(RoundedRectangle(cornerRadius: 10))
+    ViewThatFits(in: .vertical) {
+      nowPlayingContent
+      ScrollView { nowPlayingContent }
+    }
+    .focusable(true)
+    .focused($crownFocused)
+    .digitalCrownRotation(
+      $volume,
+      from: 0,
+      through: 1,
+      by: 0.01,
+      sensitivity: .medium,
+      isContinuous: false,
+      isHapticFeedbackEnabled: true
+    )
+    .onAppear {
+      crownFocused = true
+    }
+    .onChange(of: volume) { _, newValue in
+      playerViewModel.player?.volume = Float(newValue)
+    }
+    .navigationBarTitleDisplayMode(.inline)
+    .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        if !playerViewModel.isLiveRadio {
+          NavigationLink(destination: WatchQueueView()) {
+            Image(systemName: "list.bullet")
+          }
+        }
+      }
+      ToolbarItem(placement: .topBarTrailing) {
+        Button {
+          Task {
+            let session = AVAudioSession.sharedInstance()
+            try? session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+            session.activate(options: []) { _, _ in }
+          }
+        } label: {
+          Image(systemName: "airplayaudio")
+        }
+        .accessibilityLabel("Choose Audio Output")
+      }
+    }
+  }
 
-      // Song title
-      Text(playerViewModel.nowPlaying.songName ?? "Unknown")
-        .font(.system(size: 13, weight: .bold))
-        .lineLimit(1)
-        .multilineTextAlignment(.center)
+  private var nowPlayingContent: some View {
+    VStack(spacing: 7) {
+      // Header: art + metadata side by side
+      HStack(spacing: 8) {
+        WatchAlbumArtView(
+          url: playerViewModel.getAlbumCoverArt(),
+          size: 48,
+          albumId: playerViewModel.nowPlaying.albumId ?? ""
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 6))
 
-      // Artist name
-      Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
-        .font(.system(size: 11))
-        .foregroundColor(.secondary)
-        .lineLimit(1)
+        VStack(alignment: .leading, spacing: 2) {
+          Text(playerViewModel.nowPlaying.songName ?? "Unknown")
+            .font(.system(size: 13, weight: .semibold))
+            .lineLimit(1)
+
+          Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
+            .lineLimit(1)
+
+          Label("\(Int(volume * 100))%", systemImage: "speaker.wave.2.fill")
+            .font(.system(size: 10))
+            .foregroundColor(.secondary)
+        }
+
+        Spacer(minLength: 0)
+      }
 
       if playerViewModel.isLiveRadio {
-        // Live radio: simple LIVE indicator
+        // Live radio indicator
         Text("LIVE")
           .font(.system(size: 11, weight: .bold))
           .foregroundColor(.red)
@@ -40,7 +97,7 @@ struct WatchNowPlayingView: View {
           .padding(.vertical, 2)
           .background(Capsule().fill(Color.red.opacity(0.2)))
 
-        // Play/Pause only, centered
+        // Play/Pause only
         Button(action: {
           if playerViewModel.isPlaying {
             playerViewModel.pause()
@@ -50,48 +107,37 @@ struct WatchNowPlayingView: View {
           WKInterfaceDevice.current().play(.success)
         }) {
           Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
-            .font(.system(size: 20))
-            .frame(width: 44, height: 44)
-            .foregroundColor(.accentColor)
-            .background(
-              Circle()
-                .strokeBorder(Color.accentColor, lineWidth: 2)
-            )
+            .font(.system(size: 22, weight: .semibold))
+            .frame(width: 48, height: 48)
         }
         .buttonStyle(.plain)
+        .background(Circle().strokeBorder(Color.accentColor, lineWidth: 2))
       } else {
-        // Progress bar with time labels
-        VStack(spacing: 1) {
+        // Progress bar
+        VStack(spacing: 2) {
           ProgressView(value: playerViewModel.progress.isFinite ? playerViewModel.progress : 0)
             .tint(.accentColor)
 
           HStack {
             Text(playerViewModel.currentTimeString)
-              .font(.system(size: 10))
+              .font(.system(size: 9))
               .foregroundColor(.secondary)
             Spacer()
             Text(playerViewModel.totalTimeString)
-              .font(.system(size: 10))
+              .font(.system(size: 9))
               .foregroundColor(.secondary)
           }
         }
-        .padding(.horizontal, 2)
 
-        // Playback controls
-        HStack(spacing: 12) {
-          Button(action: {
-            playerViewModel.prevSong()
-          }) {
+        // Transport controls
+        HStack(spacing: 14) {
+          Button(action: { playerViewModel.prevSong() }) {
             Image(systemName: "backward.fill")
-              .font(.system(size: 14))
-              .frame(width: 36, height: 36)
-              .foregroundColor(.accentColor)
-              .background(
-                Circle()
-                  .strokeBorder(Color.accentColor.opacity(0.4), lineWidth: 1.5)
-              )
+              .font(.system(size: 18, weight: .semibold))
+              .frame(width: 40, height: 40)
           }
           .buttonStyle(.plain)
+          .background(Circle().strokeBorder(Color.accentColor.opacity(0.4), lineWidth: 1.5))
 
           Button(action: {
             if playerViewModel.isPlaying {
@@ -102,82 +148,67 @@ struct WatchNowPlayingView: View {
             WKInterfaceDevice.current().play(.success)
           }) {
             Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
-              .font(.system(size: 20))
-              .frame(width: 44, height: 44)
-              .foregroundColor(.accentColor)
-              .background(
-                Circle()
-                  .strokeBorder(Color.accentColor, lineWidth: 2)
-              )
+              .font(.system(size: 22, weight: .semibold))
+              .frame(width: 48, height: 48)
           }
           .buttonStyle(.plain)
+          .background(Circle().strokeBorder(Color.accentColor, lineWidth: 2))
 
-          Button(action: {
-            playerViewModel.nextSong()
-          }) {
+          Button(action: { playerViewModel.nextSong() }) {
             Image(systemName: "forward.fill")
-              .font(.system(size: 14))
-              .frame(width: 36, height: 36)
-              .foregroundColor(.accentColor)
-              .background(
-                Circle()
-                  .strokeBorder(Color.accentColor.opacity(0.4), lineWidth: 1.5)
-              )
+              .font(.system(size: 18, weight: .semibold))
+              .frame(width: 40, height: 40)
           }
           .buttonStyle(.plain)
+          .background(Circle().strokeBorder(Color.accentColor.opacity(0.4), lineWidth: 1.5))
         }
 
-        // Shuffle, Heart & Repeat
-        HStack(spacing: 16) {
+        // Secondary controls
+        HStack(spacing: 18) {
           Button(action: {
             playerViewModel.shuffleCurrentQueue()
+            WKInterfaceDevice.current().play(.click)
           }) {
             Image(systemName: "shuffle")
-              .font(.system(size: 15))
-              .frame(width: 36, height: 36)
+              .font(.system(size: 21, weight: .semibold))
+              .frame(width: 44, height: 44)
               .foregroundColor(playerViewModel.isShuffling ? .accentColor : .secondary)
           }
           .buttonStyle(.plain)
+          .contentShape(Circle())
 
           Button(action: {
             playerViewModel.toggleStar()
             WKInterfaceDevice.current().play(.click)
           }) {
             Image(systemName: playerViewModel.isStarred ? "heart.fill" : "heart")
-              .font(.system(size: 15))
-              .frame(width: 36, height: 36)
+              .font(.system(size: 21, weight: .semibold))
+              .frame(width: 44, height: 44)
               .foregroundColor(playerViewModel.isStarred ? .red : .secondary)
           }
           .buttonStyle(.plain)
+          .contentShape(Circle())
           .id("star-\(playerViewModel.isStarred)")
 
           Button(action: {
             playerViewModel.setPlaybackMode()
+            WKInterfaceDevice.current().play(.click)
           }) {
             Image(
               systemName: playerViewModel.playbackMode == PlaybackMode.repeatOnce
                 ? "repeat.1" : "repeat"
             )
-            .font(.system(size: 15))
-            .frame(width: 36, height: 36)
+            .font(.system(size: 21, weight: .semibold))
+            .frame(width: 44, height: 44)
             .foregroundColor(
               playerViewModel.playbackMode != PlaybackMode.defaultPlayback
                 ? .accentColor : .secondary)
           }
           .buttonStyle(.plain)
+          .contentShape(Circle())
         }
       }
     }
     .padding(.horizontal, 8)
-    .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      if !playerViewModel.isLiveRadio {
-        ToolbarItem(placement: .topBarTrailing) {
-          NavigationLink(destination: WatchQueueView()) {
-            Image(systemName: "list.bullet")
-          }
-        }
-      }
-    }
   }
 }
