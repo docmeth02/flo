@@ -11,6 +11,7 @@ struct WatchNowPlayingView: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
 
   @State private var volume: Double = 0.7
+  @State private var showVolume: Bool = false
   @FocusState private var crownFocused: Bool
 
   var body: some View {
@@ -34,6 +35,11 @@ struct WatchNowPlayingView: View {
     }
     .onChange(of: volume) { _, newValue in
       playerViewModel.player?.volume = Float(newValue)
+      showVolume = true
+      Task {
+        try? await Task.sleep(for: .seconds(2))
+        showVolume = false
+      }
     }
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
@@ -81,9 +87,12 @@ struct WatchNowPlayingView: View {
             .foregroundColor(.secondary)
             .lineLimit(1)
 
-          Label("\(Int(volume * 100))%", systemImage: "speaker.wave.2.fill")
-            .font(.system(size: 10))
-            .foregroundColor(.secondary)
+          if showVolume {
+            Label("\(Int(volume * 100))%", systemImage: "speaker.wave.2.fill")
+              .font(.system(size: 10))
+              .foregroundColor(.secondary)
+              .transition(.opacity)
+          }
         }
 
         Spacer(minLength: 0)
