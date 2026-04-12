@@ -14,6 +14,7 @@ class SmartPlaybackService {
   private init() {}
 
   /// Generate song recommendations based on on-device listening data.
+  /// Must be called on the main thread (uses CoreData viewContext for history).
   func generateRecommendations(
     count: Int,
     currentQueue: [QueueEntity] = [],

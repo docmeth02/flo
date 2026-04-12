@@ -101,7 +101,7 @@ class AlbumViewModel: ObservableObject {
   // MARK: - Generic cache helpers
 
   private enum CacheKey: String {
-    case albums, artists, playlists, songs
+    case albums, artists, playlists, songs, starredSongs
   }
 
   private func fetchCached<T: Codable>(
