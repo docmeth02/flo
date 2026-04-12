@@ -860,9 +860,27 @@ class PlayerViewModel: ObservableObject {
       return
     }
 
-    let allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
+    var allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
     let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
 
+    if allSongs.isEmpty {
+      // Fetch songs from network if cache is empty
+      AlbumService.shared.getAllSongs { [weak self] result in
+        guard let self = self else { return }
+        DispatchQueue.main.async {
+          if case .success(let songs) = result {
+            allSongs = songs
+            LibraryCacheManager.shared.save(songs, forKey: "songs")
+          }
+          self.playRecommendations(allSongs: allSongs, albums: albums)
+        }
+      }
+    } else {
+      playRecommendations(allSongs: allSongs, albums: albums)
+    }
+  }
+
+  private func playRecommendations(allSongs: [Song], albums: [Album]) {
     let recommendations = SmartPlaybackService.shared.generateRecommendations(
       count: 10,
       currentQueue: self.queue,
