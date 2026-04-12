@@ -64,6 +64,7 @@ class CoverArtCacheManager {
   }
 
   func clearCache() {
+    syncQueue.sync { inFlightIds.removeAll() }
     guard let dir = cacheDirectory, fileManager.fileExists(atPath: dir.path) else { return }
     try? fileManager.removeItem(at: dir)
     try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)

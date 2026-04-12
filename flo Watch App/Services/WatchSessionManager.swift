@@ -48,6 +48,8 @@ class WatchSessionManager: NSObject, ObservableObject, WKExtendedRuntimeSessionD
     didInvalidateWith reason: WKExtendedRuntimeSessionInvalidationReason, error: Error?
   ) {
     DispatchQueue.main.async {
+      // Only wipe if this callback is for the current session
+      guard self.session === extendedRuntimeSession else { return }
       self.isSessionActive = false
       self.session = nil
     }

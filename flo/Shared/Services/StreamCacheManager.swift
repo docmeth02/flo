@@ -132,7 +132,7 @@ class StreamCacheManager {
       switch result {
       case .success(let tempFile):
         guard let dir = self.cacheDirectory else {
-          self.removeCacheRecord(key: key)
+          DispatchQueue.main.async { self.removeCacheRecord(key: key) }
           return
         }
 
@@ -144,18 +144,20 @@ class StreamCacheManager {
             let fileSize =
               (try? self.fileManager.attributesOfItem(atPath: target.path)[.size] as? Int64) ?? 0
 
-            let records = CoreDataManager.shared.getRecordByKey(
-              entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1)
-            if let record = records.first {
-              record.state = "ready"
-              record.fileSize = fileSize
-              CoreDataManager.shared.saveRecord()
+            DispatchQueue.main.async {
+              let records = CoreDataManager.shared.getRecordByKey(
+                entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1)
+              if let record = records.first {
+                record.state = "ready"
+                record.fileSize = fileSize
+                CoreDataManager.shared.saveRecord()
+              }
+
+              self.evictIfNeeded()
             }
 
-            self.evictIfNeeded()
-
           case .failure:
-            self.removeCacheRecord(key: key)
+            DispatchQueue.main.async { self.removeCacheRecord(key: key) }
           }
         }
 
@@ -163,7 +165,7 @@ class StreamCacheManager {
         if let afError = error.asAFError, case .explicitlyCancelled = afError {
           // Cancelled — clean up
         }
-        self.removeCacheRecord(key: key)
+        DispatchQueue.main.async { self.removeCacheRecord(key: key) }
       }
     }
 
@@ -212,6 +214,21 @@ class StreamCacheManager {
     for key in keysToClean {
       removeCacheRecord(key: key)
     }
+
+    // Clean up any orphan downloading records from the cancelled keys
+    if !keysToClean.isEmpty {
+      let keySet = Set(keysToClean)
+      DispatchQueue.main.async {
+        let records = CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)
+        let orphans = records.filter { $0.state == "downloading" && keySet.contains($0.cacheKey ?? "") }
+        for record in orphans {
+          CoreDataManager.shared.viewContext.delete(record)
+        }
+        if !orphans.isEmpty {
+          CoreDataManager.shared.saveRecord()
+        }
+      }
+    }
   }
 
   func clearCache() {
@@ -229,11 +246,18 @@ class StreamCacheManager {
       try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
     }
 
-    // Delete all CacheEntity records
-    let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CacheEntity")
-    let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-    try? CoreDataManager.shared.viewContext.execute(deleteRequest)
-    try? CoreDataManager.shared.viewContext.save()
+    // Delete all CacheEntity records (synchronous — callers expect cache to be clear on return)
+    let deleteBlock = {
+      let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CacheEntity")
+      let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+      try? CoreDataManager.shared.viewContext.execute(deleteRequest)
+      try? CoreDataManager.shared.viewContext.save()
+    }
+    if Thread.isMainThread {
+      deleteBlock()
+    } else {
+      DispatchQueue.main.sync { deleteBlock() }
+    }
   }
 
   func calculateCacheSize() async -> Int64 {
@@ -252,41 +276,43 @@ class StreamCacheManager {
       inFlightKeys.removeAll()
     }
 
-    let records = CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)
+    DispatchQueue.main.async { [self] in
+      let records = CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)
 
-    for record in records {
-      if record.state == "downloading" {
+      for record in records {
+        if record.state == "downloading" {
+          if let filePath = record.filePath, let dir = cacheDirectory {
+            let fileURL = dir.appendingPathComponent(filePath)
+            try? fileManager.removeItem(at: fileURL)
+          }
+          CoreDataManager.shared.viewContext.delete(record)
+          continue
+        }
+
         if let filePath = record.filePath, let dir = cacheDirectory {
           let fileURL = dir.appendingPathComponent(filePath)
-          try? fileManager.removeItem(at: fileURL)
-        }
-        CoreDataManager.shared.viewContext.delete(record)
-        continue
-      }
-
-      if let filePath = record.filePath, let dir = cacheDirectory {
-        let fileURL = dir.appendingPathComponent(filePath)
-        if !fileManager.fileExists(atPath: fileURL.path) {
+          if !fileManager.fileExists(atPath: fileURL.path) {
+            CoreDataManager.shared.viewContext.delete(record)
+          }
+        } else {
           CoreDataManager.shared.viewContext.delete(record)
         }
-      } else {
-        CoreDataManager.shared.viewContext.delete(record)
       }
-    }
 
-    CoreDataManager.shared.saveRecord()
+      CoreDataManager.shared.saveRecord()
 
-    // Re-fetch surviving records for orphan file cleanup
-    let survivingRecords = CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)
-    let knownFiles = Set(survivingRecords.compactMap { $0.filePath })
+      // Re-fetch surviving records for orphan file cleanup
+      let survivingRecords = CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)
+      let knownFiles = Set(survivingRecords.compactMap { $0.filePath })
 
-    if let dir = cacheDirectory,
-      let files = try? fileManager.contentsOfDirectory(
-        at: dir, includingPropertiesForKeys: nil)
-    {
-      for file in files {
-        if !knownFiles.contains(file.lastPathComponent) {
-          try? fileManager.removeItem(at: file)
+      if let dir = cacheDirectory,
+        let files = try? fileManager.contentsOfDirectory(
+          at: dir, includingPropertiesForKeys: nil)
+      {
+        for file in files {
+          if !knownFiles.contains(file.lastPathComponent) {
+            try? fileManager.removeItem(at: file)
+          }
         }
       }
     }
@@ -304,6 +330,9 @@ class StreamCacheManager {
   }
 
   private func evictIfNeeded() {
+    // Must be called on main thread for CoreData viewContext safety
+    dispatchPrecondition(condition: .onQueue(.main))
+
     let maxSize = UserDefaultsManager.streamCacheMaxSize
     guard maxSize > 0 else { return }
 

@@ -156,7 +156,12 @@ class SmartPlaybackService {
       let blArtist = String(parts[1])
       guard blArtist == song.artist.lowercased() else { continue }
       if blNorm.count >= 4 && normalizedSong.count >= 4 {
-        if normalizedSong.hasPrefix(blNorm) || blNorm.hasPrefix(normalizedSong) {
+        let shorter = min(blNorm.count, normalizedSong.count)
+        let longer = max(blNorm.count, normalizedSong.count)
+        let ratio = Double(shorter) / Double(longer)
+        if ratio >= 0.75,
+          normalizedSong.hasPrefix(blNorm) || blNorm.hasPrefix(normalizedSong)
+        {
           return true
         }
       }
