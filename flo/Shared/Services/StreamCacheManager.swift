@@ -59,6 +59,7 @@ class StreamCacheManager {
   func cacheSong(mediaFileId: String, originalSuffix: String? = nil, from queueItem: QueueEntity? = nil) {
     guard UserDefaultsManager.streamCacheMaxSize > 0 else { return }
     guard !mediaFileId.isEmpty else { return }
+    guard ConnectivityMonitor.shared.isOnline else { return }
 
     let bitrate = UserDefaultsManager.maxBitRate
     let key = cacheKey(mediaFileId: mediaFileId, bitrate: bitrate)

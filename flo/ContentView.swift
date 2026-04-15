@@ -19,6 +19,7 @@ struct ContentView: View {
   @StateObject private var albumViewModel = AlbumViewModel()
   @StateObject private var floooViewModel = FloooViewModel()
   @StateObject private var downloadViewModel = DownloadViewModel()
+  @StateObject private var connectivity = ConnectivityMonitor.shared
 
   @State private var floatingPlayerOffsetX: CGFloat = .zero
   @State private var isSwipping = false
@@ -71,6 +72,19 @@ struct ContentView: View {
       }
 
       VStack {
+        if !connectivity.isOnline {
+          HStack(spacing: 6) {
+            Image(systemName: "wifi.slash")
+            Text("Offline — showing downloaded content")
+              .customFont(.caption1)
+          }
+          .foregroundColor(.white)
+          .padding(.vertical, 6)
+          .frame(maxWidth: .infinity)
+          .background(Color.secondary)
+          .transition(.move(edge: .top).combined(with: .opacity))
+        }
+
         Spacer()
 
         if playerViewModel.hasNowPlaying() && !playerViewModel.shouldHidePlayer {

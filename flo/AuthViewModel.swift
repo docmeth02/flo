@@ -57,7 +57,17 @@ class AuthViewModel: ObservableObject {
             print("Error loading password from Keychain: \(error)")
           }
 
-          self.login()
+          // Offline: trust cached creds instead of blocking on a login that will time out.
+          // A stale session surfaces as a 401 on the first real call once connectivity returns.
+          if ConnectivityMonitor.shared.isOnline {
+            self.login()
+          } else {
+            // AuthService.shared reads creds from Keychain on first access — no setCreds needed.
+            self.user = UserAuth(
+              id: data.id, username: data.username, name: data.name, isAdmin: data.isAdmin,
+              lastFMApiKey: data.lastFMApiKey)
+            self.isLoggedIn = true
+          }
         } else {
 
           self.user = UserAuth(
