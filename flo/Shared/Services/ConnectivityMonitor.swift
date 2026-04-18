@@ -15,8 +15,9 @@ final class ConnectivityMonitor: ObservableObject {
   private let queue = DispatchQueue(label: "net.faultables.flo.connectivity")
 
   private init() {
-    // Seed synchronously so AuthViewModel.init sees an accurate value on launch
-    isOnline = monitor.currentPath.status == .satisfied
+    // Default true (optimistic). pathUpdateHandler fires within milliseconds of start()
+    // and will correct to false if actually offline. Reading currentPath before start()
+    // returns .unsatisfied on watchOS, which false-seeds the state.
 
     monitor.pathUpdateHandler = { [weak self] path in
       let online = path.status == .satisfied
