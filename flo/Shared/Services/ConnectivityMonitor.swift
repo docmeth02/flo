@@ -13,17 +13,28 @@ final class ConnectivityMonitor: ObservableObject {
 
   private let monitor = NWPathMonitor()
   private let queue = DispatchQueue(label: "net.faultables.flo.connectivity")
+  private var offlineDebounce: DispatchWorkItem?
 
   private init() {
-    // Default true (optimistic). pathUpdateHandler fires within milliseconds of start()
-    // and will correct to false if actually offline. Reading currentPath before start()
-    // returns .unsatisfied on watchOS, which false-seeds the state.
-
     monitor.pathUpdateHandler = { [weak self] path in
       let online = path.status == .satisfied
       DispatchQueue.main.async {
-        guard let self = self, self.isOnline != online else { return }
-        self.isOnline = online
+        guard let self = self else { return }
+
+        self.offlineDebounce?.cancel()
+
+        if online {
+          // Going online: apply immediately
+          self.isOnline = true
+        } else {
+          // Going offline: debounce to ignore transient .unsatisfied during
+          // watchOS network-stack warm-up after deploy/launch
+          let work = DispatchWorkItem { [weak self] in
+            self?.isOnline = false
+          }
+          self.offlineDebounce = work
+          DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+        }
       }
     }
     monitor.start(queue: queue)

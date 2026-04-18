@@ -19,7 +19,7 @@ struct ContentView: View {
   @StateObject private var albumViewModel = AlbumViewModel()
   @StateObject private var floooViewModel = FloooViewModel()
   @StateObject private var downloadViewModel = DownloadViewModel()
-  @StateObject private var connectivity = ConnectivityMonitor.shared
+  @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
   @State private var floatingPlayerOffsetX: CGFloat = .zero
   @State private var isSwipping = false
