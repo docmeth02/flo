@@ -17,6 +17,9 @@ class PlayerViewModel: ObservableObject {
   private var playerItem: AVPlayerItem?
   private var timeObserverToken: Any?
 
+  private var autoPlayGeneration: Int = 0
+  private var isAutoPlayPending: Bool = false
+
   @Published var queue: [QueueEntity] = []
   @Published var playbackMode = PlaybackMode.defaultPlayback
 
@@ -168,6 +171,8 @@ class PlayerViewModel: ObservableObject {
   }
 
   func addToQueue(idx: Int, item: [QueueEntity], playAudio: Bool = true) {
+    invalidatePendingAutoPlay()
+
     self.activeQueueIdx = idx
     self.queue = item
     self.setNowPlaying(playAudio: playAudio)
@@ -469,7 +474,14 @@ class PlayerViewModel: ObservableObject {
     MPNowPlayingInfoCenter.default().playbackState = .paused
   }
 
+  private func invalidatePendingAutoPlay() {
+    autoPlayGeneration &+= 1
+    isAutoPlayPending = false
+  }
+
   func stop() {
+    invalidatePendingAutoPlay()
+
     player?.pause()
     player?.seek(to: CMTime.zero)
 
@@ -509,12 +521,16 @@ class PlayerViewModel: ObservableObject {
   }
 
   func playBySong<T: Playable>(idx: Int, item: T, isFromLocal: Bool) {
+    invalidatePendingAutoPlay()
+
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
 
     self.addToQueue(idx: idx, item: queue)
   }
 
   func playItem<T: Playable>(item: T, isFromLocal: Bool) {
+    invalidatePendingAutoPlay()
+
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
 
     self.addToQueue(idx: 0, item: queue)
@@ -524,6 +540,8 @@ class PlayerViewModel: ObservableObject {
     guard let radioUrl = Self.normalizedRadioURL(from: radio.streamUrl) else {
       return
     }
+
+    invalidatePendingAutoPlay()
 
     let item = radio.toPlayable()
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: false)
@@ -583,6 +601,8 @@ class PlayerViewModel: ObservableObject {
   }
 
   func shuffleItem<T: Playable>(item: T, isFromLocal: Bool) {
+    invalidatePendingAutoPlay()
+
     var shuffledItem = item
     shuffledItem.songs.shuffle()
 
@@ -601,6 +621,8 @@ class PlayerViewModel: ObservableObject {
   }
 
   func playFromQueue(idx: Int) {
+    invalidatePendingAutoPlay()
+
     self.activeQueueIdx = idx
     self.setNowPlaying()
 
@@ -608,6 +630,8 @@ class PlayerViewModel: ObservableObject {
   }
 
   func prevSong() {
+    invalidatePendingAutoPlay()
+
     // TODO: handle experience saat album abis -> balik ke index 0 -> prevSong() -> expect nya i guess ke index .count?
     if self.activeQueueIdx != 0 {
       if self.playbackMode != PlaybackMode.repeatOnce {
@@ -860,6 +884,14 @@ class PlayerViewModel: ObservableObject {
       return
     }
 
+    // Prevent re-entry while a previous auto-play is still pending (e.g. periodic
+    // observer firing nextSong() multiple times before the network fetch returns).
+    guard !isAutoPlayPending else { return }
+
+    autoPlayGeneration &+= 1
+    let gen = autoPlayGeneration
+    isAutoPlayPending = true
+
     var allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
     let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
 
@@ -872,15 +904,20 @@ class PlayerViewModel: ObservableObject {
             allSongs = songs
             LibraryCacheManager.shared.save(songs, forKey: "songs")
           }
-          self.playRecommendations(allSongs: allSongs, albums: albums)
+          self.playRecommendations(generation: gen, allSongs: allSongs, albums: albums)
         }
       }
     } else {
-      playRecommendations(allSongs: allSongs, albums: albums)
+      playRecommendations(generation: gen, allSongs: allSongs, albums: albums)
     }
   }
 
-  private func playRecommendations(allSongs: [Song], albums: [Album]) {
+  private func playRecommendations(generation: Int, allSongs: [Song], albums: [Album]) {
+    // Bail out if the user has manually changed playback (playItem/stop/destroy)
+    // since this auto-play sequence started.
+    guard generation == autoPlayGeneration else { return }
+    isAutoPlayPending = false
+
     let recommendations = SmartPlaybackService.shared.generateRecommendations(
       count: 10,
       currentQueue: self.queue,
@@ -894,7 +931,7 @@ class PlayerViewModel: ObservableObject {
     }
 
     let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: recommendations)
-    PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false)
+    _ = PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false)
     self.queue = PlaybackService.shared.getQueue()
     self.activeQueueIdx = 0
     self.setNowPlaying()

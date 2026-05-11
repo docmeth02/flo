@@ -341,7 +341,6 @@ struct PreferencesView: View {
           }
         }
 
-        // TODO: finish this later
         Section(header: Text("Playback")) {
           VStack(alignment: .leading, spacing: 4) {
             Toggle(

@@ -18,6 +18,7 @@ class UserDefaultsManager {
       UserDefaultsKeys.queueActiveIdx,
       UserDefaultsKeys.playbackMode,
       UserDefaultsKeys.floPlus,
+      UserDefaultsKeys.keepPlaying,
     ]
 
     for key in keys {

@@ -12,6 +12,7 @@ import Combine
     private let interfaceController: CPInterfaceController
     private let playerVM = PlayerViewModel.shared
     private var nowPlayingManager: CarPlayNowPlayingManager?
+    private var isSmartShufflePending = false
 
     init(interfaceController: CPInterfaceController) {
       self.interfaceController = interfaceController
@@ -107,39 +108,45 @@ import Combine
     // MARK: - Smart Shuffle
 
     private func playSmartShuffle(completion: @escaping () -> Void) {
+      // Release CarPlay's busy row immediately; we'll push templates as work progresses.
+      completion()
+
+      // Drop duplicate taps while a fetch is already in flight.
+      guard !isSmartShufflePending else { return }
+
       var allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
       let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
 
       if allSongs.isEmpty {
+        isSmartShufflePending = true
+        let loadingTemplate = CPListTemplate(
+          title: String(localized: "Loading…"), sections: [])
+        interfaceController.pushTemplate(loadingTemplate, animated: true, completion: nil)
+
         AlbumService.shared.getAllSongs { [weak self] result in
           DispatchQueue.main.async {
-            guard let self = self else {
-              completion()
-              return
-            }
+            guard let self = self else { return }
+            self.isSmartShufflePending = false
             if case .success(let songs) = result {
               allSongs = songs
               LibraryCacheManager.shared.save(songs, forKey: "songs")
             }
-            self.startSmartPlayback(allSongs: allSongs, albums: albums)
-            completion()
+            // Only pop if our loading template is still on top; the user may have
+            // navigated away while the fetch was pending.
+            if self.interfaceController.topTemplate === loadingTemplate {
+              self.interfaceController.popTemplate(animated: false, completion: nil)
+              self.startSmartPlayback(allSongs: allSongs, albums: albums)
+            }
           }
         }
       } else {
-        DispatchQueue.main.async { [weak self] in
-          guard let self = self else {
-            completion()
-            return
-          }
-          self.startSmartPlayback(allSongs: allSongs, albums: albums)
-          completion()
-        }
+        startSmartPlayback(allSongs: allSongs, albums: albums)
       }
     }
 
     private func startSmartPlayback(allSongs: [Song], albums: [Album]) {
       let recommendations = SmartPlaybackService.shared.generateRecommendations(
-        count: 20, allSongs: allSongs, albums: albums)
+        count: 20, currentQueue: playerVM.queue, allSongs: allSongs, albums: albums)
 
       guard !recommendations.isEmpty else {
         showErrorTemplate(

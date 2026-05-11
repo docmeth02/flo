@@ -21,6 +21,7 @@ class SmartPlaybackService {
     allSongs: [Song],
     albums: [Album] = []
   ) -> [Song] {
+    assert(Thread.isMainThread, "SmartPlaybackService must be called on the main thread")
     guard !allSongs.isEmpty else { return [] }
 
     let history = CoreDataManager.shared.getRecordsByEntity(entity: HistoryEntity.self)
@@ -157,7 +158,12 @@ class SmartPlaybackService {
       let blArtist = String(parts[1])
       guard blArtist == song.artist.lowercased() else { continue }
       if blNorm.count >= 4 && normalizedSong.count >= 4 {
-        if normalizedSong.hasPrefix(blNorm) || blNorm.hasPrefix(normalizedSong) {
+        let shorter = min(blNorm.count, normalizedSong.count)
+        let longer = max(blNorm.count, normalizedSong.count)
+        let ratio = Double(shorter) / Double(longer)
+        if ratio >= 0.75,
+          normalizedSong.hasPrefix(blNorm) || blNorm.hasPrefix(normalizedSong)
+        {
           return true
         }
       }

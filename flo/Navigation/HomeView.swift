@@ -10,6 +10,8 @@ import SwiftUI
 struct HomeView: View {
   @ObservedObject var viewModel: AuthViewModel
   @State private var showLoginSheet: Bool = false
+  @State private var isPlayingSomething: Bool = false
+  @State private var smartPlayAlert: String?
 
   @EnvironmentObject var floooViewModel: FloooViewModel
 
@@ -53,6 +55,45 @@ struct HomeView: View {
         showLoginSheet = newValue
       }
     )
+  }
+
+  private func playSomething() {
+    guard !isPlayingSomething else { return }
+
+    let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
+    let cached = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
+
+    if cached.isEmpty {
+      isPlayingSomething = true
+      AlbumService.shared.getAllSongs { result in
+        DispatchQueue.main.async {
+          var songs = cached
+          if case .success(let fetched) = result {
+            songs = fetched
+            LibraryCacheManager.shared.save(fetched, forKey: "songs")
+          }
+          isPlayingSomething = false
+          startSmartPlayback(allSongs: songs, albums: albums)
+        }
+      }
+    } else {
+      startSmartPlayback(allSongs: cached, albums: albums)
+    }
+  }
+
+  private func startSmartPlayback(allSongs: [Song], albums: [Album]) {
+    let recommendations = SmartPlaybackService.shared.generateRecommendations(
+      count: 20,
+      currentQueue: PlayerViewModel.shared.queue,
+      allSongs: allSongs,
+      albums: albums
+    )
+    guard !recommendations.isEmpty else {
+      smartPlayAlert = "Listen to a few more songs so we can learn what you like."
+      return
+    }
+    let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: recommendations)
+    PlayerViewModel.shared.playItem(item: mix, isFromLocal: false)
   }
 
   private func homeContentWidth(for availableWidth: CGFloat) -> CGFloat {
@@ -146,37 +187,14 @@ struct HomeView: View {
               )
             }
 
-            Button(action: {
-              var allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
-              let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
-
-              if allSongs.isEmpty {
-                AlbumService.shared.getAllSongs { result in
-                  DispatchQueue.main.async {
-                    if case .success(let songs) = result {
-                      allSongs = songs
-                      LibraryCacheManager.shared.save(songs, forKey: "songs")
-                    }
-                    let recommendations = SmartPlaybackService.shared.generateRecommendations(
-                      count: 20, allSongs: allSongs, albums: albums)
-                    if !recommendations.isEmpty {
-                      let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: recommendations)
-                      PlayerViewModel.shared.playItem(item: mix, isFromLocal: false)
-                    }
-                  }
-                }
-              } else {
-                let recommendations = SmartPlaybackService.shared.generateRecommendations(
-                  count: 20, allSongs: allSongs, albums: albums)
-                if !recommendations.isEmpty {
-                  let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: recommendations)
-                  PlayerViewModel.shared.playItem(item: mix, isFromLocal: false)
-                }
-              }
-            }) {
+            Button(action: playSomething) {
               HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                  .font(.title2)
+                if isPlayingSomething {
+                  ProgressView().tint(.white)
+                } else {
+                  Image(systemName: "sparkles")
+                    .font(.title2)
+                }
                 Text("Play Something")
                   .font(.headline)
               }
@@ -185,6 +203,18 @@ struct HomeView: View {
               .padding(.vertical, 14)
               .background(Color.accentColor)
               .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(isPlayingSomething)
+            .alert(
+              "Smart Shuffle",
+              isPresented: Binding(
+                get: { smartPlayAlert != nil },
+                set: { if !$0 { smartPlayAlert = nil } }
+              )
+            ) {
+              Button("OK", role: .cancel) {}
+            } message: {
+              Text(smartPlayAlert ?? "")
             }
 
             Text(
