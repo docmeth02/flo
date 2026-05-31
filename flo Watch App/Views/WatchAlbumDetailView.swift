@@ -161,14 +161,14 @@ struct WatchAlbumDetailView: View {
         downloadViewModel.downloadWatcher = false
       }
     }
+    .onReceive(albumViewModel.$album) { updated in
+      if updated.id == album.id {
+        localAlbum = updated
+      }
+    }
   }
 
   private func loadAlbumDetail() {
     albumViewModel.setActiveAlbum(album: album)
-
-    // Observe changes from the view model
-    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-      self.localAlbum = albumViewModel.album
-    }
   }
 }

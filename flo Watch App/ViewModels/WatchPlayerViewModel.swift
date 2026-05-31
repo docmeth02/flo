@@ -86,8 +86,8 @@ class WatchPlayerViewModel: ObservableObject {
   func observeInterruptionNotifications() {
     NotificationCenter.default
       .publisher(for: AVAudioSession.interruptionNotification)
-      .sink { notification in
-        self.handleInterruptionNotification(notification)
+      .sink { [weak self] notification in
+        self?.handleInterruptionNotification(notification)
       }
       .store(in: &interruptionObservation)
   }
@@ -184,6 +184,7 @@ class WatchPlayerViewModel: ObservableObject {
 
     let trackId = self.nowPlaying.id
     self.playerItemObservation = self.playerItem?.publisher(for: \.status)
+      .receive(on: DispatchQueue.main)
       .sink { [weak self] status in
         guard let self = self else { return }
         switch status {
@@ -339,30 +340,35 @@ class WatchPlayerViewModel: ObservableObject {
     let commandCenter = MPRemoteCommandCenter.shared()
 
     commandCenter.playCommand.isEnabled = true
-    commandCenter.playCommand.addTarget { [unowned self] event in
+    commandCenter.playCommand.addTarget { [weak self] event in
+      guard let self = self else { return .commandFailed }
       self.play()
       return .success
     }
 
-    commandCenter.pauseCommand.addTarget { [unowned self] event in
+    commandCenter.pauseCommand.addTarget { [weak self] event in
+      guard let self = self else { return .commandFailed }
       self.pause()
       return .success
     }
 
     commandCenter.nextTrackCommand.isEnabled = true
-    commandCenter.nextTrackCommand.addTarget { event in
+    commandCenter.nextTrackCommand.addTarget { [weak self] event in
+      guard let self = self else { return .commandFailed }
       self.nextSong()
       return .success
     }
 
     commandCenter.previousTrackCommand.isEnabled = true
-    commandCenter.previousTrackCommand.addTarget { event in
+    commandCenter.previousTrackCommand.addTarget { [weak self] event in
+      guard let self = self else { return .commandFailed }
       self.prevSong()
       return .success
     }
 
     commandCenter.changePlaybackPositionCommand.isEnabled = true
-    commandCenter.changePlaybackPositionCommand.addTarget { event in
+    commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
+      guard let self = self else { return .commandFailed }
       if self.isLiveRadio {
         return .commandFailed
       }
@@ -483,6 +489,7 @@ class WatchPlayerViewModel: ObservableObject {
 
     let radioTrackId = self.nowPlaying.id
     self.playerItemObservation = self.playerItem?.publisher(for: \.status)
+      .receive(on: DispatchQueue.main)
       .sink { [weak self] status in
         guard let self = self else { return }
         switch status {

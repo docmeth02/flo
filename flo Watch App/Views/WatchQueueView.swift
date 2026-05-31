@@ -10,7 +10,7 @@ struct WatchQueueView: View {
 
   var body: some View {
     List {
-      ForEach(Array(playerViewModel.queue.enumerated()), id: \.offset) { index, item in
+      ForEach(Array(playerViewModel.queue.enumerated()), id: \.element.objectID) { index, item in
         Button(action: {
           playerViewModel.playFromQueue(idx: index)
         }) {

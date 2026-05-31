@@ -37,7 +37,6 @@
 		2AE1B762E9EA6FECAE94CDB0 /* Stats.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46B8DD62CF4B88E00B40644 /* Stats.swift */; };
 		2B111AB43116AF1070FA94AA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C5C41672C6BF11C846EC75F /* Assets.xcassets */; };
 		3940A90EEAFD851F057672DD /* UserAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = C446A6B62C08DE8800CC9787 /* UserAuth.swift */; };
-		3CEDB29C7DB1BA0E52DF3583 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECF5EB5929A9C463632166A4 /* WatchSessionManager.swift */; };
 		437E40842848FEAE96E64293 /* flo.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */; };
 		447F2ACD5758A1573EBD2536 /* ScanStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49495802C1C25E5006B4D1E /* ScanStatus.swift */; };
 		45F84A57CB274512D8FC3EE6 /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4100A6A2CE78B5F001BC9BE /* Playlist.swift */; };
@@ -339,7 +338,6 @@
 		D31807F080421C27DD094A3C /* WatchAlbumArtView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumArtView.swift; sourceTree = "<group>"; };
 		E15329B2E69CD405EE1FA1DA /* WatchContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
 		E1D07B929800509A9082615D /* WatchArtistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchArtistDetailView.swift; sourceTree = "<group>"; };
-		ECF5EB5929A9C463632166A4 /* WatchSessionManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
 		EE8672530107686E69349E53 /* TrackRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrackRowView.swift; sourceTree = "<group>"; };
 		FDF43D735FD2FAF483904328 /* WatchHomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchHomeView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -466,7 +464,6 @@
 		A5848125CAF8F0CC2D672B03 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				ECF5EB5929A9C463632166A4 /* WatchSessionManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -813,7 +810,6 @@
 				604413A3C487B4DA0E254DB2 /* WatchSettingsView.swift in Sources */,
 				C4DFFA222D32E76E003B9C4F /* DownloadViewModel.swift in Sources */,
 				B46A893EAE4F5312B01A6DF7 /* WatchPlayerViewModel.swift in Sources */,
-				3CEDB29C7DB1BA0E52DF3583 /* WatchSessionManager.swift in Sources */,
 				7378E3332D148A9A8B2BB208 /* NowPlayingIndicator.swift in Sources */,
 				85FBEF89EEC5325D36E32C07 /* TrackRowView.swift in Sources */,
 				FA43509E1E428C622F90A946 /* WatchAlbumArtView.swift in Sources */,

@@ -11,6 +11,7 @@ struct WatchNowPlayingView: View {
 
   @State private var volume: Double = 0.7
   @State private var showVolume: Bool = false
+  @State private var volumeHideTask: Task<Void, Never>?
   @FocusState private var crownFocused: Bool
 
   var body: some View {
@@ -32,12 +33,18 @@ struct WatchNowPlayingView: View {
     .onAppear {
       crownFocused = true
     }
+    .onDisappear {
+      volumeHideTask?.cancel()
+    }
     .onChange(of: volume) { _, newValue in
       playerViewModel.player?.volume = Float(newValue)
       showVolume = true
-      Task {
+      volumeHideTask?.cancel()
+      volumeHideTask = Task {
         try? await Task.sleep(for: .seconds(2))
-        showVolume = false
+        if !Task.isCancelled {
+          showVolume = false
+        }
       }
     }
     .navigationBarTitleDisplayMode(.inline)
