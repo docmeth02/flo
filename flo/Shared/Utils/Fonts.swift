@@ -65,7 +65,7 @@ extension View {
       self.modifier(CustomFont(textStyle: textStyle))
     #else
       // FIXME: this is fishy
-      self.modifier(CustomFont(textStyle: textStyle)).foregroundColor(.accentColor)
+      self.modifier(CustomFont(textStyle: textStyle)).foregroundColor(.accent)
     #endif
   }
 }

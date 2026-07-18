@@ -11,7 +11,7 @@ import Foundation
 class AlbumService {
   static let shared = AlbumService()
 
-  func buildRemoteStreamUrl(id: String) -> String {
+  private func buildRemoteStreamUrl(id: String) -> String {
     let maxBitrate = UserDefaultsManager.maxBitRate
 
     let format =

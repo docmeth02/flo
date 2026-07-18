@@ -27,10 +27,6 @@ struct WatchPlaylistDetailView: View {
     downloadViewModel.getDownloadedTrackProgress(albumName: playlist.name)
   }
 
-  private var asAlbum: Album {
-    Album(from: playlist)
-  }
-
   private var displayPlaylist: Playlist {
     albumViewModel.playlist.id == playlist.id ? albumViewModel.playlist : playlist
   }

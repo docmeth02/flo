@@ -6,7 +6,6 @@
 import AVFoundation
 import Combine
 import MediaPlayer
-import SwiftUI
 import WatchKit
 
 class WatchPlayerViewModel: ObservableObject {
@@ -23,14 +22,12 @@ class WatchPlayerViewModel: ObservableObject {
   @Published var isMediaLoading: Bool = false
   @Published var isShuffling: Bool = false
   @Published var isPlaying: Bool = false
-  @Published var isSeeking: Bool = false
 
   @Published var progress: Double = 0.0
 
   @Published var currentTimeString: String = "00:00"
   @Published var totalTimeString: String = "00:00"
 
-  @Published var _playFromLocal: Bool = false
   @Published var isStarred: Bool = false
 
   private var isLocallySaved: Bool = false
@@ -53,11 +50,6 @@ class WatchPlayerViewModel: ObservableObject {
   var isLiveRadio: Bool {
     guard hasNowPlaying() else { return false }
     return nowPlaying.duration.isInfinite || nowPlaying.duration.isNaN
-  }
-
-  var isPlayFromSource: Bool {
-    return self._playFromLocal
-      || UserDefaultsManager.maxBitRate == TranscodingSettings.sourceBitRate
   }
 
   init() {
@@ -169,8 +161,6 @@ class WatchPlayerViewModel: ObservableObject {
       isMediaFailed = true
       return
     }
-
-    self._playFromLocal = audioURL.isFileURL
 
     self.playerItem = AVPlayerItem(url: audioURL)
     self.player?.replaceCurrentItem(with: self.playerItem)
@@ -504,7 +494,6 @@ class WatchPlayerViewModel: ObservableObject {
     self.activeQueueIdx = 0
     self.queue = queue
     self.isLocallySaved = false
-    self._playFromLocal = false
 
     if let timeObserverToken = timeObserverToken {
       player?.removeTimeObserver(timeObserverToken)
@@ -722,20 +711,6 @@ class WatchPlayerViewModel: ObservableObject {
         self.setNowPlaying()
       }
     }
-  }
-
-  func destroyPlayerAndQueue() {
-    self.stop()
-    self.progress = 0.0
-
-    self.isLocallySaved = false
-
-    PlaybackService.shared.clearQueue()
-    UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
-
-    MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-
-    self.queue = []
   }
 
   func toggleStar() {

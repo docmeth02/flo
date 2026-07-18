@@ -27,7 +27,6 @@
 		0C1A2B3C4D5E6F7A8B9C0D1E /* LibraryCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */; };
 		0D1A2B3C4D5E6F7A8B9C0D1E /* CoverArtCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */; };
 		0F1A2B3C4D5E6F7A8B9C0D1E /* SmartPlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F2A3B4C5D6E7F8A9B0C1D2E /* SmartPlaybackService.swift */; };
-		0F3A4B5C6D7E8F9A0B1C2D3E /* SmartPlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F2A3B4C5D6E7F8A9B0C1D2E /* SmartPlaybackService.swift */; };
 		1A1A2B3C4D5E6F7A8B9C0D1E /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2A3B4C5D6E7F8A9B0C1D2E /* ConnectivityMonitor.swift */; };
 		1A3A4B5C6D7E8F9A0B1C2D3E /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2A3B4C5D6E7F8A9B0C1D2E /* ConnectivityMonitor.swift */; };
 		097DA1E18629F39C1C9615A9 /* WatchQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D12A88F1F4331250EAC2F /* WatchQueueView.swift */; };
@@ -57,7 +56,6 @@
 		85FBEF89EEC5325D36E32C07 /* TrackRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8672530107686E69349E53 /* TrackRowView.swift */; };
 		8B35AE5496AB8086236BCB22 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E012C149DDD00D9BAEB /* AuthService.swift */; };
 		8DE61FDF6757FDAC853CDDBF /* FloooViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD502D3264AE00644E68 /* FloooViewModel.swift */; };
-		8EBA8D5732D904AB82E3313D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C907533AAA89EA09D23A5B1A /* Foundation.framework */; };
 		91032C8438218FAD12CDBAB5 /* FloooService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* FloooService.swift */; };
 		99794CC64C21AC3E897EF106 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = F0BEBFD1A1C1E219816A7F4E /* KeychainAccess */; };
 		9B8DF0082C84CF99D318766C /* WatchAlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6987CC26A91D09E0F053A7C /* WatchAlbumDetailView.swift */; };
@@ -66,7 +64,6 @@
 		AB1C863415BA8F881C52A34D /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E032C149F9A00D9BAEB /* APIManager.swift */; };
 		B341BDBCB019195C280B5115 /* WatchPlaylistsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74288F9C25850681259A4D11 /* WatchPlaylistsListView.swift */; };
 		B46A893EAE4F5312B01A6DF7 /* WatchPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDA4610BA4E14DC4D119E17 /* WatchPlayerViewModel.swift */; };
-		B4CAC00C398AA9A4797BED34 /* Pulse in Frameworks */ = {isa = PBXBuildFile; productRef = 5114976C01C4D592EDDF7B1F /* Pulse */; };
 		BA1D885946946F842BF56D0E /* AlbumViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4289F472C12391300C3A4FD /* AlbumViewModel.swift */; };
 		C401D09A2C5AED9F009F91C7 /* LocalFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C401D0992C5AED9F009F91C7 /* LocalFileManager.swift */; };
 		C4100A692CE78B25001BC9BE /* PlaylistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4100A682CE78B21001BC9BE /* PlaylistView.swift */; };
@@ -91,36 +88,6 @@
 		C42B25862F44551B00E62008 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25852F44551B00E62008 /* WatchConnectivityManager.swift */; };
 		C42B25882F4456BF00E62008 /* WatchLibraryResponder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25872F4456BF00E62008 /* WatchLibraryResponder.swift */; };
 		C42B25972F4458EF00E62008 /* flo Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 71493F8E741F7D5134E12AF4 /* flo Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		C42B259C2F445B7000E62008 /* WatchArtistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25792F4453B600E62008 /* WatchArtistsView.swift */; };
-		C42B259D2F445B7000E62008 /* WatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B256D2F44536D00E62008 /* WatchHomeView.swift */; };
-		C42B259E2F445B7000E62008 /* WatchPlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B257F2F4453CE00E62008 /* WatchPlaylistDetailView.swift */; };
-		C42B259F2F445B7000E62008 /* WatchArtistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B257B2F4453B600E62008 /* WatchArtistDetailView.swift */; };
-		C42B25A12F445B7000E62008 /* WatchPlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B257D2F4453CE00E62008 /* WatchPlaylistsView.swift */; };
-		C42B25A32F445B7000E62008 /* WatchLibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B256F2F44539300E62008 /* WatchLibraryViewModel.swift */; };
-		C42B25A42F445B7000E62008 /* WatchNowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25812F4453CF00E62008 /* WatchNowPlayingView.swift */; };
-		C42B25A52F445B7000E62008 /* WatchPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25712F44539300E62008 /* WatchPlayerViewModel.swift */; };
-		C42B25A62F445B7000E62008 /* WatchAlbumsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25752F4453B500E62008 /* WatchAlbumsView.swift */; };
-		C42B25A72F445B7000E62008 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25692F44536C00E62008 /* WatchRootView.swift */; };
-		C42B25A82F445B7000E62008 /* WatchAlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25772F4453B500E62008 /* WatchAlbumDetailView.swift */; };
-		C42B25A92F445B7000E62008 /* WatchCoverArtView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25732F44539300E62008 /* WatchCoverArtView.swift */; };
-		C42B25AA2F445C8900E62008 /* UserAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = C446A6B62C08DE8800CC9787 /* UserAuth.swift */; };
-		C42B25AB2F445C8900E62008 /* LyricsLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C456D8FB2F2FF397002AAB8B /* LyricsLine.swift */; };
-		C42B25AC2F445C8900E62008 /* Song.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FDC2C15E1C300E712BE /* Song.swift */; };
-		C42B25AD2F445C8900E62008 /* LRCLIB.swift in Sources */ = {isa = PBXBuildFile; fileRef = C456D8F52F2FBD61002AAB8B /* LRCLIB.swift */; };
-		C42B25AE2F445C8900E62008 /* AccountLinkStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD542D329C8500644E68 /* AccountLinkStatus.swift */; };
-		C42B25AF2F445C8900E62008 /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
-		C42B25B02F445C8900E62008 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EAA4852C297E35007EB2E0 /* NowPlaying.swift */; };
-		C42B25B12F445C8900E62008 /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4100A6A2CE78B5F001BC9BE /* Playlist.swift */; };
-		C42B25B22F445C8900E62008 /* Playable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4824D222CE8C41D003EAB52 /* Playable.swift */; };
-		C42B25B32F445C8900E62008 /* Album.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4289F492C12392B00C3A4FD /* Album.swift */; };
-		C42B25B42F445C8900E62008 /* Stats.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46B8DD62CF4B88E00B40644 /* Stats.swift */; };
-		C42B25B52F445C8900E62008 /* ScanStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49495802C1C25E5006B4D1E /* ScanStatus.swift */; };
-		C42B25B62F445C8900E62008 /* Subsonic.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD522D3267CE00644E68 /* Subsonic.swift */; };
-		C42B25B72F445C8900E62008 /* Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41470BA2CE65808008BDCE8 /* Artist.swift */; };
-		C42B25B82F445C9B00E62008 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25852F44551B00E62008 /* WatchConnectivityManager.swift */; };
-		C42B25BA2F445E9600E62008 /* FloWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25672F44536C00E62008 /* FloWatchApp.swift */; };
-		C42B25BC2F4464AD00E62008 /* WatchSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25BB2F4464AD00E62008 /* WatchSongsView.swift */; };
-		C42B25BE2F4464AE00E62008 /* WatchRadiosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25BD2F4464AE00E62008 /* WatchRadiosView.swift */; };
 		C42E7E182CE7EF5500505B4E /* PlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42E7E172CE7EF4D00505B4E /* PlaylistDetailView.swift */; };
 		C440228D2C09BE2E004EE9CD /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C440228C2C09BE2E004EE9CD /* PlayerView.swift */; };
 		C446A6B72C08DE8800CC9787 /* UserAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = C446A6B62C08DE8800CC9787 /* UserAuth.swift */; };
@@ -153,7 +120,6 @@
 		C4A4BF372C14442F00363290 /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A4BF362C14442F00363290 /* DownloadsView.swift */; };
 		C4A4BF392C14445000363290 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A4BF382C14445000363290 /* PreferencesView.swift */; };
 		C4A4BF3D2C1455A100363290 /* FloatingPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A4BF3C2C1455A100363290 /* FloatingPlayerView.swift */; };
-		C4B232EF2F44809F006A5044 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4E8D95F2B763BAB00C2353E /* Assets.xcassets */; };
 		C4B7E6A42F3C1001001D9A01 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C4B7E6A32F3C0FFF001D9A01 /* PrivacyInfo.xcprivacy */; };
 		C4D7F84D2C7F2AE900165EFD /* flo.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */; };
 		C4D7F84F2C7F2C5D00165EFD /* PlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */; };
@@ -181,7 +147,6 @@
 		D2E39F1B59DA8351ED5314A2 /* WatchNowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6952BC46D9AF9E2E2A5689E9 /* WatchNowPlayingView.swift */; };
 		D44B14AE958B656B0D6270C5 /* WatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF43D735FD2FAF483904328 /* WatchHomeView.swift */; };
 		D59D78D5498292C45BDAF6A7 /* WatchArtistsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 173F7195039A67ED244801A3 /* WatchArtistsListView.swift */; };
-		D72776A85482EF3FF1D50F2B /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = 3E90C7324C24C4B8D1F7B146 /* Nuke */; };
 		DDE5493A6D2F2E91EF8B56AB /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F5592C11953000E3E1D2 /* Constants.swift */; };
 		E09A76F85921E0BF7CCC9397 /* Fonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F5632C11AA8700E3E1D2 /* Fonts.swift */; };
 		E28EFA0EADE6BB20D710C334 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524C2C14E71B0053763A /* KeychainManager.swift */; };
@@ -264,24 +229,9 @@
 		C4289F502C139B2E00C3A4FD /* AlbumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumView.swift; sourceTree = "<group>"; };
 		C429DB2F2D33AE81009F2684 /* DownloadQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadQueueView.swift; sourceTree = "<group>"; };
 		C429DB312D33C704009F2684 /* DownloadButtonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadButtonView.swift; sourceTree = "<group>"; };
-		C42B25672F44536C00E62008 /* FloWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloWatchApp.swift; sourceTree = "<group>"; };
-		C42B25692F44536C00E62008 /* WatchRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRootView.swift; sourceTree = "<group>"; };
-		C42B256D2F44536D00E62008 /* WatchHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHomeView.swift; sourceTree = "<group>"; };
-		C42B256F2F44539300E62008 /* WatchLibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLibraryViewModel.swift; sourceTree = "<group>"; };
-		C42B25712F44539300E62008 /* WatchPlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlayerViewModel.swift; sourceTree = "<group>"; };
-		C42B25732F44539300E62008 /* WatchCoverArtView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchCoverArtView.swift; sourceTree = "<group>"; };
-		C42B25752F4453B500E62008 /* WatchAlbumsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAlbumsView.swift; sourceTree = "<group>"; };
-		C42B25772F4453B500E62008 /* WatchAlbumDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAlbumDetailView.swift; sourceTree = "<group>"; };
-		C42B25792F4453B600E62008 /* WatchArtistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchArtistsView.swift; sourceTree = "<group>"; };
-		C42B257B2F4453B600E62008 /* WatchArtistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchArtistDetailView.swift; sourceTree = "<group>"; };
-		C42B257D2F4453CE00E62008 /* WatchPlaylistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlaylistsView.swift; sourceTree = "<group>"; };
-		C42B257F2F4453CE00E62008 /* WatchPlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlaylistDetailView.swift; sourceTree = "<group>"; };
-		C42B25812F4453CF00E62008 /* WatchNowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchNowPlayingView.swift; sourceTree = "<group>"; };
 		C42B25832F44551B00E62008 /* PlaybackCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackCoordinator.swift; sourceTree = "<group>"; };
 		C42B25852F44551B00E62008 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		C42B25872F4456BF00E62008 /* WatchLibraryResponder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLibraryResponder.swift; sourceTree = "<group>"; };
-		C42B25BB2F4464AD00E62008 /* WatchSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSongsView.swift; sourceTree = "<group>"; };
-		C42B25BD2F4464AE00E62008 /* WatchRadiosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
 		C42E7E172CE7EF4D00505B4E /* PlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistDetailView.swift; sourceTree = "<group>"; };
 		C440228C2C09BE2E004EE9CD /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 		C446A6B62C08DE8800CC9787 /* UserAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAuth.swift; sourceTree = "<group>"; };
@@ -334,7 +284,6 @@
 		C4F870CF2CEFD24D00312F8A /* StatCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCardView.swift; sourceTree = "<group>"; };
 		C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsManager.swift; sourceTree = "<group>"; };
 		C4FE524C2C14E71B0053763A /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
-		C907533AAA89EA09D23A5B1A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		D05D12A88F1F4331250EAC2F /* WatchQueueView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchQueueView.swift; sourceTree = "<group>"; };
 		0A5B6C7D8E9F0A1B2C3D4E5F /* WatchRadiosView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
 		D31807F080421C27DD094A3C /* WatchAlbumArtView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumArtView.swift; sourceTree = "<group>"; };
@@ -369,11 +318,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8EBA8D5732D904AB82E3313D /* Foundation.framework in Frameworks */,
 				6B99BD6847C7A0C5351217A8 /* Alamofire in Frameworks */,
 				99794CC64C21AC3E897EF106 /* KeychainAccess in Frameworks */,
-				B4CAC00C398AA9A4797BED34 /* Pulse in Frameworks */,
-				D72776A85482EF3FF1D50F2B /* Nuke in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -402,7 +348,6 @@
 		3B67A032583B0E513502C577 /* watchOS */ = {
 			isa = PBXGroup;
 			children = (
-				C907533AAA89EA09D23A5B1A /* Foundation.framework */,
 			);
 			name = watchOS;
 			sourceTree = "<group>";
@@ -544,28 +489,6 @@
 			path = Fonts;
 			sourceTree = "<group>";
 		};
-		C42B25662F44533D00E62008 /* Watch */ = {
-			isa = PBXGroup;
-			children = (
-				C42B25672F44536C00E62008 /* FloWatchApp.swift */,
-				C42B25692F44536C00E62008 /* WatchRootView.swift */,
-				C42B256D2F44536D00E62008 /* WatchHomeView.swift */,
-				C42B256F2F44539300E62008 /* WatchLibraryViewModel.swift */,
-				C42B25712F44539300E62008 /* WatchPlayerViewModel.swift */,
-				C42B25732F44539300E62008 /* WatchCoverArtView.swift */,
-				C42B25752F4453B500E62008 /* WatchAlbumsView.swift */,
-				C42B25772F4453B500E62008 /* WatchAlbumDetailView.swift */,
-				C42B25792F4453B600E62008 /* WatchArtistsView.swift */,
-				C42B257B2F4453B600E62008 /* WatchArtistDetailView.swift */,
-				C42B257D2F4453CE00E62008 /* WatchPlaylistsView.swift */,
-				C42B257F2F4453CE00E62008 /* WatchPlaylistDetailView.swift */,
-				C42B25812F4453CF00E62008 /* WatchNowPlayingView.swift */,
-				C42B25BB2F4464AD00E62008 /* WatchSongsView.swift */,
-				C42B25BD2F4464AE00E62008 /* WatchRadiosView.swift */,
-			);
-			path = Watch;
-			sourceTree = "<group>";
-		};
 		C4875DFE2C149CD500D9BAEB /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -656,7 +579,6 @@
 				C429DB2F2D33AE81009F2684 /* DownloadQueueView.swift */,
 				C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */,
 				C456D8FD2F300D37002AAB8B /* LyricsView.swift */,
-				C42B25662F44533D00E62008 /* Watch */,
 			);
 			path = flo;
 			sourceTree = "<group>";
@@ -688,8 +610,6 @@
 			packageProductDependencies = (
 				5DE7A6C4575AA444E67B4E3A /* Alamofire */,
 				F0BEBFD1A1C1E219816A7F4E /* KeychainAccess */,
-				5114976C01C4D592EDDF7B1F /* Pulse */,
-				3E90C7324C24C4B8D1F7B146 /* Nuke */,
 			);
 			productName = "flo Watch App";
 			productReference = 71493F8E741F7D5134E12AF4 /* flo Watch App.app */;
@@ -916,7 +836,6 @@
 				C4DE89182C2FFBC900E078CC /* CoreDataManager.swift in Sources */,
 				0B3A4B5C6D7E8F9A0B1C2D3E /* StreamCacheManager.swift in Sources */,
 				0C3A4B5C6D7E8F9A0B1C2D3E /* LibraryCacheManager.swift in Sources */,
-				0F3A4B5C6D7E8F9A0B1C2D3E /* SmartPlaybackService.swift in Sources */,
 				1A3A4B5C6D7E8F9A0B1C2D3E /* ConnectivityMonitor.swift in Sources */,
 				0D3A4B5C6D7E8F9A0B1C2D3E /* CoverArtCacheManager.swift in Sources */,
 				C46C85C42C07114200903F54 /* LoginView.swift in Sources */,
@@ -955,7 +874,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "flo Watch App/flo_Watch_App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 170;
+				CURRENT_PROJECT_VERSION = 211;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 7K3G973VGB;
 				ENABLE_PREVIEWS = YES;
@@ -967,7 +886,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.penerbangwalet.flo.watchkitapp2;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -989,7 +908,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "flo Watch App/flo_Watch_App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 170;
+				CURRENT_PROJECT_VERSION = 211;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 7K3G973VGB;
 				ENABLE_PREVIEWS = YES;
@@ -1001,7 +920,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.penerbangwalet.flo.watchkitapp2;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1294,16 +1213,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		3E90C7324C24C4B8D1F7B146 /* Nuke */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = C45F0E2F2CE5582C00F75C7A /* XCRemoteSwiftPackageReference "Nuke" */;
-			productName = Nuke;
-		};
-		5114976C01C4D592EDDF7B1F /* Pulse */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = C45F0E2A2CE4CCEA00F75C7A /* XCRemoteSwiftPackageReference "Pulse" */;
-			productName = Pulse;
-		};
 		5DE7A6C4575AA444E67B4E3A /* Alamofire */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C415F55B2C1197DB00E3E1D2 /* XCRemoteSwiftPackageReference "Alamofire" */;

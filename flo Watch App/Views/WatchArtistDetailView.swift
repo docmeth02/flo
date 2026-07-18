@@ -4,7 +4,6 @@
 //
 
 import SwiftUI
-import Combine
 
 struct WatchArtistDetailView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
