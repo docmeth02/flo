@@ -107,6 +107,7 @@
 		C4824D272CE908DC003EAB52 /* SongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4824D262CE908DA003EAB52 /* SongsView.swift */; };
 		C4875E002C149D9000D9BAEB /* AlbumService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875DFF2C149D9000D9BAEB /* AlbumService.swift */; };
 		0F1A2B3C4D5E6F7A8B9C0D1E /* SmartPlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F2A3B4C5D6E7F8A9B0C1D2E /* SmartPlaybackService.swift */; };
+		1A1A2B3C4D5E6F7A8B9C0D1E /* HistorySyncMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2A3B4C5D6E7F8A9B0C1D2E /* HistorySyncMonitor.swift */; };
 		C4875E022C149DDD00D9BAEB /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E012C149DDD00D9BAEB /* AuthService.swift */; };
 		C4875E042C149F9A00D9BAEB /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E032C149F9A00D9BAEB /* APIManager.swift */; };
 		C49134532C15BE0C00CCF2EB /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134522C15BE0C00CCF2EB /* Strings.swift */; };
@@ -242,6 +243,7 @@
 		C4824D262CE908DA003EAB52 /* SongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongsView.swift; sourceTree = "<group>"; };
 		C4875DFF2C149D9000D9BAEB /* AlbumService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumService.swift; sourceTree = "<group>"; };
 		0F2A3B4C5D6E7F8A9B0C1D2E /* SmartPlaybackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaybackService.swift; sourceTree = "<group>"; };
+		1A2A3B4C5D6E7F8A9B0C1D2E /* HistorySyncMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistorySyncMonitor.swift; sourceTree = "<group>"; };
 		C4875E012C149DDD00D9BAEB /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		C4875E032C149F9A00D9BAEB /* APIManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIManager.swift; sourceTree = "<group>"; };
 		C49134522C15BE0C00CCF2EB /* Strings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Strings.swift; sourceTree = "<group>"; };
@@ -444,6 +446,7 @@
 				0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */,
 				0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */,
 				0F2A3B4C5D6E7F8A9B0C1D2E /* SmartPlaybackService.swift */,
+				1A2A3B4C5D6E7F8A9B0C1D2E /* HistorySyncMonitor.swift */,
 				C4875E012C149DDD00D9BAEB /* AuthService.swift */,
 				C4875E032C149F9A00D9BAEB /* APIManager.swift */,
 				C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */,
@@ -770,6 +773,7 @@
 				0C1A2B3C4D5E6F7A8B9C0D1E /* LibraryCacheManager.swift in Sources */,
 				0D1A2B3C4D5E6F7A8B9C0D1E /* CoverArtCacheManager.swift in Sources */,
 				0F1A2B3C4D5E6F7A8B9C0D1E /* SmartPlaybackService.swift in Sources */,
+				1A1A2B3C4D5E6F7A8B9C0D1E /* HistorySyncMonitor.swift in Sources */,
 				C456D8FC2F2FF39B002AAB8B /* LyricsLine.swift in Sources */,
 				C429DB322D33C707009F2684 /* DownloadButtonView.swift in Sources */,
 				C4824D232CE8C41F003EAB52 /* Playable.swift in Sources */,
@@ -1007,7 +1011,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = floIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = flo/flo.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "flo/flo-ios.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "flo/flo-ios.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Manual;
@@ -1066,7 +1071,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = floIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = flo/flo.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "flo/flo-ios.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "flo/flo-ios.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;

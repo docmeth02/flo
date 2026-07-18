@@ -21,6 +21,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         WatchConnectivityManager.shared.start()
         #endif
 
+        if UserDefaultsManager.syncListeningHistory {
+            // CloudKit pushes silent notifications when other devices upload
+            // history; registration lets imports happen promptly.
+            application.registerForRemoteNotifications()
+            HistorySyncMonitor.shared.start()
+        }
+
         return true
     }
 

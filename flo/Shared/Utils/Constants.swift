@@ -63,6 +63,7 @@ enum UserDefaultsKeys {
   static let floPlus = "floPlus"
   static let streamCacheMaxSize = "streamCacheMaxSize"
   static let keepPlaying = "keepPlaying"
+  static let syncListeningHistory = "syncListeningHistory"
 }
 
 enum KeychainKeys {

@@ -18,6 +18,7 @@ class CoreDataManager: ObservableObject {
   private static let localConfiguration = "Local"
   private static let cloudConfiguration = "Cloud"
   private static let historyMigrationDoneKey = "coreData.historyMigrationV2.done"
+  private static let cloudKitContainerIdentifier = "iCloud.com.penerbangwalet.flo"
 
   static let localStoreURL = NSPersistentContainer.defaultDirectoryURL()
     .appendingPathComponent("flo.sqlite")
@@ -58,29 +59,38 @@ class CoreDataManager: ObservableObject {
     return container
   }
 
-  private static func historyStoreDescription() -> NSPersistentStoreDescription {
+  private static func historyStoreDescription(syncEnabled: Bool) -> NSPersistentStoreDescription {
     let description = NSPersistentStoreDescription(url: historyStoreURL)
     description.configuration = cloudConfiguration
     description.shouldAddStoreAsynchronously = false
     // Tracking from day one: rows written while sync is off still produce
-    // persistent-history transactions, so they can export once mirroring is
-    // attached in a later release.
+    // persistent-history transactions, so they export once mirroring attaches.
     description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
     description.setOption(
       true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+
+    if syncEnabled {
+      description.cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(
+        containerIdentifier: cloudKitContainerIdentifier)
+    }
+
     return description
   }
 
   private static func makeContainer(syncEnabled: Bool) -> (
     container: NSPersistentContainer, historyAvailable: Bool
   ) {
-    let container = NSPersistentContainer(name: modelName, managedObjectModel: model)
+    // Without cloudKitContainerOptions on any store this behaves exactly like
+    // a plain NSPersistentContainer.
+    let container = NSPersistentCloudKitContainer(name: modelName, managedObjectModel: model)
 
     let local = NSPersistentStoreDescription(url: localStoreURL)
     local.configuration = localConfiguration
     local.shouldAddStoreAsynchronously = false
 
-    container.persistentStoreDescriptions = [local, historyStoreDescription()]
+    container.persistentStoreDescriptions = [
+      local, historyStoreDescription(syncEnabled: syncEnabled),
+    ]
 
     var errorsByConfiguration: [String: Error] = [:]
 
@@ -105,6 +115,20 @@ class CoreDataManager: ObservableObject {
 
     container.viewContext.automaticallyMergesChangesFromParent = true
 
+    #if DEBUG
+      // One-time developer tool: creates/updates the record types in the
+      // CloudKit development environment. Promote to production in the
+      // CloudKit Console before any TestFlight build.
+      if syncEnabled, ProcessInfo.processInfo.environment["INIT_CLOUDKIT_SCHEMA"] == "1" {
+        do {
+          try container.initializeCloudKitSchema(options: [])
+          print("CloudKit development schema initialized")
+        } catch {
+          print("initializeCloudKitSchema failed: \(error.localizedDescription)")
+        }
+      }
+    #endif
+
     return (container, historyAvailable)
   }
 
@@ -123,7 +147,10 @@ class CoreDataManager: ObservableObject {
 
     Self.migrateLegacyHistoryIfNeeded()
 
-    let (container, historyAvailable) = Self.makeContainer(syncEnabled: false)
+    // The sync preference is read once per launch — toggling it takes effect
+    // on the next start, so the stack is never rebuilt while in use.
+    let (container, historyAvailable) = Self.makeContainer(
+      syncEnabled: UserDefaultsManager.syncListeningHistory)
     self.isHistoryStoreAvailable = historyAvailable
     self.loadedContainer = container
 

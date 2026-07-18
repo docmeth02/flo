@@ -1,4 +1,5 @@
 import Alamofire
+import CoreData
 import Foundation
 
 //
@@ -41,9 +42,28 @@ class FloooService {
   }
 
   func clearListeningHistory() {
-    CoreDataManager.shared.deleteRecordByKey(
-      entity: HistoryEntity.self, key: \HistoryEntity.libraryScope,
-      value: AuthService.shared.currentLibraryScope)
+    let scope = AuthService.shared.currentLibraryScope
+    guard !scope.isEmpty else { return }
+
+    // Regular deletes, not a batch request: batch deletes bypass CloudKit
+    // mirroring and would wipe history on this device only. Fetched and
+    // deleted in bounded chunks so a large history never sits in memory.
+    let context = CoreDataManager.shared.viewContext
+
+    while true {
+      let request = NSFetchRequest<HistoryEntity>(entityName: "HistoryEntity")
+      request.predicate = NSPredicate(format: "libraryScope == %@", scope)
+      request.fetchLimit = 500
+
+      guard let rows = try? context.fetch(request), !rows.isEmpty else { break }
+
+      for row in rows {
+        context.delete(row)
+      }
+      CoreDataManager.shared.saveRecord()
+
+      if rows.count < 500 { break }
+    }
   }
 
   @MainActor

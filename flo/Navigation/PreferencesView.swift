@@ -92,6 +92,8 @@ struct PreferencesView: View {
 
   @EnvironmentObject var floooViewModel: FloooViewModel
   @EnvironmentObject var playerViewModel: PlayerViewModel
+  @ObservedObject private var historySyncMonitor = HistorySyncMonitor.shared
+  @State private var syncListeningHistory = UserDefaultsManager.syncListeningHistory
   @EnvironmentObject var inAppPurchaseManager: InAppPurchaseManager
 
   let themeColors = ["Blue", "Green", "Red", "Ohio"]
@@ -234,7 +236,9 @@ struct PreferencesView: View {
               floooViewModel.clearListeningHistory()
             }
           ) {
-            Text("Clear listening history (no alert and irreversible)")
+            Text(
+              "Clear listening history (no alert, irreversible, removes it from all synced devices)"
+            )
           }
 
           Button(action: {
@@ -354,6 +358,27 @@ struct PreferencesView: View {
             Text(
               "Automatically play recommended songs when the queue ends."
             ).font(.caption).foregroundColor(.gray)
+          }
+
+          VStack(alignment: .leading, spacing: 4) {
+            Toggle("Sync Listening History", isOn: $syncListeningHistory)
+              .onChange(of: syncListeningHistory) { newValue in
+                UserDefaultsManager.syncListeningHistory = newValue
+              }
+
+            Text(
+              "Syncs your listening history to your private iCloud so recommendations follow you across devices. Takes effect the next time the app starts."
+            ).font(.caption).foregroundColor(.gray)
+
+            if syncListeningHistory {
+              if let error = historySyncMonitor.lastErrorDescription {
+                Text("Sync issue: \(error)")
+                  .font(.caption).foregroundColor(.orange)
+              } else if let lastSync = historySyncMonitor.lastSyncDate {
+                Text("Last synced \(lastSync.formatted(date: .abbreviated, time: .shortened))")
+                  .font(.caption).foregroundColor(.gray)
+              }
+            }
           }
         }
 

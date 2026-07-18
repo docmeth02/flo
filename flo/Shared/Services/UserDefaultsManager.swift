@@ -138,6 +138,15 @@ class UserDefaultsManager {
     }
   }
 
+  static var syncListeningHistory: Bool {
+    get {
+      return UserDefaults.standard.bool(forKey: UserDefaultsKeys.syncListeningHistory)
+    }
+    set {
+      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.syncListeningHistory)
+    }
+  }
+
   static var floPlus: Bool {
     get {
       return UserDefaults.standard.bool(forKey: UserDefaultsKeys.floPlus)
