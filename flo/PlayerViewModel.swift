@@ -16,6 +16,7 @@ class PlayerViewModel: ObservableObject {
   private var player: AVPlayer?
   private var playerItem: AVPlayerItem?
   private var timeObserverToken: Any?
+  private var isAutoContinuing: Bool = false
 
   @Published var queue: [QueueEntity] = []
   @Published var playbackMode = PlaybackMode.defaultPlayback
@@ -859,45 +860,34 @@ class PlayerViewModel: ObservableObject {
       self.stop()
       return
     }
+    guard !isAutoContinuing else { return }
+    isAutoContinuing = true
 
-    var allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
-    let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
+    // Capture the playback context before the queue is replaced.
+    let seed = SmartPlaybackService.Seed(
+      artist: self.nowPlaying.artistName ?? "",
+      albumId: self.nowPlaying.albumId ?? "")
+    let queueIds = Set(self.queue.compactMap { $0.id })
 
-    if allSongs.isEmpty {
-      // Fetch songs from network if cache is empty
-      AlbumService.shared.getAllSongs { [weak self] result in
+    Task { [weak self] in
+      let songs = await SmartPlaybackService.shared.generateMix(
+        count: 10, seed: seed, queueIds: queueIds)
+
+      await MainActor.run {
         guard let self = self else { return }
-        DispatchQueue.main.async {
-          if case .success(let songs) = result {
-            allSongs = songs
-            LibraryCacheManager.shared.save(songs, forKey: "songs")
-          }
-          self.playRecommendations(allSongs: allSongs, albums: albums)
+        self.isAutoContinuing = false
+
+        guard !songs.isEmpty else {
+          self.stop()
+          return
         }
+
+        let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: songs)
+        self.queue = PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false)
+        self.activeQueueIdx = 0
+        self.setNowPlaying()
       }
-    } else {
-      playRecommendations(allSongs: allSongs, albums: albums)
     }
-  }
-
-  private func playRecommendations(allSongs: [Song], albums: [Album]) {
-    let recommendations = SmartPlaybackService.shared.generateRecommendations(
-      count: 10,
-      currentQueue: self.queue,
-      allSongs: allSongs,
-      albums: albums
-    )
-
-    guard !recommendations.isEmpty else {
-      self.stop()
-      return
-    }
-
-    let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: recommendations)
-    PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false)
-    self.queue = PlaybackService.shared.getQueue()
-    self.activeQueueIdx = 0
-    self.setNowPlaying()
   }
 
   deinit {

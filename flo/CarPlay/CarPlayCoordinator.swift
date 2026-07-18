@@ -105,50 +105,25 @@ import Combine
     // MARK: - Smart Shuffle
 
     private func playSmartShuffle(completion: @escaping () -> Void) {
-      var allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
-      let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
+      Task { [weak self] in
+        let songs = await SmartPlaybackService.shared.generateMix(count: 20)
 
-      if allSongs.isEmpty {
-        AlbumService.shared.getAllSongs { [weak self] result in
-          DispatchQueue.main.async {
-            guard let self = self else {
-              completion()
-              return
-            }
-            if case .success(let songs) = result {
-              allSongs = songs
-              LibraryCacheManager.shared.save(songs, forKey: "songs")
-            }
-            self.startSmartPlayback(allSongs: allSongs, albums: albums)
-            completion()
-          }
-        }
-      } else {
-        DispatchQueue.main.async { [weak self] in
-          guard let self = self else {
-            completion()
+        await MainActor.run {
+          defer { completion() }
+          guard let self = self else { return }
+
+          guard !songs.isEmpty else {
+            self.showErrorTemplate(
+              title: String(localized: "Nothing to Play"),
+              message: String(localized: "Open the app to sync your library first."))
             return
           }
-          self.startSmartPlayback(allSongs: allSongs, albums: albums)
-          completion()
+
+          let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs)
+          self.playerVM.playItem(item: mix, isFromLocal: false)
+          self.showNowPlaying()
         }
       }
-    }
-
-    private func startSmartPlayback(allSongs: [Song], albums: [Album]) {
-      let recommendations = SmartPlaybackService.shared.generateRecommendations(
-        count: 20, allSongs: allSongs, albums: albums)
-
-      guard !recommendations.isEmpty else {
-        showErrorTemplate(
-          title: String(localized: "Nothing to Play"),
-          message: String(localized: "Open the app to sync your library first."))
-        return
-      }
-
-      let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: recommendations)
-      playerVM.playItem(item: mix, isFromLocal: false)
-      showNowPlaying()
     }
 
     // MARK: - Albums

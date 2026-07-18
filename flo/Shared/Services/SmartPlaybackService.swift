@@ -6,234 +6,339 @@
 import CoreData
 import Foundation
 
-class SmartPlaybackService {
+/// Generates personalized song recommendations from on-device listening data.
+///
+/// All heavy work (library cache decode, history aggregation, scoring) runs off
+/// the main thread; callers `await generateMix` and receive plain `Song` values.
+final class SmartPlaybackService {
   static let shared = SmartPlaybackService()
 
-  private let blacklistDurationMinutes = 30
+  /// Playback context for auto-continue: biases results toward the genre and
+  /// artist of the song that just finished, away from its album.
+  struct Seed {
+    let artist: String
+    let albumId: String
+  }
+
+  /// Immutable aggregate of listening history, built in a single pass on a
+  /// background Core Data context so scoring never touches managed objects.
+  private struct ListeningSnapshot {
+    var totalListens = 0
+    var artistPlays: [String: Int] = [:]
+    var albumPlays: [String: Int] = [:]
+    var recentArtists: Set<String> = []
+    var recentAlbumIds: Set<String> = []
+    var cooldownSongIds: Set<String> = []
+    var cooldownTitlesByArtist: [String: Set<String>] = [:]
+  }
+
+  private static let historyWindowDays = 365
+  private static let recencyWindowDays = 14
+  private static let replayCooldownMinutes = 30
+  private static let coldStartThreshold = 20
 
   private init() {}
 
-  /// Generate song recommendations based on on-device listening data.
-  /// Must be called on the main thread (uses CoreData viewContext for history).
-  func generateRecommendations(
-    count: Int,
-    currentQueue: [QueueEntity] = [],
-    allSongs: [Song],
-    albums: [Album] = []
+  /// Build a fresh mix of `count` songs. `queueIds` are excluded from the
+  /// candidates; `seed` biases scoring toward the current playback context.
+  func generateMix(count: Int, seed: Seed? = nil, queueIds: Set<String> = []) async -> [Song] {
+    guard count > 0 else { return [] }
+
+    let (songs, albums) = await loadLibrary()
+    guard !songs.isEmpty else { return [] }
+
+    let starredIds = loadStarredIds()
+    let listening = await listeningSnapshot()
+    var rng = SystemRandomNumberGenerator()
+
+    return Self.rank(
+      songs: songs, albums: albums, starredIds: starredIds, listening: listening,
+      seed: seed, queueIds: queueIds, count: count, rng: &rng)
+  }
+
+  // MARK: - Data loading
+
+  private func loadLibrary() async -> (songs: [Song], albums: [Album]) {
+    let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
+
+    if let cached = LibraryCacheManager.shared.load([Song].self, forKey: "songs"),
+      !cached.isEmpty
+    {
+      return (cached, albums)
+    }
+
+    let fetched: [Song] = await withCheckedContinuation { continuation in
+      AlbumService.shared.getAllSongs { result in
+        if case .success(let songs) = result {
+          continuation.resume(returning: songs)
+        } else {
+          continuation.resume(returning: [])
+        }
+      }
+    }
+
+    if !fetched.isEmpty {
+      LibraryCacheManager.shared.save(fetched, forKey: "songs")
+    }
+
+    return (fetched, albums)
+  }
+
+  private func loadStarredIds() -> Set<String> {
+    let starred = LibraryCacheManager.shared.load([Song].self, forKey: "starredSongs") ?? []
+    return Set(starred.map { $0.playbackID })
+  }
+
+  private func listeningSnapshot() async -> ListeningSnapshot {
+    let now = Date()
+    let calendar = Calendar.current
+    let historyCutoff =
+      calendar.date(byAdding: .day, value: -Self.historyWindowDays, to: now) ?? .distantPast
+    let recencyCutoff =
+      calendar.date(byAdding: .day, value: -Self.recencyWindowDays, to: now) ?? now
+    let cooldownCutoff =
+      calendar.date(byAdding: .minute, value: -Self.replayCooldownMinutes, to: now) ?? now
+
+    let context = CoreDataManager.shared.persistentContainer.newBackgroundContext()
+
+    return await context.perform {
+      var snapshot = ListeningSnapshot()
+
+      let request = NSFetchRequest<HistoryEntity>(entityName: "HistoryEntity")
+      request.predicate = NSPredicate(format: "timestamp >= %@", historyCutoff as NSDate)
+      guard let history = try? context.fetch(request) else { return snapshot }
+
+      snapshot.totalListens = history.count
+
+      for entry in history {
+        guard let timestamp = entry.timestamp else { continue }
+
+        let artistKey = entry.artistName.map(Self.artistKey) ?? ""
+        let albumId = entry.albumId ?? ""
+
+        if !artistKey.isEmpty {
+          snapshot.artistPlays[artistKey, default: 0] += 1
+        }
+        if !albumId.isEmpty {
+          snapshot.albumPlays[albumId, default: 0] += 1
+        }
+        if timestamp >= recencyCutoff {
+          if !artistKey.isEmpty { snapshot.recentArtists.insert(artistKey) }
+          if !albumId.isEmpty { snapshot.recentAlbumIds.insert(albumId) }
+        }
+        if timestamp >= cooldownCutoff {
+          if let songId = entry.songId, !songId.isEmpty {
+            snapshot.cooldownSongIds.insert(songId)
+          }
+          if let track = entry.trackName, !track.isEmpty, !artistKey.isEmpty {
+            snapshot.cooldownTitlesByArtist[artistKey, default: []]
+              .insert(Self.normalizeTitle(track))
+          }
+        }
+      }
+
+      return snapshot
+    }
+  }
+
+  // MARK: - Ranking
+
+  private static func rank<R: RandomNumberGenerator>(
+    songs: [Song], albums: [Album], starredIds: Set<String>,
+    listening: ListeningSnapshot, seed: Seed?, queueIds: Set<String>,
+    count: Int, rng: inout R
   ) -> [Song] {
-    guard !allSongs.isEmpty else { return [] }
+    var albumGenres: [String: String] = [:]
+    for album in albums where !album.genre.isEmpty {
+      albumGenres[album.id] = album.genre
+    }
 
-    let history = CoreDataManager.shared.getRecordsByEntity(entity: HistoryEntity.self)
-    let artistFreqs = getArtistFrequencies(history: history)
-    let recentArtists = getRecentArtists(history: history, days: 14)
-    let recentAlbumIds = getRecentAlbumIds(history: history, days: 14)
-    let topGenreEntries = getTopGenres(albums: albums, artistFreqs: artistFreqs)
-      .sorted { $0.value > $1.value }.prefix(5)
-    let topGenres = Dictionary(uniqueKeysWithValues: topGenreEntries.map { ($0.key, $0.value) })
-    let albumGenreMap = buildAlbumGenreMap(albums: albums)
+    func isStarred(_ song: Song) -> Bool {
+      song.starred || starredIds.contains(song.playbackID)
+    }
+    func isEligible(_ song: Song) -> Bool {
+      if queueIds.contains(song.id) || queueIds.contains(song.playbackID) { return false }
+      if listening.cooldownSongIds.contains(song.playbackID) { return false }
+      guard let titles = listening.cooldownTitlesByArtist[artistKey(song.artist)] else {
+        return true
+      }
+      return !titles.contains(normalizeTitle(song.title))
+    }
 
-    let queueIds = Set(currentQueue.compactMap { $0.id })
-    let blacklist = getBlacklist(history: history, minutes: blacklistDurationMinutes)
+    // Cold start: not enough history to score meaningfully — starred songs
+    // first, then the rest, both shuffled, with the same diversity caps.
+    if listening.totalListens < coldStartThreshold {
+      let starred = songs.filter(isStarred).shuffled(using: &rng)
+      let rest = songs.filter { !isStarred($0) }.shuffled(using: &rng)
+      let pool = (starred + rest).lazy.filter(isEligible).prefix(count * 5)
+      return select(from: pool.map { ($0, 1.0) }, count: count, weighted: false, rng: &rng)
+    }
 
-    let maxArtistFreq = Double(artistFreqs.values.max() ?? 1)
+    // Genre affinity comes from listens (album plays joined to album genres),
+    // not from how many albums of a genre happen to be in the library.
+    var genrePlays: [String: Int] = [:]
+    for (albumId, plays) in listening.albumPlays {
+      if let genre = albumGenres[albumId] {
+        genrePlays[genre, default: 0] += plays
+      }
+    }
+
+    let logMaxArtistPlays = log1p(Double(listening.artistPlays.values.max() ?? 0))
+    let maxGenrePlays = Double(genrePlays.values.max() ?? 0)
+    let seedArtistKey = seed.map { artistKey($0.artist) }
+    let seedGenre = seed.flatMap { albumGenres[$0.albumId] }
 
     var scored: [(Song, Double)] = []
+    scored.reserveCapacity(songs.count)
 
-    for song in allSongs {
-      let songId = song.mediaFileId.isEmpty ? song.id : song.mediaFileId
-      if queueIds.contains(song.id) || queueIds.contains(songId) { continue }
-      if isBlacklisted(song: song, blacklist: blacklist) { continue }
-
+    for song in songs {
+      let key = artistKey(song.artist)
       var score = 0.0
 
-      // Artist frequency (0.30)
-      let freq = Double(artistFreqs[song.artist] ?? 0)
-      score += (freq / maxArtistFreq) * 0.30
+      // Artist affinity (0.30), log-scaled so one dominant artist does not
+      // crush the long tail to zero.
+      if logMaxArtistPlays > 0 {
+        let plays = Double(listening.artistPlays[key] ?? 0)
+        score += (log1p(plays) / logMaxArtistPlays) * 0.30
+      }
 
       // Starred (0.25)
-      if song.starred {
-        score += 0.25
+      if isStarred(song) { score += 0.25 }
+
+      // Recency (0.20 total: 0.10 artist + 0.10 album)
+      if listening.recentArtists.contains(key) { score += 0.10 }
+      if listening.recentAlbumIds.contains(song.albumId) { score += 0.10 }
+
+      // Genre affinity (0.15), proportional to listens in that genre
+      if maxGenrePlays > 0, let genre = albumGenres[song.albumId] {
+        score += (Double(genrePlays[genre] ?? 0) / maxGenrePlays) * 0.15
       }
 
-      // Recency boost (0.20 total: 0.10 artist + 0.10 album)
-      if recentArtists.contains(song.artist) {
-        score += 0.10
+      // Playback context: continue in the same lane, but not the same album
+      if let seed {
+        if let seedGenre, albumGenres[song.albumId] == seedGenre { score += 0.15 }
+        if key == seedArtistKey { score += 0.05 }
+        if song.albumId == seed.albumId { score -= 0.20 }
       }
-      if recentAlbumIds.contains(song.albumId) {
-        score += 0.10
-      }
-
-      // Genre match (0.15)
-      let songGenre = albumGenreMap[song.albumId] ?? ""
-      if !songGenre.isEmpty, topGenres[songGenre] != nil {
-        score += 0.15
-      }
-
-      // Random factor (0.10)
-      score += Double.random(in: 0...0.10)
 
       scored.append((song, score))
     }
 
-    // Weighted random selection from top candidates
     scored.sort { $0.1 > $1.1 }
-    let poolSize = min(scored.count, count * 5)
-    let pool = Array(scored.prefix(poolSize))
 
-    return weightedRandomSelection(from: pool, count: min(count, pool.count))
-  }
-
-  // MARK: - Helpers
-
-  private func getArtistFrequencies(history: [HistoryEntity]) -> [String: Int] {
-    var freqs: [String: Int] = [:]
-    for entry in history {
-      if let artist = entry.artistName, !artist.isEmpty {
-        freqs[artist, default: 0] += 1
-      }
-    }
-    return freqs
-  }
-
-  private func getRecentArtists(history: [HistoryEntity], days: Int) -> Set<String> {
-    let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
-    var artists: Set<String> = []
-    for entry in history {
-      if let ts = entry.timestamp, ts >= cutoff, let artist = entry.artistName {
-        artists.insert(artist)
-      }
-    }
-    return artists
-  }
-
-  private func getRecentAlbumIds(history: [HistoryEntity], days: Int) -> Set<String> {
-    let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
-    var albumIds: Set<String> = []
-    for entry in history {
-      if let ts = entry.timestamp, ts >= cutoff, let albumId = entry.albumId, !albumId.isEmpty {
-        albumIds.insert(albumId)
-      }
-    }
-    return albumIds
-  }
-
-  private struct Blacklist {
-    let songIds: Set<String>
-    let normalizedTitles: Set<String>
-  }
-
-  private func getBlacklist(history: [HistoryEntity], minutes: Int) -> Blacklist {
-    let cutoff = Calendar.current.date(byAdding: .minute, value: -minutes, to: Date()) ?? Date()
-    var ids: Set<String> = []
-    var normalized: Set<String> = []
-    for entry in history {
-      guard let ts = entry.timestamp, ts >= cutoff else { continue }
-      if let songId = entry.songId, !songId.isEmpty {
-        ids.insert(songId)
-      }
-      if let trackName = entry.trackName, let artistName = entry.artistName {
-        let key = "\(normalizeTitle(trackName))|\(artistName.lowercased())"
-        normalized.insert(key)
-      }
-    }
-    return Blacklist(songIds: ids, normalizedTitles: normalized)
-  }
-
-  private func isBlacklisted(song: Song, blacklist: Blacklist) -> Bool {
-    let songId = song.mediaFileId.isEmpty ? song.id : song.mediaFileId
-    if blacklist.songIds.contains(songId) { return true }
-
-    let normalizedSong = normalizeTitle(song.title)
-    let artistKey = "\(normalizedSong)|\(song.artist.lowercased())"
-
-    // Exact normalized match
-    if blacklist.normalizedTitles.contains(artistKey) { return true }
-
-    // Prefix match: if either normalized title is a prefix of the other (same artist)
-    for blTitle in blacklist.normalizedTitles {
-      let parts = blTitle.split(separator: "|", maxSplits: 1)
-      guard parts.count == 2 else { continue }
-      let blNorm = String(parts[0])
-      let blArtist = String(parts[1])
-      guard blArtist == song.artist.lowercased() else { continue }
-      if blNorm.count >= 4 && normalizedSong.count >= 4 {
-        if normalizedSong.hasPrefix(blNorm) || blNorm.hasPrefix(normalizedSong) {
-          return true
-        }
-      }
+    // Exclusions run only while filling the pool, so title normalization
+    // touches a few hundred candidates instead of the whole library.
+    var pool: [(Song, Double)] = []
+    pool.reserveCapacity(count * 5)
+    for (song, score) in scored {
+      if pool.count >= count * 5 { break }
+      if isEligible(song) { pool.append((song, score)) }
     }
 
-    return false
+    return select(from: pool, count: count, weighted: true, rng: &rng)
   }
 
-  /// Normalize a track title by stripping live/remaster/acoustic tags, parentheticals, brackets, etc.
-  private func normalizeTitle(_ title: String) -> String {
-    var t = title.lowercased()
-    // Remove content in parentheses and brackets: (Live...), [Remastered], (2024), etc.
-    t = t.replacingOccurrences(
-      of: #"[\(\[][^\)\]]*[\)\]]"#, with: "", options: .regularExpression)
-    // Remove common trailing suffixes after dash: " - live", " - remastered", " - acoustic", etc.
-    t = t.replacingOccurrences(
-      of: #"\s*[-–—]\s*(live|remaster(ed)?|acoustic|bonus(\s+track)?|demo|remix|edit|deluxe|radio).*$"#,
-      with: "", options: .regularExpression)
-    // Remove feat./ft. and everything after
-    t = t.replacingOccurrences(
-      of: #"\s*(feat\.?|ft\.?).*$"#, with: "", options: .regularExpression)
-    // Trim whitespace
-    t = t.trimmingCharacters(in: .whitespacesAndNewlines)
-    return t
-  }
-
-  private func getTopGenres(albums: [Album], artistFreqs: [String: Int]) -> [String: Int] {
-    var genreScores: [String: Int] = [:]
-    for album in albums {
-      if !album.genre.isEmpty {
-        let weight = artistFreqs[album.artist] ?? artistFreqs[album.albumArtist] ?? 1
-        genreScores[album.genre, default: 0] += weight
-      }
-    }
-    return genreScores
-  }
-
-  private func buildAlbumGenreMap(albums: [Album]) -> [String: String] {
-    var map: [String: String] = [:]
-    for album in albums {
-      if !album.genre.isEmpty {
-        map[album.id] = album.genre
-      }
-    }
-    return map
-  }
-
-  private func weightedRandomSelection(from pool: [(Song, Double)], count: Int) -> [Song] {
+  /// Sample `count` songs from the pool — weighted by score when `weighted`,
+  /// in pool order otherwise — enforcing per-artist/per-album diversity caps.
+  private static func select<R: RandomNumberGenerator>(
+    from pool: [(Song, Double)], count: Int, weighted: Bool, rng: inout R
+  ) -> [Song] {
     guard !pool.isEmpty else { return [] }
+
+    let maxPerArtist = max(2, count / 10)
+    let maxPerAlbum = max(2, count / 10)
 
     var remaining = pool
     var selected: [Song] = []
+    var overflow: [Song] = []
+    var artistCounts: [String: Int] = [:]
+    var albumCounts: [String: Int] = [:]
 
-    for _ in 0..<count {
-      guard !remaining.isEmpty else { break }
-
-      let totalWeight = remaining.reduce(0.0) { $0 + $1.1 }
-      guard totalWeight > 0 else {
-        selected.append(contentsOf: remaining.prefix(count - selected.count).map { $0.0 })
-        break
-      }
-
-      var roll = Double.random(in: 0..<totalWeight)
-      var pickedIdx = 0
-      for (idx, item) in remaining.enumerated() {
-        roll -= item.1
-        if roll <= 0 {
-          pickedIdx = idx
-          break
+    while selected.count < count, !remaining.isEmpty {
+      var index = 0
+      if weighted {
+        let totalWeight = remaining.reduce(0.0) { $0 + max($1.1, 0.01) }
+        var roll = Double.random(in: 0..<totalWeight, using: &rng)
+        index = remaining.count - 1
+        for (i, item) in remaining.enumerated() {
+          roll -= max(item.1, 0.01)
+          if roll <= 0 {
+            index = i
+            break
+          }
         }
       }
 
-      selected.append(remaining[pickedIdx].0)
-      remaining.remove(at: pickedIdx)
+      let song = remaining.remove(at: index).0
+      let key = artistKey(song.artist)
+
+      if artistCounts[key, default: 0] >= maxPerArtist
+        || albumCounts[song.albumId, default: 0] >= maxPerAlbum
+      {
+        overflow.append(song)
+        continue
+      }
+
+      artistCounts[key, default: 0] += 1
+      albumCounts[song.albumId, default: 0] += 1
+      selected.append(song)
     }
 
-    return selected
+    // Relax the caps if they prevented filling the request.
+    if selected.count < count {
+      selected.append(contentsOf: overflow.prefix(count - selected.count))
+    }
+
+    return spreadArtists(selected)
+  }
+
+  /// Push apart back-to-back songs by the same artist where possible.
+  private static func spreadArtists(_ songs: [Song]) -> [Song] {
+    guard songs.count > 2 else { return songs }
+
+    var result = songs
+    for i in 1..<result.count {
+      let previous = artistKey(result[i - 1].artist)
+      guard artistKey(result[i].artist) == previous else { continue }
+      if let swap = ((i + 1)..<result.count).first(where: {
+        artistKey(result[$0].artist) != previous
+      }) {
+        result.swapAt(i, swap)
+      }
+    }
+    return result
+  }
+
+  // MARK: - Normalization
+
+  /// Case- and diacritic-insensitive key so "Beyoncé" and "beyonce" pool
+  /// their plays.
+  private static func artistKey(_ artist: String) -> String {
+    artist.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+      .trimmingCharacters(in: .whitespaces)
+  }
+
+  /// Strip version markers ("(Live)", "[2019 Remaster]", "- acoustic",
+  /// "feat. X") so variants of a just-played track share its cooldown, while
+  /// distinguishing parentheticals like "Intro (North)" are left intact.
+  private static func normalizeTitle(_ title: String) -> String {
+    var t = title.lowercased()
+    t = t.replacingOccurrences(
+      of:
+        #"\s*[\(\[](live|remaster(ed)?|acoustic|demo|deluxe|bonus|mono|stereo|single|radio|remix|edit|version|feat\.?|ft\.?|\d{4})[^\)\]]*[\)\]]"#,
+      with: "", options: .regularExpression)
+    t = t.replacingOccurrences(
+      of:
+        #"\s*[-–—]\s*(live|remaster(ed)?|acoustic|bonus(\s+track)?|demo|remix|edit|deluxe|radio|single|mono|stereo|version).*$"#,
+      with: "", options: .regularExpression)
+    t = t.replacingOccurrences(
+      of: #"\s*(feat\.|ft\.)\s.*$"#, with: "", options: .regularExpression)
+    return t.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+}
+
+extension Song {
+  fileprivate var playbackID: String {
+    mediaFileId.isEmpty ? id : mediaFileId
   }
 }

@@ -10,6 +10,7 @@ import SwiftUI
 struct HomeView: View {
   @ObservedObject var viewModel: AuthViewModel
   @State private var showLoginSheet: Bool = false
+  @State private var isGeneratingMix: Bool = false
 
   @EnvironmentObject var floooViewModel: FloooViewModel
 
@@ -147,36 +148,28 @@ struct HomeView: View {
             }
 
             Button(action: {
-              var allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
-              let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
+              guard !isGeneratingMix else { return }
+              isGeneratingMix = true
 
-              if allSongs.isEmpty {
-                AlbumService.shared.getAllSongs { result in
-                  DispatchQueue.main.async {
-                    if case .success(let songs) = result {
-                      allSongs = songs
-                      LibraryCacheManager.shared.save(songs, forKey: "songs")
-                    }
-                    let recommendations = SmartPlaybackService.shared.generateRecommendations(
-                      count: 20, allSongs: allSongs, albums: albums)
-                    if !recommendations.isEmpty {
-                      let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: recommendations)
-                      PlayerViewModel.shared.playItem(item: mix, isFromLocal: false)
-                    }
+              Task {
+                let songs = await SmartPlaybackService.shared.generateMix(count: 20)
+                await MainActor.run {
+                  if !songs.isEmpty {
+                    let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs)
+                    PlayerViewModel.shared.playItem(item: mix, isFromLocal: false)
                   }
-                }
-              } else {
-                let recommendations = SmartPlaybackService.shared.generateRecommendations(
-                  count: 20, allSongs: allSongs, albums: albums)
-                if !recommendations.isEmpty {
-                  let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: recommendations)
-                  PlayerViewModel.shared.playItem(item: mix, isFromLocal: false)
+                  isGeneratingMix = false
                 }
               }
             }) {
               HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                  .font(.title2)
+                if isGeneratingMix {
+                  ProgressView()
+                    .tint(.white)
+                } else {
+                  Image(systemName: "sparkles")
+                    .font(.title2)
+                }
                 Text("Play Something")
                   .font(.headline)
               }
@@ -186,6 +179,7 @@ struct HomeView: View {
               .background(Color.accentColor)
               .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+            .disabled(isGeneratingMix)
 
             Text(
               "This stat is generated on-device (once every session) and no data is stored or shared with a third party — #selfhosting, baby!"
