@@ -45,7 +45,7 @@ final class SmartPlaybackService {
     guard count > 0 else { return [] }
 
     var (songs, albums, starredIds) = await loadCachedLibrary()
-    if await MainActor.run(body: { ConnectivityMonitor.shared.isOnline }) {
+    if await ConnectivityMonitor.shared.firstVerdict() {
       if songs.isEmpty {
         songs = await fetchAllSongs()
       }

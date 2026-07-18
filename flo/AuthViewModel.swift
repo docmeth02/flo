@@ -68,7 +68,7 @@ class AuthViewModel: ObservableObject {
           self.isLoggedIn = true
 
           ConnectivityMonitor.shared.onFirstVerdict { [weak self] online in
-            if online { self?.login() }
+            if online { self?.refreshSession() }
           }
         } else {
 
@@ -80,6 +80,21 @@ class AuthViewModel: ObservableObject {
       }
     } catch {
       print("Error loading data from Keychain: \(error)")
+    }
+  }
+
+  // Non-interactive session refresh after the optimistic cached login: no
+  // spinner, no alerts, no form-field resets. Any failure keeps the cached
+  // session — a transport error is indistinguishable from a rejected
+  // credential here (ErrorHandler maps URLErrors to .server too), and stale
+  // credentials surface as 401s on real calls where the user can act.
+  private func refreshSession() {
+    AuthService.shared.login(serverUrl: serverUrl, username: username, password: password) {
+      [weak self] result in
+      DispatchQueue.main.async {
+        guard let self = self, self.isLoggedIn, case .success(let data) = result else { return }
+        self.persistAuthData(data)
+      }
     }
   }
 

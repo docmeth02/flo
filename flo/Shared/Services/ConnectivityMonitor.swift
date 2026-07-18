@@ -23,18 +23,23 @@ final class ConnectivityMonitor: ObservableObject {
       DispatchQueue.main.async {
         guard let self = self else { return }
 
-        self.offlineDebounce?.cancel()
-
         if online {
           // Going online: apply immediately
+          self.offlineDebounce?.cancel()
+          self.offlineDebounce = nil
           self.isOnline = true
           self.deliverVerdict(true)
         } else {
           // Going offline: debounce to ignore transient .unsatisfied during
-          // watchOS network-stack warm-up after deploy/launch
+          // watchOS network-stack warm-up after deploy/launch. A pending
+          // debounce is left running — repeated .unsatisfied updates must not
+          // keep pushing the verdict out indefinitely.
+          guard self.offlineDebounce == nil else { return }
           let work = DispatchWorkItem { [weak self] in
-            self?.isOnline = false
-            self?.deliverVerdict(false)
+            guard let self = self else { return }
+            self.offlineDebounce = nil
+            self.isOnline = false
+            self.deliverVerdict(false)
           }
           self.offlineDebounce = work
           DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
@@ -55,6 +60,14 @@ final class ConnectivityMonitor: ObservableObject {
       } else {
         self.verdictWaiters.append(handler)
       }
+    }
+  }
+
+  /// Async variant of `onFirstVerdict`. After the first verdict this returns
+  /// the current state immediately.
+  func firstVerdict() async -> Bool {
+    await withCheckedContinuation { continuation in
+      onFirstVerdict { continuation.resume(returning: $0) }
     }
   }
 

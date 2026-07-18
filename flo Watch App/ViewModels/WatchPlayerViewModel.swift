@@ -254,9 +254,16 @@ class WatchPlayerViewModel: ObservableObject {
 
     let interval = CMTime(seconds: 1, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
 
+    // A callback already queued on main can fire after the track advanced
+    // (e.g. via the did-play-to-end fallback); comparing the old track's time
+    // against the new track's duration would advance a second time. The item
+    // identity check drops those stale callbacks.
+    let observedItem = self.playerItem
     timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) {
-      [weak self] time in
-      guard let self = self else { return }
+      [weak self, weak observedItem] time in
+      guard let self = self, let observedItem = observedItem,
+        self.playerItem === observedItem
+      else { return }
       let currentTime = CMTimeGetSeconds(time)
       let roundedTotalDuration = floor(self.totalDuration)
 
@@ -357,45 +364,46 @@ class WatchPlayerViewModel: ObservableObject {
   private func setupRemoteCommandCenter() {
     let commandCenter = MPRemoteCommandCenter.shared()
 
+    // Remote commands can arrive off the main thread; every handler hops to
+    // main before touching playback or published state.
     commandCenter.playCommand.isEnabled = true
     commandCenter.playCommand.addTarget { [weak self] event in
       guard let self = self else { return .commandFailed }
-      self.play()
+      DispatchQueue.main.async { self.play() }
       return .success
     }
 
     commandCenter.pauseCommand.addTarget { [weak self] event in
       guard let self = self else { return .commandFailed }
-      self.pause()
+      DispatchQueue.main.async { self.pause() }
       return .success
     }
 
     commandCenter.nextTrackCommand.isEnabled = true
     commandCenter.nextTrackCommand.addTarget { [weak self] event in
       guard let self = self else { return .commandFailed }
-      self.nextSong()
+      DispatchQueue.main.async { self.nextSong() }
       return .success
     }
 
     commandCenter.previousTrackCommand.isEnabled = true
     commandCenter.previousTrackCommand.addTarget { [weak self] event in
       guard let self = self else { return .commandFailed }
-      self.prevSong()
+      DispatchQueue.main.async { self.prevSong() }
       return .success
     }
 
     commandCenter.changePlaybackPositionCommand.isEnabled = true
     commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
-      guard let self = self else { return .commandFailed }
-      if self.isLiveRadio {
-        return .commandFailed
+      guard let self = self, !self.isLiveRadio,
+        let event = event as? MPChangePlaybackPositionCommandEvent
+      else { return .commandFailed }
+      let positionTime = event.positionTime
+      DispatchQueue.main.async {
+        guard self.totalDuration > 0 else { return }
+        self.seek(to: positionTime / self.totalDuration)
       }
-      if let event = event as? MPChangePlaybackPositionCommandEvent {
-        let progress = event.positionTime / self.totalDuration
-        self.seek(to: progress)
-        return .success
-      }
-      return .commandFailed
+      return .success
     }
   }
 
@@ -689,9 +697,11 @@ class WatchPlayerViewModel: ObservableObject {
         self.isAutoContinuing = false
 
         // Discard the mix if the user started something else while it was
-        // being generated.
+        // being generated — the queue contents are compared too, so a new
+        // queue that happens to start on the same song is not overwritten.
         guard self.queue.indices.contains(self.activeQueueIdx),
-          self.nowPlaying.id == lastPlayedId
+          self.nowPlaying.id == lastPlayedId,
+          Set(self.queue.compactMap { $0.id }) == queueIds
         else { return }
 
         guard !songs.isEmpty else {
