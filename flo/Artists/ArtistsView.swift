@@ -17,7 +17,7 @@ struct ArtistsView: View {
 
   var filteredArtists: [Artist] {
     artists.filter { artist in
-      let matchesAlbumArtist = !filterAlbumArtistOnly || artist.stats.albumartist != nil
+      let matchesAlbumArtist = !filterAlbumArtistOnly || artist.stats?.albumartist != nil
       let matchesSearch = searchArtist.isEmpty || artist.name.localizedCaseInsensitiveContains(searchArtist)
       return matchesAlbumArtist && matchesSearch
     }

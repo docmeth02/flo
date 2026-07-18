@@ -90,7 +90,7 @@
 		C42B25842F44551B00E62008 /* PlaybackCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25832F44551B00E62008 /* PlaybackCoordinator.swift */; };
 		C42B25862F44551B00E62008 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25852F44551B00E62008 /* WatchConnectivityManager.swift */; };
 		C42B25882F4456BF00E62008 /* WatchLibraryResponder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25872F4456BF00E62008 /* WatchLibraryResponder.swift */; };
-		C42B25972F4458EF00E62008 /* flo Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C42B258D2F4458ED00E62008 /* flo Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C42B25972F4458EF00E62008 /* flo Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 71493F8E741F7D5134E12AF4 /* flo Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C42B259C2F445B7000E62008 /* WatchArtistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25792F4453B600E62008 /* WatchArtistsView.swift */; };
 		C42B259D2F445B7000E62008 /* WatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B256D2F44536D00E62008 /* WatchHomeView.swift */; };
 		C42B259E2F445B7000E62008 /* WatchPlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B257F2F4453CE00E62008 /* WatchPlaylistDetailView.swift */; };
@@ -199,8 +199,8 @@
 			isa = PBXContainerItemProxy;
 			containerPortal = C4E8D9502B763BA900C2353E /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = C42B258C2F4458ED00E62008;
-			remoteInfo = "flo Watch Watch App";
+			remoteGlobalIDString = 3F9908B854E0D019A7945A9E;
+			remoteInfo = "flo Watch App";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -211,7 +211,7 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolderSpec = 16;
 			files = (
-				C42B25972F4458EF00E62008 /* flo Watch Watch App.app in Embed Watch Content */,
+				C42B25972F4458EF00E62008 /* flo Watch App.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -280,7 +280,6 @@
 		C42B25832F44551B00E62008 /* PlaybackCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackCoordinator.swift; sourceTree = "<group>"; };
 		C42B25852F44551B00E62008 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		C42B25872F4456BF00E62008 /* WatchLibraryResponder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLibraryResponder.swift; sourceTree = "<group>"; };
-		C42B258D2F4458ED00E62008 /* flo Watch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flo Watch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C42B25BB2F4464AD00E62008 /* WatchSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSongsView.swift; sourceTree = "<group>"; };
 		C42B25BD2F4464AE00E62008 /* WatchRadiosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
 		C42E7E172CE7EF4D00505B4E /* PlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistDetailView.swift; sourceTree = "<group>"; };
@@ -733,9 +732,6 @@
 				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
-					C42B258C2F4458ED00E62008 = {
-						CreatedOnToolsVersion = 26.3;
-					};
 					C4E8D9572B763BA900C2353E = {
 						CreatedOnToolsVersion = 15.2;
 					};
@@ -946,7 +942,7 @@
 /* Begin PBXTargetDependency section */
 		C42B25962F4458EF00E62008 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = C42B258C2F4458ED00E62008 /* flo Watch Watch App */;
+			target = 3F9908B854E0D019A7945A9E /* flo Watch App */;
 			targetProxy = C42B25952F4458EF00E62008 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -1233,15 +1229,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C42B25982F4458EF00E62008 /* Build configuration list for PBXNativeTarget "flo Watch Watch App" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				C42B25992F4458EF00E62008 /* Debug */,
-				C42B259A2F4458EF00E62008 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		C4E8D9532B763BA900C2353E /* Build configuration list for PBXProject "flo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
