@@ -35,8 +35,10 @@ class WatchPlayerViewModel: ObservableObject {
 
   private var isLocallySaved: Bool = false
   private var isFinished: Bool = false
+  private var isAutoContinuing: Bool = false
   private var totalDuration: Double = 0.0
   private var playerItemObservation: AnyCancellable?
+  private var playbackEndObservation: AnyCancellable?
   private var interruptionObservation = Set<AnyCancellable>()
   private var unshuffledQueue: [QueueEntity] = []
 
@@ -86,6 +88,7 @@ class WatchPlayerViewModel: ObservableObject {
   func observeInterruptionNotifications() {
     NotificationCenter.default
       .publisher(for: AVAudioSession.interruptionNotification)
+      .receive(on: DispatchQueue.main)
       .sink { [weak self] notification in
         self?.handleInterruptionNotification(notification)
       }
@@ -102,10 +105,8 @@ class WatchPlayerViewModel: ObservableObject {
 
     switch type {
     case .began:
-      DispatchQueue.main.async {
-        self.isPlaying = false
-        self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
-      }
+      self.isPlaying = false
+      self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
     case .ended:
       if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? Int {
         let options = AVAudioSession.InterruptionOptions(rawValue: UInt(optionsValue))
@@ -172,8 +173,12 @@ class WatchPlayerViewModel: ObservableObject {
     self.playerItem = AVPlayerItem(url: audioURL)
     self.player?.replaceCurrentItem(with: self.playerItem)
 
-    let duration = CMTime(
-      seconds: self.nowPlaying.duration, preferredTimescale: self.nowPlaying.sampleRate)
+    // Songs from Subsonic endpoints can carry sampleRate 0, which would make
+    // an invalid CMTime and a NaN duration — the end-of-track check would
+    // never fire and playback would stall after every song.
+    let timescale =
+      self.nowPlaying.sampleRate > 0 ? self.nowPlaying.sampleRate : CMTimeScale(NSEC_PER_SEC)
+    let duration = CMTime(seconds: self.nowPlaying.duration, preferredTimescale: timescale)
     let playbackDuration = CMTimeGetSeconds(duration)
 
     self.totalDuration = playbackDuration
@@ -203,6 +208,18 @@ class WatchPlayerViewModel: ObservableObject {
         @unknown default:
           self.isMediaLoading = true
         }
+      }
+
+    // Fallback advance for items whose reported duration is off (VBR, missing
+    // metadata): if the periodic check misses the end, the player item itself
+    // tells us. The observation is per-item, so a track advanced by the
+    // periodic check never double-fires here.
+    self.playbackEndObservation = NotificationCenter.default
+      .publisher(for: .AVPlayerItemDidPlayToEndTime, object: self.playerItem)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in
+        self?.nextSong()
+        UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
       }
 
     if playAudio {
@@ -238,7 +255,8 @@ class WatchPlayerViewModel: ObservableObject {
     let interval = CMTime(seconds: 1, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
 
     timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) {
-      time in
+      [weak self] time in
+      guard let self = self else { return }
       let currentTime = CMTimeGetSeconds(time)
       let roundedTotalDuration = floor(self.totalDuration)
 
@@ -262,11 +280,11 @@ class WatchPlayerViewModel: ObservableObject {
         }
       }
 
+      // Runs on main (observer queue) — history writes stay on viewContext's
+      // queue and the network submission is async inside the service anyway.
       if !self.isLocallySaved && self.progress >= 0.5 {
-        Task {
-          FloooViewModel.shared.scrobble(submission: true, nowPlaying: self.nowPlaying)
-          self.isLocallySaved = true
-        }
+        self.isLocallySaved = true
+        FloooViewModel.shared.scrobble(submission: true, nowPlaying: self.nowPlaying)
       }
 
       if self.totalDuration.isFinite,
@@ -638,31 +656,55 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   private func autoPlayOrStop() {
+    // Remote command handlers may call in off the main thread; the flag and
+    // all playback state are only touched on main.
+    guard Thread.isMainThread else {
+      DispatchQueue.main.async { self.autoPlayOrStop() }
+      return
+    }
     guard UserDefaultsManager.keepPlaying else {
       self.stop()
       return
     }
-
-    let allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
-    let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
-
-    let recommendations = SmartPlaybackService.shared.generateRecommendations(
-      count: 10,
-      currentQueue: self.queue,
-      allSongs: allSongs,
-      albums: albums
-    )
-
-    guard !recommendations.isEmpty else {
+    guard self.queue.indices.contains(self.activeQueueIdx) else {
       self.stop()
       return
     }
+    guard !isAutoContinuing else { return }
+    isAutoContinuing = true
 
-    let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: recommendations)
-    PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false)
-    self.queue = PlaybackService.shared.getQueue()
-    self.activeQueueIdx = 0
-    self.setNowPlaying()
+    // Capture the playback context before the queue is replaced.
+    let lastPlayedId = self.nowPlaying.id
+    let seed = SmartPlaybackService.Seed(
+      artist: self.nowPlaying.artistName ?? "",
+      albumId: self.nowPlaying.albumId ?? "")
+    let queueIds = Set(self.queue.compactMap { $0.id })
+
+    Task { [weak self] in
+      let songs = await SmartPlaybackService.shared.generateMix(
+        count: 10, seed: seed, queueIds: queueIds)
+
+      await MainActor.run {
+        guard let self = self else { return }
+        self.isAutoContinuing = false
+
+        // Discard the mix if the user started something else while it was
+        // being generated.
+        guard self.queue.indices.contains(self.activeQueueIdx),
+          self.nowPlaying.id == lastPlayedId
+        else { return }
+
+        guard !songs.isEmpty else {
+          self.stop()
+          return
+        }
+
+        let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: songs)
+        self.queue = PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false)
+        self.activeQueueIdx = 0
+        self.setNowPlaying()
+      }
+    }
   }
 
   func destroyPlayerAndQueue() {

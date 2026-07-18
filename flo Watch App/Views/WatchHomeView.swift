@@ -9,6 +9,8 @@ struct WatchHomeView: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
   @EnvironmentObject var albumViewModel: AlbumViewModel
 
+  @State private var isGeneratingMix = false
+
   var body: some View {
     List {
       if playerViewModel.hasNowPlaying() {
@@ -18,34 +20,21 @@ struct WatchHomeView: View {
       }
 
       Button(action: {
-        var allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
-        let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
-        if allSongs.isEmpty && ConnectivityMonitor.shared.isOnline {
-          AlbumService.shared.getAllSongs { result in
-            DispatchQueue.main.async {
-              if case .success(let songs) = result {
-                allSongs = songs
-                LibraryCacheManager.shared.save(songs, forKey: "songs")
-              }
-              let recs = SmartPlaybackService.shared.generateRecommendations(
-                count: 15, allSongs: allSongs, albums: albums)
-              if !recs.isEmpty {
-                let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: recs)
-                playerViewModel.playItem(item: mix, isFromLocal: false)
-              }
-            }
-          }
-        } else {
-          let recs = SmartPlaybackService.shared.generateRecommendations(
-            count: 15, allSongs: allSongs, albums: albums)
-          if !recs.isEmpty {
-            let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: recs)
-            playerViewModel.playItem(item: mix, isFromLocal: false)
-          }
+        guard !isGeneratingMix else { return }
+        isGeneratingMix = true
+
+        Task {
+          let songs = await SmartPlaybackService.shared.generateMix(count: 15)
+          isGeneratingMix = false
+
+          guard !songs.isEmpty else { return }
+          let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs)
+          playerViewModel.playItem(item: mix, isFromLocal: false)
         }
       }) {
         Label("Play Something", systemImage: "sparkles")
       }
+      .disabled(isGeneratingMix)
 
       Section("Library") {
         NavigationLink(destination: WatchStarredSongsView()) {
