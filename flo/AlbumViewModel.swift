@@ -164,16 +164,10 @@ class AlbumViewModel: ObservableObject {
   }
 
   func fetchStarredSongs() {
-    AlbumService.shared.getStarredSongs { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let songs):
-          self.starredSongs = songs
-        case .failure(let error):
-          self.error = error
-        }
-      }
-    }
+    fetchCached(
+      current: self.starredSongs, cacheKey: .starredSongs,
+      assign: { self.starredSongs = $0 },
+      request: AlbumService.shared.getStarredSongs)
   }
 
   // MARK: - Fetch methods

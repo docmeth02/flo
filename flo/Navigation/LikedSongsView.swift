@@ -71,5 +71,8 @@ struct LikedSongsView: View {
     .onChange(of: playerViewModel.isStarred) { _ in
       viewModel.fetchStarredSongs()
     }
+    .refreshable {
+      await viewModel.refreshStarredSongs()
+    }
   }
 }

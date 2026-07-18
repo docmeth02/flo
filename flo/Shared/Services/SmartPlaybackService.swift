@@ -44,10 +44,12 @@ final class SmartPlaybackService {
   func generateMix(count: Int, seed: Seed? = nil, queueIds: Set<String> = []) async -> [Song] {
     guard count > 0 else { return [] }
 
-    let (songs, albums) = await loadLibrary()
+    var (songs, albums, starredIds) = await loadCachedLibrary()
+    if songs.isEmpty {
+      songs = await fetchAllSongs()
+    }
     guard !songs.isEmpty else { return [] }
 
-    let starredIds = loadStarredIds()
     let listening = await listeningSnapshot()
     var rng = SystemRandomNumberGenerator()
 
@@ -58,15 +60,22 @@ final class SmartPlaybackService {
 
   // MARK: - Data loading
 
-  private func loadLibrary() async -> (songs: [Song], albums: [Album]) {
-    let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
-
-    if let cached = LibraryCacheManager.shared.load([Song].self, forKey: "songs"),
-      !cached.isEmpty
-    {
-      return (cached, albums)
+  /// Blocking JSON cache reads run on a GCD queue so the cooperative thread
+  /// pool never blocks on disk.
+  private func loadCachedLibrary() async -> (
+    songs: [Song], albums: [Album], starredIds: Set<String>
+  ) {
+    await withCheckedContinuation { continuation in
+      DispatchQueue.global(qos: .userInitiated).async {
+        let songs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
+        let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
+        let starred = LibraryCacheManager.shared.load([Song].self, forKey: "starredSongs") ?? []
+        continuation.resume(returning: (songs, albums, Set(starred.map { $0.playbackID })))
+      }
     }
+  }
 
+  private func fetchAllSongs() async -> [Song] {
     let fetched: [Song] = await withCheckedContinuation { continuation in
       AlbumService.shared.getAllSongs { result in
         if case .success(let songs) = result {
@@ -78,15 +87,12 @@ final class SmartPlaybackService {
     }
 
     if !fetched.isEmpty {
-      LibraryCacheManager.shared.save(fetched, forKey: "songs")
+      DispatchQueue.global(qos: .utility).async {
+        LibraryCacheManager.shared.save(fetched, forKey: "songs")
+      }
     }
 
-    return (fetched, albums)
-  }
-
-  private func loadStarredIds() -> Set<String> {
-    let starred = LibraryCacheManager.shared.load([Song].self, forKey: "starredSongs") ?? []
-    return Set(starred.map { $0.playbackID })
+    return fetched
   }
 
   private func listeningSnapshot() async -> ListeningSnapshot {
@@ -214,11 +220,13 @@ final class SmartPlaybackService {
         score += (Double(genrePlays[genre] ?? 0) / maxGenrePlays) * 0.15
       }
 
-      // Playback context: continue in the same lane, but not the same album
+      // Playback context: continue in the same lane, but not the same album.
+      // Empty ids never match — otherwise a non-album single would penalize
+      // every other single in the library.
       if let seed {
         if let seedGenre, albumGenres[song.albumId] == seedGenre { score += 0.15 }
-        if key == seedArtistKey { score += 0.05 }
-        if song.albumId == seed.albumId { score -= 0.20 }
+        if !key.isEmpty, key == seedArtistKey { score += 0.05 }
+        if !seed.albumId.isEmpty, song.albumId == seed.albumId { score -= 0.20 }
       }
 
       scored.append((song, score))

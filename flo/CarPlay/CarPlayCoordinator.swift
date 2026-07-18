@@ -55,7 +55,11 @@ import Combine
         image: UIImage(systemName: "sparkles")?.withRenderingMode(.alwaysTemplate)
       )
       playSomethingItem.handler = { [weak self] _, completion in
-        self?.playSmartShuffle(completion: completion)
+        guard let self = self else {
+          completion()
+          return
+        }
+        self.playSmartShuffle(completion: completion)
       }
 
       let albumsItem = CPListItem(

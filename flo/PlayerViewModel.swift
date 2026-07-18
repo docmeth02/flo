@@ -856,7 +856,17 @@ class PlayerViewModel: ObservableObject {
   }
 
   private func autoPlayOrStop() {
+    // Remote command handlers may call in off the main thread; the flag and
+    // all playback state are only touched on main.
+    guard Thread.isMainThread else {
+      DispatchQueue.main.async { self.autoPlayOrStop() }
+      return
+    }
     guard UserDefaultsManager.keepPlaying else {
+      self.stop()
+      return
+    }
+    guard self.queue.indices.contains(self.activeQueueIdx) else {
       self.stop()
       return
     }
@@ -864,6 +874,7 @@ class PlayerViewModel: ObservableObject {
     isAutoContinuing = true
 
     // Capture the playback context before the queue is replaced.
+    let lastPlayedId = self.nowPlaying.id
     let seed = SmartPlaybackService.Seed(
       artist: self.nowPlaying.artistName ?? "",
       albumId: self.nowPlaying.albumId ?? "")
@@ -876,6 +887,12 @@ class PlayerViewModel: ObservableObject {
       await MainActor.run {
         guard let self = self else { return }
         self.isAutoContinuing = false
+
+        // Discard the mix if the user started something else while it was
+        // being generated.
+        guard self.queue.indices.contains(self.activeQueueIdx),
+          self.nowPlaying.id == lastPlayedId
+        else { return }
 
         guard !songs.isEmpty else {
           self.stop()
