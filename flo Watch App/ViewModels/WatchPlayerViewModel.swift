@@ -143,6 +143,8 @@ class WatchPlayerViewModel: ObservableObject {
         self.timeObserverToken = nil
       }
       playerItemObservation?.cancel()
+      playbackEndObservation?.cancel()
+      playbackEndObservation = nil
       isMediaLoading = false
       isMediaFailed = true
       return
@@ -395,12 +397,11 @@ class WatchPlayerViewModel: ObservableObject {
 
     commandCenter.changePlaybackPositionCommand.isEnabled = true
     commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
-      guard let self = self, !self.isLiveRadio,
-        let event = event as? MPChangePlaybackPositionCommandEvent
+      guard let self = self, let event = event as? MPChangePlaybackPositionCommandEvent
       else { return .commandFailed }
       let positionTime = event.positionTime
       DispatchQueue.main.async {
-        guard self.totalDuration > 0 else { return }
+        guard !self.isLiveRadio, self.totalDuration > 0 else { return }
         self.seek(to: positionTime / self.totalDuration)
       }
       return .success
@@ -412,14 +413,14 @@ class WatchPlayerViewModel: ObservableObject {
     playGeneration += 1
     let gen = playGeneration
     AVAudioSession.sharedInstance().activate(options: []) { [weak self] success, error in
-      guard let self = self, gen == self.playGeneration else { return }
-      if let error = error {
-        print("Audio session activation failed: \(error)")
-        return
-      }
-
+      // The callback arrives off-main; playGeneration is only read or written
+      // on the main queue.
       DispatchQueue.main.async {
-        guard gen == self.playGeneration else { return }
+        guard let self = self, gen == self.playGeneration else { return }
+        if let error = error {
+          print("Audio session activation failed: \(error)")
+          return
+        }
 
         if self.isFinished {
           self.stop()
@@ -509,6 +510,11 @@ class WatchPlayerViewModel: ObservableObject {
       player?.removeTimeObserver(timeObserverToken)
       self.timeObserverToken = nil
     }
+
+    // A queued end notification from the previous track must not advance the
+    // radio queue — live streams have no track end.
+    self.playbackEndObservation?.cancel()
+    self.playbackEndObservation = nil
 
     self.playerItem = AVPlayerItem(url: radioUrl)
     self.player?.replaceCurrentItem(with: self.playerItem)
@@ -686,7 +692,8 @@ class WatchPlayerViewModel: ObservableObject {
     let seed = SmartPlaybackService.Seed(
       artist: self.nowPlaying.artistName ?? "",
       albumId: self.nowPlaying.albumId ?? "")
-    let queueIds = Set(self.queue.compactMap { $0.id })
+    let queueIdList = self.queue.compactMap { $0.id }
+    let queueIds = Set(queueIdList)
 
     Task { [weak self] in
       let songs = await SmartPlaybackService.shared.generateMix(
@@ -697,11 +704,11 @@ class WatchPlayerViewModel: ObservableObject {
         self.isAutoContinuing = false
 
         // Discard the mix if the user started something else while it was
-        // being generated — the queue contents are compared too, so a new
-        // queue that happens to start on the same song is not overwritten.
+        // being generated — the ordered queue contents are compared too, so a
+        // new queue that happens to start on the same song is not overwritten.
         guard self.queue.indices.contains(self.activeQueueIdx),
           self.nowPlaying.id == lastPlayedId,
-          Set(self.queue.compactMap { $0.id }) == queueIds
+          self.queue.compactMap({ $0.id }) == queueIdList
         else { return }
 
         guard !songs.isEmpty else {

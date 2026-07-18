@@ -28,6 +28,10 @@ class AuthViewModel: ObservableObject {
   @Published var isSubmitting: Bool = false
   @Published var isLoggedIn: Bool = false
 
+  // Bumped by every interactive login and logout; a background session
+  // refresh only persists its result while the generation is unchanged.
+  private var sessionGeneration: Int = 0
+
   static let shared = AuthViewModel()
 
   private func validateURL() {
@@ -89,16 +93,27 @@ class AuthViewModel: ObservableObject {
   // credential here (ErrorHandler maps URLErrors to .server too), and stale
   // credentials surface as 401s on real calls where the user can act.
   private func refreshSession() {
+    // A delayed connectivity verdict can arrive after a logout, when the form
+    // fields may already hold half-typed credentials for another account.
+    guard isLoggedIn else { return }
+    let generation = sessionGeneration
+
     AuthService.shared.login(serverUrl: serverUrl, username: username, password: password) {
       [weak self] result in
       DispatchQueue.main.async {
-        guard let self = self, self.isLoggedIn, case .success(let data) = result else { return }
+        // The generation check drops a refresh that outlived its session —
+        // a logout or an interactive login into another account must never
+        // be overwritten by this stale completion.
+        guard let self = self, self.isLoggedIn, self.sessionGeneration == generation,
+          case .success(let data) = result
+        else { return }
         self.persistAuthData(data)
       }
     }
   }
 
   func login() {
+    sessionGeneration += 1
     isSubmitting = true
 
     AuthService.shared.login(serverUrl: serverUrl, username: username, password: password) {
@@ -146,6 +161,8 @@ class AuthViewModel: ObservableObject {
 
   // TODO: how to deal with "last playing" data?
   func logout() {
+    sessionGeneration += 1
+
     do {
       try KeychainManager.removeAuthCreds()
 
