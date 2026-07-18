@@ -142,6 +142,10 @@ class AuthViewModel: ObservableObject {
 
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.serverURL)
 
+      // The library caches feed recommendations — the next account must not
+      // inherit this account's songs/albums/starred lists.
+      LibraryCacheManager.shared.clearCache()
+
       user = nil
       isLoggedIn = false
       authMode = .standard

@@ -133,6 +133,10 @@ class FloooViewModel: ObservableObject {
     processScrobble(submission: false, nowPlaying: nowPlaying)
   }
 
+  func logSkip(nowPlaying: QueueEntity) {
+    FloooService.shared.saveListeningHistory(payload: nowPlaying, skipped: true)
+  }
+
   func scrobble(submission: Bool, nowPlaying: QueueEntity) {
     FloooService.shared.saveListeningHistory(payload: nowPlaying)
     processScrobble(submission: submission, nowPlaying: nowPlaying)

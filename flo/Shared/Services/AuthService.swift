@@ -59,6 +59,30 @@ class AuthService {
     return ""
   }
   
+  /// Identifies the active server+user pair for scoping listening history:
+  /// "<host[:port]>|<username>", lowercased. Empty when not logged in.
+  var currentLibraryScope: String {
+    let serverURL = UserDefaultsManager.serverBaseURL
+
+    guard !serverURL.isEmpty,
+      let jsonString = try? KeychainManager.getAuthCreds(),
+      let jsonData = jsonString.data(using: .utf8),
+      let auth = try? JSONDecoder().decode(UserAuth.self, from: jsonData)
+    else {
+      return ""
+    }
+
+    var host = serverURL.lowercased()
+    if let url = URL(string: serverURL), let urlHost = url.host {
+      host = urlHost.lowercased()
+      if let port = url.port {
+        host += ":\(port)"
+      }
+    }
+
+    return "\(host)|\(auth.username.lowercased())"
+  }
+
   func getAuthMode() -> AuthMode {
     return authMode
   }

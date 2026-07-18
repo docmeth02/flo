@@ -6,6 +6,7 @@
 //
 
 @preconcurrency import CoreData
+import CryptoKit
 import Foundation
 
 class CoreDataManager: ObservableObject {
@@ -13,8 +14,33 @@ class CoreDataManager: ObservableObject {
 
   private init() {}
 
+  private static let modelName = "flo"
+  private static let localConfiguration = "Local"
+  private static let cloudConfiguration = "Cloud"
+  private static let historyMigrationDoneKey = "coreData.historyMigrationV2.done"
+
+  static let localStoreURL = NSPersistentContainer.defaultDirectoryURL()
+    .appendingPathComponent("flo.sqlite")
+  static let historyStoreURL = NSPersistentContainer.defaultDirectoryURL()
+    .appendingPathComponent("flo-history.sqlite")
+
+  // One shared model instance for the container AND the migration stack — two
+  // instances of the same model cause duplicate NSEntityDescription class claims.
+  private static let model: NSManagedObjectModel = {
+    guard let url = Bundle.main.url(forResource: modelName, withExtension: "momd"),
+      let model = NSManagedObjectModel(contentsOf: url)
+    else {
+      fatalError("failed to load Core Data model \(modelName)")
+    }
+    return model
+  }()
+
+  /// False when the history store failed to load — history reads/writes are
+  /// skipped for the session while queue/downloads/playlists keep working.
+  private(set) var isHistoryStoreAvailable: Bool = true
+
   private static func inMemoryContainer() -> NSPersistentContainer {
-    let container = NSPersistentContainer(name: "flo")
+    let container = NSPersistentContainer(name: modelName, managedObjectModel: model)
     let description = NSPersistentStoreDescription()
 
     description.type = NSInMemoryStoreType
@@ -32,28 +58,207 @@ class CoreDataManager: ObservableObject {
     return container
   }
 
-  lazy var persistentContainer: NSPersistentContainer = {
-    let container = NSPersistentContainer(name: "flo")  //FIXME: constants?
-    container.persistentStoreDescriptions.forEach { $0.shouldAddStoreAsynchronously = false }
+  private static func historyStoreDescription() -> NSPersistentStoreDescription {
+    let description = NSPersistentStoreDescription(url: historyStoreURL)
+    description.configuration = cloudConfiguration
+    description.shouldAddStoreAsynchronously = false
+    // Tracking from day one: rows written while sync is off still produce
+    // persistent-history transactions, so they can export once mirroring is
+    // attached in a later release.
+    description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+    description.setOption(
+      true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+    return description
+  }
 
-    var loadError: Error?
+  private static func makeContainer(syncEnabled: Bool) -> (
+    container: NSPersistentContainer, historyAvailable: Bool
+  ) {
+    let container = NSPersistentContainer(name: modelName, managedObjectModel: model)
 
-    container.loadPersistentStores { _, error in
+    let local = NSPersistentStoreDescription(url: localStoreURL)
+    local.configuration = localConfiguration
+    local.shouldAddStoreAsynchronously = false
+
+    container.persistentStoreDescriptions = [local, historyStoreDescription()]
+
+    var errorsByConfiguration: [String: Error] = [:]
+
+    container.loadPersistentStores { description, error in
       if let error {
-        loadError = error
+        errorsByConfiguration[description.configuration ?? ""] = error
       }
     }
 
-    if let loadError {
-      print("failed to load persistent stores: \(loadError.localizedDescription)")
+    if let localError = errorsByConfiguration[localConfiguration] {
+      print("failed to load local store: \(localError.localizedDescription)")
 
-      return Self.inMemoryContainer()
+      return (Self.inMemoryContainer(), true)
+    }
+
+    let historyAvailable = errorsByConfiguration[cloudConfiguration] == nil
+    if !historyAvailable {
+      print(
+        "failed to load history store: "
+          + "\(errorsByConfiguration[cloudConfiguration]!.localizedDescription)")
     }
 
     container.viewContext.automaticallyMergesChangesFromParent = true
 
+    return (container, historyAvailable)
+  }
+
+  private let containerLock = NSLock()
+  private var loadedContainer: NSPersistentContainer?
+
+  // Not a lazy var: the first access runs the history migration, and lazy
+  // initialization is not thread-safe.
+  var persistentContainer: NSPersistentContainer {
+    containerLock.lock()
+    defer { containerLock.unlock() }
+
+    if let loadedContainer {
+      return loadedContainer
+    }
+
+    Self.migrateLegacyHistoryIfNeeded()
+
+    let (container, historyAvailable) = Self.makeContainer(syncEnabled: false)
+    self.isHistoryStoreAvailable = historyAvailable
+    self.loadedContainer = container
+
     return container
-  }()
+  }
+
+  // MARK: - Legacy history migration
+
+  /// Moves HistoryEntity rows out of the original single store into the
+  /// dedicated history store. Idempotent and crash-recoverable: rows carry a
+  /// stable eventID derived from their legacy objectID, so a retry never
+  /// duplicates them; the UserDefaults flag is only a fast path.
+  private static func migrateLegacyHistoryIfNeeded() {
+    guard !UserDefaults.standard.bool(forKey: historyMigrationDoneKey) else { return }
+
+    guard FileManager.default.fileExists(atPath: localStoreURL.path) else {
+      UserDefaults.standard.set(true, forKey: historyMigrationDoneKey)
+      return
+    }
+
+    // Migrating while logged out would stamp rows with an empty scope and
+    // orphan them from every future account-scoped read. Wait for a login and
+    // migrate on a later launch.
+    let scope = AuthService.shared.currentLibraryScope
+    guard !scope.isEmpty else { return }
+
+    let coordinator = NSPersistentStoreCoordinator(managedObjectModel: model)
+    let migrationOptions: [String: Any] = [
+      NSMigratePersistentStoresAutomaticallyOption: true,
+      NSInferMappingModelAutomaticallyOption: true,
+    ]
+
+    let legacyStore: NSPersistentStore
+    let historyStore: NSPersistentStore
+
+    do {
+      // nil configuration = default configuration = all entities, so the
+      // legacy HistoryEntity rows are reachable. This add also performs the
+      // in-place lightweight v1 -> v2 migration of the legacy file.
+      legacyStore = try coordinator.addPersistentStore(
+        ofType: NSSQLiteStoreType, configurationName: nil, at: localStoreURL,
+        options: migrationOptions)
+
+      var historyOptions = migrationOptions
+      historyOptions[NSPersistentHistoryTrackingKey] = true
+      historyOptions[NSPersistentStoreRemoteChangeNotificationPostOptionKey] = true
+
+      historyStore = try coordinator.addPersistentStore(
+        ofType: NSSQLiteStoreType, configurationName: cloudConfiguration, at: historyStoreURL,
+        options: historyOptions)
+    } catch {
+      print("history migration: failed to open stores: \(error.localizedDescription)")
+      return
+    }
+
+    defer {
+      try? coordinator.remove(legacyStore)
+      try? coordinator.remove(historyStore)
+    }
+
+    let context = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
+    context.persistentStoreCoordinator = coordinator
+
+    context.performAndWait {
+      do {
+        let legacyRequest = NSFetchRequest<HistoryEntity>(entityName: "HistoryEntity")
+        legacyRequest.affectedStores = [legacyStore]
+        legacyRequest.fetchBatchSize = 500
+
+        let legacyRows = try context.fetch(legacyRequest)
+
+        if legacyRows.isEmpty {
+          UserDefaults.standard.set(true, forKey: historyMigrationDoneKey)
+          return
+        }
+
+        let existingRequest = NSFetchRequest<NSDictionary>(entityName: "HistoryEntity")
+        existingRequest.affectedStores = [historyStore]
+        existingRequest.resultType = .dictionaryResultType
+        existingRequest.propertiesToFetch = ["eventID"]
+
+        let migratedIDs = Set(
+          try context.fetch(existingRequest).compactMap { $0["eventID"] as? UUID })
+
+        var pending = 0
+        for row in legacyRows {
+          let eventID = stableEventID(for: row.objectID)
+          guard !migratedIDs.contains(eventID) else { continue }
+
+          let copy = HistoryEntity(context: context)
+          context.assign(copy, to: historyStore)
+          copy.albumId = row.albumId
+          copy.albumName = row.albumName
+          copy.artistName = row.artistName
+          copy.songId = row.songId
+          copy.timestamp = row.timestamp
+          copy.trackName = row.trackName
+          copy.eventID = eventID
+          copy.libraryScope = scope
+
+          pending += 1
+          if pending >= 500 {
+            try context.save()
+            pending = 0
+          }
+        }
+        if pending > 0 {
+          try context.save()
+        }
+
+        let deleteFetch = NSFetchRequest<NSFetchRequestResult>(entityName: "HistoryEntity")
+        let deleteRequest = NSBatchDeleteRequest(fetchRequest: deleteFetch)
+        deleteRequest.affectedStores = [legacyStore]
+        try context.execute(deleteRequest)
+        try context.save()
+
+        UserDefaults.standard.set(true, forKey: historyMigrationDoneKey)
+      } catch {
+        print("history migration failed, will retry next launch: \(error.localizedDescription)")
+      }
+    }
+  }
+
+  /// Stable per-row identity across migration retries: the legacy objectID URI
+  /// survives lightweight migration, and it distinguishes even rows whose
+  /// content is identical.
+  private static func stableEventID(for objectID: NSManagedObjectID) -> UUID {
+    let digest = SHA256.hash(data: Data(objectID.uriRepresentation().absoluteString.utf8))
+    let bytes = Array(digest.prefix(16))
+    return UUID(
+      uuid: (
+        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+        bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+      ))
+  }
 
   var viewContext: NSManagedObjectContext {
     return self.persistentContainer.viewContext
@@ -74,11 +279,12 @@ class CoreDataManager: ObservableObject {
   }
 
   func getRecordsByEntityBatched<T: NSManagedObject>(
-    entity: T.Type, sortDescriptors: [NSSortDescriptor]? = nil,
+    entity: T.Type, predicate: NSPredicate? = nil, sortDescriptors: [NSSortDescriptor]? = nil,
     batchSize: Int = 100
   ) async -> [T] {
     let request: NSFetchRequest<T> = NSFetchRequest<T>(entityName: String(describing: T.self))
 
+    request.predicate = predicate
     request.sortDescriptors = sortDescriptors
     request.fetchBatchSize = batchSize
 
@@ -148,6 +354,9 @@ class CoreDataManager: ObservableObject {
     }
   }
 
+  /// A single save spanning entities from both stores is not atomic across
+  /// stores (Core Data commits per store) — no caller may mix History and
+  /// Local writes in one save.
   func saveRecord() {
     do {
       try self.viewContext.save()

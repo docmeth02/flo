@@ -12,10 +12,19 @@ class FloooService {
   static let shared: FloooService = FloooService()
 
   func getListeningHistory() async -> [HistoryEntity] {
-    return await CoreDataManager.shared.getRecordsByEntityBatched(entity: HistoryEntity.self)
+    return await CoreDataManager.shared.getRecordsByEntityBatched(
+      entity: HistoryEntity.self,
+      predicate: NSPredicate(
+        format: "libraryScope == %@ AND skipped == NO", AuthService.shared.currentLibraryScope))
   }
 
-  func saveListeningHistory(payload: QueueEntity) {
+  func saveListeningHistory(payload: QueueEntity, skipped: Bool = false) {
+    let scope = AuthService.shared.currentLibraryScope
+
+    // No account, no history — an unscoped row would be orphaned from every
+    // scoped read once an account exists.
+    guard !scope.isEmpty, CoreDataManager.shared.isHistoryStoreAvailable else { return }
+
     let currentSession = HistoryEntity(context: CoreDataManager.shared.viewContext)
 
     currentSession.albumId = payload.albumId
@@ -24,12 +33,17 @@ class FloooService {
     currentSession.albumName = payload.albumName
     currentSession.songId = payload.id
     currentSession.timestamp = Date()
+    currentSession.eventID = UUID()
+    currentSession.libraryScope = scope
+    currentSession.skipped = skipped
 
     CoreDataManager.shared.saveRecord()
   }
 
   func clearListeningHistory() {
-    CoreDataManager.shared.deleteRecords(entity: HistoryEntity.self)
+    CoreDataManager.shared.deleteRecordByKey(
+      entity: HistoryEntity.self, key: \HistoryEntity.libraryScope,
+      value: AuthService.shared.currentLibraryScope)
   }
 
   @MainActor

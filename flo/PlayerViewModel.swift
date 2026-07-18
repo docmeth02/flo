@@ -18,6 +18,10 @@ class PlayerViewModel: ObservableObject {
   private var timeObserverToken: Any?
   private var isAutoContinuing: Bool = false
 
+  // Accumulated audible playback of the current item — unlike the playhead
+  // position, seeking cannot inflate or erase it.
+  private var secondsListened: Double = 0
+
   @Published var queue: [QueueEntity] = []
   @Published var playbackMode = PlaybackMode.defaultPlayback
 
@@ -200,6 +204,7 @@ class PlayerViewModel: ObservableObject {
     self.shouldHidePlayer = false
     self.isLocallySaved = false
     self.hasTriggeredCache = false
+    self.secondsListened = 0
 
     StreamCacheManager.shared.cancelAllInFlight()
 
@@ -294,6 +299,8 @@ class PlayerViewModel: ObservableObject {
       } else {
         self.progress = 0.0
       }
+
+      self.secondsListened += 1
 
       self.currentTimeString = timeString(for: currentTime)
 
@@ -418,7 +425,11 @@ class PlayerViewModel: ObservableObject {
 
     commandCenter.nextTrackCommand.isEnabled = true
     commandCenter.nextTrackCommand.addTarget { event in
-      self.nextSong()
+      // Remote handlers run on an unspecified queue; nextSong mutates
+      // playback state and logs history, which must stay on main.
+      DispatchQueue.main.async {
+        self.nextSong(userInitiated: true)
+      }
 
       return .success
     }
@@ -621,7 +632,11 @@ class PlayerViewModel: ObservableObject {
     self.setNowPlaying()
   }
 
-  func nextSong() {
+  func nextSong(userInitiated: Bool = false) {
+    if userInitiated {
+      logSkipIfAbandoned()
+    }
+
     // TODO: refactor later ngantuk bosss
     // singles
     if self.queue.count == 1 {
@@ -853,6 +868,26 @@ class PlayerViewModel: ObservableObject {
         }
       }
     }
+  }
+
+  /// A user pressing next on a song they barely heard is a negative signal
+  /// for the recommender. Only explicit, early, user-initiated abandonment
+  /// counts — natural completion, radio, repeat modes that restart the same
+  /// track, and accidental sub-5s starts do not.
+  private func logSkipIfAbandoned() {
+    guard self.queue.indices.contains(self.activeQueueIdx), !self.isLiveRadio else { return }
+    guard !self.isLocallySaved else { return }
+
+    let restartsSameTrack =
+      self.playbackMode == PlaybackMode.repeatOnce
+      || (self.queue.count == 1 && self.playbackMode != PlaybackMode.defaultPlayback)
+    guard !restartsSameTrack else { return }
+
+    guard self.totalDuration.isFinite, self.totalDuration > 0,
+      self.secondsListened >= 5, self.progress < 0.3
+    else { return }
+
+    FloooViewModel.shared.logSkip(nowPlaying: self.nowPlaying)
   }
 
   private func autoPlayOrStop() {

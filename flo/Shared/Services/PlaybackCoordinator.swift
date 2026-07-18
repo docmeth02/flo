@@ -32,7 +32,7 @@ final class PlaybackCoordinator {
       }
     case "next":
       DispatchQueue.main.async {
-        self.playerViewModel?.nextSong()
+        self.playerViewModel?.nextSong(userInitiated: true)
       }
     case "previous":
       DispatchQueue.main.async {

@@ -333,7 +333,7 @@ struct PlayerView: View {
           .disabled(viewModel.isMediaLoading)
 
           Button {
-            viewModel.nextSong()
+            viewModel.nextSong(userInitiated: true)
           } label: {
             Image(systemName: "forward.fill").font(.title)
           }

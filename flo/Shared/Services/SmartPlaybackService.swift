@@ -30,11 +30,14 @@ final class SmartPlaybackService {
     var recentAlbumIds: Set<String> = []
     var cooldownSongIds: Set<String> = []
     var cooldownTitlesByArtist: [String: Set<String>] = [:]
+    var skippedSongIds: Set<String> = []
+    var skipCountByArtist: [String: Int] = [:]
   }
 
   private static let historyWindowDays = 365
   private static let recencyWindowDays = 14
   private static let replayCooldownMinutes = 30
+  private static let skipWindowDays = 30
   private static let coldStartThreshold = 20
 
   private init() {}
@@ -76,6 +79,8 @@ final class SmartPlaybackService {
   }
 
   private func fetchAllSongs() async -> [Song] {
+    let scope = AuthService.shared.currentLibraryScope
+
     let fetched: [Song] = await withCheckedContinuation { continuation in
       AlbumService.shared.getAllSongs { result in
         if case .success(let songs) = result {
@@ -88,6 +93,9 @@ final class SmartPlaybackService {
 
     if !fetched.isEmpty {
       DispatchQueue.global(qos: .utility).async {
+        // A logout while this fetch was in flight cleared the cache — do not
+        // write the old account's library back for the next one to find.
+        guard AuthService.shared.currentLibraryScope == scope else { return }
         LibraryCacheManager.shared.save(fetched, forKey: "songs")
       }
     }
@@ -104,23 +112,44 @@ final class SmartPlaybackService {
       calendar.date(byAdding: .day, value: -Self.recencyWindowDays, to: now) ?? now
     let cooldownCutoff =
       calendar.date(byAdding: .minute, value: -Self.replayCooldownMinutes, to: now) ?? now
+    let skipCutoff =
+      calendar.date(byAdding: .day, value: -Self.skipWindowDays, to: now) ?? now
 
+    let scope = AuthService.shared.currentLibraryScope
     let context = CoreDataManager.shared.persistentContainer.newBackgroundContext()
 
     return await context.perform {
       var snapshot = ListeningSnapshot()
 
       let request = NSFetchRequest<HistoryEntity>(entityName: "HistoryEntity")
-      request.predicate = NSPredicate(format: "timestamp >= %@", historyCutoff as NSDate)
+      request.predicate = NSPredicate(
+        format: "timestamp >= %@ AND libraryScope == %@", historyCutoff as NSDate, scope)
       guard let history = try? context.fetch(request) else { return snapshot }
 
-      snapshot.totalListens = history.count
+      // Per-song skip counts, capped when aggregated per artist so one broken
+      // track cannot annihilate its artist.
+      var skipsBySong: [String: (artistKey: String, count: Int)] = [:]
 
       for entry in history {
         guard let timestamp = entry.timestamp else { continue }
 
         let artistKey = entry.artistName.map(Self.artistKey) ?? ""
         let albumId = entry.albumId ?? ""
+
+        // Skips never count as listens, but a just-skipped song still enters
+        // the replay cooldown.
+        if entry.skipped {
+          if timestamp >= skipCutoff, let songId = entry.songId, !songId.isEmpty {
+            let current = skipsBySong[songId]?.count ?? 0
+            skipsBySong[songId] = (artistKey, current + 1)
+          }
+          if timestamp >= cooldownCutoff, let songId = entry.songId, !songId.isEmpty {
+            snapshot.cooldownSongIds.insert(songId)
+          }
+          continue
+        }
+
+        snapshot.totalListens += 1
 
         if !artistKey.isEmpty {
           snapshot.artistPlays[artistKey, default: 0] += 1
@@ -140,6 +169,13 @@ final class SmartPlaybackService {
             snapshot.cooldownTitlesByArtist[artistKey, default: []]
               .insert(Self.normalizeTitle(track))
           }
+        }
+      }
+
+      for (songId, entry) in skipsBySong {
+        snapshot.skippedSongIds.insert(songId)
+        if !entry.artistKey.isEmpty {
+          snapshot.skipCountByArtist[entry.artistKey, default: 0] += min(entry.count, 3)
         }
       }
 
@@ -173,10 +209,13 @@ final class SmartPlaybackService {
 
     // Cold start: not enough history to score meaningfully — starred songs
     // first, then the rest, both shuffled, with the same diversity caps.
+    // Recently skipped songs stay out even here.
     if listening.totalListens < coldStartThreshold {
       let starred = songs.filter(isStarred).shuffled(using: &rng)
       let rest = songs.filter { !isStarred($0) }.shuffled(using: &rng)
-      let pool = (starred + rest).lazy.filter(isEligible).prefix(count * 5)
+      let pool = (starred + rest).lazy
+        .filter { isEligible($0) && !listening.skippedSongIds.contains($0.playbackID) }
+        .prefix(count * 5)
       return select(from: pool.map { ($0, 1.0) }, count: count, weighted: false, rng: &rng)
     }
 
@@ -218,6 +257,13 @@ final class SmartPlaybackService {
       // Genre affinity (0.15), proportional to listens in that genre
       if maxGenrePlays > 0, let genre = albumGenres[song.albumId] {
         score += (Double(genrePlays[genre] ?? 0) / maxGenrePlays) * 0.15
+      }
+
+      // Skip pressure: a recently skipped song is penalized directly, an
+      // artist with repeated skips slightly.
+      if listening.skippedSongIds.contains(song.playbackID) { score -= 0.15 }
+      if let skips = listening.skipCountByArtist[key], skips > 0 {
+        score -= min(Double(skips), 5) / 5 * 0.05
       }
 
       // Playback context: continue in the same lane, but not the same album.

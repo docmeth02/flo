@@ -257,6 +257,7 @@
 		C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamCacheManager.swift; sourceTree = "<group>"; };
 		C4CBBA732FBA223C00F0DE75 /* floIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = floIcon.icon; sourceTree = "<group>"; };
 		C4D7F84C2C7F2AE900165EFD /* flo.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = flo.xcdatamodel; sourceTree = "<group>"; };
+		C4D7F84E2C7F2AE900165EFD /* flo 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "flo 2.xcdatamodel"; sourceTree = "<group>"; };
 		C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackService.swift; sourceTree = "<group>"; };
 		C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
 		C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadViewModel.swift; sourceTree = "<group>"; };
@@ -1222,9 +1223,10 @@
 		C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
+				C4D7F84E2C7F2AE900165EFD /* flo 2.xcdatamodel */,
 				C4D7F84C2C7F2AE900165EFD /* flo.xcdatamodel */,
 			);
-			currentVersion = C4D7F84C2C7F2AE900165EFD /* flo.xcdatamodel */;
+			currentVersion = C4D7F84E2C7F2AE900165EFD /* flo 2.xcdatamodel */;
 			path = flo.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;
