@@ -20,7 +20,8 @@ class SmartPlaybackService {
     allSongs: [Song],
     albums: [Album] = []
   ) -> [Song] {
-    guard !allSongs.isEmpty else { return [] }
+    let candidates = ConnectivityMonitor.shared.isOnline ? allSongs : offlinePlayableSongs()
+    guard !candidates.isEmpty else { return [] }
 
     let history = CoreDataManager.shared.getRecordsByEntity(entity: HistoryEntity.self)
     let artistFreqs = getArtistFrequencies(history: history)
@@ -38,7 +39,7 @@ class SmartPlaybackService {
 
     var scored: [(Song, Double)] = []
 
-    for song in allSongs {
+    for song in candidates {
       let songId = song.mediaFileId.isEmpty ? song.id : song.mediaFileId
       if queueIds.contains(song.id) || queueIds.contains(songId) { continue }
       if isBlacklisted(song: song, blacklist: blacklist) { continue }
@@ -83,6 +84,22 @@ class SmartPlaybackService {
   }
 
   // MARK: - Helpers
+
+  /// Candidate pool when offline: only songs playable without a connection
+  /// (downloaded albums/playlists plus the transparent stream cache).
+  private func offlinePlayableSongs() -> [Song] {
+    let downloaded = CoreDataManager.shared.getRecordsByEntity(entity: SongEntity.self)
+      .map(Song.init)
+
+    var seen = Set<String>()
+    var pool: [Song] = []
+    for song in downloaded + StreamCacheManager.shared.getCachedSongs() {
+      let key = song.mediaFileId.isEmpty ? song.id : song.mediaFileId
+      guard !key.isEmpty, seen.insert(key).inserted else { continue }
+      pool.append(song)
+    }
+    return pool
+  }
 
   private func getArtistFrequencies(history: [HistoryEntity]) -> [String: Int] {
     var freqs: [String: Int] = [:]

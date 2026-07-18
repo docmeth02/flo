@@ -20,7 +20,7 @@ struct WatchHomeView: View {
       Button(action: {
         var allSongs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
         let albums = LibraryCacheManager.shared.load([Album].self, forKey: "albums") ?? []
-        if allSongs.isEmpty {
+        if allSongs.isEmpty && ConnectivityMonitor.shared.isOnline {
           AlbumService.shared.getAllSongs { result in
             DispatchQueue.main.async {
               if case .success(let songs) = result {
