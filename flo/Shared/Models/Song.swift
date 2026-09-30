@@ -19,10 +19,15 @@ struct Song: Codable, Identifiable, Hashable {
   let sampleRate: Int
   let suffix: String
   let duration: Double
+  let explicitStatus: ExplicitStatus
 
   var mediaFileId: String = ""
   var fileUrl: String = ""
   var starred: Bool = false
+
+  var isExplicit: Bool {
+    explicitStatus.isExplicit
+  }
 
   enum DecodeKeys: String, CodingKey {
     case id
@@ -39,6 +44,7 @@ struct Song: Codable, Identifiable, Hashable {
     case duration
     case mediaFileId
     case starred
+    case explicitStatus
   }
 
   enum EncodeKeys: String, CodingKey {
@@ -55,6 +61,7 @@ struct Song: Codable, Identifiable, Hashable {
     case duration
     case mediaFileId
     case starred
+    case explicitStatus
   }
 
   init(from decoder: any Decoder) throws {
@@ -77,6 +84,8 @@ struct Song: Codable, Identifiable, Hashable {
     self.duration = try container.decode(Double.self, forKey: .duration)
     self.mediaFileId = try container.decodeIfPresent(String.self, forKey: .mediaFileId) ?? ""
     self.starred = try container.decodeIfPresent(Bool.self, forKey: .starred) ?? false
+    self.explicitStatus = ExplicitStatus(
+      from: try container.decodeIfPresent(String.self, forKey: .explicitStatus))
   }
 
   func encode(to encoder: any Encoder) throws {
@@ -95,6 +104,7 @@ struct Song: Codable, Identifiable, Hashable {
     try container.encode(duration, forKey: .duration)
     try container.encode(mediaFileId, forKey: .mediaFileId)
     try container.encode(starred, forKey: .starred)
+    try container.encode(explicitStatus.rawValue, forKey: .explicitStatus)
   }
 
   init(
@@ -102,7 +112,8 @@ struct Song: Codable, Identifiable, Hashable {
     trackNumber: Int, discNumber: Int,
     bitRate: Int,
     sampleRate: Int,
-    suffix: String, duration: Double, mediaFileId: String
+    suffix: String, duration: Double, mediaFileId: String,
+    explicitStatus: ExplicitStatus = .unknown
   ) {
     self.id = id
     self.title = title
@@ -116,50 +127,57 @@ struct Song: Codable, Identifiable, Hashable {
     self.suffix = suffix
     self.duration = duration
     self.mediaFileId = mediaFileId
+    self.explicitStatus = explicitStatus
   }
 
-  init(from cache: CacheEntity) {
-    self.id = cache.mediaFileId ?? ""
-    self.title = cache.title ?? "Unknown"
-    self.artist = cache.artistName ?? "Unknown"
-    self.albumId = cache.albumId ?? ""
-    self.albumName = cache.albumName ?? ""
-    self.trackNumber = 0
-    self.discNumber = 0
-    self.bitRate = Int(cache.bitRate)
-    self.sampleRate = Int(cache.sampleRate)
-    self.suffix = cache.suffix ?? ""
-    self.duration = cache.duration
-    self.mediaFileId = cache.mediaFileId ?? ""
-  }
+  #if os(iOS) || FLO_STANDALONE
+    init(from cache: CacheEntity) {
+      self.id = cache.mediaFileId ?? ""
+      self.title = cache.title ?? "Unknown"
+      self.artist = cache.artistName ?? "Unknown"
+      self.albumId = cache.albumId ?? ""
+      self.albumName = cache.albumName ?? ""
+      self.trackNumber = 0
+      self.discNumber = 0
+      self.bitRate = Int(cache.bitRate)
+      self.sampleRate = Int(cache.sampleRate)
+      self.suffix = cache.suffix ?? ""
+      self.duration = cache.duration
+      self.mediaFileId = cache.mediaFileId ?? ""
+      self.explicitStatus = ExplicitStatus(from: cache.explicitStatus)
+    }
+  #endif
 
-  init(from song: SongEntity) {
-    self.id = song.id ?? ""
-    self.title = song.title ?? "N/A"
-    self.artist = song.artistName ?? "N/A"
-    self.albumId = song.albumId ?? ""
+  #if os(iOS) || FLO_STANDALONE
+    init(from song: SongEntity) {
+      self.id = song.id ?? ""
+      self.title = song.title ?? "N/A"
+      self.artist = song.artistName ?? "N/A"
+      self.albumId = song.albumId ?? ""
 
-    if let storedAlbumName = song.albumName, !storedAlbumName.isEmpty {
-      self.albumName = storedAlbumName
-    } else if let fileURL = song.fileURL {
-      let parts = fileURL.split(separator: "/")
+      if let storedAlbumName = song.albumName, !storedAlbumName.isEmpty {
+        self.albumName = storedAlbumName
+      } else if let fileURL = song.fileURL {
+        let parts = fileURL.split(separator: "/")
 
-      if parts.count >= 3 {
-        self.albumName = String(parts[2])
+        if parts.count >= 3 {
+          self.albumName = String(parts[2])
+        } else {
+          self.albumName = ""
+        }
       } else {
         self.albumName = ""
       }
-    } else {
-      self.albumName = ""
-    }
 
-    self.trackNumber = Int(song.trackNumber)
-    self.discNumber = Int(song.discNumber)
-    self.bitRate = Int(song.bitRate)
-    self.sampleRate = Int(song.sampleRate)
-    self.suffix = song.suffix ?? "N/A"
-    self.duration = song.duration
-    self.fileUrl = song.fileURL ?? ""
-    self.mediaFileId = song.mediaFileId ?? ""
-  }
+      self.trackNumber = Int(song.trackNumber)
+      self.discNumber = Int(song.discNumber)
+      self.bitRate = Int(song.bitRate)
+      self.sampleRate = Int(song.sampleRate)
+      self.suffix = song.suffix ?? "N/A"
+      self.duration = song.duration
+      self.fileUrl = song.fileURL ?? ""
+      self.mediaFileId = song.mediaFileId ?? ""
+      self.explicitStatus = ExplicitStatus(from: song.explicitStatus)
+    }
+  #endif
 }

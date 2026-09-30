@@ -7,30 +7,19 @@
 
 import AVFoundation
 import SwiftUI
+import UIKit
 
 @main
 struct FloApp: App {
-  @StateObject private var inAppPurchaseManager = InAppPurchaseManager()
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-  init() {
-    do {
-      try AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.playback)
-      try AVAudioSession.sharedInstance().setActive(true)
-    } catch {
-      print(error)
+    init() {
+        StreamCacheManager.shared.reconcile()
     }
 
-    StreamCacheManager.shared.reconcile()
-
-    #if os(iOS)
-      WatchConnectivityManager.shared.start()
-    #endif
-  }
-
-  var body: some Scene {
-    WindowGroup {
-      ContentView()
-        .environmentObject(inAppPurchaseManager)
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
     }
-  }
 }

@@ -1,0 +1,93 @@
+//
+//  LikedSongsView.swift
+//  flo
+//
+
+import NukeUI
+import SwiftUI
+
+struct LikedSongsView: View {
+  @EnvironmentObject private var viewModel: AlbumViewModel
+  @EnvironmentObject private var playerViewModel: PlayerViewModel
+  @State private var searchText = ""
+
+  private var filteredSongs: [Song] {
+    if searchText.isEmpty { return viewModel.starredSongs }
+    return viewModel.starredSongs.filter { song in
+      song.title.localizedCaseInsensitiveContains(searchText)
+        || song.artist.localizedCaseInsensitiveContains(searchText)
+    }
+  }
+
+  var body: some View {
+    ScrollView {
+      LazyVStack {
+        ForEach(Array(filteredSongs.enumerated()), id: \.element.id) { idx, song in
+          VStack {
+            HStack {
+              LazyImage(url: URL(string: viewModel.getAlbumCoverArt(id: song.albumId))) { state in
+                if let image = state.image {
+                  image
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 60, height: 60)
+                    .clipShape(
+                      RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+                } else {
+                  Color("PlayerColor").frame(width: 60, height: 60)
+                    .cornerRadius(5)
+                }
+              }
+
+              VStack(alignment: .leading) {
+                HStack(alignment: .center, spacing: 6) {
+                  Text(song.title)
+                    .customFont(.headline)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+
+                  if song.isExplicit {
+                    ExplicitBadge(size: .compact)
+                  }
+                }
+                .padding(.bottom, 3)
+
+                Text(song.artist)
+                  .customFont(.subheadline)
+                  .foregroundColor(.gray)
+                  .lineLimit(2)
+                  .multilineTextAlignment(.leading)
+              }
+              .padding(.horizontal, 10)
+
+              Spacer()
+            }
+            .padding(.horizontal)
+            .background(Color(UIColor.systemBackground))
+
+            Divider()
+          }
+          .onTapGesture {
+            let liked = SongCollection(
+              id: "starred-songs", name: "Liked Songs", songs: filteredSongs)
+            playerViewModel.playBySong(idx: idx, item: liked, isFromLocal: false)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
+      }
+      .padding(.top, 10)
+      .padding(.bottom, playerContentBottomPadding(viewModel: playerViewModel, iPhoneActive: 100, iPhoneInactive: 12))
+      .navigationTitle("Liked Songs")
+      .searchable(
+        text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search"
+      )
+    }
+    .onAppear {
+      viewModel.fetchStarredSongs()
+    }
+    .onChange(of: playerViewModel.isStarred) { _ in
+      viewModel.fetchStarredSongs()
+    }
+  }
+}

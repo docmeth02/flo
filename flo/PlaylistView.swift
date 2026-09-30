@@ -12,8 +12,18 @@ struct PlaylistView: View {
   @EnvironmentObject private var playerViewModel: PlayerViewModel
   @EnvironmentObject private var downloadViewModel: DownloadViewModel
 
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
   @State private var searchPlaylist = ""
   @State private var showDownloadSheet: Bool = false
+
+  private var columns: [GridItem] {
+    if horizontalSizeClass == .regular {
+      return Array(repeating: GridItem(.flexible()), count: 4)
+    } else {
+      return Array(repeating: GridItem(.flexible()), count: 2)
+    }
+  }
 
   var filteredPlaylists: [Playlist] {
     if searchPlaylist.isEmpty {
@@ -26,62 +36,45 @@ struct PlaylistView: View {
   }
 
   var body: some View {
-    NavigationStack {
-      ScrollView {
-        LazyVStack {
-          ForEach(filteredPlaylists) { playlist in
-            NavigationLink {
-              PlaylistDetailView()
-                .environmentObject(viewModel)
-                .environmentObject(playerViewModel)
-                .environmentObject(downloadViewModel)
-                .onAppear {
-                  viewModel.setActivePlaylist(playlist: playlist)
-                }
-            } label: {
-              VStack {
-                HStack {
-                  VStack(alignment: .leading) {
-                    Text("\(playlist.name)\(playlist.isPublic ? "" : " 🔒")")
-                      .customFont(.headline)
-                      .multilineTextAlignment(.leading)
-
-                    Text(playlist.comment)
-                      .customFont(.caption1)
-                      .multilineTextAlignment(.leading)
-                  }
-
-                  Spacer()
-
-                  Image(systemName: "chevron.right")
-                    .foregroundColor(.gray)
-                    .font(.caption)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 5)
-
-                Divider()
+    ScrollView {
+      LazyVGrid(columns: columns) {
+        ForEach(filteredPlaylists) { playlist in
+          NavigationLink {
+            PlaylistDetailView()
+              .environmentObject(viewModel)
+              .environmentObject(playerViewModel)
+              .environmentObject(downloadViewModel)
+              .onAppear {
+                viewModel.setActivePlaylist(playlist: playlist)
               }
-            }
-          }
-        }.padding(.bottom, 100)
-      }
-      .toolbar {
-        if downloadViewModel.hasDownloadQueue() {
-          Button(action: {
-            showDownloadSheet.toggle()
-          }) {
-            Label("", systemImage: "icloud.and.arrow.down")
+          } label: {
+            PlaylistsView(viewModel: viewModel, playlist: playlist)
           }
         }
       }
-      .sheet(isPresented: $showDownloadSheet) {
-        DownloadQueueView().environmentObject(downloadViewModel)
-      }
-      .navigationTitle("Playlists")
-      .searchable(
-        text: $searchPlaylist, placement: .navigationBarDrawer(displayMode: .always),
-        prompt: "Search")
+      .padding(.top, 10)
+      .padding(
+        .bottom, playerContentBottomPadding(viewModel: playerViewModel, iPhoneActive: 100, iPhoneInactive: 0)
+      )
     }
+    .toolbar {
+      if downloadViewModel.hasDownloadQueue() {
+        Button(action: {
+          showDownloadSheet.toggle()
+        }) {
+          Label("", systemImage: "icloud.and.arrow.down")
+        }
+      }
+    }
+    .sheet(isPresented: $showDownloadSheet) {
+      DownloadQueueView().environmentObject(downloadViewModel)
+    }
+    .navigationTitle("Playlists")
+    .refreshable {
+      await viewModel.refreshPlaylists()
+    }
+    .searchable(
+      text: $searchPlaylist, placement: .navigationBarDrawer(displayMode: .always),
+      prompt: "Search")
   }
 }

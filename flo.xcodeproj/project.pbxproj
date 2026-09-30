@@ -7,64 +7,105 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		01805F1E44CC1B1244CA864C /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4100A6A2CE78B5F001BC9BE /* Playlist.swift */; };
+		02E566BC379A4C25B4AB907C /* CachedSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8455A32A2A31C3AA7C4DC99 /* CachedSongsView.swift */; };
+		039F16C6B65D4284E6989F70 /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134522C15BE0C00CCF2EB /* Strings.swift */; };
+		0492785B34424AF5CCDAD005 /* AuthMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C912872F5DD9280087EE61 /* AuthMode.swift */; };
+		0AD0C2EC6B75E69FAE803F08 /* CoreDataManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15235A548CA629C5DC234A0D /* CoreDataManagerTests.swift */; };
+		0C1A2B3C4D5E6F7A8B9C0D1E /* LibraryCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */; };
+		0D1A2B3C4D5E6F7A8B9C0D1E /* CoverArtCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */; };
+		0D25BDE8239F8A39D2BC630E /* FloooService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* FloooService.swift */; };
+		0E1A2B3C4D5E6F7A8B9C0D1E /* LikedSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2A3B4C5D6E7F8A9B0C1D2E /* LikedSongsView.swift */; };
+		1DD438B1C8D7D5AEC7562A6A /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FB5C179BC0B76201835B86 /* WatchContentView.swift */; };
+		2C0356A72AB4F01AA810FE73 /* WatchPlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EBE53668B154717D97E0654 /* WatchPlaylistDetailView.swift */; };
+		2F8DDF24A4E509AD68036392 /* WatchNowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FABF85F19B541FE12696A0E5 /* WatchNowPlayingView.swift */; };
+		2FA18EA1F9CF42711E1323EE /* WatchArtistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B41738B26DF74C4135ED3B6B /* WatchArtistDetailView.swift */; };
+		31853D55BC2448BE9766D45E /* Subsonic.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD522D3267CE00644E68 /* Subsonic.swift */; };
+		3334D3E1F41C3BD65DD6E300 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */; };
+		34BF3A1DC0B124BA46364F05 /* SubsonicResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E02B26D29AEC94518678820D /* SubsonicResponseTests.swift */; };
+		37345ED87EE0B8A08B56A73C /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */; };
+		3911EF003135778456337152 /* ScrobbleQueueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */; };
+		3D4F22CBDB6FE7B5DC2ACA7D /* LRCParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75FD47BBDA4C5304FD735BB6 /* LRCParserTests.swift */; };
+		3FED4C4043890696D075FFBC /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
+		47A870594A9F53F6C888BC3B /* ScanStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49495802C1C25E5006B4D1E /* ScanStatus.swift */; };
+		48426E09F42798E3F16C85E2 /* WatchQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BDA0AFDF99572D783F7433F /* WatchQueueView.swift */; };
+		48ADEC12F9F42A971F3E1BEC /* UserDefaultsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D5CDC0FFBED576BEE3A0C01 /* UserDefaultsManagerTests.swift */; };
+		4CC28174B1DBFE6CDF8AD636 /* WatchStarredSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5055C3CF1C4E3BB88F96CCCD /* WatchStarredSongsView.swift */; };
+		4EF6639A35569AEC92BD1D9D /* ExplicitStatusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 432B409E97B302AF6CFFC31C /* ExplicitStatusTests.swift */; };
+		4F8E0BD04AC14F52D5C8E033 /* ExplicitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */; };
+		50C912892F5DD9280087EE61 /* AuthMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C912872F5DD9280087EE61 /* AuthMode.swift */; };
+		50C912912F5DD9990087EE61 /* IAPLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C9128A2F5DD9990087EE61 /* IAPLoginView.swift */; };
+		50C912A42F648A440087EE61 /* IAPWebAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C912A32F648A440087EE61 /* IAPWebAuthView.swift */; };
+		50C912A62F648A490087EE61 /* IAPWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C912A52F648A490087EE61 /* IAPWebView.swift */; };
+		50CDEED087F337229E9A8581 /* PlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */; };
+		510CE2B2F1965140C2CED0FC /* PlaylistDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBD4357E146B89677DDD799 /* PlaylistDecodingTests.swift */; };
+		5493F47DE4E5039A5F602A32 /* ArtistRadio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */; };
+		55CFFAB52342C01E366F87B0 /* CarPlayCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2645E70081EEE2C0396E04D8 /* CarPlayCoordinator.swift */; };
+		57D805A2215E047ACD99D945 /* LocalFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C401D0992C5AED9F009F91C7 /* LocalFileManager.swift */; };
+		587A2E31AB9ADC1C724BE658 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFA9D48444F961601BF12316 /* AppDelegate.swift */; };
+		5A6FBD57C4ECDA2296B278AE /* AlbumService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875DFF2C149D9000D9BAEB /* AlbumService.swift */; };
+		5B36C5A514B55EDA0931E21D /* flo.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */; };
+		5C0FF0022F8B0001000000A2 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0012F8B0001000000A1 /* NetworkMonitor.swift */; };
+		5C0FF0042F8B0001000000A4 /* ScrobbleQueueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */; };
+		5C0FF0062F8B0001000000A6 /* ScrobbleQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0052F8B0001000000A5 /* ScrobbleQueueView.swift */; };
+		5E64C3D71B02BE8FEDF5FF3C /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566B2E217C6248B16912297F /* CarPlaySceneDelegate.swift */; };
+		5EABCFCB76DE2EC0F4669A95 /* Album.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4289F492C12392B00C3A4FD /* Album.swift */; };
+		61F85A23962C669E4FAA3B23 /* RadioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAC2F321697002A5FBB /* RadioService.swift */; };
+		62222FC9E7E16FA561E5506B /* RadioURLNormalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F17FAD2FB5BF6F9E62F05842 /* RadioURLNormalizationTests.swift */; };
+		62F4DD11E524061F6A975D7F /* WatchRadiosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F94DAD74D58A8EBD6F580A81 /* WatchRadiosView.swift */; };
+		6A17041A9B41B54D4EF1673F /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E032C149F9A00D9BAEB /* APIManager.swift */; };
+		6B3DAAA1C878630B99B85D6B /* DownloadViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F889E971F362E5FCACE642B7 /* DownloadViewModelTests.swift */; };
+		6BDAFB58A4C77A82BCCFD0F4 /* CarPlay.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE85DCBEE7ADB56E8BFD6338 /* CarPlay.framework */; platformFilter = ios; };
+		6BEC73D6E3EF95D46B740883 /* SongDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE4FB43F0E12E4292BAD138 /* SongDecodingTests.swift */; };
+		6EBD3913AE23DE45F099A0F7 /* MergePlaylistSongsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D05C52638B6C2E48AC6723C /* MergePlaylistSongsTests.swift */; };
+		756478A3866CAEE05EB5E04F /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 1E22C1780DE530F41F928A95 /* KeychainAccess */; };
+		757E8B897B4A9B47143D8CCF /* WatchAlbumsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703CA328A69040E6CCF954B4 /* WatchAlbumsListView.swift */; };
+		75C7C243D6402BCA5EC4F236 /* AlbumViewModelNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C41C55ECB0D003CFFE00C2A /* AlbumViewModelNavigationTests.swift */; };
+		75D1AF56B31EC146D85A2D00 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 106BAFD6F01D187F29A17A9D /* Alamofire */; };
+		7629BD4F6227A8E16A2BBB5E /* CoverArtCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */; };
+		79A34A805FA50EE0C4B7810D /* StreamCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */; };
+		7C09E28C1BFFDB5D5F124EC9 /* CarPlayNowPlayingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EEF17030A154EB98122A089 /* CarPlayNowPlayingManager.swift */; };
+		7CB0AF2CAF287CB275F8E58B /* WatchPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88D8350161966488618D240F /* WatchPlayerViewModel.swift */; };
+		80E9928F3EE8386AAF1C8235 /* Stats.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46B8DD62CF4B88E00B40644 /* Stats.swift */; };
+		854D35E557CBD828EC654F35 /* UserDefaultsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */; };
+		918D91B96EB2612541200A7F /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F5592C11953000E3E1D2 /* Constants.swift */; };
+		928BF54D766E3F6E6EBACD85 /* WatchPlaylistsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AD5E1FE518457926B00D341 /* WatchPlaylistsListView.swift */; };
+		937DBDB438F8A8C386E0C7A4 /* UserAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = C446A6B62C08DE8800CC9787 /* UserAuth.swift */; };
+		93C4EDA5F5007DA82FE113B5 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 638B2D1AECAA38268427598A /* WatchApp.swift */; };
+		983F57A9E194FBCAF8E44F09 /* WatchCachedSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DFCE00EB3D08D69E35F8A68 /* WatchCachedSongsView.swift */; };
+		9E2978ECF52F4F441930EDE3 /* FloooViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD502D3264AE00644E68 /* FloooViewModel.swift */; };
+		A08ED21ABC61336BDD76B09E /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524C2C14E71B0053763A /* KeychainManager.swift */; };
+		A119B71A26B0361EADB0E7B7 /* APIServiceMockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC814DF88E8BCC1A4B8B476B /* APIServiceMockTests.swift */; };
+		A1E7A7FD78DB99C307639D7E /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
+		A41E9729ECD9216622752F1D /* WatchAlbumArtView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC2E67CCE3ED944C69F8973 /* WatchAlbumArtView.swift */; };
+		A49532B8A368D691410CAF60 /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
+		A59D3A76D831697134462DB7 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EAA4852C297E35007EB2E0 /* NowPlaying.swift */; };
+		A696A6F708006E6ABC75D01C /* WatchLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B4EC1A2350C8A0C34B7AE02 /* WatchLoginView.swift */; };
+		A9B94AB857BA8220121A3A0B /* AccountLinkStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD542D329C8500644E68 /* AccountLinkStatus.swift */; };
+		AF8F4066A6464664404ECF80 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C33E4D7DFB09BB760978CACE /* Assets.xcassets */; };
 		B02A003F2F36662C0024E8EC /* UIScreen+.swift in Sources */ = {isa = PBXBuildFile; fileRef = B02A003E2F3666240024E8EC /* UIScreen+.swift */; };
+		B0330DD0198F131B14456A89 /* WatchAlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66B14F36AC2C06239FAD68BF /* WatchAlbumDetailView.swift */; };
 		B0AD2E712F4B037400577062 /* ArtistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E6E2F4B037400577062 /* ArtistDetailView.swift */; };
 		B0AD2E722F4B037400577062 /* ArtistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E6F2F4B037400577062 /* ArtistsView.swift */; };
 		B0AD2E742F4B037C00577062 /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		B0AD2E762F4B2B6900577062 /* ArtistRadio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */; };
 		B0AD2E772F4B2B6900577062 /* ArtistRadio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */; };
-		A1B2C3D4E5F6A7B800577062 /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
+		B0AD2E782F4B037D00577062 /* ArtistImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E792F4B037D00577062 /* ArtistImageView.swift */; };
 		B0BAAAA62F31F0A0002A5FBB /* RadiosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA52F31F0A0002A5FBB /* RadiosView.swift */; };
 		B0BAAAA92F3213AF002A5FBB /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
 		B0BAAAAB2F3214F7002A5FBB /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
 		B0BAAAAD2F3216A0002A5FBB /* RadioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAC2F321697002A5FBB /* RadioService.swift */; };
-		0A1B2C3D4E5F6A7B8C9D0E1F /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
-		0A2B3C4D5E6F7A8B9C0D1E2F /* RadioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAC2F321697002A5FBB /* RadioService.swift */; };
-		0A3B4C5D6E7F8A9B0C1D2E3F /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
-		0A4B5C6D7E8F9A0B1C2D3E4F /* WatchRadiosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A5B6C7D8E9F0A1B2C3D4E5F /* WatchRadiosView.swift */; };
-		097763560166B559CC3554F9 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */; };
-		0B1A2B3C4D5E6F7A8B9C0D1E /* StreamCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B2A3B4C5D6E7F8A9B0C1D2E /* StreamCacheManager.swift */; };
-		0C1A2B3C4D5E6F7A8B9C0D1E /* LibraryCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */; };
-		0D1A2B3C4D5E6F7A8B9C0D1E /* CoverArtCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */; };
-		0F1A2B3C4D5E6F7A8B9C0D1E /* SmartPlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F2A3B4C5D6E7F8A9B0C1D2E /* SmartPlaybackService.swift */; };
-		1A1A2B3C4D5E6F7A8B9C0D1E /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2A3B4C5D6E7F8A9B0C1D2E /* ConnectivityMonitor.swift */; };
-		1A3A4B5C6D7E8F9A0B1C2D3E /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2A3B4C5D6E7F8A9B0C1D2E /* ConnectivityMonitor.swift */; };
-		097DA1E18629F39C1C9615A9 /* WatchQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D12A88F1F4331250EAC2F /* WatchQueueView.swift */; };
-		0E1124832632321863923A2D /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134522C15BE0C00CCF2EB /* Strings.swift */; };
-		169F90289CA99D195434F17E /* AccountLinkStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD542D329C8500644E68 /* AccountLinkStatus.swift */; };
-		1C4F6D34021FA5402E41E901 /* PlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */; };
-		251E9DA2F355D337215B0B51 /* Playable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4824D222CE8C41D003EAB52 /* Playable.swift */; };
-		25AFF17DF3C6BFE52B54ADEA /* PlusJakartaSans-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C415F55E2C11A34C00E3E1D2 /* PlusJakartaSans-VariableFont_wght.ttf */; };
-		2AE1B762E9EA6FECAE94CDB0 /* Stats.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46B8DD62CF4B88E00B40644 /* Stats.swift */; };
-		2B111AB43116AF1070FA94AA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C5C41672C6BF11C846EC75F /* Assets.xcassets */; };
-		3940A90EEAFD851F057672DD /* UserAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = C446A6B62C08DE8800CC9787 /* UserAuth.swift */; };
-		437E40842848FEAE96E64293 /* flo.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */; };
-		447F2ACD5758A1573EBD2536 /* ScanStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49495802C1C25E5006B4D1E /* ScanStatus.swift */; };
-		45F84A57CB274512D8FC3EE6 /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4100A6A2CE78B5F001BC9BE /* Playlist.swift */; };
-		4F33FDDC7D495CD573E5D433 /* WatchArtistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D07B929800509A9082615D /* WatchArtistDetailView.swift */; };
-		524D79FBF5463AA5AE824ED2 /* Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41470BA2CE65808008BDCE8 /* Artist.swift */; };
-		53AAD5C6C3E7286B8F258663 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EAA4852C297E35007EB2E0 /* NowPlaying.swift */; };
-		5546A82CFBACC9BAA65BB749 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ABA55FBF01C3B454EDCEAA8 /* WatchApp.swift */; };
-		5578731AA38D89318ED9F4F8 /* Song.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FDC2C15E1C300E712BE /* Song.swift */; };
-		5880A641F3054635E0E30B4B /* UserDefaultsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */; };
-		604413A3C487B4DA0E254DB2 /* WatchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B900EB966261C96243C3B96D /* WatchSettingsView.swift */; };
-		61E8341165822DA68439B38D /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15329B2E69CD405EE1FA1DA /* WatchContentView.swift */; };
-		6B99BD6847C7A0C5351217A8 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 5DE7A6C4575AA444E67B4E3A /* Alamofire */; };
-		70B03F11AF4B149B607852F2 /* AlbumService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875DFF2C149D9000D9BAEB /* AlbumService.swift */; };
-		7378E3332D148A9A8B2BB208 /* NowPlayingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9534CD360742A3A0CE0F6105 /* NowPlayingIndicator.swift */; };
-		83609895273E639A5CEBF0D6 /* WatchLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1802E5EEFF4EA39373808FAB /* WatchLoginView.swift */; };
-		85FBEF89EEC5325D36E32C07 /* TrackRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8672530107686E69349E53 /* TrackRowView.swift */; };
-		8B35AE5496AB8086236BCB22 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E012C149DDD00D9BAEB /* AuthService.swift */; };
-		8DE61FDF6757FDAC853CDDBF /* FloooViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD502D3264AE00644E68 /* FloooViewModel.swift */; };
-		91032C8438218FAD12CDBAB5 /* FloooService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* FloooService.swift */; };
-		99794CC64C21AC3E897EF106 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = F0BEBFD1A1C1E219816A7F4E /* KeychainAccess */; };
-		9B8DF0082C84CF99D318766C /* WatchAlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6987CC26A91D09E0F053A7C /* WatchAlbumDetailView.swift */; };
-		A1CDAC159C0A61FD8EFB5B41 /* LocalFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C401D0992C5AED9F009F91C7 /* LocalFileManager.swift */; };
-		AADBB8CBDC936CD7E4CBA434 /* ScanStatusService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49495842C1C26D4006B4D1E /* ScanStatusService.swift */; };
-		AB1C863415BA8F881C52A34D /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E032C149F9A00D9BAEB /* APIManager.swift */; };
-		B341BDBCB019195C280B5115 /* WatchPlaylistsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74288F9C25850681259A4D11 /* WatchPlaylistsListView.swift */; };
-		B46A893EAE4F5312B01A6DF7 /* WatchPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDA4610BA4E14DC4D119E17 /* WatchPlayerViewModel.swift */; };
-		BA1D885946946F842BF56D0E /* AlbumViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4289F472C12391300C3A4FD /* AlbumViewModel.swift */; };
+		B1C2D3E4F5A60718293B4C5D /* AlbumServicePlaylistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* AlbumServicePlaylistTests.swift */; };
+		B1C2D3E4F5A60718293B4C60 /* AlbumViewModelPlaylistDownloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B60 /* AlbumViewModelPlaylistDownloadTests.swift */; };
+		B6A31D8C7E7A1093688BD8FB /* PlayerViewModelPlaybackModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ABA4B4E4ABEC1D5475B7F9C /* PlayerViewModelPlaybackModeTests.swift */; };
+		B9745708AA8D871D0BCF4A39 /* LyricsLineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837DA624832C5D48C65AE9EC /* LyricsLineTests.swift */; };
+		B9D08EAB8C51BDB1AF9AD48C /* ScanStatusService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49495842C1C26D4006B4D1E /* ScanStatusService.swift */; };
+		BB9009B8D9D67F2A01F6A722 /* Playable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4824D222CE8C41D003EAB52 /* Playable.swift */; };
+		BBA7A0BDCD8BAFA9B2088999 /* AlbumViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4289F472C12391300C3A4FD /* AlbumViewModel.swift */; };
+		BC8F89CD0C6562C496EDE0F6 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6CC2B5AA866663E09C3E38A /* SceneDelegate.swift */; };
+		BD0EE3C15900C43F8F8F05A2 /* NowPlayingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCECEB2E491539A0CCEFF67F /* NowPlayingIndicator.swift */; };
+		BD3D1C826D4DCF07A8043948 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0012F8B0001000000A1 /* NetworkMonitor.swift */; };
+		BE5C5E81B4634769556BAB00 /* WatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A31EF1F3148DA550C9A9567 /* WatchHomeView.swift */; };
 		C401D09A2C5AED9F009F91C7 /* LocalFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C401D0992C5AED9F009F91C7 /* LocalFileManager.swift */; };
 		C4100A692CE78B25001BC9BE /* PlaylistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4100A682CE78B21001BC9BE /* PlaylistView.swift */; };
 		C4100A6B2CE78B62001BC9BE /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4100A6A2CE78B5F001BC9BE /* Playlist.swift */; };
@@ -87,6 +128,37 @@
 		C42B25842F44551B00E62008 /* PlaybackCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25832F44551B00E62008 /* PlaybackCoordinator.swift */; };
 		C42B25862F44551B00E62008 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25852F44551B00E62008 /* WatchConnectivityManager.swift */; };
 		C42B25882F4456BF00E62008 /* WatchLibraryResponder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25872F4456BF00E62008 /* WatchLibraryResponder.swift */; };
+		C42B25972F4458EF00E62008 /* flo Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C42B258D2F4458ED00E62008 /* flo Watch Watch App.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C42B259C2F445B7000E62008 /* WatchArtistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25792F4453B600E62008 /* WatchArtistsView.swift */; };
+		C42B259D2F445B7000E62008 /* WatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B256D2F44536D00E62008 /* WatchHomeView.swift */; };
+		C42B259E2F445B7000E62008 /* WatchPlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B257F2F4453CE00E62008 /* WatchPlaylistDetailView.swift */; };
+		C42B259F2F445B7000E62008 /* WatchArtistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B257B2F4453B600E62008 /* WatchArtistDetailView.swift */; };
+		C42B25A12F445B7000E62008 /* WatchPlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B257D2F4453CE00E62008 /* WatchPlaylistsView.swift */; };
+		C42B25A32F445B7000E62008 /* WatchLibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B256F2F44539300E62008 /* WatchLibraryViewModel.swift */; };
+		C42B25A42F445B7000E62008 /* WatchNowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25812F4453CF00E62008 /* WatchNowPlayingView.swift */; };
+		C42B25A52F445B7000E62008 /* WatchPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25712F44539300E62008 /* WatchPlayerViewModel.swift */; };
+		C42B25A62F445B7000E62008 /* WatchAlbumsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25752F4453B500E62008 /* WatchAlbumsView.swift */; };
+		C42B25A72F445B7000E62008 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25692F44536C00E62008 /* WatchRootView.swift */; };
+		C42B25A82F445B7000E62008 /* WatchAlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25772F4453B500E62008 /* WatchAlbumDetailView.swift */; };
+		C42B25A92F445B7000E62008 /* WatchCoverArtView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25732F44539300E62008 /* WatchCoverArtView.swift */; };
+		C42B25AA2F445C8900E62008 /* UserAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = C446A6B62C08DE8800CC9787 /* UserAuth.swift */; };
+		C42B25AB2F445C8900E62008 /* LyricsLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C456D8FB2F2FF397002AAB8B /* LyricsLine.swift */; };
+		C42B25AC2F445C8900E62008 /* Song.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FDC2C15E1C300E712BE /* Song.swift */; };
+		C42B25AD2F445C8900E62008 /* LRCLIB.swift in Sources */ = {isa = PBXBuildFile; fileRef = C456D8F52F2FBD61002AAB8B /* LRCLIB.swift */; };
+		C42B25AE2F445C8900E62008 /* AccountLinkStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD542D329C8500644E68 /* AccountLinkStatus.swift */; };
+		C42B25AF2F445C8900E62008 /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
+		C42B25B02F445C8900E62008 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EAA4852C297E35007EB2E0 /* NowPlaying.swift */; };
+		C42B25B12F445C8900E62008 /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4100A6A2CE78B5F001BC9BE /* Playlist.swift */; };
+		C42B25B22F445C8900E62008 /* Playable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4824D222CE8C41D003EAB52 /* Playable.swift */; };
+		C42B25B32F445C8900E62008 /* Album.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4289F492C12392B00C3A4FD /* Album.swift */; };
+		C42B25B42F445C8900E62008 /* Stats.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46B8DD62CF4B88E00B40644 /* Stats.swift */; };
+		C42B25B52F445C8900E62008 /* ScanStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49495802C1C25E5006B4D1E /* ScanStatus.swift */; };
+		C42B25B62F445C8900E62008 /* Subsonic.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD522D3267CE00644E68 /* Subsonic.swift */; };
+		C42B25B72F445C8900E62008 /* Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41470BA2CE65808008BDCE8 /* Artist.swift */; };
+		C42B25B82F445C9B00E62008 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25852F44551B00E62008 /* WatchConnectivityManager.swift */; };
+		C42B25BA2F445E9600E62008 /* FloWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25672F44536C00E62008 /* FloWatchApp.swift */; };
+		C42B25BC2F4464AD00E62008 /* WatchSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25BB2F4464AD00E62008 /* WatchSongsView.swift */; };
+		C42B25BE2F4464AE00E62008 /* WatchRadiosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25BD2F4464AE00E62008 /* WatchRadiosView.swift */; };
 		C42E7E182CE7EF5500505B4E /* PlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42E7E172CE7EF4D00505B4E /* PlaylistDetailView.swift */; };
 		C440228D2C09BE2E004EE9CD /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C440228C2C09BE2E004EE9CD /* PlayerView.swift */; };
 		C446A6B72C08DE8800CC9787 /* UserAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = C446A6B62C08DE8800CC9787 /* UserAuth.swift */; };
@@ -103,6 +175,8 @@
 		C467AD532D3267D000644E68 /* Subsonic.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD522D3267CE00644E68 /* Subsonic.swift */; };
 		C467AD552D329C8B00644E68 /* AccountLinkStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD542D329C8500644E68 /* AccountLinkStatus.swift */; };
 		C46B8DD72CF4B89000B40644 /* Stats.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46B8DD62CF4B88E00B40644 /* Stats.swift */; };
+		C46B8DD92CF4B89100B40644 /* LibraryDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46B8DD82CF4B89100B40644 /* LibraryDestination.swift */; };
+		C46B8DDB2CF4B89200B40644 /* LibraryNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46B8DDA2CF4B89200B40644 /* LibraryNavigation.swift */; };
 		C46C85C42C07114200903F54 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46C85C32C07114200903F54 /* LoginView.swift */; };
 		C47876022C2BF15900184A33 /* AlbumsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C47876012C2BF15900184A33 /* AlbumsView.swift */; };
 		C47876042C2BFFF900184A33 /* SongView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C47876032C2BFFF900184A33 /* SongView.swift */; };
@@ -119,76 +193,152 @@
 		C4A4BF372C14442F00363290 /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A4BF362C14442F00363290 /* DownloadsView.swift */; };
 		C4A4BF392C14445000363290 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A4BF382C14445000363290 /* PreferencesView.swift */; };
 		C4A4BF3D2C1455A100363290 /* FloatingPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A4BF3C2C1455A100363290 /* FloatingPlayerView.swift */; };
+		C4B232EF2F44809F006A5044 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4E8D95F2B763BAB00C2353E /* Assets.xcassets */; };
 		C4B7E6A42F3C1001001D9A01 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C4B7E6A32F3C0FFF001D9A01 /* PrivacyInfo.xcprivacy */; };
+		C4CACHE012D7B0000003B9C4F /* StreamCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */; };
+		C4CBBA742FBA223C00F0DE75 /* floIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = C4CBBA732FBA223C00F0DE75 /* floIcon.icon */; };
 		C4D7F84D2C7F2AE900165EFD /* flo.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */; };
 		C4D7F84F2C7F2C5D00165EFD /* PlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */; };
 		C4DE89182C2FFBC900E078CC /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */; };
-		0B3A4B5C6D7E8F9A0B1C2D3E /* StreamCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B2A3B4C5D6E7F8A9B0C1D2E /* StreamCacheManager.swift */; };
-		0C3A4B5C6D7E8F9A0B1C2D3E /* LibraryCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */; };
-		0D3A4B5C6D7E8F9A0B1C2D3E /* CoverArtCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */; };
 		C4DFFA212D32E76E003B9C4E /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
-		C4DFFA222D32E76E003B9C4F /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
 		C4E8D95C2B763BA900C2353E /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E8D95B2B763BA900C2353E /* App.swift */; };
 		C4E8D95E2B763BA900C2353E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E8D95D2B763BA900C2353E /* ContentView.swift */; };
 		C4E8D9602B763BAB00C2353E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4E8D95F2B763BAB00C2353E /* Assets.xcassets */; };
 		C4E8D9632B763BAB00C2353E /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4E8D9622B763BAB00C2353E /* Preview Assets.xcassets */; };
 		C4E958982CA033BC00BBF394 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C4E958972CA033BC00BBF394 /* Localizable.xcstrings */; };
 		C4EAA4862C297E35007EB2E0 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EAA4852C297E35007EB2E0 /* NowPlaying.swift */; };
+		C4EXPLICIT012F4B0001AAAAAA /* ExplicitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */; };
+		C4EXPLICIT022F4B0001AAAAAA /* ExplicitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */; };
+		C4EXPLICIT042F4B0001AAAAAA /* ExplicitBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EXPLICIT032F4B0001AAAAAA /* ExplicitBadge.swift */; };
+		C4EXPLICIT052F4B0001AAAAAA /* ExplicitBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EXPLICIT032F4B0001AAAAAA /* ExplicitBadge.swift */; };
 		C4F0B0A22F3A111100ABC002 /* AirPlayRoutePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F0B0A12F3A111100ABC002 /* AirPlayRoutePicker.swift */; };
 		C4F1A0012F4A000100AAAAAA /* InAppPurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F1A0022F4A000100AAAAAA /* InAppPurchaseManager.swift */; };
 		C4F870CE2CEFCC5E00312F8A /* FloooService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* FloooService.swift */; };
 		C4F870D02CEFD25900312F8A /* StatCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CF2CEFD24D00312F8A /* StatCardView.swift */; };
 		C4FE524B2C14E1F70053763A /* UserDefaultsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */; };
 		C4FE524D2C14E71B0053763A /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524C2C14E71B0053763A /* KeychainManager.swift */; };
-		C5000F5A590A9533BB660D8E /* WatchAlbumsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3526308D2324A2F2C16C1695 /* WatchAlbumsListView.swift */; };
-		CD1CF1D5C5F6F372EAD7D617 /* Album.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4289F492C12392B00C3A4FD /* Album.swift */; };
-		D235EA9AC4ADBA9E159A73C7 /* WatchPlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44BE9700C568E33D05CF3241 /* WatchPlaylistDetailView.swift */; };
-		D2E39F1B59DA8351ED5314A2 /* WatchNowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6952BC46D9AF9E2E2A5689E9 /* WatchNowPlayingView.swift */; };
-		D44B14AE958B656B0D6270C5 /* WatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF43D735FD2FAF483904328 /* WatchHomeView.swift */; };
-		D59D78D5498292C45BDAF6A7 /* WatchArtistsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 173F7195039A67ED244801A3 /* WatchArtistsListView.swift */; };
-		DDE5493A6D2F2E91EF8B56AB /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F5592C11953000E3E1D2 /* Constants.swift */; };
-		E09A76F85921E0BF7CCC9397 /* Fonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F5632C11AA8700E3E1D2 /* Fonts.swift */; };
-		E28EFA0EADE6BB20D710C334 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524C2C14E71B0053763A /* KeychainManager.swift */; };
-		E9848D970CC0D36C57BE35C0 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F54D2C11908100E3E1D2 /* AuthViewModel.swift */; };
-		803A64897BE124FF861237C6 /* WatchCachedSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B75FAEE4FD21BF2C5B19F9 /* WatchCachedSongsView.swift */; };
-		A10C8DF6163751C868F3101B /* WatchStarredSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DFB2FA91260EF78D058402B /* WatchStarredSongsView.swift */; };
-		F30F820892097E4E907E6363 /* WatchDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4524E9ACA2B1D268A0EE938 /* WatchDownloadsView.swift */; };
-		F8B813E9AB860857A69952FF /* Subsonic.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD522D3267CE00644E68 /* Subsonic.swift */; };
-		FA43509E1E428C622F90A946 /* WatchAlbumArtView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31807F080421C27DD094A3C /* WatchAlbumArtView.swift */; };
-		FEA112E9C57BEE96828064FB /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FD82C15D58E00E712BE /* Errors.swift */; };
+		C4PLSTVW012F4B0001AAAAAA /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4PLSTVW002F4B0001AAAAAA /* PlaylistsView.swift */; };
+		C5F2B0042F5C000200BBCCDD /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5F2B0032F5C000200BBCCDD /* ConfettiView.swift */; };
+		C5F2B0062F5C000200BBCCDD /* GenreAlbumsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5F2B0052F5C000200BBCCDD /* GenreAlbumsView.swift */; };
+		C9F1A2B32D4E5F60718293AAC /* PlayerSidePanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F1A2B32D4E5F60718293AAB /* PlayerSidePanelView.swift */; };
+		CA219A4DA50CFD50683DE71B /* PlaybackServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E4BA752C1CCEB432C20A919 /* PlaybackServiceTests.swift */; };
+		D25AF44BCEB4F1ECC4EAA971 /* WatchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE281A2946A2E18C84927D8 /* WatchSettingsView.swift */; };
+		D349080D92950A1C67EDADB6 /* TrackRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA601DF6D60F70D262CE557B /* TrackRowView.swift */; };
+		D56D8D67004B7A3F15CA1FB8 /* WatchArtistsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0727D9D472758F5B95F301F6 /* WatchArtistsListView.swift */; };
+		D8A2EFEBC9CEAC6809CF726F /* UserAuthDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 610783432ED4ED3D44204F4C /* UserAuthDecodingTests.swift */; };
+		D957F801D3A1DA274CAA0864 /* Song.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FDC2C15E1C300E712BE /* Song.swift */; };
+		D990D07BDC3E9BA0B765EC45 /* LibraryCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */; };
+		DD189BE105260256B4F4BFCD /* Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41470BA2CE65808008BDCE8 /* Artist.swift */; };
+		E1C8A6B396E10315DCC67CD7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C82CC94036FFFCF7BF63C37 /* Foundation.framework */; };
+		E1F2A3B4C5D60718293B4C5E /* MockURLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3A4B5C60718293A4B5D /* MockURLProtocol.swift */; };
+		E630217EDD6F3306103C7C1D /* WatchDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C00FCB7A37E884BAAC284C9 /* WatchDownloadsView.swift */; };
+		E8AB6CFDF3CCA70D9FD9E2F9 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FD82C15D58E00E712BE /* Errors.swift */; };
+		ECAFB6C32648B3A1587A499A /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F54D2C11908100E3E1D2 /* AuthViewModel.swift */; };
+		EE8257FFD4E35E3713B38C38 /* SmartPlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C533CDA257C450543A1A341D /* SmartPlaybackService.swift */; };
+		F1A2B3C4D5E6F07182A3B4C6 /* TabSelectionClampingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F07182A3B4C5 /* TabSelectionClampingTests.swift */; };
+		F1F2B828D68321384EA37737 /* Fonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F5632C11AA8700E3E1D2 /* Fonts.swift */; };
+		F603ADBA32F245B193DE927F /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E012C149DDD00D9BAEB /* AuthService.swift */; };
+		FA138533DE126212552B3A51 /* CarPlayImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80C89AD8466BDBA43F95F5DC /* CarPlayImageLoader.swift */; };
+		FA7A4E54ED4653E81AD8F701 /* AlbumDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABB45CCDFA72AC567B21C95B /* AlbumDecodingTests.swift */; };
+		FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
+		FB66DABB7F1FED68A499E009 /* PlusJakartaSans-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C415F55E2C11A34C00E3E1D2 /* PlusJakartaSans-VariableFont_wght.ttf */; };
+		FE84EAF37C9E7F4D5488B658 /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		B80C8A13C1435D0785A7B14B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C4E8D9502B763BA900C2353E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C4E8D9572B763BA900C2353E;
+			remoteInfo = flo;
+		};
+		C42B25952F4458EF00E62008 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C4E8D9502B763BA900C2353E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C42B258C2F4458ED00E62008;
+			remoteInfo = "flo Watch Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
+		C42B259B2F4458EF00E62008 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				C42B25972F4458EF00E62008 /* flo Watch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0727D9D472758F5B95F301F6 /* WatchArtistsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchArtistsListView.swift; sourceTree = "<group>"; };
+		0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCacheManager.swift; sourceTree = "<group>"; };
+		0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverArtCacheManager.swift; sourceTree = "<group>"; };
+		0E2A3B4C5D6E7F8A9B0C1D2E /* LikedSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikedSongsView.swift; sourceTree = "<group>"; };
+		0EEF17030A154EB98122A089 /* CarPlayNowPlayingManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CarPlayNowPlayingManager.swift; sourceTree = "<group>"; };
+		15235A548CA629C5DC234A0D /* CoreDataManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CoreDataManagerTests.swift; sourceTree = "<group>"; };
+		1AD5E1FE518457926B00D341 /* WatchPlaylistsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlaylistsListView.swift; sourceTree = "<group>"; };
+		1B4EC1A2350C8A0C34B7AE02 /* WatchLoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLoginView.swift; sourceTree = "<group>"; };
+		1BDA0AFDF99572D783F7433F /* WatchQueueView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchQueueView.swift; sourceTree = "<group>"; };
+		1C00FCB7A37E884BAAC284C9 /* WatchDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDownloadsView.swift; sourceTree = "<group>"; };
+		2645E70081EEE2C0396E04D8 /* CarPlayCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CarPlayCoordinator.swift; sourceTree = "<group>"; };
+		2E4BA752C1CCEB432C20A919 /* PlaybackServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaybackServiceTests.swift; sourceTree = "<group>"; };
+		3EE4FB43F0E12E4292BAD138 /* SongDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SongDecodingTests.swift; sourceTree = "<group>"; };
+		432B409E97B302AF6CFFC31C /* ExplicitStatusTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExplicitStatusTests.swift; sourceTree = "<group>"; };
+		4D5CDC0FFBED576BEE3A0C01 /* UserDefaultsManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UserDefaultsManagerTests.swift; sourceTree = "<group>"; };
+		4EBE53668B154717D97E0654 /* WatchPlaylistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlaylistDetailView.swift; sourceTree = "<group>"; };
+		5055C3CF1C4E3BB88F96CCCD /* WatchStarredSongsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchStarredSongsView.swift; sourceTree = "<group>"; };
+		50C912872F5DD9280087EE61 /* AuthMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthMode.swift; sourceTree = "<group>"; };
+		50C9128A2F5DD9990087EE61 /* IAPLoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IAPLoginView.swift; sourceTree = "<group>"; };
+		50C912A32F648A440087EE61 /* IAPWebAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IAPWebAuthView.swift; sourceTree = "<group>"; };
+		50C912A52F648A490087EE61 /* IAPWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IAPWebView.swift; sourceTree = "<group>"; };
+		566B2E217C6248B16912297F /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
+		5C0FF0012F8B0001000000A1 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrobbleQueueManager.swift; sourceTree = "<group>"; };
+		5C0FF0052F8B0001000000A5 /* ScrobbleQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrobbleQueueView.swift; sourceTree = "<group>"; };
+		5C41C55ECB0D003CFFE00C2A /* AlbumViewModelNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlbumViewModelNavigationTests.swift; sourceTree = "<group>"; };
+		610783432ED4ED3D44204F4C /* UserAuthDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UserAuthDecodingTests.swift; sourceTree = "<group>"; };
+		638B2D1AECAA38268427598A /* WatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
+		64FB5C179BC0B76201835B86 /* WatchContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
+		66B14F36AC2C06239FAD68BF /* WatchAlbumDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumDetailView.swift; sourceTree = "<group>"; };
+		6A9F81F9C96481A86DE61DC9 /* floTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = floTests.xctest; path = floTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6ABA4B4E4ABEC1D5475B7F9C /* PlayerViewModelPlaybackModeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlayerViewModelPlaybackModeTests.swift; sourceTree = "<group>"; };
+		6FBD4357E146B89677DDD799 /* PlaylistDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaylistDecodingTests.swift; sourceTree = "<group>"; };
+		703CA328A69040E6CCF954B4 /* WatchAlbumsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumsListView.swift; sourceTree = "<group>"; };
+		75FD47BBDA4C5304FD735BB6 /* LRCParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LRCParserTests.swift; sourceTree = "<group>"; };
+		7A31EF1F3148DA550C9A9567 /* WatchHomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchHomeView.swift; sourceTree = "<group>"; };
+		7E2C854C4AFDB5F757411C4C /* flo.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = flo.entitlements; sourceTree = "<group>"; };
+		80C89AD8466BDBA43F95F5DC /* CarPlayImageLoader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CarPlayImageLoader.swift; sourceTree = "<group>"; };
+		837DA624832C5D48C65AE9EC /* LyricsLineTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LyricsLineTests.swift; sourceTree = "<group>"; };
+		88D8350161966488618D240F /* WatchPlayerViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlayerViewModel.swift; sourceTree = "<group>"; };
+		8D05C52638B6C2E48AC6723C /* MergePlaylistSongsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MergePlaylistSongsTests.swift; sourceTree = "<group>"; };
+		8DFCE00EB3D08D69E35F8A68 /* WatchCachedSongsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchCachedSongsView.swift; sourceTree = "<group>"; };
+		9A72287ACF3C11B43C138CED /* flo Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flo Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9C82CC94036FFFCF7BF63C37 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		A1B2C3D4E5F60718293A4B5C /* AlbumServicePlaylistTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlbumServicePlaylistTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B60 /* AlbumViewModelPlaylistDownloadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlbumViewModelPlaylistDownloadTests.swift; sourceTree = "<group>"; };
+		ABB45CCDFA72AC567B21C95B /* AlbumDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlbumDecodingTests.swift; sourceTree = "<group>"; };
+		AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectivityMonitor.swift; sourceTree = "<group>"; };
 		B02A003E2F3666240024E8EC /* UIScreen+.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIScreen+.swift"; sourceTree = "<group>"; };
 		B0AD2E6E2F4B037400577062 /* ArtistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistDetailView.swift; sourceTree = "<group>"; };
 		B0AD2E6F2F4B037400577062 /* ArtistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistsView.swift; sourceTree = "<group>"; };
 		B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistDetailViewModel.swift; sourceTree = "<group>"; };
 		B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistRadio.swift; sourceTree = "<group>"; };
+		B0AD2E792F4B037D00577062 /* ArtistImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistImageView.swift; sourceTree = "<group>"; };
 		B0BAAAA52F31F0A0002A5FBB /* RadiosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadiosView.swift; sourceTree = "<group>"; };
 		B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadiosViewModel.swift; sourceTree = "<group>"; };
 		B0BAAAAA2F3214F7002A5FBB /* Radio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Radio.swift; sourceTree = "<group>"; };
 		B0BAAAAC2F321697002A5FBB /* RadioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioService.swift; sourceTree = "<group>"; };
-		0FDA4610BA4E14DC4D119E17 /* WatchPlayerViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlayerViewModel.swift; sourceTree = "<group>"; };
-		173F7195039A67ED244801A3 /* WatchArtistsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchArtistsListView.swift; sourceTree = "<group>"; };
-		1802E5EEFF4EA39373808FAB /* WatchLoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLoginView.swift; sourceTree = "<group>"; };
-		3526308D2324A2F2C16C1695 /* WatchAlbumsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumsListView.swift; sourceTree = "<group>"; };
-		3E82F5FAFCB5606358990002 /* flo_Watch_App.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = flo_Watch_App.entitlements; sourceTree = "<group>"; };
-		44B012284F4E3E8462BDEC0B /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		44BE9700C568E33D05CF3241 /* WatchPlaylistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlaylistDetailView.swift; sourceTree = "<group>"; };
-		5C5C41672C6BF11C846EC75F /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		6952BC46D9AF9E2E2A5689E9 /* WatchNowPlayingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNowPlayingView.swift; sourceTree = "<group>"; };
-		71493F8E741F7D5134E12AF4 /* flo Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flo Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		74288F9C25850681259A4D11 /* WatchPlaylistsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlaylistsListView.swift; sourceTree = "<group>"; };
-		8ABA55FBF01C3B454EDCEAA8 /* WatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
-		9534CD360742A3A0CE0F6105 /* NowPlayingIndicator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NowPlayingIndicator.swift; sourceTree = "<group>"; };
-		52B75FAEE4FD21BF2C5B19F9 /* WatchCachedSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchCachedSongsView.swift; sourceTree = "<group>"; };
-		3DFB2FA91260EF78D058402B /* WatchStarredSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchStarredSongsView.swift; sourceTree = "<group>"; };
-		A4524E9ACA2B1D268A0EE938 /* WatchDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDownloadsView.swift; sourceTree = "<group>"; };
-		A6987CC26A91D09E0F053A7C /* WatchAlbumDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumDetailView.swift; sourceTree = "<group>"; };
-		B900EB966261C96243C3B96D /* WatchSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSettingsView.swift; sourceTree = "<group>"; };
+		B41738B26DF74C4135ED3B6B /* WatchArtistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchArtistDetailView.swift; sourceTree = "<group>"; };
+		BCC2E67CCE3ED944C69F8973 /* WatchAlbumArtView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumArtView.swift; sourceTree = "<group>"; };
+		BEC483ED8897928881A5A100 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		C33E4D7DFB09BB760978CACE /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C401D0992C5AED9F009F91C7 /* LocalFileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFileManager.swift; sourceTree = "<group>"; };
 		C4100A682CE78B21001BC9BE /* PlaylistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistView.swift; sourceTree = "<group>"; };
 		C4100A6A2CE78B5F001BC9BE /* Playlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Playlist.swift; sourceTree = "<group>"; };
@@ -207,9 +357,25 @@
 		C4289F502C139B2E00C3A4FD /* AlbumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumView.swift; sourceTree = "<group>"; };
 		C429DB2F2D33AE81009F2684 /* DownloadQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadQueueView.swift; sourceTree = "<group>"; };
 		C429DB312D33C704009F2684 /* DownloadButtonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadButtonView.swift; sourceTree = "<group>"; };
+		C42B25672F44536C00E62008 /* FloWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloWatchApp.swift; sourceTree = "<group>"; };
+		C42B25692F44536C00E62008 /* WatchRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRootView.swift; sourceTree = "<group>"; };
+		C42B256D2F44536D00E62008 /* WatchHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHomeView.swift; sourceTree = "<group>"; };
+		C42B256F2F44539300E62008 /* WatchLibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLibraryViewModel.swift; sourceTree = "<group>"; };
+		C42B25712F44539300E62008 /* WatchPlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlayerViewModel.swift; sourceTree = "<group>"; };
+		C42B25732F44539300E62008 /* WatchCoverArtView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchCoverArtView.swift; sourceTree = "<group>"; };
+		C42B25752F4453B500E62008 /* WatchAlbumsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAlbumsView.swift; sourceTree = "<group>"; };
+		C42B25772F4453B500E62008 /* WatchAlbumDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAlbumDetailView.swift; sourceTree = "<group>"; };
+		C42B25792F4453B600E62008 /* WatchArtistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchArtistsView.swift; sourceTree = "<group>"; };
+		C42B257B2F4453B600E62008 /* WatchArtistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchArtistDetailView.swift; sourceTree = "<group>"; };
+		C42B257D2F4453CE00E62008 /* WatchPlaylistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlaylistsView.swift; sourceTree = "<group>"; };
+		C42B257F2F4453CE00E62008 /* WatchPlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlaylistDetailView.swift; sourceTree = "<group>"; };
+		C42B25812F4453CF00E62008 /* WatchNowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchNowPlayingView.swift; sourceTree = "<group>"; };
 		C42B25832F44551B00E62008 /* PlaybackCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackCoordinator.swift; sourceTree = "<group>"; };
 		C42B25852F44551B00E62008 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		C42B25872F4456BF00E62008 /* WatchLibraryResponder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLibraryResponder.swift; sourceTree = "<group>"; };
+		C42B258D2F4458ED00E62008 /* flo Watch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flo Watch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C42B25BB2F4464AD00E62008 /* WatchSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSongsView.swift; sourceTree = "<group>"; };
+		C42B25BD2F4464AE00E62008 /* WatchRadiosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
 		C42E7E172CE7EF4D00505B4E /* PlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistDetailView.swift; sourceTree = "<group>"; };
 		C440228C2C09BE2E004EE9CD /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 		C446A6B62C08DE8800CC9787 /* UserAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAuth.swift; sourceTree = "<group>"; };
@@ -222,6 +388,8 @@
 		C467AD522D3267CE00644E68 /* Subsonic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subsonic.swift; sourceTree = "<group>"; };
 		C467AD542D329C8500644E68 /* AccountLinkStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountLinkStatus.swift; sourceTree = "<group>"; };
 		C46B8DD62CF4B88E00B40644 /* Stats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stats.swift; sourceTree = "<group>"; };
+		C46B8DD82CF4B89100B40644 /* LibraryDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryDestination.swift; sourceTree = "<group>"; };
+		C46B8DDA2CF4B89200B40644 /* LibraryNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryNavigation.swift; sourceTree = "<group>"; };
 		C46C85C32C07114200903F54 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		C47876012C2BF15900184A33 /* AlbumsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumsView.swift; sourceTree = "<group>"; };
 		C47876032C2BFFF900184A33 /* SongView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongView.swift; sourceTree = "<group>"; };
@@ -240,14 +408,11 @@
 		C4A4BF382C14445000363290 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
 		C4A4BF3C2C1455A100363290 /* FloatingPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPlayerView.swift; sourceTree = "<group>"; };
 		C4B7E6A32F3C0FFF001D9A01 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamCacheManager.swift; sourceTree = "<group>"; };
+		C4CBBA732FBA223C00F0DE75 /* floIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = floIcon.icon; sourceTree = "<group>"; };
 		C4D7F84C2C7F2AE900165EFD /* flo.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = flo.xcdatamodel; sourceTree = "<group>"; };
 		C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackService.swift; sourceTree = "<group>"; };
 		C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
-		0B2A3B4C5D6E7F8A9B0C1D2E /* StreamCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamCacheManager.swift; sourceTree = "<group>"; };
-		0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCacheManager.swift; sourceTree = "<group>"; };
-		0F2A3B4C5D6E7F8A9B0C1D2E /* SmartPlaybackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaybackService.swift; sourceTree = "<group>"; };
-		1A2A3B4C5D6E7F8A9B0C1D2E /* ConnectivityMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectivityMonitor.swift; sourceTree = "<group>"; };
-		0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverArtCacheManager.swift; sourceTree = "<group>"; };
 		C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadViewModel.swift; sourceTree = "<group>"; };
 		C4E8D9582B763BA900C2353E /* flo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = flo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C4E8D95B2B763BA900C2353E /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
@@ -256,22 +421,54 @@
 		C4E8D9622B763BAB00C2353E /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		C4E958972CA033BC00BBF394 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		C4EAA4852C297E35007EB2E0 /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
+		C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplicitStatus.swift; sourceTree = "<group>"; };
+		C4EXPLICIT032F4B0001AAAAAA /* ExplicitBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplicitBadge.swift; sourceTree = "<group>"; };
 		C4F0B0A12F3A111100ABC002 /* AirPlayRoutePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPlayRoutePicker.swift; sourceTree = "<group>"; };
 		C4F1A0022F4A000100AAAAAA /* InAppPurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppPurchaseManager.swift; sourceTree = "<group>"; };
 		C4F870CD2CEFCC5B00312F8A /* FloooService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloooService.swift; sourceTree = "<group>"; };
 		C4F870CF2CEFD24D00312F8A /* StatCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCardView.swift; sourceTree = "<group>"; };
 		C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsManager.swift; sourceTree = "<group>"; };
 		C4FE524C2C14E71B0053763A /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
-		D05D12A88F1F4331250EAC2F /* WatchQueueView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchQueueView.swift; sourceTree = "<group>"; };
-		0A5B6C7D8E9F0A1B2C3D4E5F /* WatchRadiosView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
-		D31807F080421C27DD094A3C /* WatchAlbumArtView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumArtView.swift; sourceTree = "<group>"; };
-		E15329B2E69CD405EE1FA1DA /* WatchContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
-		E1D07B929800509A9082615D /* WatchArtistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchArtistDetailView.swift; sourceTree = "<group>"; };
-		EE8672530107686E69349E53 /* TrackRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrackRowView.swift; sourceTree = "<group>"; };
-		FDF43D735FD2FAF483904328 /* WatchHomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchHomeView.swift; sourceTree = "<group>"; };
+		C4PLSTVW002F4B0001AAAAAA /* PlaylistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistsView.swift; sourceTree = "<group>"; };
+		C533CDA257C450543A1A341D /* SmartPlaybackService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SmartPlaybackService.swift; sourceTree = "<group>"; };
+		C5F2B0032F5C000200BBCCDD /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ConfettiView.swift; sourceTree = "<group>"; };
+		C5F2B0052F5C000200BBCCDD /* GenreAlbumsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/GenreAlbumsView.swift; sourceTree = "<group>"; };
+		C9F1A2B32D4E5F60718293AAB /* PlayerSidePanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSidePanelView.swift; sourceTree = "<group>"; };
+		CC814DF88E8BCC1A4B8B476B /* APIServiceMockTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = APIServiceMockTests.swift; sourceTree = "<group>"; };
+		CCECEB2E491539A0CCEFF67F /* NowPlayingIndicator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NowPlayingIndicator.swift; sourceTree = "<group>"; };
+		CE85DCBEE7ADB56E8BFD6338 /* CarPlay.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = CarPlay.framework; sourceTree = SDKROOT; };
+		CFA9D48444F961601BF12316 /* AppDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		D1E2F3A4B5C60718293A4B5D /* MockURLProtocol.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MockURLProtocol.swift; sourceTree = "<group>"; };
+		E02B26D29AEC94518678820D /* SubsonicResponseTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubsonicResponseTests.swift; sourceTree = "<group>"; };
+		E8455A32A2A31C3AA7C4DC99 /* CachedSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedSongsView.swift; sourceTree = "<group>"; };
+		EA601DF6D60F70D262CE557B /* TrackRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrackRowView.swift; sourceTree = "<group>"; };
+		F17FAD2FB5BF6F9E62F05842 /* RadioURLNormalizationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RadioURLNormalizationTests.swift; sourceTree = "<group>"; };
+		F1A2B3C4D5E6F07182A3B4C5 /* TabSelectionClampingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TabSelectionClampingTests.swift; sourceTree = "<group>"; };
+		F6CC2B5AA866663E09C3E38A /* SceneDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		F889E971F362E5FCACE642B7 /* DownloadViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadViewModelTests.swift; sourceTree = "<group>"; };
+		F94DAD74D58A8EBD6F580A81 /* WatchRadiosView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
+		FABF85F19B541FE12696A0E5 /* WatchNowPlayingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNowPlayingView.swift; sourceTree = "<group>"; };
+		FBE281A2946A2E18C84927D8 /* WatchSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		4230BA71AA528DF81B97FEC7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				75D1AF56B31EC146D85A2D00 /* Alamofire in Frameworks */,
+				756478A3866CAEE05EB5E04F /* KeychainAccess in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5793235D7C1F721BA9A420D9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E1C8A6B396E10315DCC67CD7 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C42B258A2F4458ED00E62008 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -289,26 +486,101 @@
 				C45F0E312CE5582C00F75C7A /* Nuke in Frameworks */,
 				C45F0E2C2CE4CCEA00F75C7A /* Pulse in Frameworks */,
 				C415F5512C11912800E3E1D2 /* KeychainAccess in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		D2ABAF9A0D53E1A2BB33BB6E /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				6B99BD6847C7A0C5351217A8 /* Alamofire in Frameworks */,
-				99794CC64C21AC3E897EF106 /* KeychainAccess in Frameworks */,
+				6BDAFB58A4C77A82BCCFD0F4 /* CarPlay.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2902A4035F798586E2A6C881 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				64FB5C179BC0B76201835B86 /* WatchContentView.swift */,
+				7A31EF1F3148DA550C9A9567 /* WatchHomeView.swift */,
+				1B4EC1A2350C8A0C34B7AE02 /* WatchLoginView.swift */,
+				FABF85F19B541FE12696A0E5 /* WatchNowPlayingView.swift */,
+				1BDA0AFDF99572D783F7433F /* WatchQueueView.swift */,
+				0727D9D472758F5B95F301F6 /* WatchArtistsListView.swift */,
+				B41738B26DF74C4135ED3B6B /* WatchArtistDetailView.swift */,
+				703CA328A69040E6CCF954B4 /* WatchAlbumsListView.swift */,
+				66B14F36AC2C06239FAD68BF /* WatchAlbumDetailView.swift */,
+				1AD5E1FE518457926B00D341 /* WatchPlaylistsListView.swift */,
+				4EBE53668B154717D97E0654 /* WatchPlaylistDetailView.swift */,
+				8DFCE00EB3D08D69E35F8A68 /* WatchCachedSongsView.swift */,
+				5055C3CF1C4E3BB88F96CCCD /* WatchStarredSongsView.swift */,
+				1C00FCB7A37E884BAAC284C9 /* WatchDownloadsView.swift */,
+				FBE281A2946A2E18C84927D8 /* WatchSettingsView.swift */,
+				F94DAD74D58A8EBD6F580A81 /* WatchRadiosView.swift */,
+			);
+			name = Views;
+			path = Views;
+			sourceTree = "<group>";
+		};
+		3187E4E95236423EE8702B86 /* CarPlay */ = {
+			isa = PBXGroup;
+			children = (
+				566B2E217C6248B16912297F /* CarPlaySceneDelegate.swift */,
+				2645E70081EEE2C0396E04D8 /* CarPlayCoordinator.swift */,
+				0EEF17030A154EB98122A089 /* CarPlayNowPlayingManager.swift */,
+				80C89AD8466BDBA43F95F5DC /* CarPlayImageLoader.swift */,
+			);
+			path = CarPlay;
+			sourceTree = "<group>";
+		};
+		4706CFB7A6A3B2B19FAE74D0 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				9C82CC94036FFFCF7BF63C37 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		6789EB37355A658EBDE0012F /* floTests */ = {
+			isa = PBXGroup;
+			children = (
+				ABB45CCDFA72AC567B21C95B /* AlbumDecodingTests.swift */,
+				A1B2C3D4E5F60718293A4B5C /* AlbumServicePlaylistTests.swift */,
+				5C41C55ECB0D003CFFE00C2A /* AlbumViewModelNavigationTests.swift */,
+				A1B2C3D4E5F60718293A4B60 /* AlbumViewModelPlaylistDownloadTests.swift */,
+				15235A548CA629C5DC234A0D /* CoreDataManagerTests.swift */,
+				F889E971F362E5FCACE642B7 /* DownloadViewModelTests.swift */,
+				432B409E97B302AF6CFFC31C /* ExplicitStatusTests.swift */,
+				75FD47BBDA4C5304FD735BB6 /* LRCParserTests.swift */,
+				837DA624832C5D48C65AE9EC /* LyricsLineTests.swift */,
+				8D05C52638B6C2E48AC6723C /* MergePlaylistSongsTests.swift */,
+				CC814DF88E8BCC1A4B8B476B /* APIServiceMockTests.swift */,
+				D1E2F3A4B5C60718293A4B5D /* MockURLProtocol.swift */,
+				2E4BA752C1CCEB432C20A919 /* PlaybackServiceTests.swift */,
+				6ABA4B4E4ABEC1D5475B7F9C /* PlayerViewModelPlaybackModeTests.swift */,
+				6FBD4357E146B89677DDD799 /* PlaylistDecodingTests.swift */,
+				F17FAD2FB5BF6F9E62F05842 /* RadioURLNormalizationTests.swift */,
+				3EE4FB43F0E12E4292BAD138 /* SongDecodingTests.swift */,
+				E02B26D29AEC94518678820D /* SubsonicResponseTests.swift */,
+				F1A2B3C4D5E6F07182A3B4C5 /* TabSelectionClampingTests.swift */,
+				610783432ED4ED3D44204F4C /* UserAuthDecodingTests.swift */,
+				4D5CDC0FFBED576BEE3A0C01 /* UserDefaultsManagerTests.swift */,
+			);
+			name = floTests;
+			path = floTests;
+			sourceTree = "<group>";
+		};
+		6BEE21E914C1B4C06D14C578 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CE85DCBEE7ADB56E8BFD6338 /* CarPlay.framework */,
+				4706CFB7A6A3B2B19FAE74D0 /* iOS */,
+				EAAB2CF74EC49336F814C3A0 /* watchOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		B0AD2E702F4B037400577062 /* Artists */ = {
 			isa = PBXGroup;
 			children = (
 				B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */,
 				B0AD2E6E2F4B037400577062 /* ArtistDetailView.swift */,
+				B0AD2E792F4B037D00577062 /* ArtistImageView.swift */,
 				B0AD2E6F2F4B037400577062 /* ArtistsView.swift */,
 			);
 			path = Artists;
@@ -323,82 +595,28 @@
 			path = Radios;
 			sourceTree = "<group>";
 		};
-		3B67A032583B0E513502C577 /* watchOS */ = {
+		BF0C8310E85E03FC45C8E535 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				CCECEB2E491539A0CCEFF67F /* NowPlayingIndicator.swift */,
+				EA601DF6D60F70D262CE557B /* TrackRowView.swift */,
+				BCC2E67CCE3ED944C69F8973 /* WatchAlbumArtView.swift */,
 			);
-			name = watchOS;
-			sourceTree = "<group>";
-		};
-		43D91C472F2609E414B47C37 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				3B67A032583B0E513502C577 /* watchOS */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		55556EEFA661155882600B67 /* Components */ = {
-			isa = PBXGroup;
-			children = (
-				9534CD360742A3A0CE0F6105 /* NowPlayingIndicator.swift */,
-				EE8672530107686E69349E53 /* TrackRowView.swift */,
-				D31807F080421C27DD094A3C /* WatchAlbumArtView.swift */,
-			);
+			name = Components;
 			path = Components;
 			sourceTree = "<group>";
 		};
-		80555E0B0E09E84152467B54 /* Views */ = {
+		BF2DF53DA004FBCBF3B0118C /* flo Watch App */ = {
 			isa = PBXGroup;
 			children = (
-				E15329B2E69CD405EE1FA1DA /* WatchContentView.swift */,
-				FDF43D735FD2FAF483904328 /* WatchHomeView.swift */,
-				1802E5EEFF4EA39373808FAB /* WatchLoginView.swift */,
-				6952BC46D9AF9E2E2A5689E9 /* WatchNowPlayingView.swift */,
-				D05D12A88F1F4331250EAC2F /* WatchQueueView.swift */,
-				173F7195039A67ED244801A3 /* WatchArtistsListView.swift */,
-				E1D07B929800509A9082615D /* WatchArtistDetailView.swift */,
-				3526308D2324A2F2C16C1695 /* WatchAlbumsListView.swift */,
-				A6987CC26A91D09E0F053A7C /* WatchAlbumDetailView.swift */,
-				74288F9C25850681259A4D11 /* WatchPlaylistsListView.swift */,
-				44BE9700C568E33D05CF3241 /* WatchPlaylistDetailView.swift */,
-				52B75FAEE4FD21BF2C5B19F9 /* WatchCachedSongsView.swift */,
-				A4524E9ACA2B1D268A0EE938 /* WatchDownloadsView.swift */,
-				3DFB2FA91260EF78D058402B /* WatchStarredSongsView.swift */,
-				B900EB966261C96243C3B96D /* WatchSettingsView.swift */,
-				0A5B6C7D8E9F0A1B2C3D4E5F /* WatchRadiosView.swift */,
+				638B2D1AECAA38268427598A /* WatchApp.swift */,
+				2902A4035F798586E2A6C881 /* Views */,
+				FC042B4DD47E6FF44A016E1C /* ViewModels */,
+				BF0C8310E85E03FC45C8E535 /* Components */,
+				C33E4D7DFB09BB760978CACE /* Assets.xcassets */,
 			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		92379F4AEDC6CC56749763D8 /* flo Watch App */ = {
-			isa = PBXGroup;
-			children = (
-				80555E0B0E09E84152467B54 /* Views */,
-				AD3F1417C79383DDBB8E51AE /* ViewModels */,
-				A5848125CAF8F0CC2D672B03 /* Services */,
-				55556EEFA661155882600B67 /* Components */,
-				8ABA55FBF01C3B454EDCEAA8 /* WatchApp.swift */,
-				5C5C41672C6BF11C846EC75F /* Assets.xcassets */,
-				44B012284F4E3E8462BDEC0B /* Info.plist */,
-				3E82F5FAFCB5606358990002 /* flo_Watch_App.entitlements */,
-			);
+			name = "flo Watch App";
 			path = "flo Watch App";
-			sourceTree = "<group>";
-		};
-		A5848125CAF8F0CC2D672B03 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
-		AD3F1417C79383DDBB8E51AE /* ViewModels */ = {
-			isa = PBXGroup;
-			children = (
-				0FDA4610BA4E14DC4D119E17 /* WatchPlayerViewModel.swift */,
-			);
-			path = ViewModels;
 			sourceTree = "<group>";
 		};
 		C4289F4B2C1253B800C3A4FD /* Shared */ = {
@@ -407,6 +625,8 @@
 				C4875DFE2C149CD500D9BAEB /* Services */,
 				C4289F4D2C1253EB00C3A4FD /* Utils */,
 				C4289F4C2C1253BE00C3A4FD /* Models */,
+				C5F2B0032F5C000200BBCCDD /* ConfettiView.swift */,
+				C5F2B0052F5C000200BBCCDD /* GenreAlbumsView.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -418,12 +638,14 @@
 				C467AD542D329C8500644E68 /* AccountLinkStatus.swift */,
 				C467AD522D3267CE00644E68 /* Subsonic.swift */,
 				C46B8DD62CF4B88E00B40644 /* Stats.swift */,
+				C46B8DD82CF4B89100B40644 /* LibraryDestination.swift */,
 				C4824D222CE8C41D003EAB52 /* Playable.swift */,
 				C4100A6A2CE78B5F001BC9BE /* Playlist.swift */,
 				C41470BA2CE65808008BDCE8 /* Artist.swift */,
 				C4289F492C12392B00C3A4FD /* Album.swift */,
 				C446A6B62C08DE8800CC9787 /* UserAuth.swift */,
 				C4120FDC2C15E1C300E712BE /* Song.swift */,
+				C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */,
 				C49495802C1C25E5006B4D1E /* ScanStatus.swift */,
 				B0BAAAAA2F3214F7002A5FBB /* Radio.swift */,
 				C4EAA4852C297E35007EB2E0 /* NowPlaying.swift */,
@@ -436,13 +658,18 @@
 		C4289F4D2C1253EB00C3A4FD /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				50C912A52F648A490087EE61 /* IAPWebView.swift */,
+				50C912A32F648A440087EE61 /* IAPWebAuthView.swift */,
 				B02A003E2F3666240024E8EC /* UIScreen+.swift */,
 				C456D8F92F2FF33B002AAB8B /* LRCParser.swift */,
 				C4F0B0A12F3A111100ABC002 /* AirPlayRoutePicker.swift */,
 				C415F5592C11953000E3E1D2 /* Constants.swift */,
+				C46B8DDA2CF4B89200B40644 /* LibraryNavigation.swift */,
 				C415F5632C11AA8700E3E1D2 /* Fonts.swift */,
 				C49134522C15BE0C00CCF2EB /* Strings.swift */,
+				C4EXPLICIT032F4B0001AAAAAA /* ExplicitBadge.swift */,
 				C4120FD82C15D58E00E712BE /* Errors.swift */,
+				50C9128A2F5DD9990087EE61 /* IAPLoginView.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -450,6 +677,7 @@
 		C4289F4E2C12553800C3A4FD /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				C4CBBA732FBA223C00F0DE75 /* floIcon.icon */,
 				C4B7E6A32F3C0FFF001D9A01 /* PrivacyInfo.xcprivacy */,
 				C4E958972CA033BC00BBF394 /* Localizable.xcstrings */,
 				C4E8D95F2B763BAB00C2353E /* Assets.xcassets */,
@@ -467,22 +695,44 @@
 			path = Fonts;
 			sourceTree = "<group>";
 		};
+		C42B25662F44533D00E62008 /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				C42B25672F44536C00E62008 /* FloWatchApp.swift */,
+				C42B25692F44536C00E62008 /* WatchRootView.swift */,
+				C42B256D2F44536D00E62008 /* WatchHomeView.swift */,
+				C42B256F2F44539300E62008 /* WatchLibraryViewModel.swift */,
+				C42B25712F44539300E62008 /* WatchPlayerViewModel.swift */,
+				C42B25732F44539300E62008 /* WatchCoverArtView.swift */,
+				C42B25752F4453B500E62008 /* WatchAlbumsView.swift */,
+				C42B25772F4453B500E62008 /* WatchAlbumDetailView.swift */,
+				C42B25792F4453B600E62008 /* WatchArtistsView.swift */,
+				C42B257B2F4453B600E62008 /* WatchArtistDetailView.swift */,
+				C42B257D2F4453CE00E62008 /* WatchPlaylistsView.swift */,
+				C42B257F2F4453CE00E62008 /* WatchPlaylistDetailView.swift */,
+				C42B25812F4453CF00E62008 /* WatchNowPlayingView.swift */,
+				C42B25BB2F4464AD00E62008 /* WatchSongsView.swift */,
+				C42B25BD2F4464AE00E62008 /* WatchRadiosView.swift */,
+			);
+			path = Watch;
+			sourceTree = "<group>";
+		};
 		C4875DFE2C149CD500D9BAEB /* Services */ = {
 			isa = PBXGroup;
 			children = (
 				C4F870CD2CEFCC5B00312F8A /* FloooService.swift */,
+				5C0FF0012F8B0001000000A1 /* NetworkMonitor.swift */,
+				5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */,
 				C4875DFF2C149D9000D9BAEB /* AlbumService.swift */,
+				C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */,
+				0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */,
+				0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */,
 				C4875E012C149DDD00D9BAEB /* AuthService.swift */,
 				C4875E032C149F9A00D9BAEB /* APIManager.swift */,
 				C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */,
 				C4FE524C2C14E71B0053763A /* KeychainManager.swift */,
 				C49495842C1C26D4006B4D1E /* ScanStatusService.swift */,
 				C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */,
-				0B2A3B4C5D6E7F8A9B0C1D2E /* StreamCacheManager.swift */,
-				0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */,
-				0F2A3B4C5D6E7F8A9B0C1D2E /* SmartPlaybackService.swift */,
-				1A2A3B4C5D6E7F8A9B0C1D2E /* ConnectivityMonitor.swift */,
-				0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */,
 				C401D0992C5AED9F009F91C7 /* LocalFileManager.swift */,
 				C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */,
 				B0BAAAAC2F321697002A5FBB /* RadioService.swift */,
@@ -491,6 +741,8 @@
 				C42B25852F44551B00E62008 /* WatchConnectivityManager.swift */,
 				C42B25872F4456BF00E62008 /* WatchLibraryResponder.swift */,
 				C4F1A0022F4A000100AAAAAA /* InAppPurchaseManager.swift */,
+				C533CDA257C450543A1A341D /* SmartPlaybackService.swift */,
+				AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -500,8 +752,10 @@
 			children = (
 				C4A4BF302C14433D00363290 /* HomeView.swift */,
 				C4A4BF322C14437700363290 /* LibraryView.swift */,
+				E8455A32A2A31C3AA7C4DC99 /* CachedSongsView.swift */,
 				C4A4BF362C14442F00363290 /* DownloadsView.swift */,
 				C4A4BF382C14445000363290 /* PreferencesView.swift */,
+				0E2A3B4C5D6E7F8A9B0C1D2E /* LikedSongsView.swift */,
 			);
 			path = Navigation;
 			sourceTree = "<group>";
@@ -512,8 +766,9 @@
 				C49134542C15C47F00CCF2EB /* README.md */,
 				C4E8D95A2B763BA900C2353E /* flo */,
 				C4E8D9592B763BA900C2353E /* Products */,
-				43D91C472F2609E414B47C37 /* Frameworks */,
-				92379F4AEDC6CC56749763D8 /* flo Watch App */,
+				6BEE21E914C1B4C06D14C578 /* Frameworks */,
+				6789EB37355A658EBDE0012F /* floTests */,
+				BF2DF53DA004FBCBF3B0118C /* flo Watch App */,
 			);
 			sourceTree = "<group>";
 		};
@@ -521,7 +776,9 @@
 			isa = PBXGroup;
 			children = (
 				C4E8D9582B763BA900C2353E /* flo.app */,
-				71493F8E741F7D5134E12AF4 /* flo Watch App.app */,
+				C42B258D2F4458ED00E62008 /* flo Watch Watch App.app */,
+				6A9F81F9C96481A86DE61DC9 /* floTests.xctest */,
+				9A72287ACF3C11B43C138CED /* flo Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -546,17 +803,26 @@
 				B0BAAAA72F32139D002A5FBB /* Radios */,
 				C4824D262CE908DA003EAB52 /* SongsView.swift */,
 				C4A4BF3C2C1455A100363290 /* FloatingPlayerView.swift */,
+				C9F1A2B32D4E5F60718293AAB /* PlayerSidePanelView.swift */,
 				C42E7E172CE7EF4D00505B4E /* PlaylistDetailView.swift */,
 				C4F870CF2CEFD24D00312F8A /* StatCardView.swift */,
 				C47876012C2BF15900184A33 /* AlbumsView.swift */,
+				C4PLSTVW002F4B0001AAAAAA /* PlaylistsView.swift */,
 				B0AD2E702F4B037400577062 /* Artists */,
 				C47876032C2BFFF900184A33 /* SongView.swift */,
 				C4100A682CE78B21001BC9BE /* PlaylistView.swift */,
 				C467AD502D3264AE00644E68 /* FloooViewModel.swift */,
 				C429DB312D33C704009F2684 /* DownloadButtonView.swift */,
 				C429DB2F2D33AE81009F2684 /* DownloadQueueView.swift */,
+				5C0FF0052F8B0001000000A5 /* ScrobbleQueueView.swift */,
 				C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */,
 				C456D8FD2F300D37002AAB8B /* LyricsView.swift */,
+				C42B25662F44533D00E62008 /* Watch */,
+				3187E4E95236423EE8702B86 /* CarPlay */,
+				7E2C854C4AFDB5F757411C4C /* flo.entitlements */,
+				50C912872F5DD9280087EE61 /* AuthMode.swift */,
+				CFA9D48444F961601BF12316 /* AppDelegate.swift */,
+				F6CC2B5AA866663E09C3E38A /* SceneDelegate.swift */,
 			);
 			path = flo;
 			sourceTree = "<group>";
@@ -569,16 +835,51 @@
 			path = "Preview Content";
 			sourceTree = "<group>";
 		};
+		EAAB2CF74EC49336F814C3A0 /* watchOS */ = {
+			isa = PBXGroup;
+			children = (
+				BEC483ED8897928881A5A100 /* Foundation.framework */,
+			);
+			name = watchOS;
+			sourceTree = "<group>";
+		};
+		FC042B4DD47E6FF44A016E1C /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				88D8350161966488618D240F /* WatchPlayerViewModel.swift */,
+			);
+			name = ViewModels;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		3F9908B854E0D019A7945A9E /* flo Watch App */ = {
+		1320193087A52EB195D8BD49 /* floTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F8BCF8EB5A1AB80ADCB8E06B /* Build configuration list for PBXNativeTarget "flo Watch App" */;
+			buildConfigurationList = 4A924AE078813BF6809EC787 /* Build configuration list for PBXNativeTarget "floTests" */;
 			buildPhases = (
-				BD9F21AC560BEB3807D552D8 /* Sources */,
-				D2ABAF9A0D53E1A2BB33BB6E /* Frameworks */,
-				8463230765B0FDBE870EFACA /* Resources */,
+				CE3263C0B7BA6B1C76594896 /* Sources */,
+				5793235D7C1F721BA9A420D9 /* Frameworks */,
+				B074F28E913F5152E319E820 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				20C3ED7420DC60B59B5CF6B3 /* PBXTargetDependency */,
+			);
+			name = floTests;
+			productName = floTests;
+			productReference = 6A9F81F9C96481A86DE61DC9 /* floTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		7CC9530350C4CC7D7AC9BC22 /* flo Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CD7DE126845AED74E6E49EA0 /* Build configuration list for PBXNativeTarget "flo Watch App" */;
+			buildPhases = (
+				2498CAF7743577F3688B513D /* Sources */,
+				4230BA71AA528DF81B97FEC7 /* Frameworks */,
+				BEB326C21052C66C21E7B811 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -586,11 +887,28 @@
 			);
 			name = "flo Watch App";
 			packageProductDependencies = (
-				5DE7A6C4575AA444E67B4E3A /* Alamofire */,
-				F0BEBFD1A1C1E219816A7F4E /* KeychainAccess */,
+				106BAFD6F01D187F29A17A9D /* Alamofire */,
+				1E22C1780DE530F41F928A95 /* KeychainAccess */,
 			);
 			productName = "flo Watch App";
-			productReference = 71493F8E741F7D5134E12AF4 /* flo Watch App.app */;
+			productReference = 9A72287ACF3C11B43C138CED /* flo Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C42B258C2F4458ED00E62008 /* flo Watch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C42B25982F4458EF00E62008 /* Build configuration list for PBXNativeTarget "flo Watch Watch App" */;
+			buildPhases = (
+				C42B25892F4458ED00E62008 /* Sources */,
+				C42B258A2F4458ED00E62008 /* Frameworks */,
+				C42B258B2F4458ED00E62008 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "flo Watch Watch App";
+			productName = "flo Watch Watch App";
+			productReference = C42B258D2F4458ED00E62008 /* flo Watch Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
 		C4E8D9572B763BA900C2353E /* flo */ = {
@@ -600,10 +918,12 @@
 				C4E8D9542B763BA900C2353E /* Sources */,
 				C4E8D9552B763BA900C2353E /* Frameworks */,
 				C4E8D9562B763BA900C2353E /* Resources */,
+				C42B259B2F4458EF00E62008 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C42B25962F4458EF00E62008 /* PBXTargetDependency */,
 			);
 			name = flo;
 			packageProductDependencies = (
@@ -628,6 +948,9 @@
 				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					C42B258C2F4458ED00E62008 = {
+						CreatedOnToolsVersion = 26.3;
+					};
 					C4E8D9572B763BA900C2353E = {
 						CreatedOnToolsVersion = 15.2;
 					};
@@ -654,18 +977,35 @@
 			projectRoot = "";
 			targets = (
 				C4E8D9572B763BA900C2353E /* flo */,
-				3F9908B854E0D019A7945A9E /* flo Watch App */,
+				C42B258C2F4458ED00E62008 /* flo Watch Watch App */,
+				1320193087A52EB195D8BD49 /* floTests */,
+				7CC9530350C4CC7D7AC9BC22 /* flo Watch App */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		8463230765B0FDBE870EFACA /* Resources */ = {
+		B074F28E913F5152E319E820 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2B111AB43116AF1070FA94AA /* Assets.xcassets in Resources */,
-				25AFF17DF3C6BFE52B54ADEA /* PlusJakartaSans-VariableFont_wght.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BEB326C21052C66C21E7B811 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AF8F4066A6464664404ECF80 /* Assets.xcassets in Resources */,
+				FB66DABB7F1FED68A499E009 /* PlusJakartaSans-VariableFont_wght.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C42B258B2F4458ED00E62008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C4B232EF2F44809F006A5044 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -676,6 +1016,7 @@
 				C4B7E6A42F3C1001001D9A01 /* PrivacyInfo.xcprivacy in Resources */,
 				C4E8D9632B763BAB00C2353E /* Preview Assets.xcassets in Resources */,
 				C4E8D9602B763BAB00C2353E /* Assets.xcassets in Resources */,
+				C4CBBA742FBA223C00F0DE75 /* floIcon.icon in Resources */,
 				C4E958982CA033BC00BBF394 /* Localizable.xcstrings in Resources */,
 				C415F55F2C11A34C00E3E1D2 /* PlusJakartaSans-VariableFont_wght.ttf in Resources */,
 			);
@@ -684,71 +1025,115 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		BD9F21AC560BEB3807D552D8 /* Sources */ = {
+		2498CAF7743577F3688B513D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5546A82CFBACC9BAA65BB749 /* WatchApp.swift in Sources */,
-				61E8341165822DA68439B38D /* WatchContentView.swift in Sources */,
-				D44B14AE958B656B0D6270C5 /* WatchHomeView.swift in Sources */,
-				83609895273E639A5CEBF0D6 /* WatchLoginView.swift in Sources */,
-				D2E39F1B59DA8351ED5314A2 /* WatchNowPlayingView.swift in Sources */,
-				097DA1E18629F39C1C9615A9 /* WatchQueueView.swift in Sources */,
-				D59D78D5498292C45BDAF6A7 /* WatchArtistsListView.swift in Sources */,
-				4F33FDDC7D495CD573E5D433 /* WatchArtistDetailView.swift in Sources */,
-				C5000F5A590A9533BB660D8E /* WatchAlbumsListView.swift in Sources */,
-				9B8DF0082C84CF99D318766C /* WatchAlbumDetailView.swift in Sources */,
-				B341BDBCB019195C280B5115 /* WatchPlaylistsListView.swift in Sources */,
-				D235EA9AC4ADBA9E159A73C7 /* WatchPlaylistDetailView.swift in Sources */,
-				803A64897BE124FF861237C6 /* WatchCachedSongsView.swift in Sources */,
-				A10C8DF6163751C868F3101B /* WatchStarredSongsView.swift in Sources */,
-				F30F820892097E4E907E6363 /* WatchDownloadsView.swift in Sources */,
-				604413A3C487B4DA0E254DB2 /* WatchSettingsView.swift in Sources */,
-				C4DFFA222D32E76E003B9C4F /* DownloadViewModel.swift in Sources */,
-				B46A893EAE4F5312B01A6DF7 /* WatchPlayerViewModel.swift in Sources */,
-				7378E3332D148A9A8B2BB208 /* NowPlayingIndicator.swift in Sources */,
-				85FBEF89EEC5325D36E32C07 /* TrackRowView.swift in Sources */,
-				FA43509E1E428C622F90A946 /* WatchAlbumArtView.swift in Sources */,
-				5578731AA38D89318ED9F4F8 /* Song.swift in Sources */,
-				CD1CF1D5C5F6F372EAD7D617 /* Album.swift in Sources */,
-				524D79FBF5463AA5AE824ED2 /* Artist.swift in Sources */,
-				45F84A57CB274512D8FC3EE6 /* Playlist.swift in Sources */,
-				251E9DA2F355D337215B0B51 /* Playable.swift in Sources */,
-				3940A90EEAFD851F057672DD /* UserAuth.swift in Sources */,
-				53AAD5C6C3E7286B8F258663 /* NowPlaying.swift in Sources */,
-				F8B813E9AB860857A69952FF /* Subsonic.swift in Sources */,
-				447F2ACD5758A1573EBD2536 /* ScanStatus.swift in Sources */,
-				2AE1B762E9EA6FECAE94CDB0 /* Stats.swift in Sources */,
-				169F90289CA99D195434F17E /* AccountLinkStatus.swift in Sources */,
-				AB1C863415BA8F881C52A34D /* APIManager.swift in Sources */,
-				8B35AE5496AB8086236BCB22 /* AuthService.swift in Sources */,
-				70B03F11AF4B149B607852F2 /* AlbumService.swift in Sources */,
-				1C4F6D34021FA5402E41E901 /* PlaybackService.swift in Sources */,
-				097763560166B559CC3554F9 /* CoreDataManager.swift in Sources */,
-				0B1A2B3C4D5E6F7A8B9C0D1E /* StreamCacheManager.swift in Sources */,
-				0C1A2B3C4D5E6F7A8B9C0D1E /* LibraryCacheManager.swift in Sources */,
-				0F1A2B3C4D5E6F7A8B9C0D1E /* SmartPlaybackService.swift in Sources */,
-				1A1A2B3C4D5E6F7A8B9C0D1E /* ConnectivityMonitor.swift in Sources */,
-				0D1A2B3C4D5E6F7A8B9C0D1E /* CoverArtCacheManager.swift in Sources */,
-				A1CDAC159C0A61FD8EFB5B41 /* LocalFileManager.swift in Sources */,
-				E28EFA0EADE6BB20D710C334 /* KeychainManager.swift in Sources */,
-				5880A641F3054635E0E30B4B /* UserDefaultsManager.swift in Sources */,
-				91032C8438218FAD12CDBAB5 /* FloooService.swift in Sources */,
-				AADBB8CBDC936CD7E4CBA434 /* ScanStatusService.swift in Sources */,
-				DDE5493A6D2F2E91EF8B56AB /* Constants.swift in Sources */,
-				FEA112E9C57BEE96828064FB /* Errors.swift in Sources */,
-				0E1124832632321863923A2D /* Strings.swift in Sources */,
-				E09A76F85921E0BF7CCC9397 /* Fonts.swift in Sources */,
-				E9848D970CC0D36C57BE35C0 /* AuthViewModel.swift in Sources */,
-				BA1D885946946F842BF56D0E /* AlbumViewModel.swift in Sources */,
-				8DE61FDF6757FDAC853CDDBF /* FloooViewModel.swift in Sources */,
-				437E40842848FEAE96E64293 /* flo.xcdatamodeld in Sources */,
-				0A1B2C3D4E5F6A7B8C9D0E1F /* Radio.swift in Sources */,
-				0A2B3C4D5E6F7A8B9C0D1E2F /* RadioService.swift in Sources */,
-				0A3B4C5D6E7F8A9B0C1D2E3F /* RadiosViewModel.swift in Sources */,
-				0A4B5C6D7E8F9A0B1C2D3E4F /* WatchRadiosView.swift in Sources */,
+				93C4EDA5F5007DA82FE113B5 /* WatchApp.swift in Sources */,
+				1DD438B1C8D7D5AEC7562A6A /* WatchContentView.swift in Sources */,
+				BE5C5E81B4634769556BAB00 /* WatchHomeView.swift in Sources */,
+				A696A6F708006E6ABC75D01C /* WatchLoginView.swift in Sources */,
+				2F8DDF24A4E509AD68036392 /* WatchNowPlayingView.swift in Sources */,
+				48426E09F42798E3F16C85E2 /* WatchQueueView.swift in Sources */,
+				D56D8D67004B7A3F15CA1FB8 /* WatchArtistsListView.swift in Sources */,
+				2FA18EA1F9CF42711E1323EE /* WatchArtistDetailView.swift in Sources */,
+				757E8B897B4A9B47143D8CCF /* WatchAlbumsListView.swift in Sources */,
+				B0330DD0198F131B14456A89 /* WatchAlbumDetailView.swift in Sources */,
+				928BF54D766E3F6E6EBACD85 /* WatchPlaylistsListView.swift in Sources */,
+				2C0356A72AB4F01AA810FE73 /* WatchPlaylistDetailView.swift in Sources */,
+				983F57A9E194FBCAF8E44F09 /* WatchCachedSongsView.swift in Sources */,
+				4CC28174B1DBFE6CDF8AD636 /* WatchStarredSongsView.swift in Sources */,
+				E630217EDD6F3306103C7C1D /* WatchDownloadsView.swift in Sources */,
+				D25AF44BCEB4F1ECC4EAA971 /* WatchSettingsView.swift in Sources */,
+				A1E7A7FD78DB99C307639D7E /* DownloadViewModel.swift in Sources */,
+				7CB0AF2CAF287CB275F8E58B /* WatchPlayerViewModel.swift in Sources */,
+				BD0EE3C15900C43F8F8F05A2 /* NowPlayingIndicator.swift in Sources */,
+				D349080D92950A1C67EDADB6 /* TrackRowView.swift in Sources */,
+				A41E9729ECD9216622752F1D /* WatchAlbumArtView.swift in Sources */,
+				D957F801D3A1DA274CAA0864 /* Song.swift in Sources */,
+				5EABCFCB76DE2EC0F4669A95 /* Album.swift in Sources */,
+				DD189BE105260256B4F4BFCD /* Artist.swift in Sources */,
+				01805F1E44CC1B1244CA864C /* Playlist.swift in Sources */,
+				BB9009B8D9D67F2A01F6A722 /* Playable.swift in Sources */,
+				937DBDB438F8A8C386E0C7A4 /* UserAuth.swift in Sources */,
+				A59D3A76D831697134462DB7 /* NowPlaying.swift in Sources */,
+				31853D55BC2448BE9766D45E /* Subsonic.swift in Sources */,
+				47A870594A9F53F6C888BC3B /* ScanStatus.swift in Sources */,
+				80E9928F3EE8386AAF1C8235 /* Stats.swift in Sources */,
+				A9B94AB857BA8220121A3A0B /* AccountLinkStatus.swift in Sources */,
+				6A17041A9B41B54D4EF1673F /* APIManager.swift in Sources */,
+				F603ADBA32F245B193DE927F /* AuthService.swift in Sources */,
+				5A6FBD57C4ECDA2296B278AE /* AlbumService.swift in Sources */,
+				50CDEED087F337229E9A8581 /* PlaybackService.swift in Sources */,
+				3334D3E1F41C3BD65DD6E300 /* CoreDataManager.swift in Sources */,
+				79A34A805FA50EE0C4B7810D /* StreamCacheManager.swift in Sources */,
+				D990D07BDC3E9BA0B765EC45 /* LibraryCacheManager.swift in Sources */,
+				EE8257FFD4E35E3713B38C38 /* SmartPlaybackService.swift in Sources */,
+				FE84EAF37C9E7F4D5488B658 /* ConnectivityMonitor.swift in Sources */,
+				7629BD4F6227A8E16A2BBB5E /* CoverArtCacheManager.swift in Sources */,
+				57D805A2215E047ACD99D945 /* LocalFileManager.swift in Sources */,
+				A08ED21ABC61336BDD76B09E /* KeychainManager.swift in Sources */,
+				854D35E557CBD828EC654F35 /* UserDefaultsManager.swift in Sources */,
+				0D25BDE8239F8A39D2BC630E /* FloooService.swift in Sources */,
+				B9D08EAB8C51BDB1AF9AD48C /* ScanStatusService.swift in Sources */,
+				918D91B96EB2612541200A7F /* Constants.swift in Sources */,
+				E8AB6CFDF3CCA70D9FD9E2F9 /* Errors.swift in Sources */,
+				039F16C6B65D4284E6989F70 /* Strings.swift in Sources */,
+				F1F2B828D68321384EA37737 /* Fonts.swift in Sources */,
+				ECAFB6C32648B3A1587A499A /* AuthViewModel.swift in Sources */,
+				BBA7A0BDCD8BAFA9B2088999 /* AlbumViewModel.swift in Sources */,
+				9E2978ECF52F4F441930EDE3 /* FloooViewModel.swift in Sources */,
+				5B36C5A514B55EDA0931E21D /* flo.xcdatamodeld in Sources */,
+				A49532B8A368D691410CAF60 /* Radio.swift in Sources */,
+				61F85A23962C669E4FAA3B23 /* RadioService.swift in Sources */,
+				3FED4C4043890696D075FFBC /* RadiosViewModel.swift in Sources */,
+				62F4DD11E524061F6A975D7F /* WatchRadiosView.swift in Sources */,
+				5493F47DE4E5039A5F602A32 /* ArtistRadio.swift in Sources */,
+				FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */,
+				4F8E0BD04AC14F52D5C8E033 /* ExplicitStatus.swift in Sources */,
+				0492785B34424AF5CCDAD005 /* AuthMode.swift in Sources */,
+				BD3D1C826D4DCF07A8043948 /* NetworkMonitor.swift in Sources */,
+				3911EF003135778456337152 /* ScrobbleQueueManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C42B25892F4458ED00E62008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C42B259C2F445B7000E62008 /* WatchArtistsView.swift in Sources */,
+				C42B259D2F445B7000E62008 /* WatchHomeView.swift in Sources */,
+				C42B259E2F445B7000E62008 /* WatchPlaylistDetailView.swift in Sources */,
+				C42B259F2F445B7000E62008 /* WatchArtistDetailView.swift in Sources */,
+				C42B25A12F445B7000E62008 /* WatchPlaylistsView.swift in Sources */,
+				C42B25A32F445B7000E62008 /* WatchLibraryViewModel.swift in Sources */,
+				C42B25AA2F445C8900E62008 /* UserAuth.swift in Sources */,
+				C42B25AB2F445C8900E62008 /* LyricsLine.swift in Sources */,
+				C42B25AC2F445C8900E62008 /* Song.swift in Sources */,
+				C4EXPLICIT022F4B0001AAAAAA /* ExplicitStatus.swift in Sources */,
+				C4EXPLICIT052F4B0001AAAAAA /* ExplicitBadge.swift in Sources */,
+				C42B25AD2F445C8900E62008 /* LRCLIB.swift in Sources */,
+				C42B25BE2F4464AE00E62008 /* WatchRadiosView.swift in Sources */,
+				C42B25AE2F445C8900E62008 /* AccountLinkStatus.swift in Sources */,
+				C42B25AF2F445C8900E62008 /* Radio.swift in Sources */,
+				C42B25B02F445C8900E62008 /* NowPlaying.swift in Sources */,
+				C42B25B12F445C8900E62008 /* Playlist.swift in Sources */,
+				C42B25B22F445C8900E62008 /* Playable.swift in Sources */,
+				C42B25B32F445C8900E62008 /* Album.swift in Sources */,
+				C42B25B42F445C8900E62008 /* Stats.swift in Sources */,
+				C42B25BA2F445E9600E62008 /* FloWatchApp.swift in Sources */,
+				C42B25B52F445C8900E62008 /* ScanStatus.swift in Sources */,
+				C42B25B62F445C8900E62008 /* Subsonic.swift in Sources */,
+				C42B25B72F445C8900E62008 /* Artist.swift in Sources */,
 				B0AD2E772F4B2B6900577062 /* ArtistRadio.swift in Sources */,
-				A1B2C3D4E5F6A7B800577062 /* ArtistDetailViewModel.swift in Sources */,
+				C42B25A42F445B7000E62008 /* WatchNowPlayingView.swift in Sources */,
+				C42B25A52F445B7000E62008 /* WatchPlayerViewModel.swift in Sources */,
+				C42B25A62F445B7000E62008 /* WatchAlbumsView.swift in Sources */,
+				C42B25A72F445B7000E62008 /* WatchRootView.swift in Sources */,
+				C42B25A82F445B7000E62008 /* WatchAlbumDetailView.swift in Sources */,
+				C42B25BC2F4464AD00E62008 /* WatchSongsView.swift in Sources */,
+				C42B25A92F445B7000E62008 /* WatchCoverArtView.swift in Sources */,
+				C42B25B82F445C9B00E62008 /* WatchConnectivityManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -761,6 +1146,7 @@
 				C49495812C1C25E5006B4D1E /* ScanStatus.swift in Sources */,
 				C4289F482C12391300C3A4FD /* AlbumViewModel.swift in Sources */,
 				C42B25882F4456BF00E62008 /* WatchLibraryResponder.swift in Sources */,
+				50C912A62F648A490087EE61 /* IAPWebView.swift in Sources */,
 				C49495852C1C26D4006B4D1E /* ScanStatusService.swift in Sources */,
 				C47876042C2BFFF900184A33 /* SongView.swift in Sources */,
 				C446A6B72C08DE8800CC9787 /* UserAuth.swift in Sources */,
@@ -774,20 +1160,33 @@
 				B0BAAAAB2F3214F7002A5FBB /* Radio.swift in Sources */,
 				C467AD552D329C8B00644E68 /* AccountLinkStatus.swift in Sources */,
 				C4120FDD2C15E1C300E712BE /* Song.swift in Sources */,
+				C4EXPLICIT012F4B0001AAAAAA /* ExplicitStatus.swift in Sources */,
+				C4EXPLICIT042F4B0001AAAAAA /* ExplicitBadge.swift in Sources */,
 				C467AD532D3267D000644E68 /* Subsonic.swift in Sources */,
 				C47876022C2BF15900184A33 /* AlbumsView.swift in Sources */,
+				C4PLSTVW012F4B0001AAAAAA /* PlaylistsView.swift in Sources */,
+				50C912A42F648A440087EE61 /* IAPWebAuthView.swift in Sources */,
 				C4824D272CE908DC003EAB52 /* SongsView.swift in Sources */,
+				0E1A2B3C4D5E6F7A8B9C0D1E /* LikedSongsView.swift in Sources */,
 				C456D8FA2F2FF33E002AAB8B /* LRCParser.swift in Sources */,
+				50C912892F5DD9280087EE61 /* AuthMode.swift in Sources */,
 				C4F870CE2CEFCC5E00312F8A /* FloooService.swift in Sources */,
+				5C0FF0022F8B0001000000A2 /* NetworkMonitor.swift in Sources */,
+				5C0FF0042F8B0001000000A4 /* ScrobbleQueueManager.swift in Sources */,
+				5C0FF0062F8B0001000000A6 /* ScrobbleQueueView.swift in Sources */,
 				C4DFFA212D32E76E003B9C4E /* DownloadViewModel.swift in Sources */,
 				C4F1A0012F4A000100AAAAAA /* InAppPurchaseManager.swift in Sources */,
+				C5F2B0042F5C000200BBCCDD /* ConfettiView.swift in Sources */,
+				C5F2B0062F5C000200BBCCDD /* GenreAlbumsView.swift in Sources */,
 				C4120FD92C15D58E00E712BE /* Errors.swift in Sources */,
 				C415F55A2C11953000E3E1D2 /* Constants.swift in Sources */,
+				C46B8DDB2CF4B89200B40644 /* LibraryNavigation.swift in Sources */,
 				C401D09A2C5AED9F009F91C7 /* LocalFileManager.swift in Sources */,
 				C4F870D02CEFD25900312F8A /* StatCardView.swift in Sources */,
 				C4100A6B2CE78B62001BC9BE /* Playlist.swift in Sources */,
 				C4A4BF332C14437700363290 /* LibraryView.swift in Sources */,
 				C46B8DD72CF4B89000B40644 /* Stats.swift in Sources */,
+				C46B8DD92CF4B89100B40644 /* LibraryDestination.swift in Sources */,
 				B02A003F2F36662C0024E8EC /* UIScreen+.swift in Sources */,
 				C4F0B0A22F3A111100ABC002 /* AirPlayRoutePicker.swift in Sources */,
 				C415F5642C11AA8700E3E1D2 /* Fonts.swift in Sources */,
@@ -803,22 +1202,24 @@
 				C456D8F82F2FBD64002AAB8B /* LRCLIBService.swift in Sources */,
 				C4289F512C139B2E00C3A4FD /* AlbumView.swift in Sources */,
 				C4A4BF3D2C1455A100363290 /* FloatingPlayerView.swift in Sources */,
+				C9F1A2B32D4E5F60718293AAC /* PlayerSidePanelView.swift in Sources */,
 				C415F54E2C11908100E3E1D2 /* AuthViewModel.swift in Sources */,
 				C42B25842F44551B00E62008 /* PlaybackCoordinator.swift in Sources */,
+				50C912912F5DD9990087EE61 /* IAPLoginView.swift in Sources */,
+				02E566BC379A4C25B4AB907C /* CachedSongsView.swift in Sources */,
 				C4A4BF372C14442F00363290 /* DownloadsView.swift in Sources */,
 				C4100A692CE78B25001BC9BE /* PlaylistView.swift in Sources */,
 				C440228D2C09BE2E004EE9CD /* PlayerView.swift in Sources */,
 				C42B25862F44551B00E62008 /* WatchConnectivityManager.swift in Sources */,
 				C4DE89182C2FFBC900E078CC /* CoreDataManager.swift in Sources */,
-				0B3A4B5C6D7E8F9A0B1C2D3E /* StreamCacheManager.swift in Sources */,
-				0C3A4B5C6D7E8F9A0B1C2D3E /* LibraryCacheManager.swift in Sources */,
-				1A3A4B5C6D7E8F9A0B1C2D3E /* ConnectivityMonitor.swift in Sources */,
-				0D3A4B5C6D7E8F9A0B1C2D3E /* CoverArtCacheManager.swift in Sources */,
 				C46C85C42C07114200903F54 /* LoginView.swift in Sources */,
 				C41470BB2CE6580B008BDCE8 /* Artist.swift in Sources */,
 				C4D7F84F2C7F2C5D00165EFD /* PlaybackService.swift in Sources */,
 				C49134532C15BE0C00CCF2EB /* Strings.swift in Sources */,
 				C4875E002C149D9000D9BAEB /* AlbumService.swift in Sources */,
+				C4CACHE012D7B0000003B9C4F /* StreamCacheManager.swift in Sources */,
+				0C1A2B3C4D5E6F7A8B9C0D1E /* LibraryCacheManager.swift in Sources */,
+				0D1A2B3C4D5E6F7A8B9C0D1E /* CoverArtCacheManager.swift in Sources */,
 				C456D8FC2F2FF39B002AAB8B /* LyricsLine.swift in Sources */,
 				C429DB322D33C707009F2684 /* DownloadButtonView.swift in Sources */,
 				C4824D232CE8C41F003EAB52 /* Playable.swift in Sources */,
@@ -828,14 +1229,102 @@
 				C4A4BF312C14433D00363290 /* HomeView.swift in Sources */,
 				C4A4BF392C14445000363290 /* PreferencesView.swift in Sources */,
 				B0AD2E712F4B037400577062 /* ArtistDetailView.swift in Sources */,
+				B0AD2E782F4B037D00577062 /* ArtistImageView.swift in Sources */,
 				B0AD2E722F4B037400577062 /* ArtistsView.swift in Sources */,
+				5E64C3D71B02BE8FEDF5FF3C /* CarPlaySceneDelegate.swift in Sources */,
+				55CFFAB52342C01E366F87B0 /* CarPlayCoordinator.swift in Sources */,
+				7C09E28C1BFFDB5D5F124EC9 /* CarPlayNowPlayingManager.swift in Sources */,
+				FA138533DE126212552B3A51 /* CarPlayImageLoader.swift in Sources */,
+				587A2E31AB9ADC1C724BE658 /* AppDelegate.swift in Sources */,
+				BC8F89CD0C6562C496EDE0F6 /* SceneDelegate.swift in Sources */,
+				37345ED87EE0B8A08B56A73C /* ConnectivityMonitor.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CE3263C0B7BA6B1C76594896 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FA7A4E54ED4653E81AD8F701 /* AlbumDecodingTests.swift in Sources */,
+				B1C2D3E4F5A60718293B4C5D /* AlbumServicePlaylistTests.swift in Sources */,
+				75C7C243D6402BCA5EC4F236 /* AlbumViewModelNavigationTests.swift in Sources */,
+				B1C2D3E4F5A60718293B4C60 /* AlbumViewModelPlaylistDownloadTests.swift in Sources */,
+				0AD0C2EC6B75E69FAE803F08 /* CoreDataManagerTests.swift in Sources */,
+				6B3DAAA1C878630B99B85D6B /* DownloadViewModelTests.swift in Sources */,
+				4EF6639A35569AEC92BD1D9D /* ExplicitStatusTests.swift in Sources */,
+				3D4F22CBDB6FE7B5DC2ACA7D /* LRCParserTests.swift in Sources */,
+				B9745708AA8D871D0BCF4A39 /* LyricsLineTests.swift in Sources */,
+				6EBD3913AE23DE45F099A0F7 /* MergePlaylistSongsTests.swift in Sources */,
+				A119B71A26B0361EADB0E7B7 /* APIServiceMockTests.swift in Sources */,
+				E1F2A3B4C5D60718293B4C5E /* MockURLProtocol.swift in Sources */,
+				CA219A4DA50CFD50683DE71B /* PlaybackServiceTests.swift in Sources */,
+				B6A31D8C7E7A1093688BD8FB /* PlayerViewModelPlaybackModeTests.swift in Sources */,
+				510CE2B2F1965140C2CED0FC /* PlaylistDecodingTests.swift in Sources */,
+				62222FC9E7E16FA561E5506B /* RadioURLNormalizationTests.swift in Sources */,
+				6BEC73D6E3EF95D46B740883 /* SongDecodingTests.swift in Sources */,
+				34BF3A1DC0B124BA46364F05 /* SubsonicResponseTests.swift in Sources */,
+				D8A2EFEBC9CEAC6809CF726F /* UserAuthDecodingTests.swift in Sources */,
+				F1A2B3C4D5E6F07182A3B4C6 /* TabSelectionClampingTests.swift in Sources */,
+				48ADEC12F9F42A971F3E1BEC /* UserDefaultsManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		20C3ED7420DC60B59B5CF6B3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = flo;
+			target = C4E8D9572B763BA900C2353E /* flo */;
+			targetProxy = B80C8A13C1435D0785A7B14B /* PBXContainerItemProxy */;
+		};
+		C42B25962F4458EF00E62008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = C42B258C2F4458ED00E62008 /* flo Watch Watch App */;
+			targetProxy = C42B25952F4458EF00E62008 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
-		57B5C7BB2C2C90CEC18966BB /* Debug */ = {
+		00F9006B3FEDC232AE05B8B7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.faultables.flo.floTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/flo.app/flo";
+			};
+			name = Debug;
+		};
+		42503E6FF37BE95282C63A1F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.faultables.flo.floTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/flo.app/flo";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		6E27C25575D3A99CC61E9866 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -861,7 +1350,7 @@
 				SDKROOT = watchos;
 				SKIP_INSTALL = NO;
 				SUPPORTS_MACCATALYST = NO;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG FLO_STANDALONE $(inherited)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -870,38 +1359,79 @@
 			};
 			name = Debug;
 		};
-		7B7BF021C937AC4666980675 /* Release */ = {
+		C42B25992F4458EF00E62008 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconWatch;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "flo Watch App/flo_Watch_App.entitlements";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 7K3G973VGB;
+				CODE_SIGN_ENTITLEMENTS = flo/flo.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 211;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=watchos*]" = 8BJ4LW5J8P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "flo Watch App/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "flo watch";
-				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_WKWatchOnly = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = flo;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.penerbangwalet.flo;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch;
+				PRODUCT_BUNDLE_IDENTIFIER = com.penerbangwalet.flo.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=watchos*]" = "match Development com.penerbangwalet.flo.watchkitapp";
 				SDKROOT = watchos;
-				SKIP_INSTALL = NO;
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_COMPILATION_MODE = wholemodule;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.6;
+			};
+			name = Debug;
+		};
+		C42B259A2F4458EF00E62008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconWatch;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = flo/flo.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 211;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=watchos*]" = 8BJ4LW5J8P;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = flo;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.penerbangwalet.flo;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.penerbangwalet.flo.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=watchos*]" = "match AppStore com.penerbangwalet.flo.watchkitapp";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.6;
 			};
 			name = Release;
 		};
@@ -1032,42 +1562,59 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = AppIconAlt1;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = floIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = flo/flo.entitlements;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = flo/flo.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 211;
+				CURRENT_PROJECT_VERSION = 304;
 				DEVELOPMENT_ASSET_PATHS = "\"flo/Resources/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 8BJ4LW5J8P;
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = 8BJ4LW5J8P;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = flo/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIStatusBarStyle = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.5;
 				NEW_SETTING = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.penerbangwalet.flo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match Development com.penerbangwalet.flo";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "match Development com.penerbangwalet.flo catalyst";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MACCATALYST = YES;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -1075,49 +1622,119 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = AppIconAlt1;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = floIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = flo/flo.entitlements;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = flo/flo.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 211;
+				CURRENT_PROJECT_VERSION = 304;
 				DEVELOPMENT_ASSET_PATHS = "\"flo/Resources/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 8BJ4LW5J8P;
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = 8BJ4LW5J8P;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = flo/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIStatusBarStyle = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.5;
 				"MTL_ENABLE_DEBUG_INFO[arch=*]" = NO;
 				NEW_SETTING = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.penerbangwalet.flo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match AppStore com.penerbangwalet.flo 1769987359";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match AppStore com.penerbangwalet.flo 1773593177";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "match AppStore com.penerbangwalet.flo catalyst";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MACCATALYST = YES;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		FAE7F18442AAF1911AC0FAE8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "flo Watch App/flo_Watch_App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 7K3G973VGB;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "flo Watch App/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "flo watch";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_WKWatchOnly = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = NO;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "FLO_STANDALONE $(inherited)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		4A924AE078813BF6809EC787 /* Build configuration list for PBXNativeTarget "floTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				42503E6FF37BE95282C63A1F /* Release */,
+				00F9006B3FEDC232AE05B8B7 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C42B25982F4458EF00E62008 /* Build configuration list for PBXNativeTarget "flo Watch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C42B25992F4458EF00E62008 /* Debug */,
+				C42B259A2F4458EF00E62008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		C4E8D9532B763BA900C2353E /* Build configuration list for PBXProject "flo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1136,11 +1753,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F8BCF8EB5A1AB80ADCB8E06B /* Build configuration list for PBXNativeTarget "flo Watch App" */ = {
+		CD7DE126845AED74E6E49EA0 /* Build configuration list for PBXNativeTarget "flo Watch App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				7B7BF021C937AC4666980675 /* Release */,
-				57B5C7BB2C2C90CEC18966BB /* Debug */,
+				FAE7F18442AAF1911AC0FAE8 /* Release */,
+				6E27C25575D3A99CC61E9866 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1183,10 +1800,15 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		5DE7A6C4575AA444E67B4E3A /* Alamofire */ = {
+		106BAFD6F01D187F29A17A9D /* Alamofire */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C415F55B2C1197DB00E3E1D2 /* XCRemoteSwiftPackageReference "Alamofire" */;
 			productName = Alamofire;
+		};
+		1E22C1780DE530F41F928A95 /* KeychainAccess */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C415F54F2C11912800E3E1D2 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
+			productName = KeychainAccess;
 		};
 		C415F5502C11912800E3E1D2 /* KeychainAccess */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1217,11 +1839,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C45F0E2F2CE5582C00F75C7A /* XCRemoteSwiftPackageReference "Nuke" */;
 			productName = NukeUI;
-		};
-		F0BEBFD1A1C1E219816A7F4E /* KeychainAccess */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = C415F54F2C11912800E3E1D2 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
-			productName = KeychainAccess;
 		};
 /* End XCSwiftPackageProductDependency section */
 

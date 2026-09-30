@@ -11,18 +11,50 @@ struct Login: View {
   @ObservedObject var viewModel: AuthViewModel
   @Binding var showLoginSheet: Bool
 
+  @State private var showIAPLogin = false
+
+  // Login form fields are kept as local state so that every keystroke does
+  // not mutate the shared AuthViewModel. On Mac Catalyst the login form is
+  // presented via fullScreenCover from HomeView/PreferencesView, which both
+  // observe the same AuthViewModel; re-rendering the presenter on every
+  // keystroke while the cover is up triggers a re-presentation loop and
+  // crashes the app. Fields are pushed into the view model once on submit.
+  @State private var serverField: String
+  @State private var usernameField: String
+  @State private var passwordField: String
+
+  init(viewModel: AuthViewModel, showLoginSheet: Binding<Bool>) {
+    self.viewModel = viewModel
+    self._showLoginSheet = showLoginSheet
+    self._serverField = State(initialValue: viewModel.serverUrl)
+    self._usernameField = State(initialValue: viewModel.username)
+    self._passwordField = State(initialValue: viewModel.password)
+  }
+
   var isSubmitButtonDisabled: Bool {
-    viewModel.serverUrl.isEmpty || viewModel.username.isEmpty || viewModel.password.isEmpty
+    serverField.isEmpty || usernameField.isEmpty || passwordField.isEmpty
       || viewModel.isSubmitting
   }
 
   var body: some View {
     ScrollView {
-      if !viewModel.extraMessage.isEmpty {
-        extraMessage
+      if !httpWarning.isEmpty {
+        extraMessage(httpWarning)
       }
       headerSection
       formSection
+    }
+    .overlay(alignment: .topTrailing) {
+      if UIDevice.current.userInterfaceIdiom == .pad {
+        Button(action: { showLoginSheet = false }) {
+          Image(systemName: "xmark")
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(.primary)
+            .frame(width: 34, height: 34)
+            .glassedEffect(in: Circle(), interactive: true)
+        }
+        .padding()
+      }
     }
     .alert(isPresented: $viewModel.showAlert) {
       Alert(
@@ -31,13 +63,30 @@ struct Login: View {
         dismissButton: .default(Text("OK"))
       )
     }
+    .iapModal(isPresented: $showIAPLogin) {
+      IAPLoginView(authViewModel: viewModel)
+    }
+    .onChange(of: viewModel.isLoggedIn) { isLoggedIn in
+      if isLoggedIn {
+        showLoginSheet = false
+        showIAPLogin = false
+      }
+    }
     .background(Color(.systemBackground))
     .foregroundColor(.accent)
+    .presentationDetents([.large])
+    .presentationDragIndicator(.visible)
   }
 
-  private var extraMessage: some View {
+  private var httpWarning: String {
+    serverField.lowercased().hasPrefix("http://")
+      ? "http:// is only supported within private IP ranges: 192.168.0.0/16, 10.0.0.0/8, and 172.16.0.0/12 — learn more at https://dub.sh/flo-ats"
+      : ""
+  }
+
+  private func extraMessage(_ message: String) -> some View {
     VStack {
-      Text(viewModel.extraMessage)
+      Text(message)
         .customFont(.caption1)
         .lineSpacing(2)
         .multilineTextAlignment(.center)
@@ -85,11 +134,12 @@ struct Login: View {
   private var formSection: some View {
     VStack {
       formField(
-        title: "Server URL", text: $viewModel.serverUrl,
+        title: "Server URL", text: $serverField,
         placeholder: "https://navidrome․your-server․net", keyboardType: .URL)
-      formField(title: "Username", text: $viewModel.username, placeholder: "sigma")
-      secureFormField(title: "Password", text: $viewModel.password, placeholder: "*************")
+      formField(title: "Username", text: $usernameField, placeholder: "sigma")
+      secureFormField(title: "Password", text: $passwordField, placeholder: "*************")
       submitButton
+      iapLoginButton
     }
     .padding(.bottom, 30)
     .padding(.horizontal, 10)
@@ -136,7 +186,7 @@ struct Login: View {
 
   private var submitButton: some View {
     VStack(alignment: .leading) {
-      Button(action: viewModel.login) {
+      Button(action: submitLogin) {
         Text(viewModel.experimentalSaveLoginInfo ? "Save" : "Login")
           .foregroundColor(.white)
           .fontWeight(.bold)
@@ -153,6 +203,65 @@ struct Login: View {
       .padding()
       .disabled(isSubmitButtonDisabled)
     }
+  }
+  
+  private func submitLogin() {
+    viewModel.serverUrl = serverField
+    viewModel.username = usernameField
+    viewModel.password = passwordField
+    viewModel.login()
+  }
+
+  private var iapLoginButton: some View {
+    VStack(spacing: 12) {
+      HStack {
+        VStack { Divider() }
+        Text("OR")
+          .customFont(.caption1)
+          .foregroundColor(.secondary)
+          .padding(.horizontal, 8)
+        VStack { Divider() }
+      }
+      .padding(.horizontal, 15)
+      .padding(.vertical, 10)
+      
+      Button(action: { showIAPLogin = true }) {
+        HStack {
+          Image(systemName: "lock.shield.fill")
+            .font(.system(size: 16))
+          Text("Login with IAP")
+            .fontWeight(.semibold)
+            .customFont(.headline)
+        }
+        .foregroundColor(Color("PlayerColor"))
+        .padding()
+        .frame(maxWidth: .infinity)
+        .overlay(
+          RoundedRectangle(cornerRadius: 5)
+            .stroke(Color("PlayerColor"), lineWidth: 2)
+        )
+      }
+      .padding(.horizontal, 15)
+      
+      Text("Use this if your server is behind OAuth2-Proxy or Identity-Aware Proxy")
+        .customFont(.caption1)
+        .foregroundColor(.secondary)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 20)
+    }
+  }
+}
+
+extension View {
+  @ViewBuilder
+  func iapModal<Modal: View>(
+    isPresented: Binding<Bool>, @ViewBuilder content: @escaping () -> Modal
+  ) -> some View {
+    #if targetEnvironment(macCatalyst)
+      fullScreenCover(isPresented: isPresented, content: content)
+    #else
+      sheet(isPresented: isPresented, content: content)
+    #endif
   }
 }
 

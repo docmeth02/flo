@@ -11,6 +11,8 @@ import MediaPlayer
 import SwiftUI
 
 class PlayerViewModel: ObservableObject {
+  static let shared = PlayerViewModel()
+
   private var player: AVPlayer?
   private var playerItem: AVPlayerItem?
   private var timeObserverToken: Any?
@@ -38,6 +40,19 @@ class PlayerViewModel: ObservableObject {
   @Published var totalTimeString: String = "00:00"
   @Published var shouldHidePlayer: Bool = false
   @Published var externalOutputName: String?
+  @Published var isStarred: Bool = false
+  @Published var playbackVolume: Float = UserDefaultsManager.playbackVolume {
+    didSet {
+      let clamped = min(max(playbackVolume, 0), 1)
+      if clamped != playbackVolume {
+        playbackVolume = clamped
+        return
+      }
+      UserDefaultsManager.playbackVolume = clamped
+      player?.volume = clamped
+    }
+  }
+  private var volumeBeforeMute: Float = UserDefaultsManager.playbackVolume
 
   // FIXME: this make confusion with `isDownloaded` and/or `isPlayingFromLocal`
   @Published var _playFromLocal: Bool = false
@@ -48,6 +63,19 @@ class PlayerViewModel: ObservableObject {
   private var playerItemObservation: AnyCancellable?
   private var interruptionObservation = Set<AnyCancellable>()
   private var routeChangeObservation = Set<AnyCancellable>()
+
+  // FLO-5/FLO-3 hardening: stall and end-of-track state machine
+  private var bufferEmptyCancellable: AnyCancellable?
+  private var bufferKeepUpCancellable: AnyCancellable?
+  private var stallNotificationToken: NSObjectProtocol?
+  private var failedToEndToken: NSObjectProtocol?
+  private var didPlayToEndToken: NSObjectProtocol?
+  private var lastNextSongFire: Date?
+  private var stallRetryCount: Int = 0
+  private var isRecoveringFromStall: Bool = false
+  private let stallMaxRetries = 2
+  private let endTolerance: Double = 0.5
+  private let nextSongDebounce: TimeInterval = 0.8
 
   private var scrobbleThreshold = 0.5
   private var hasTriggeredCache: Bool = false
@@ -65,6 +93,10 @@ class PlayerViewModel: ObservableObject {
     return UserDefaultsManager.LRCLIBServerURL != ""
   }
 
+  var lyricsSourceName: String? {
+    LRCLIBSource.displayName(for: UserDefaultsManager.LRCLIBServerURL)
+  }
+
   var isLiveRadio: Bool {
     guard hasNowPlaying() else { return false }
 
@@ -73,6 +105,8 @@ class PlayerViewModel: ObservableObject {
 
   init() {
     self.player = AVPlayer()
+    self.player?.volume = UserDefaultsManager.playbackVolume
+    self.volumeBeforeMute = UserDefaultsManager.playbackVolume > 0 ? UserDefaultsManager.playbackVolume : 1.0
     self.observeInterruptionNotifications()
     self.observeRouteChangeNotifications()
     self.updateAudioRoute()
@@ -102,7 +136,8 @@ class PlayerViewModel: ObservableObject {
   func observeInterruptionNotifications() {
     NotificationCenter.default
       .publisher(for: AVAudioSession.interruptionNotification)
-      .sink { notification in
+      .sink { [weak self] notification in
+        guard let self else { return }
         self.handleInterruptionNotification(notification)
       }
       .store(in: &interruptionObservation)
@@ -111,7 +146,8 @@ class PlayerViewModel: ObservableObject {
   func observeRouteChangeNotifications() {
     NotificationCenter.default
       .publisher(for: AVAudioSession.routeChangeNotification)
-      .sink { _ in
+      .sink { [weak self] _ in
+        guard let self else { return }
         self.updateAudioRoute()
       }
       .store(in: &routeChangeObservation)
@@ -136,6 +172,192 @@ class PlayerViewModel: ObservableObject {
     }
   }
 
+  // MARK: - FLO-5 / FLO-3: Stall + end-of-track helpers
+
+  private func removePlayerItemObservers() {
+    bufferEmptyCancellable?.cancel()
+    bufferKeepUpCancellable?.cancel()
+    bufferEmptyCancellable = nil
+    bufferKeepUpCancellable = nil
+
+    if let token = stallNotificationToken {
+      NotificationCenter.default.removeObserver(token)
+      stallNotificationToken = nil
+    }
+    if let token = failedToEndToken {
+      NotificationCenter.default.removeObserver(token)
+      failedToEndToken = nil
+    }
+    if let token = didPlayToEndToken {
+      NotificationCenter.default.removeObserver(token)
+      didPlayToEndToken = nil
+    }
+    // Keep playerItemObservation for status; caller cancels separately if needed
+  }
+
+  private func setupPlayerItemObservers(for item: AVPlayerItem) {
+    removePlayerItemObservers()
+    stallRetryCount = 0
+    isRecoveringFromStall = false
+
+    // KVO: playbackBufferEmpty — true means we drained the forward buffer.
+    bufferEmptyCancellable = item.publisher(for: \.isPlaybackBufferEmpty)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] isEmpty in
+        guard let self else { return }
+        if isEmpty, self.isPlaying, !self.isRecoveringFromStall {
+          // Will enter waitingToPlayAtSpecifiedRate; let KeepUp observer drive recovery.
+          self.isMediaLoading = true
+        }
+      }
+
+    // KVO: playbackLikelyToKeepUp — false/true transition drives auto-resume.
+    bufferKeepUpCancellable = item.publisher(for: \.isPlaybackLikelyToKeepUp)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] likely in
+        guard let self else { return }
+        if likely, self.isPlaying, self.player?.timeControlStatus == .waitingToPlayAtSpecifiedRate {
+          // Buffer refilled — resume if we were stalled.
+          if self.isRecoveringFromStall {
+            self.isRecoveringFromStall = false
+            self.isMediaLoading = false
+          }
+          self.player?.play()
+          self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
+        } else if !likely, self.isPlaying {
+          // Keep waiting; stall handler may nudge later.
+        }
+        if likely {
+          self.isMediaLoading = false
+        }
+      }
+
+    stallNotificationToken = NotificationCenter.default.addObserver(
+      forName: .AVPlayerItemPlaybackStalled, object: item, queue: .main
+    ) { [weak self] _ in
+      self?.handlePlaybackStall()
+    }
+
+    failedToEndToken = NotificationCenter.default.addObserver(
+      forName: .AVPlayerItemFailedToPlayToEndTime, object: item, queue: .main
+    ) { [weak self] note in
+      self?.handleFailedToPlayToEnd(note)
+    }
+
+    didPlayToEndToken = NotificationCenter.default.addObserver(
+      forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main
+    ) { [weak self] _ in
+      self?.handleDidPlayToEndTime()
+    }
+  }
+
+  private func handlePlaybackStall() {
+    guard isPlaying, !isLiveRadio else { return }
+    // FLO-5: transcoded mp3 gap at ~71s triggers playbackStalled / bufferEmpty with
+    // timeControlStatus == .waitingToPlayAtSpecifiedRate. Previously no observer existed,
+    // so isPlaying stayed true while player was frozen and play() was a no-op.
+    if let last = lastNextSongFire, Date().timeIntervalSince(last) < nextSongDebounce {
+      return
+    }
+    if isRecoveringFromStall { return }
+    isRecoveringFromStall = true
+    isMediaLoading = true
+
+    // First retry: ask AVPlayer to resume (covers transient buffer gap).
+    if stallRetryCount < stallMaxRetries {
+      stallRetryCount += 1
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+        guard let self else { return }
+        if self.isPlaying
+          && (self.player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
+            || self.player?.rate == 0)
+        {
+          self.player?.play()
+          self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
+        }
+      }
+      // Second-phase nudge: tiny seek forward to force refill if still stalled after 1.5s.
+      DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [weak self] in
+        guard let self else { return }
+        let status = self.player?.timeControlStatus
+        let empty = self.playerItem?.isPlaybackBufferEmpty ?? false
+        if (status == .waitingToPlayAtSpecifiedRate || empty), self.isPlaying {
+          let current = CMTimeGetSeconds(self.player?.currentTime() ?? .zero)
+          if current.isFinite {
+            let nudge = min(max(current + 0.5, 0), max(self.totalDuration - 0.4, 0))
+            let target = CMTime(seconds: nudge, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+            self.player?.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+              self?.player?.play()
+              self?.updateNowPlayingInfo(progress: self?.progress ?? 0, rate: 1.0)
+              self?.isRecoveringFromStall = false
+              self?.isMediaLoading = false
+            }
+            return
+          }
+        }
+        self.isRecoveringFromStall = false
+        self.isMediaLoading = false
+      }
+    } else {
+      // Exhausted retries — clear flag and surface loading; user skip still works.
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+        self?.isRecoveringFromStall = false
+        self?.isMediaLoading = false
+      }
+    }
+  }
+
+  private func handleFailedToPlayToEnd(_ note: Notification) {
+    isMediaFailed = true
+    isMediaLoading = false
+    isRecoveringFromStall = false
+    // Keep NowPlaying paused so CarPlay does not flick to next.
+    updateNowPlayingInfo(progress: progress, rate: 0.0)
+    MPNowPlayingInfoCenter.default().playbackState = .paused
+  }
+
+  private func handleDidPlayToEndTime() {
+    // FLO-3: authoritative end-of-track signal; replaces sole reliance on rounding.
+    guard !isLiveRadio else { return }
+    if let last = lastNextSongFire, Date().timeIntervalSince(last) < nextSongDebounce {
+      return
+    }
+    // Ignore spurious end while stalled mid-track (buffer empty but not near end).
+    if let item = playerItem, item.isPlaybackBufferEmpty,
+       player?.timeControlStatus == .waitingToPlayAtSpecifiedRate {
+      let current = CMTimeGetSeconds(player?.currentTime() ?? .zero)
+      if current.isFinite, totalDuration.isFinite, totalDuration > 0,
+         current + endTolerance < totalDuration - 1.0 {
+        return
+      }
+    }
+    nextSong()
+    UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
+  }
+
+  private func shouldAdvanceToNextTrack(currentTime: Double) -> Bool {
+    guard !isLiveRadio,
+          totalDuration.isFinite, totalDuration > 0,
+          currentTime.isFinite else { return false }
+    // FLO-3: tolerance instead of round/floor; prevents early skip when duration estimate short.
+    let remaining = totalDuration - currentTime
+    guard remaining <= endTolerance else { return false }
+    // Do not advance if we are stalled mid-track (transcoded gap, not end).
+    if player?.timeControlStatus == .waitingToPlayAtSpecifiedRate,
+       playerItem?.isPlaybackBufferEmpty == true,
+       remaining > 1.0 {
+      return false
+    }
+    if let last = lastNextSongFire, Date().timeIntervalSince(last) < nextSongDebounce {
+      return false
+    }
+    // Ensure we were actually playing forward, not seeking or paused.
+    if player?.rate == 0, player?.timeControlStatus != .waitingToPlayAtSpecifiedRate {
+      return false
+    }
+    return true
+  }
+
   func handleInterruptionNotification(_ notification: Notification) {
     guard let userInfo = notification.userInfo,
       let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? Int,
@@ -146,18 +368,24 @@ class PlayerViewModel: ObservableObject {
 
     switch type {
     case .began:
+      // CarPlay / phone call / Siri: pause but keep isPlaying intent for .shouldResume gate
       self.pause()
 
     case .ended:
-      self.play()
-
+      // FLO-3: guard against double-play race (unconditional play + conditional play).
+      // Only resume when the system explicitly signals .shouldResume.
       if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? Int {
         let options = AVAudioSession.InterruptionOptions(rawValue: UInt(optionsValue))
 
         if options.contains(.shouldResume) {
+          // Debounce: if we already fired nextSong within 0.8s, do not resume stray playback
+          if let last = lastNextSongFire, Date().timeIntervalSince(last) < nextSongDebounce {
+            break
+          }
           self.play()
         }
       }
+      // No .shouldResume -> remain paused; NowPlayingManager will stay in .paused.
 
     @unknown default:
       break
@@ -176,7 +404,8 @@ class PlayerViewModel: ObservableObject {
       albumName: self.nowPlaying.albumName ?? "",
       albumId: self.nowPlaying.albumId ?? "",
       trackId: self.nowPlaying.id ?? "",
-      contextName: self.nowPlaying.contextName
+      contextName: self.nowPlaying.contextName,
+      albumCover: self.nowPlaying.albumCover ?? ""
     )
   }
 
@@ -197,15 +426,21 @@ class PlayerViewModel: ObservableObject {
     self.hasTriggeredCache = false
 
     StreamCacheManager.shared.cancelAllInFlight()
-    StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: self.nowPlaying.id ?? "")
+
+    try? AVAudioSession.sharedInstance().setActive(true)
 
     self.resetLyrics()
+    self.checkStarredStatus()
 
     if let timeObserverToken = timeObserverToken {
       player?.removeTimeObserver(timeObserverToken)
+      self.timeObserverToken = nil
     }
 
-    let streamUrl = AlbumService.shared.getStreamUrl(id: self.nowPlaying.id ?? "")
+    let songId = self.nowPlaying.id ?? ""
+    StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: songId)
+
+    let streamUrl = AlbumService.shared.getStreamUrl(id: songId)
 
     guard let audioURL = URL(string: streamUrl), !streamUrl.isEmpty else {
       self.isMediaLoading = false
@@ -216,7 +451,25 @@ class PlayerViewModel: ObservableObject {
 
     self._playFromLocal = audioURL.isFileURL
 
-    self.playerItem = AVPlayerItem(url: audioURL)
+    // Tear down prior item's stall/end observers before swapping items (FLO-5/FLO-3)
+    self.removePlayerItemObservers()
+    self.playerItemObservation?.cancel()
+    self.playerItemObservation = nil
+
+    if !audioURL.isFileURL, AuthService.shared.getAuthMode() == .iap {
+      let cookies = HTTPCookieStorage.shared.cookies(for: audioURL) ?? []
+      let asset = AVURLAsset(url: audioURL, options: [AVURLAssetHTTPCookiesKey: cookies])
+      self.playerItem = AVPlayerItem(asset: asset)
+    } else {
+      self.playerItem = AVPlayerItem(url: audioURL)
+    }
+    if let item = self.playerItem {
+      // Prefer smaller forward buffer for transcoded streams so gaps surface faster and recover.
+      item.preferredForwardBufferDuration = 3
+      self.setupPlayerItemObservers(for: item)
+    }
+    self.player?.automaticallyWaitsToMinimizeStalling = false
+    self.player?.volume = playbackVolume
     self.player?.replaceCurrentItem(with: self.playerItem)
 
     let duration = CMTime(
@@ -275,9 +528,9 @@ class PlayerViewModel: ObservableObject {
     let interval = CMTime(seconds: 1, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
 
     timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) {
-      time in
+      [weak self] time in
+      guard let self else { return }
       let currentTime = CMTimeGetSeconds(time)
-      let roundedTotalDuration = floor(self.totalDuration)
 
       if self.totalDuration.isFinite, self.totalDuration > 0 {
         self.progress = currentTime / self.totalDuration
@@ -293,6 +546,14 @@ class PlayerViewModel: ObservableObject {
         self.updateCurrentLyricsLine(currentTime: currentTime)
       }
 
+      if !self.isLocallySaved && self.progress >= 0.5 {
+        self.isLocallySaved = true
+
+        Task { @MainActor in
+          FloooViewModel.shared.scrobble(submission: true, nowPlaying: self.nowPlaying)
+        }
+      }
+
       if !self.hasTriggeredCache && currentTime >= 10.0 && !self.isLiveRadio {
         self.hasTriggeredCache = true
         if let nextIdx = self.nextQueueIdxForPreCache(),
@@ -304,20 +565,9 @@ class PlayerViewModel: ObservableObject {
         }
       }
 
-      if !self.isLocallySaved && self.progress >= 0.5 {
-        Task {
-          FloooViewModel.shared.scrobble(submission: true, nowPlaying: self.nowPlaying)
-
-          self.isLocallySaved = true
-        }
-      }
-
-      if self.totalDuration.isFinite,
-        self.totalDuration > 0,
-        round(currentTime) >= roundedTotalDuration
-      {
+      // FLO-3/FLO-5: tolerance + stall + debounce guard (replaces round/floor)
+      if self.shouldAdvanceToNextTrack(currentTime: currentTime) {
         self.nextSong()
-
         UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
       }
     }
@@ -326,23 +576,23 @@ class PlayerViewModel: ObservableObject {
   private func initNowPlayingInfo(
     title: String, artist: String, playbackDuration: Double
   ) {
-    // Set title/artist/duration immediately so Now Playing is never empty
-    var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
-    nowPlayingInfo[MPMediaItemPropertyTitle] = title
-    nowPlayingInfo[MPMediaItemPropertyArtist] = artist
-    nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = playbackDuration
-    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-
-    // Load artwork asynchronously and merge it in
     DispatchQueue.global().async {
       let artwork = self.makeNowPlayingArtwork()
 
       DispatchQueue.main.async {
+        var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
+
+        nowPlayingInfo[MPMediaItemPropertyTitle] = title
+        nowPlayingInfo[MPMediaItemPropertyArtist] = artist
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = playbackDuration
+        nowPlayingInfo[MPMediaItemPropertyIsExplicit] =
+          ExplicitStatus(from: self.nowPlaying.explicitStatus).isExplicit
+
         if let artwork = artwork {
-          var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
-          info[MPMediaItemPropertyArtwork] = artwork
-          MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+          nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
         }
+
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
       }
     }
   }
@@ -395,16 +645,30 @@ class PlayerViewModel: ObservableObject {
     let commandCenter = MPRemoteCommandCenter.shared()
 
     commandCenter.playCommand.isEnabled = true
-
-    commandCenter.playCommand.addTarget { [unowned self] event in
+    commandCenter.playCommand.addTarget { [weak self] _ in
+      guard let self else { return .commandFailed }
       self.play()
-
       return .success
     }
 
-    commandCenter.pauseCommand.addTarget { [unowned self] event in
+    commandCenter.pauseCommand.isEnabled = true
+    commandCenter.pauseCommand.addTarget { [weak self] _ in
+      guard let self else { return .commandFailed }
       self.pause()
+      return .success
+    }
 
+    // FLO-6: Wired EarPods single-press sends togglePlayPauseCommand (iOS 26),
+    // not discrete play/pause. Without this target the click is dropped as
+    // .commandFailed while volume/skip still work.
+    commandCenter.togglePlayPauseCommand.isEnabled = true
+    commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
+      guard let self else { return .commandFailed }
+      if self.isPlaying {
+        self.pause()
+      } else {
+        self.play()
+      }
       return .success
     }
 
@@ -446,18 +710,28 @@ class PlayerViewModel: ObservableObject {
       self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
     }
 
+    player?.volume = playbackVolume
     player?.play()
 
     self.isFinished = false
     self.isPlaying = true
+    // If user explicitly hits play after a stall, clear stall gating so next stall can recover again.
+    if isRecoveringFromStall, player?.timeControlStatus != .waitingToPlayAtSpecifiedRate {
+      isRecoveringFromStall = false
+      stallRetryCount = 0
+    }
+    self.isMediaLoading = false
     self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
+    MPNowPlayingInfoCenter.default().playbackState = .playing
   }
 
   func pause() {
     player?.pause()
 
     self.isPlaying = false
+    self.isRecoveringFromStall = false
     self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
+    MPNowPlayingInfoCenter.default().playbackState = .paused
   }
 
   func stop() {
@@ -472,6 +746,8 @@ class PlayerViewModel: ObservableObject {
     if isLiveRadio {
       return
     }
+
+    self.progress = progress
 
     let newTime = CMTime(
       seconds: progress * totalDuration, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
@@ -531,7 +807,18 @@ class PlayerViewModel: ObservableObject {
       self.timeObserverToken = nil
     }
 
+    self.removePlayerItemObservers()
+    self.playerItemObservation?.cancel()
+    self.playerItemObservation = nil
+
     self.playerItem = AVPlayerItem(url: radioUrl)
+    if let item = self.playerItem {
+      item.preferredForwardBufferDuration = 3
+      // Radio: still benefit from stall recovery but DidPlayToEndTime is ignored via isLiveRadio guard.
+      self.setupPlayerItemObservers(for: item)
+    }
+    self.player?.automaticallyWaitsToMinimizeStalling = false
+    self.player?.volume = playbackVolume
     self.player?.replaceCurrentItem(with: self.playerItem)
 
     self.playerItemObservation = self.playerItem?.publisher(for: \.status)
@@ -610,6 +897,15 @@ class PlayerViewModel: ObservableObject {
   }
 
   func nextSong() {
+    // FLO-3: debounce — DidPlayToEndTime + periodic observer race + CarPlay double-tap.
+    // All end-of-track paths funnel here; drop duplicate fires within 0.8s.
+    if let last = lastNextSongFire, Date().timeIntervalSince(last) < nextSongDebounce {
+      return
+    }
+    lastNextSongFire = Date()
+    stallRetryCount = 0
+    isRecoveringFromStall = false
+    isMediaLoading = false
     // TODO: refactor later ngantuk bosss
     // singles
     if self.queue.count == 1 {
@@ -656,7 +952,30 @@ class PlayerViewModel: ObservableObject {
     UserDefaultsManager.queueActiveIdx = self.activeQueueIdx
   }
 
+  private func nextQueueIdxForPreCache() -> Int? {
+    if queue.count <= 1 { return nil }
+
+    if playbackMode == PlaybackMode.repeatOnce {
+      return nil
+    }
+
+    if playbackMode == PlaybackMode.repeatAlbum {
+      return activeQueueIdx + 1 >= queue.count ? 0 : activeQueueIdx + 1
+    }
+
+    let nextIdx = activeQueueIdx + 1
+    guard nextIdx < queue.count else { return nil }
+    return nextIdx
+  }
+
   func destroyPlayerAndQueue() {
+    self.removePlayerItemObservers()
+    self.playerItemObservation?.cancel()
+    self.playerItemObservation = nil
+    if let token = timeObserverToken {
+      player?.removeTimeObserver(token)
+      timeObserverToken = nil
+    }
     self.stop()
     self.progress = 0.0
 
@@ -664,11 +983,16 @@ class PlayerViewModel: ObservableObject {
 
     self.isLocallySaved = false
     self.shouldHidePlayer = true
+    self.stallRetryCount = 0
+    self.isRecoveringFromStall = false
+    self.isMediaLoading = false
 
     PlaybackService.shared.clearQueue()
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
 
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+
+    try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
   }
 
   func resetLyrics() {
@@ -796,23 +1120,56 @@ class PlayerViewModel: ObservableObject {
     return nil
   }
 
-  private func nextQueueIdxForPreCache() -> Int? {
-    if queue.count <= 1 { return nil }
-
-    if playbackMode == PlaybackMode.repeatOnce {
-      return nil
+  private func checkStarredStatus() {
+    self.isStarred = false
+    if let songId = self.nowPlaying.id, !songId.isEmpty {
+      AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
+        DispatchQueue.main.async {
+          guard self?.nowPlaying.id == songId else { return }
+          self?.isStarred = starred
+        }
+      }
     }
+  }
 
-    if playbackMode == PlaybackMode.repeatAlbum {
-      return activeQueueIdx + 1 >= queue.count ? 0 : activeQueueIdx + 1
+  func toggleMute() {
+    if playbackVolume > 0.01 {
+      volumeBeforeMute = playbackVolume
+      playbackVolume = 0
+    } else {
+      let restore = volumeBeforeMute > 0.01 ? volumeBeforeMute : 1.0
+      playbackVolume = restore
     }
+  }
 
-    let nextIdx = activeQueueIdx + 1
-    guard nextIdx < queue.count else { return nil }
-    return nextIdx
+  func setPlaybackVolume(_ volume: Float) {
+    let clamped = min(max(volume, 0), 1)
+    if clamped > 0.01 {
+      volumeBeforeMute = clamped
+    }
+    playbackVolume = clamped
+  }
+
+  func toggleStar() {
+    guard let songId = self.nowPlaying.id, !songId.isEmpty else { return }
+
+    let shouldStar = !self.isStarred
+    self.isStarred = shouldStar
+
+    let action = shouldStar ? AlbumService.shared.starSong : AlbumService.shared.unstarSong
+    action(songId) { [weak self] success in
+      if !success {
+        DispatchQueue.main.async {
+          guard self?.nowPlaying.id == songId else { return }
+          self?.isStarred = !shouldStar
+        }
+      }
+    }
   }
 
   deinit {
+    removePlayerItemObservers()
+    playerItemObservation?.cancel()
     if let timeObserverToken = timeObserverToken {
       player?.removeTimeObserver(timeObserverToken)
       player?.pause()

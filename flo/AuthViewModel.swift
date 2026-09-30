@@ -32,6 +32,8 @@ class AuthViewModel: ObservableObject {
   // refresh only persists its result while the generation is unchanged.
   private var sessionGeneration: Int = 0
 
+  @Published var authMode: AuthMode = .standard
+
   static let shared = AuthViewModel()
 
   private func validateURL() {
@@ -44,19 +46,40 @@ class AuthViewModel: ObservableObject {
   }
 
   init() {
-    // TODO: invalidate authz token somewhere here
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(handleSessionExpired(_:)), name: .sessionExpired, object: nil)
+
     do {
       if let jsonString = try KeychainManager.getAuthCreds(),
         let jsonData = jsonString.data(using: .utf8)
       {
         let data: UserAuth = try JSONDecoder().decode(UserAuth.self, from: jsonData)
 
-        self.serverUrl = UserDefaultsManager.serverBaseURL
-        self.username = data.username
+        serverUrl = UserDefaultsManager.serverBaseURL
+        username = data.username
 
-        if UserDefaultsManager.saveLoginInfo {
+        authMode = AuthService.shared.getAuthMode()
+
+        if authMode == .iap {
+          user = UserAuth(
+            id: data.id, username: data.username, name: data.name, isAdmin: data.isAdmin,
+            lastFMApiKey: data.lastFMApiKey
+          )
+          AuthService.shared.setCreds(data)
+          isLoggedIn = true
+          let verificationSession = AuthService.shared.sessionSnapshot()
+
+          AuthService.shared.verifySubsonicAccess(data, serverUrl: serverUrl) { result in
+            if case .invalid = result {
+              DispatchQueue.main.async {
+                guard AuthService.shared.isCurrentSession(verificationSession) else { return }
+                self.logout()
+              }
+            }
+          }
+        } else if UserDefaultsManager.saveLoginInfo {
           do {
-            self.password = try KeychainManager.getAuthPassword() ?? ""
+            password = try KeychainManager.getAuthPassword() ?? ""
           } catch {
             print("Error loading password from Keychain: \(error)")
           }
@@ -75,11 +98,29 @@ class AuthViewModel: ObservableObject {
             if online { self?.refreshSession() }
           }
         } else {
-
-          self.user = UserAuth(
+          user = UserAuth(
             id: data.id, username: data.username, name: data.name, isAdmin: data.isAdmin,
-            lastFMApiKey: data.lastFMApiKey)
-          self.isLoggedIn = true
+            lastFMApiKey: data.lastFMApiKey
+          )
+          AuthService.shared.setCreds(data)
+          isLoggedIn = true
+          let verificationSession = AuthService.shared.sessionSnapshot()
+
+          // Standard auth was previously never revalidated (only IAP via
+          // verifySubsonicAccess in 7a9f844). A stale ND JWT therefore
+          // produced a ghost isLoggedIn=true while every /api/* returned
+          // 401. Verify ND token in background; on 401/403 clear the
+          // session so UI flips to .expired / login sheet instead of
+          // hanging empty.
+          AuthService.shared.verifyNDSession(serverUrl: serverUrl, token: data.token) {
+            result in
+            if case .invalid = result {
+              DispatchQueue.main.async {
+                guard AuthService.shared.isCurrentSession(verificationSession) else { return }
+                self.logout()
+              }
+            }
+          }
         }
       }
     } catch {
@@ -112,6 +153,13 @@ class AuthViewModel: ObservableObject {
     }
   }
 
+  @objc private func handleSessionExpired(_ notification: Notification) {
+    guard let requestSession = notification.object as? AuthSessionSnapshot,
+      AuthService.shared.isCurrentSession(requestSession)
+    else { return }
+    logout()
+  }
+
   func login() {
     sessionGeneration += 1
     isSubmitting = true
@@ -120,20 +168,23 @@ class AuthViewModel: ObservableObject {
       result in
       switch result {
       case .success(let data):
-        self.persistAuthData(data)
-
-        if self.experimentalSaveLoginInfo {
-          do {
-            try KeychainManager.setAuthPassword(newValue: self.password)
-            UserDefaultsManager.saveLoginInfo = true
-
-            self.experimentalSaveLoginInfo = false
-          } catch {
-            print("error saving password to Keychain: \(error)")
-          }
-        }
-
+        // persistAuthData mutates @Published state ("user"), so make sure the
+        // whole success path runs on the main actor regardless of which queue
+        // Alamofire delivered the response on.
         DispatchQueue.main.async {
+          self.persistAuthData(data)
+
+          if self.experimentalSaveLoginInfo {
+            do {
+              try KeychainManager.setAuthPassword(newValue: self.password)
+              UserDefaultsManager.saveLoginInfo = true
+
+              self.experimentalSaveLoginInfo = false
+            } catch {
+              print("error saving password to Keychain: \(error)")
+            }
+          }
+
           self.isSubmitting = false
           self.isLoggedIn = true
           self.username = ""
@@ -148,6 +199,9 @@ class AuthViewModel: ObservableObject {
           switch error {
           case .server(let message):
             self.alertMessage = message
+
+          case .sessionExpired:
+            self.alertMessage = "Session expired. Please log in again."
 
           case .unknown:
             self.alertMessage = "Unknown error ocurred"
@@ -165,14 +219,20 @@ class AuthViewModel: ObservableObject {
 
     do {
       try KeychainManager.removeAuthCreds()
+      AuthService.shared.clearCreds()
 
-      self.destroySavedPassword()
+      destroySavedPassword()
+
+      if authMode == .iap {
+        try? KeychainManager.removeAuthMode()
+      }
 
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.serverURL)
 
-      self.user = nil
-      self.isLoggedIn = false
-    } catch let error {
+      user = nil
+      isLoggedIn = false
+      authMode = .standard
+    } catch {
       print("error>>>>> \(error)")
     }
   }
@@ -183,7 +243,7 @@ class AuthViewModel: ObservableObject {
 
       UserDefaultsManager.saveLoginInfo = false
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.saveLoginInfo)
-    } catch let error {
+    } catch {
       print("error>>>>> \(error)")
     }
   }
@@ -193,16 +253,22 @@ class AuthViewModel: ObservableObject {
       let jsonData = try JSONEncoder().encode(data)
       let jsonString = String(data: jsonData, encoding: .utf8)!
 
-      try KeychainManager.setAuthCreds(newValue: jsonString)
+      do {
+        try KeychainManager.setAuthCreds(newValue: jsonString)
+      } catch {
+        print("Error saving auth creds to Keychain: \(error)")
+      }
 
       AuthService.shared.setCreds(data)
-      UserDefaultsManager.serverBaseURL = self.serverUrl
+      UserDefaultsManager.serverBaseURL = serverUrl
 
-      self.user = UserAuth(
+      user = UserAuth(
         id: data.id, username: data.username, name: data.name, isAdmin: data.isAdmin,
-        lastFMApiKey: data.lastFMApiKey)
+        lastFMApiKey: data.lastFMApiKey
+      )
     } catch {
-      print("Error saving data to Keychain: \(error)")
+      print("Error encoding auth data: \(error)")
     }
   }
+
 }

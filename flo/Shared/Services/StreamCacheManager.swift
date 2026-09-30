@@ -105,6 +105,7 @@ class StreamCacheManager {
       entity.duration = q.duration
       entity.bitRate = q.bitRate
       entity.sampleRate = q.sampleRate
+      entity.explicitStatus = q.explicitStatus
     }
 
     CoreDataManager.shared.saveRecord()

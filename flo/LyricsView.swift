@@ -13,6 +13,8 @@ struct LyricsView: View {
   @Binding var showQueue: Bool
 
   let imageSize: CGFloat
+  let topSafeInset: CGFloat
+  let bottomSafeInset: CGFloat
 
   private var isPlainLyrics: Bool {
     return viewModel.lyrics.count == 1
@@ -42,11 +44,17 @@ struct LyricsView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
         VStack(alignment: .leading, spacing: 4) {
-          Text(viewModel.nowPlaying.songName ?? "")
-            .foregroundColor(.white)
-            .customFont(.body)
-            .fontWeight(.bold)
-            .lineLimit(1)
+          HStack(alignment: .center, spacing: 6) {
+            Text(viewModel.nowPlaying.songName ?? "")
+              .foregroundColor(.white)
+              .customFont(.body)
+              .fontWeight(.bold)
+              .lineLimit(1)
+
+            if ExplicitStatus(from: viewModel.nowPlaying.explicitStatus).isExplicit {
+              ExplicitBadge(tint: .white.opacity(0.85), size: .compact)
+            }
+          }
 
           Text(viewModel.nowPlaying.artistName ?? "")
             .foregroundColor(.white.opacity(0.7))
@@ -67,9 +75,10 @@ struct LyricsView: View {
             .clipShape(Capsule())
             .shadow(color: .black.opacity(0.25), radius: 6, x: 0, y: 3)
         }
+        .keyboardShortcut(.escape, modifiers: [])
       }
       .padding(.horizontal, 30)
-      .padding(.top, 16)
+      .padding(.top, topSafeInset + 8)
       .padding(.bottom, 16)
       .onTapGesture {
         viewModel.toggleLyricsMode()
@@ -149,11 +158,26 @@ struct LyricsView: View {
               .font(.title2)
               .foregroundColor(.white)
           }
-          .frame(width: 56, alignment: .leading)
+          .frame(width: 44, height: 44)
+
+          Spacer(minLength: 0)
+
+          Button {
+            viewModel.toggleStar()
+          } label: {
+            Image(systemName: viewModel.isStarred ? "heart.fill" : "heart")
+              .font(.title2)
+              .foregroundColor(.white)
+          }
+          .disabled(viewModel.isLiveRadio)
+          .opacity(viewModel.isLiveRadio ? 0.4 : 1)
+          .frame(width: 44, height: 44)
+
+          Spacer(minLength: 0)
 
           AirPlayRoutePicker(tintColor: UIColor.white, activeTintColor: UIColor.white)
-            .frame(width: 36, height: 36, alignment: .center)
-            .frame(maxWidth: .infinity, alignment: .center)
+            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 44)
             .overlay(alignment: .bottom) {
               if let outputName = viewModel.externalOutputName {
                 Text(outputName)
@@ -167,6 +191,8 @@ struct LyricsView: View {
                   .offset(y: 13)
               }
             }
+
+          Spacer(minLength: 0)
 
           Button {
             showQueue.toggle()
@@ -196,10 +222,11 @@ struct LyricsView: View {
                 .offset(x: 10, y: -10)
               )
           }
-          .frame(width: 56, alignment: .trailing)
+          .frame(width: 44, height: 44)
         }
-        .padding(.horizontal, 30)
+        .padding(.horizontal, 18)
         .padding(.top, 10)
+        .padding(.bottom, max(bottomSafeInset, 12))
       }
     }
   }

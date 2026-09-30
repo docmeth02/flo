@@ -11,7 +11,7 @@ struct Artist: Codable, Hashable, Identifiable {
   static func == (lhs: Artist, rhs: Artist) -> Bool {
     lhs.id == rhs.id
   }
-  
+
   func hash(into hasher: inout Hasher) {
     hasher.combine(id)
   }
@@ -32,7 +32,8 @@ struct Artist: Codable, Hashable, Identifiable {
   let fullText: String?
 
   enum CodingKeys: String, CodingKey {
-    case id, name, orderArtistName, stats, size, albumCount, songCount, missing, createdAt, updatedAt, sortArtistName, playCount, playDate, fullText
+    case id, name, orderArtistName, stats, size, albumCount, songCount, missing, createdAt,
+      updatedAt, sortArtistName, playCount, playDate, fullText
     case mbzArtistID = "mbzArtistId"
     case biography
     case smallImageURL = "smallImageUrl"
@@ -42,6 +43,59 @@ struct Artist: Codable, Hashable, Identifiable {
     case externalInfoUpdatedAt
   }
 
+  static func placeholder(id: String, name: String) -> Artist {
+    Artist(
+      id: id,
+      name: name,
+      orderArtistName: name,
+      stats: ArtistStats(
+        producer: nil,
+        composer: nil,
+        artist: nil,
+        maincredit: nil,
+        albumartist: nil,
+        arranger: nil,
+        engineer: nil,
+        performer: nil,
+        mixer: nil,
+        lyricist: nil,
+        conductor: nil
+      ),
+      size: 0,
+      albumCount: 0,
+      songCount: 0,
+      missing: false,
+      createdAt: "",
+      updatedAt: "",
+      sortArtistName: nil,
+      playCount: nil,
+      playDate: nil,
+      mbzArtistID: nil,
+      biography: nil,
+      smallImageURL: nil,
+      mediumImageURL: nil,
+      largeImageURL: nil,
+      externalURL: nil,
+      externalInfoUpdatedAt: nil,
+      fullText: nil
+    )
+  }
+}
+
+// MARK: - Stats
+struct ArtistStats: Codable {
+  let producer, composer, artist, maincredit: Albumartist?
+  let albumartist, arranger, engineer, performer: Albumartist?
+  let mixer, lyricist, conductor: Albumartist?
+}
+
+// MARK: - Albumartist
+struct Albumartist: Codable {
+  let songCount, albumCount: Int
+  let size: Int64
+}
+
+extension Artist {
   init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -67,17 +121,4 @@ struct Artist: Codable, Hashable, Identifiable {
     self.externalInfoUpdatedAt = try container.decodeIfPresent(String.self, forKey: .externalInfoUpdatedAt)
     self.fullText = try container.decodeIfPresent(String.self, forKey: .fullText)
   }
-}
-
-// MARK: - Stats
-struct ArtistStats: Codable {
-  let producer, composer, artist, maincredit: Albumartist?
-  let albumartist, arranger, engineer, performer: Albumartist?
-  let mixer, lyricist, conductor: Albumartist?
-}
-
-// MARK: - Albumartist
-struct Albumartist: Codable {
-  let songCount, albumCount: Int
-  let size: Int64
 }

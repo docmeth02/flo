@@ -10,6 +10,7 @@ import SwiftUI
 struct ArtistDetailView: View {
   @EnvironmentObject var viewModel: AlbumViewModel
   @EnvironmentObject var playerViewModel: PlayerViewModel
+  @EnvironmentObject var downloadViewModel: DownloadViewModel
 
   @StateObject var artistDetailViewModel = ArtistDetailViewModel()
 
@@ -18,10 +19,15 @@ struct ArtistDetailView: View {
 
   let artist: Artist
 
-  let columns = [
-    GridItem(.flexible()),
-    GridItem(.flexible()),
-  ]
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+  private var columns: [GridItem] {
+    if horizontalSizeClass == .regular {
+      return Array(repeating: GridItem(.flexible()), count: 4)
+    } else {
+      return Array(repeating: GridItem(.flexible()), count: 2)
+    }
+  }
 
   func stripBiography(biography: String) -> String {
     guard let regex = try? NSRegularExpression(pattern: "<a[^>]*>.*?</a>") else {
@@ -31,7 +37,8 @@ struct ArtistDetailView: View {
     let range = NSRange(location: 0, length: biography.utf16.count)
 
     let stripped = regex.stringByReplacingMatches(
-      in: biography, range: range, withTemplate: "")
+      in: biography, range: range, withTemplate: ""
+    )
 
     return stripped == "" ? "No biography available" : stripped
   }
@@ -39,21 +46,26 @@ struct ArtistDetailView: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading) {
-        Text(artist.name)
-          .customFont(.title)
-          .fontWeight(.bold)
-          .multilineTextAlignment(.leading)
-          .padding(.bottom, 3)
-          .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(alignment: .top, spacing: 16) {
+          ArtistImageView(artist: artist, size: 88)
 
-        Text(stripBiography(biography: artist.biography ?? ""))
-          .customFont(.subheadline)
-          .lineSpacing(3)
-          .multilineTextAlignment(.leading)
-          .lineLimit(isExpanded ? nil : 3)
-          .onTapGesture {
-            isExpanded.toggle()
+          VStack(alignment: .leading, spacing: 6) {
+            Text(artist.name)
+              .customFont(.title)
+              .fontWeight(.bold)
+              .multilineTextAlignment(.leading)
+              .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(stripBiography(biography: artist.biography ?? ""))
+              .customFont(.subheadline)
+              .lineSpacing(3)
+              .multilineTextAlignment(.leading)
+              .lineLimit(isExpanded ? nil : 3)
+              .onTapGesture {
+                isExpanded.toggle()
+              }
           }
+        }
       }
       .padding()
       .onAppear {
@@ -113,6 +125,8 @@ struct ArtistDetailView: View {
         ForEach(viewModel.artistAlbums) { album in
           NavigationLink {
             AlbumView(viewModel: viewModel)
+              .environmentObject(playerViewModel)
+              .environmentObject(downloadViewModel)
               .onAppear {
                 viewModel.setActiveAlbum(album: album)
               }
@@ -120,7 +134,7 @@ struct ArtistDetailView: View {
             AlbumsView(viewModel: viewModel, album: album)
           }
         }
-      }.padding(.bottom, 100)
+      }.padding(.bottom, playerContentBottomPadding(viewModel: playerViewModel, iPhoneActive: 100, iPhoneInactive: 12))
     }
     .onReceive(artistDetailViewModel.playableSongs) { songs in
       if songs.isEmpty {
