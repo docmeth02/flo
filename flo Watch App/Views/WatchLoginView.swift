@@ -8,8 +8,6 @@ import SwiftUI
 struct WatchLoginView: View {
   @ObservedObject var viewModel: AuthViewModel
 
-  @State private var showManualLogin = false
-
   var isSubmitDisabled: Bool {
     viewModel.serverUrl.isEmpty || viewModel.username.isEmpty || viewModel.password.isEmpty
       || viewModel.isSubmitting
@@ -28,29 +26,12 @@ struct WatchLoginView: View {
             .customFont(.title2)
             .fontWeight(.bold)
 
-          Text("Open flo on iPhone to sign in")
+          Text("Sign in to your Navidrome server")
             .customFont(.caption1)
             .foregroundColor(.secondary)
             .multilineTextAlignment(.center)
 
-          Button(action: refreshAuth) {
-            Label("Refresh", systemImage: "arrow.clockwise")
-          }
-          .padding(.top, 4)
-
-          Divider()
-            .padding(.vertical, 8)
-
-          Button(action: { showManualLogin.toggle() }) {
-            Text(showManualLogin ? "Hide Login" : "Manual Login")
-              .customFont(.caption1)
-          }
-          .buttonStyle(.plain)
-          .foregroundColor(.accentColor)
-
-          if showManualLogin {
-            manualLoginForm
-          }
+          loginForm
         }
         .padding(.horizontal)
       }
@@ -65,7 +46,7 @@ struct WatchLoginView: View {
     }
   }
 
-  private var manualLoginForm: some View {
+  private var loginForm: some View {
     VStack(spacing: 8) {
       TextField("Server URL", text: $viewModel.serverUrl)
         .textContentType(.URL)
@@ -91,28 +72,6 @@ struct WatchLoginView: View {
       }
       .disabled(isSubmitDisabled)
       .padding(.top, 4)
-    }
-  }
-
-  private func refreshAuth() {
-    if let jsonString = try? KeychainManager.getAuthCreds(),
-      let jsonData = jsonString.data(using: .utf8),
-      let data = try? JSONDecoder().decode(UserAuth.self, from: jsonData)
-    {
-      let serverURL = UserDefaultsManager.serverBaseURL
-      if !serverURL.isEmpty {
-        viewModel.serverUrl = serverURL
-        viewModel.username = data.username
-
-        if UserDefaultsManager.saveLoginInfo,
-          let password = try? KeychainManager.getAuthPassword(), !password.isEmpty
-        {
-          viewModel.password = password
-          viewModel.experimentalSaveLoginInfo = true
-        }
-
-        viewModel.login()
-      }
     }
   }
 }
