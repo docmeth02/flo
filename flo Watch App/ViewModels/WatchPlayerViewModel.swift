@@ -152,6 +152,9 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   func addToQueue(idx: Int, item: [QueueEntity], playAudio: Bool = true) {
+    // A new queue starts unshuffled; the saved order belongs to the old one.
+    self.isShuffling = false
+    self.unshuffledQueue = []
     self.activeQueueIdx = idx
     self.queue = item
     self.setNowPlaying(playAudio: playAudio)
@@ -643,6 +646,7 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   func shuffleCurrentQueue() {
+    guard queue.indices.contains(activeQueueIdx) else { return }
     self.isShuffling.toggle()
 
     if self.isShuffling {
@@ -658,13 +662,12 @@ class WatchPlayerViewModel: ObservableObject {
       self.queue = [currentSong] + remaining
       self.activeQueueIdx = 0
     } else {
-      // Restore original order, find current song in it
+      // Restore original order and find the current song in it; an index
+      // from the shuffled order must never survive into the restored queue.
       let currentId = self.queue[self.activeQueueIdx].id
       self.queue = self.unshuffledQueue
-
-      if let idx = self.queue.firstIndex(where: { $0.id == currentId }) {
-        self.activeQueueIdx = idx
-      }
+      self.unshuffledQueue = []
+      self.activeQueueIdx = self.queue.firstIndex(where: { $0.id == currentId }) ?? 0
     }
   }
 
