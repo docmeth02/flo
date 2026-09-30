@@ -40,7 +40,7 @@ class FloooViewModel: ObservableObject {
       switch result {
       case .success(let shouldProceed):
         if shouldProceed {
-          CoreDataManager.shared.clearEverything()
+          CoreDataManager.shared.clearDownloads()
         }
 
         self.getLocalStorageInformation()

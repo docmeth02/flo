@@ -179,8 +179,10 @@ class CoreDataManager: ObservableObject {
     }
   }
 
-  func clearEverything() {
-    let entities = ["QueueEntity", "SongEntity", "PlaylistEntity", "CacheEntity"]
+  /// Deletes the records of downloaded songs and collections. The play queue
+  /// and the stream cache have their own lifecycles and stay untouched.
+  func clearDownloads() {
+    let entities = ["SongEntity", "PlaylistEntity"]
 
     for entity in entities {
       let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: entity)
