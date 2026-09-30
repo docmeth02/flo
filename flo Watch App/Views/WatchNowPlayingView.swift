@@ -9,7 +9,10 @@ import WatchKit
 struct WatchNowPlayingView: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
 
-  @State private var volume: Double = 0.7
+  @State private var volume: Double = 1
+  // The crown drives 1 - volume: with the system indicator drawing the bound
+  // value, turning the crown so the indicator moves up raises the volume.
+  @State private var crownValue: Double = 0
   @State private var showVolume: Bool = false
   @State private var volumeHideTask: Task<Void, Never>?
   @FocusState private var crownFocused: Bool
@@ -27,7 +30,7 @@ struct WatchNowPlayingView: View {
     .focusable(true)
     .focused($crownFocused)
     .digitalCrownRotation(
-      $volume,
+      $crownValue,
       from: 0,
       through: 1,
       by: 0.01,
@@ -36,13 +39,21 @@ struct WatchNowPlayingView: View {
       isHapticFeedbackEnabled: true
     )
     .onAppear {
+      // Start from the player's real volume so the first crown notch does not
+      // jump to a default.
+      volume = Double(playerViewModel.player?.volume ?? 1)
+      crownValue = 1 - volume
       crownFocused = true
     }
     .onDisappear {
       volumeHideTask?.cancel()
     }
-    .onChange(of: volume) { _, newValue in
-      playerViewModel.player?.volume = Float(newValue)
+    .onChange(of: crownValue) { _, newValue in
+      let newVolume = 1 - newValue
+      // Seeding the crown on appear is not a user change.
+      guard abs(newVolume - Double(playerViewModel.player?.volume ?? 1)) > 0.001 else { return }
+      volume = newVolume
+      playerViewModel.player?.volume = Float(volume)
       showVolume = true
       volumeHideTask?.cancel()
       volumeHideTask = Task {
