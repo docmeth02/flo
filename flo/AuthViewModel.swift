@@ -101,6 +101,10 @@ class AuthViewModel: ObservableObject {
     } catch {
       print("Error loading data from Keychain: \(error)")
     }
+
+    #if DEBUG
+      applyDebugLaunchOptions()
+    #endif
   }
 
   // Non-interactive session refresh after the optimistic cached login: no
@@ -246,3 +250,26 @@ class AuthViewModel: ObservableObject {
   }
 
 }
+
+#if DEBUG
+  // Simulator verification only. FLO_DEBUG_LOGIN="url|user|password" signs in
+  // when nobody is logged in; FLO_DEBUG_EXPIRE_TOKEN=1 swaps the Navidrome
+  // token for an invalid one so the expired-session path can be exercised.
+  extension AuthViewModel {
+    fileprivate func applyDebugLaunchOptions() {
+      let env = ProcessInfo.processInfo.environment
+
+      if !isLoggedIn, let debugLogin = env["FLO_DEBUG_LOGIN"] {
+        let parts = debugLogin.split(separator: "|", maxSplits: 2).map(String.init)
+        guard parts.count == 3 else { return }
+        serverUrl = parts[0]
+        username = parts[1]
+        password = parts[2]
+        experimentalSaveLoginInfo = true
+        login()
+      } else if isLoggedIn, env["FLO_DEBUG_EXPIRE_TOKEN"] == "1" {
+        AuthService.shared.invalidateNDTokenForTesting()
+      }
+    }
+  }
+#endif

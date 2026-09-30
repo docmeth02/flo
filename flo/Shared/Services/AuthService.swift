@@ -79,6 +79,14 @@ class AuthService {
     self.subsonicParams = subsonicParams
   }
 
+  #if DEBUG
+    func invalidateNDTokenForTesting() {
+      credentialsLock.lock()
+      defer { credentialsLock.unlock() }
+      NDToken = "expired"
+    }
+  #endif
+
   func clearCreds() {
     credentialsLock.lock()
     defer { credentialsLock.unlock() }
