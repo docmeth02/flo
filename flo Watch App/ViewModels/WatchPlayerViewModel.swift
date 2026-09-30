@@ -751,6 +751,8 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   func prevSong() {
+    // Live radio has no tracks; rebuilding it as a song would stop the stream.
+    guard !isLiveRadio else { return }
     if self.activeQueueIdx != 0 {
       if self.playbackMode != PlaybackMode.repeatOnce {
         self.activeQueueIdx = self.activeQueueIdx - 1
@@ -764,6 +766,7 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   func nextSong(userInitiated: Bool = false) {
+    guard !isLiveRadio else { return }
     if userInitiated {
       logSkipIfAbandoned()
     }
