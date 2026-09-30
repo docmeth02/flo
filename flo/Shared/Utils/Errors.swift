@@ -39,11 +39,6 @@ struct ErrorResponse: Decodable {
 }
 
 class ErrorHandler {
-  static func isSessionExpired(statusCode: Int?) -> Bool {
-    guard let code = statusCode else { return false }
-    return code == 401 || code == 403
-  }
-
   static func isSessionExpired(error: AFError) -> Bool {
     return error.responseCode == 401 || error.responseCode == 403
   }

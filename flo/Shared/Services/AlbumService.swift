@@ -234,45 +234,6 @@ class AlbumService {
     }
   }
 
-  func getAlbumInfo(id: String, completion: @escaping (Result<AlbumInfo, Error>) -> Void) {
-    let params: [String: Any] = ["id": id]
-
-    APIManager.shared.SubsonicEndpointRequest(
-      endpoint: API.SubsonicEndpoint.albuminfo, parameters: params
-    ) {
-      (response: DataResponse<AlbumInfo, AFError>) in
-      switch response.result {
-      case .success(let status):
-        completion(.success(status))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
-  }
-
-  func share(
-    albumId: String, description: String, downloadable: Bool,
-    completion: @escaping (Result<AlbumShare, Error>) -> Void
-  ) {
-    let params: [String: Any] = [
-      "description": description, "resourceIds": albumId, "downloadable": downloadable,
-      "resourceType": "album",
-    ]
-
-    APIManager.shared.NDEndpointRequest(
-      endpoint: API.NDEndpoint.shareAlbum, method: .post, parameters: params,
-      encoding: JSONEncoding.default
-    ) {
-      (response: DataResponse<AlbumShare, AFError>) in
-      switch response.result {
-      case .success(let id):
-        completion(.success(id))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
-  }
-
   func getSongsByAlbumId(albumId: String, limit: Int = 0) -> [Song] {
     let sortByTrackNumber = NSSortDescriptor(key: "trackNumber", ascending: true)
 

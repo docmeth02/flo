@@ -50,10 +50,6 @@ class FloooViewModel: ObservableObject {
     }
   }
 
-  func saveListeningHistory(nowPlayingData: QueueEntity) {
-    FloooService.shared.saveListeningHistory(payload: nowPlayingData)
-  }
-
   func setNowPlayingToScrobbleServer(nowPlaying: QueueEntity) {
     processScrobble(submission: false, nowPlaying: nowPlaying)
   }

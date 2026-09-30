@@ -11,14 +11,12 @@ class AlbumViewModel: ObservableObject {
   @Published var artists: [Artist] = []
   @Published var playlists: [Playlist] = []
   @Published var playlist: Playlist = Playlist()
-  @Published var songs: [Song] = []
   @Published var artistAlbums: [Album] = []
   @Published var albums: [Album] = []
   @Published var album: Album = Album()
   @Published var starredSongs: [Song] = []
   @Published var downloadedAlbums: [Album] = []
   @Published var isDownloaded = false
-  @Published var isViewingPlaylistDownload = false
 
   @Published var isLoading = false
   @Published var error: Error?
@@ -35,7 +33,6 @@ class AlbumViewModel: ObservableObject {
   @objc private func handleLogout() {
     artists = []
     playlists = []
-    songs = []
     artistAlbums = []
     albums = []
     starredSongs = []
@@ -49,10 +46,8 @@ class AlbumViewModel: ObservableObject {
       self.getAlbumById()
 
       if AlbumService.shared.isPlaylistDownload(id: album.id) {
-        self.isViewingPlaylistDownload = true
         self.fetchPlaylistSongsIntoAlbum(id: album.id)
       } else {
-        self.isViewingPlaylistDownload = false
         self.fetchSongs(id: album.id)
       }
     }
@@ -124,9 +119,38 @@ class AlbumViewModel: ObservableObject {
   // MARK: - Generic cache helpers
 
   private enum CacheKey: String {
-    case albums, artists, playlists, songs, starredSongs
+    case albums, artists, playlists, starredSongs
   }
 
+  /// Requests the list, assigns it and caches it, then calls `done`, all on
+  /// the main thread. An empty answer is a real answer (e.g. every song
+  /// unliked) and replaces the cached list too.
+  private func requestCached<T: Codable>(
+    cacheKey: CacheKey,
+    assign: @escaping ([T]) -> Void,
+    request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void,
+    done: @escaping () -> Void
+  ) {
+    let cacheGeneration = LibraryCacheManager.shared.generation
+    request { result in
+      DispatchQueue.main.async {
+        switch result {
+        case .success(let items):
+          assign(items)
+          DispatchQueue.global(qos: .utility).async {
+            LibraryCacheManager.shared.save(
+              items, forKey: cacheKey.rawValue, generation: cacheGeneration)
+          }
+        case .failure(let error):
+          self.error = error
+        }
+        done()
+      }
+    }
+  }
+
+  /// Shows the cached list right away when nothing is loaded yet, then
+  /// replaces it with the server's.
   private func fetchCached<T: Codable>(
     current: [T],
     cacheKey: CacheKey,
@@ -140,23 +164,8 @@ class AlbumViewModel: ObservableObject {
       assign(cached)
     }
     if showsLoading { isLoading = true }
-    let cacheGeneration = LibraryCacheManager.shared.generation
-    request { result in
-      DispatchQueue.main.async {
-        if showsLoading { self.isLoading = false }
-        switch result {
-        case .success(let items):
-          assign(items)
-          // An empty answer is a real answer (e.g. every song unliked) and
-          // must replace the cached list.
-          DispatchQueue.global(qos: .utility).async {
-            LibraryCacheManager.shared.save(
-              items, forKey: cacheKey.rawValue, generation: cacheGeneration)
-          }
-        case .failure(let error):
-          self.error = error
-        }
-      }
+    requestCached(cacheKey: cacheKey, assign: assign, request: request) {
+      if showsLoading { self.isLoading = false }
     }
   }
 
@@ -168,22 +177,9 @@ class AlbumViewModel: ObservableObject {
   ) async {
     isLoading = true
     defer { isLoading = false }
-    let cacheGeneration = LibraryCacheManager.shared.generation
     await withCheckedContinuation { continuation in
-      request { result in
-        DispatchQueue.main.async {
-          switch result {
-          case .success(let items):
-            assign(items)
-            DispatchQueue.global(qos: .utility).async {
-              LibraryCacheManager.shared.save(
-                items, forKey: cacheKey.rawValue, generation: cacheGeneration)
-            }
-          case .failure(let error):
-            self.error = error
-          }
-          continuation.resume()
-        }
+      requestCached(cacheKey: cacheKey, assign: assign, request: request) {
+        continuation.resume()
       }
     }
   }
@@ -196,60 +192,11 @@ class AlbumViewModel: ObservableObject {
 
   // MARK: - Fetch methods
 
-  func fetchAllSongs() {
-    fetchCached(
-      current: songs, cacheKey: .songs,
-      assign: { self.songs = $0 }, request: AlbumService.shared.getAllSongs)
-  }
-
-  func getAlbumInfo() {
-    AlbumService.shared.getAlbumInfo(id: self.album.id) { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let response):
-          if let albumInfo = response.subsonicResponse.albumInfo.notes {
-            guard let regex = try? NSRegularExpression(pattern: "<a href=\".*\">.*</a>\\.")
-
-            else {
-              self.album.info = albumInfo
-
-              return
-            }
-            let range = NSRange(location: 0, length: albumInfo.utf16.count)
-
-            let stripped = regex.stringByReplacingMatches(
-              in: albumInfo, range: range, withTemplate: "")
-
-            self.album.info = stripped
-          } else {
-            self.album.info = "Description Unavailable"
-          }
-
-        case .failure(let error):
-          self.error = error
-        }
-      }
-    }
-  }
-
   func getAlbumCoverArt(
     id: String, artistName: String = "", albumName: String = "", albumCover: String = ""
   ) -> String {
     return AlbumService.shared.getAlbumCover(
       artistName: artistName, albumName: albumName, albumId: id, albumCover: albumCover)
-  }
-
-  func shareAlbum(description: String, completion: @escaping (String) -> Void) {
-    AlbumService.shared.share(albumId: self.album.id, description: description, downloadable: false)
-    { result in
-      switch result {
-      case .success(let share):
-        completion("\(UserDefaultsManager.serverBaseURL)/share/\(share.id)")
-
-      case .failure(let error):
-        print("error>>>", error)
-      }
-    }
   }
 
   func getAlbumById() {
@@ -271,7 +218,6 @@ class AlbumViewModel: ObservableObject {
   func downloadPlaylist(_ playlistToDownload: Playlist, targetIdx: Int = -1) {
     let maxConcurrentDownloads = ProcessInfo.processInfo.activeProcessorCount / 2
     let downloadSemaphore = DispatchSemaphore(value: maxConcurrentDownloads)
-    let downloadGroup = DispatchGroup()
 
     let songs = targetIdx == -1 ? playlistToDownload.songs : [playlistToDownload.songs[targetIdx]]
 
@@ -290,14 +236,11 @@ class AlbumViewModel: ObservableObject {
     }
 
     songs.forEach { song in
-      downloadGroup.enter()
-
       DispatchQueue.global(qos: .background).async {
         downloadSemaphore.wait()
 
         AlbumService.shared.downloadAlbumCoverForPlaylist(albumId: song.albumId) { _ in
           downloadSemaphore.signal()
-          downloadGroup.leave()
         }
       }
     }

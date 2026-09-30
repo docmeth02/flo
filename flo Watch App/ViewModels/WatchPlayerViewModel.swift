@@ -131,6 +131,48 @@ class WatchPlayerViewModel: ObservableObject {
     }
   }
 
+  /// Tracks the current item's loading state for both songs and radio.
+  private func observeItemStatus(trackId: String?) {
+    playerItemObservation = playerItem?.publisher(for: \.status)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] status in
+        guard let self = self else { return }
+        switch status {
+        case .readyToPlay:
+          self.consecutiveFailures = 0
+          self.loadWatchdog?.cancel()
+          DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            guard self.queue.indices.contains(self.activeQueueIdx),
+              self.nowPlaying.id == trackId
+            else { return }
+            self.isMediaLoading = false
+            self.isMediaFailed = false
+          }
+        case .failed:
+          self.isMediaLoading = false
+          self.isMediaFailed = true
+          self.skipFailedTrack(trackId: trackId)
+        case .unknown:
+          self.isMediaLoading = false
+        @unknown default:
+          self.isMediaLoading = true
+        }
+      }
+  }
+
+  /// Detaches every observer tied to the current item.
+  private func tearDownItemObservers() {
+    if let timeObserverToken = timeObserverToken {
+      player?.removeTimeObserver(timeObserverToken)
+      self.timeObserverToken = nil
+    }
+    playerItemObservation?.cancel()
+    playbackEndObservation?.cancel()
+    playbackEndObservation = nil
+    playbackFailureObservation = nil
+    loadWatchdog?.cancel()
+  }
+
   /// A failed stream (deleted file, transcoder error, corrupt cache) never
   /// reaches its end, so nothing would advance and playback would sit silent.
   /// Skip ahead after a moment, but stop after a few failures in a row so an
@@ -158,15 +200,7 @@ class WatchPlayerViewModel: ObservableObject {
     playGeneration += 1
     player?.pause()
     player?.replaceCurrentItem(with: nil)
-    if let timeObserverToken = timeObserverToken {
-      player?.removeTimeObserver(timeObserverToken)
-      self.timeObserverToken = nil
-    }
-    playerItemObservation?.cancel()
-    playbackEndObservation?.cancel()
-    playbackEndObservation = nil
-    playbackFailureObservation = nil
-    loadWatchdog?.cancel()
+    tearDownItemObservers()
     playerItem = nil
 
     queue = []
@@ -205,13 +239,7 @@ class WatchPlayerViewModel: ObservableObject {
   func setNowPlaying(playAudio: Bool = true) {
     guard queue.indices.contains(activeQueueIdx) else {
       player?.pause()
-      if let timeObserverToken = timeObserverToken {
-        player?.removeTimeObserver(timeObserverToken)
-        self.timeObserverToken = nil
-      }
-      playerItemObservation?.cancel()
-      playbackEndObservation?.cancel()
-      playbackEndObservation = nil
+      tearDownItemObservers()
       isMediaLoading = false
       isMediaFailed = true
       return
@@ -258,30 +286,7 @@ class WatchPlayerViewModel: ObservableObject {
     self.currentTimeString = timeString(for: newTimeString)
 
     let trackId = self.nowPlaying.id
-    self.playerItemObservation = self.playerItem?.publisher(for: \.status)
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] status in
-        guard let self = self else { return }
-        switch status {
-        case .readyToPlay:
-          self.consecutiveFailures = 0
-          self.loadWatchdog?.cancel()
-          DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            guard self.queue.indices.contains(self.activeQueueIdx),
-                  self.nowPlaying.id == trackId else { return }
-            self.isMediaLoading = false
-            self.isMediaFailed = false
-          }
-        case .failed:
-          self.isMediaLoading = false
-          self.isMediaFailed = true
-          self.skipFailedTrack(trackId: trackId)
-        case .unknown:
-          self.isMediaLoading = false
-        @unknown default:
-          self.isMediaLoading = true
-        }
-      }
+    self.observeItemStatus(trackId: trackId)
 
     // A server that never answers leaves the item loading forever without
     // reporting .failed, and a stream can also break mid-song; both count as
@@ -631,43 +636,14 @@ class WatchPlayerViewModel: ObservableObject {
     self.queue = queue
     self.isLocallySaved = false
 
-    if let timeObserverToken = timeObserverToken {
-      player?.removeTimeObserver(timeObserverToken)
-      self.timeObserverToken = nil
-    }
-
     // A queued end notification from the previous track must not advance the
-    // radio queue — live streams have no track end.
-    self.playbackEndObservation?.cancel()
-    self.playbackEndObservation = nil
-    self.playbackFailureObservation = nil
-    self.loadWatchdog?.cancel()
+    // radio queue; live streams have no track end.
+    tearDownItemObservers()
 
     self.playerItem = AVPlayerItem(url: radioUrl)
     self.player?.replaceCurrentItem(with: self.playerItem)
 
-    let radioTrackId = self.nowPlaying.id
-    self.playerItemObservation = self.playerItem?.publisher(for: \.status)
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] status in
-        guard let self = self else { return }
-        switch status {
-        case .readyToPlay:
-          DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            guard self.queue.indices.contains(self.activeQueueIdx),
-                  self.nowPlaying.id == radioTrackId else { return }
-            self.isMediaLoading = false
-            self.isMediaFailed = false
-          }
-        case .failed:
-          self.isMediaLoading = false
-          self.isMediaFailed = true
-        case .unknown:
-          self.isMediaLoading = false
-        @unknown default:
-          self.isMediaLoading = true
-        }
-      }
+    self.observeItemStatus(trackId: self.nowPlaying.id)
 
     self.isMediaLoading = true
     self.isMediaFailed = false
@@ -838,12 +814,6 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   private func autoPlayOrStop() {
-    // Remote command handlers may call in off the main thread; the flag and
-    // all playback state are only touched on main.
-    guard Thread.isMainThread else {
-      DispatchQueue.main.async { self.autoPlayOrStop() }
-      return
-    }
     guard UserDefaultsManager.keepPlaying else {
       self.stop()
       return

@@ -6,10 +6,6 @@ import Alamofire
 class RadioService {
   static let shared = RadioService()
   
-  func getStreamUrl(radio: Radio) -> String {
-    radio.streamUrl
-  }
-
   func getAllRadios(completion: @escaping (Result<[Radio], Error>) -> Void) {
 
     APIManager.shared.SubsonicEndpointRequest(endpoint: API.SubsonicEndpoint.radios, parameters: nil) {
