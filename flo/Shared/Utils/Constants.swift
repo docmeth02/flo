@@ -20,8 +20,6 @@ enum API {
     static let getPlaylists = "/api/playlist"
     static let getSong = "/api/song"
     static let shareAlbum = "/api/share"
-    static let listenBrainzLink = "/api/listenbrainz/link"
-    static let lastFMLink = "/api/lastfm/link"
   }
 
   enum SubsonicEndpoint {

@@ -88,27 +88,7 @@ final class ScrobbleQueueManager: ObservableObject {
 
     isFlushing = true
 
-    FloooViewModel.shared.fetchAccountLinkStatus { [weak self] result in
-      guard let self = self else { return }
-
-      switch result {
-      case .success(true):
-        self.submitPending(pending)
-
-      case .success(false):
-        pending.forEach { CoreDataManager.shared.viewContext.delete($0) }
-
-        CoreDataManager.shared.saveRecord()
-
-        self.isFlushing = false
-        self.reload()
-        self.cancelRetry()
-
-      case .failure:
-        self.isFlushing = false
-        self.scheduleRetry()
-      }
-    }
+    submitPending(pending)
   }
 
   func remove(_ entry: ScrobbleEntity) {

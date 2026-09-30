@@ -49,7 +49,6 @@
 		A49532B8A368D691410CAF60 /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
 		A59D3A76D831697134462DB7 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EAA4852C297E35007EB2E0 /* NowPlaying.swift */; };
 		A696A6F708006E6ABC75D01C /* WatchLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B4EC1A2350C8A0C34B7AE02 /* WatchLoginView.swift */; };
-		A9B94AB857BA8220121A3A0B /* AccountLinkStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD542D329C8500644E68 /* AccountLinkStatus.swift */; };
 		AF8F4066A6464664404ECF80 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C33E4D7DFB09BB760978CACE /* Assets.xcassets */; };
 		B0330DD0198F131B14456A89 /* WatchAlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66B14F36AC2C06239FAD68BF /* WatchAlbumDetailView.swift */; };
 		B9D08EAB8C51BDB1AF9AD48C /* ScanStatusService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49495842C1C26D4006B4D1E /* ScanStatusService.swift */; };
@@ -142,7 +141,6 @@
 		C446A6B62C08DE8800CC9787 /* UserAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAuth.swift; sourceTree = "<group>"; };
 		C467AD502D3264AE00644E68 /* FloooViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloooViewModel.swift; sourceTree = "<group>"; };
 		C467AD522D3267CE00644E68 /* Subsonic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subsonic.swift; sourceTree = "<group>"; };
-		C467AD542D329C8500644E68 /* AccountLinkStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountLinkStatus.swift; sourceTree = "<group>"; };
 		C4824D222CE8C41D003EAB52 /* Playable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Playable.swift; sourceTree = "<group>"; };
 		C4875DFF2C149D9000D9BAEB /* AlbumService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumService.swift; sourceTree = "<group>"; };
 		C4875E012C149DDD00D9BAEB /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
@@ -259,7 +257,6 @@
 			isa = PBXGroup;
 			children = (
 				B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */,
-				C467AD542D329C8500644E68 /* AccountLinkStatus.swift */,
 				C467AD522D3267CE00644E68 /* Subsonic.swift */,
 				C4824D222CE8C41D003EAB52 /* Playable.swift */,
 				C4100A6A2CE78B5F001BC9BE /* Playlist.swift */,
@@ -504,7 +501,6 @@
 				937DBDB438F8A8C386E0C7A4 /* UserAuth.swift in Sources */,
 				A59D3A76D831697134462DB7 /* NowPlaying.swift in Sources */,
 				31853D55BC2448BE9766D45E /* Subsonic.swift in Sources */,
-				A9B94AB857BA8220121A3A0B /* AccountLinkStatus.swift in Sources */,
 				6A17041A9B41B54D4EF1673F /* APIManager.swift in Sources */,
 				F603ADBA32F245B193DE927F /* AuthService.swift in Sources */,
 				5A6FBD57C4ECDA2296B278AE /* AlbumService.swift in Sources */,

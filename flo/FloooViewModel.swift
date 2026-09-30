@@ -14,11 +14,6 @@ class FloooViewModel: ObservableObject {
   @Published var localDirectorySize: String = "0 MB"
   @Published var streamCacheSize: String = "0 MB"
 
-  @Published var isListenBrainzLinked: Bool = false
-  @Published var isLastFmLinked: Bool = false
-
-  private var isScrobbleAccountStatusChecked = false
-
   static let shared = FloooViewModel()
 
   func getLocalStorageInformation() {
@@ -56,22 +51,6 @@ class FloooViewModel: ObservableObject {
     }
   }
 
-  func fetchAccountLinkStatus(completion: @escaping (Result<Bool, Error>) -> Void) {
-    return FloooService.shared.getAccountLinkStatuses { result in
-      switch result {
-      case .success(let status):
-        self.isListenBrainzLinked = status.listenBrainz
-        self.isLastFmLinked = status.lastFM
-        self.isScrobbleAccountStatusChecked = true
-
-        completion(.success(status.listenBrainz || status.lastFM))
-
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
-  }
-
   func saveListeningHistory(nowPlayingData: QueueEntity) {
     FloooService.shared.saveListeningHistory(payload: nowPlayingData)
   }
@@ -92,40 +71,18 @@ class FloooViewModel: ObservableObject {
   private func processScrobble(submission: Bool, nowPlaying: QueueEntity) {
     guard let songId = nowPlaying.id, !songId.isEmpty else { return }
 
-    if !ConnectivityMonitor.shared.isOnline || !ConnectivityMonitor.shared.isServerReachable {
-      if isScrobbleAccountStatusChecked && !(isListenBrainzLinked || isLastFmLinked) {
-        return
-      }
-
+    // Navidrome records every scrobble for its own play counts and forwards it
+    // to Last.fm or ListenBrainz when the user linked them there, so the watch
+    // always scrobbles to the server and queues submissions while it is away.
+    let connectivity = ConnectivityMonitor.shared
+    guard connectivity.isOnline, connectivity.isServerReachable else {
       if submission {
         ScrobbleQueueManager.shared.enqueue(nowPlaying: nowPlaying)
       }
-
       return
     }
 
-    if isScrobbleAccountStatusChecked {
-      if isListenBrainzLinked || isLastFmLinked {
-        sendScrobble(submission: submission, nowPlaying: nowPlaying)
-      }
-    } else {
-      fetchAccountLinkStatus { [weak self] result in
-        guard let self = self else { return }
-
-        switch result {
-        case .success(true):
-          self.sendScrobble(submission: submission, nowPlaying: nowPlaying)
-
-        case .success(false):
-          break
-
-        case .failure:
-          if submission {
-            ScrobbleQueueManager.shared.enqueue(nowPlaying: nowPlaying)
-          }
-        }
-      }
-    }
+    sendScrobble(submission: submission, nowPlaying: nowPlaying)
   }
 
   private func sendScrobble(submission: Bool, nowPlaying: QueueEntity) {

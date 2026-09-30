@@ -25,81 +25,6 @@ class FloooService {
     CoreDataManager.shared.saveRecord()
   }
 
-  func getAccountLinkStatuses(completion: @escaping (Result<AccountLinkStatus, Error>) -> Void) {
-    let group = DispatchGroup()
-
-    var listenBrainzStatus: Bool?
-    var lastFMStatus: Bool?
-    var requestError: Error?
-
-    group.enter()
-
-    checkListenBrainzAccountStatus { result in
-      switch result {
-      case .success(let status):
-        listenBrainzStatus = status
-      case .failure(let error):
-        requestError = error
-      }
-
-      group.leave()
-    }
-
-    group.enter()
-
-    checkLastFMAccountStatus { result in
-      switch result {
-      case .success(let status):
-        lastFMStatus = status
-      case .failure(let error):
-        requestError = error
-      }
-
-      group.leave()
-    }
-
-    group.notify(queue: .main) {
-      if listenBrainzStatus == nil || lastFMStatus == nil, let requestError = requestError {
-        completion(.failure(requestError))
-        return
-      }
-
-      completion(
-        .success(
-          AccountLinkStatus(
-            listenBrainz: listenBrainzStatus ?? false,
-            lastFM: lastFMStatus ?? false)))
-    }
-  }
-
-  func checkListenBrainzAccountStatus(completion: @escaping (Result<Bool, Error>) -> Void) {
-    APIManager.shared.NDEndpointRequest(
-      endpoint: API.NDEndpoint.listenBrainzLink, parameters: [:], timeout: 8
-    ) {
-      (response: DataResponse<AccountStatusResponse, AFError>) in
-      switch response.result {
-      case .success(let status):
-        completion(.success(status.status))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
-  }
-
-  func checkLastFMAccountStatus(completion: @escaping (Result<Bool, Error>) -> Void) {
-    APIManager.shared.NDEndpointRequest(
-      endpoint: API.NDEndpoint.lastFMLink, parameters: [:], timeout: 8
-    ) {
-      (response: DataResponse<AccountStatusResponse, AFError>) in
-      switch response.result {
-      case .success(let status):
-        completion(.success(status.status))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
-  }
-
   func scrobbleToBuiltinEndpoint(
     submission: Bool, songId: String, time: Date? = nil, timeout: TimeInterval? = nil,
     completion: @escaping (Result<BasicSubsonicResponse, Error>) -> Void
@@ -121,12 +46,6 @@ class FloooService {
         completion(.failure(error))
       }
     }
-  }
-}
-
-extension FloooService {
-  struct AccountStatusResponse: Decodable {
-    let status: Bool
   }
 }
 
