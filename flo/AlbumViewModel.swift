@@ -147,11 +147,11 @@ class AlbumViewModel: ObservableObject {
         switch result {
         case .success(let items):
           assign(items)
-          if !items.isEmpty {
-            DispatchQueue.global(qos: .utility).async {
-              LibraryCacheManager.shared.save(
-                items, forKey: cacheKey.rawValue, generation: cacheGeneration)
-            }
+          // An empty answer is a real answer (e.g. every song unliked) and
+          // must replace the cached list.
+          DispatchQueue.global(qos: .utility).async {
+            LibraryCacheManager.shared.save(
+              items, forKey: cacheKey.rawValue, generation: cacheGeneration)
           }
         case .failure(let error):
           self.error = error
@@ -175,11 +175,9 @@ class AlbumViewModel: ObservableObject {
           switch result {
           case .success(let items):
             assign(items)
-            if !items.isEmpty {
-              DispatchQueue.global(qos: .utility).async {
-                LibraryCacheManager.shared.save(
+            DispatchQueue.global(qos: .utility).async {
+              LibraryCacheManager.shared.save(
                 items, forKey: cacheKey.rawValue, generation: cacheGeneration)
-              }
             }
           case .failure(let error):
             self.error = error
