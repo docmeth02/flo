@@ -21,10 +21,8 @@ class APIManager {
     let configuration = URLSessionConfiguration.default
     configuration.timeoutIntervalForRequest = 30
 
-    let retrier = RetryPolicy(retryLimit: 3)
-
     return Alamofire.Session(
-      configuration: configuration, interceptor: retrier)
+      configuration: configuration, interceptor: WatchRetryPolicy())
   }
 
   func NDEndpointRequest<T: Decodable>(
@@ -134,6 +132,24 @@ class APIManager {
         completion(.failure(error))
       }
     }
+  }
+}
+
+/// One retry for transient connection failures. Time-outs are not retried,
+/// since the watch already waited the full request timeout, and scrobbles
+/// never are: a lost response would submit the same listen again.
+final class WatchRetryPolicy: RetryPolicy {
+  init() {
+    var codes = RetryPolicy.defaultRetryableURLErrorCodes
+    codes.remove(.timedOut)
+    super.init(retryLimit: 1, retryableURLErrorCodes: codes)
+  }
+
+  override func shouldRetry(request: Request, dueTo error: Error) -> Bool {
+    if request.request?.url?.path.hasSuffix(API.SubsonicEndpoint.scrobble) == true {
+      return false
+    }
+    return super.shouldRetry(request: request, dueTo: error)
   }
 }
 
