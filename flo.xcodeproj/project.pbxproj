@@ -224,6 +224,7 @@
 		CA219A4DA50CFD50683DE71B /* PlaybackServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E4BA752C1CCEB432C20A919 /* PlaybackServiceTests.swift */; };
 		D25AF44BCEB4F1ECC4EAA971 /* WatchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE281A2946A2E18C84927D8 /* WatchSettingsView.swift */; };
 		D349080D92950A1C67EDADB6 /* TrackRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA601DF6D60F70D262CE557B /* TrackRowView.swift */; };
+		D493E3043CDDF727DCE79E63 /* flo Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 9A72287ACF3C11B43C138CED /* flo Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D56D8D67004B7A3F15CA1FB8 /* WatchArtistsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0727D9D472758F5B95F301F6 /* WatchArtistsListView.swift */; };
 		D8A2EFEBC9CEAC6809CF726F /* UserAuthDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 610783432ED4ED3D44204F4C /* UserAuthDecodingTests.swift */; };
 		D957F801D3A1DA274CAA0864 /* Song.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FDC2C15E1C300E712BE /* Song.swift */; };
@@ -246,6 +247,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		73FDF984DE28DB5AE8911740 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C4E8D9502B763BA900C2353E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7CC9530350C4CC7D7AC9BC22;
+			remoteInfo = "flo Watch App";
+		};
 		B80C8A13C1435D0785A7B14B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = C4E8D9502B763BA900C2353E /* Project object */;
@@ -274,6 +282,17 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E1CC4580D66755B6FDAEA436 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				D493E3043CDDF727DCE79E63 /* flo Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -291,6 +310,7 @@
 		2E4BA752C1CCEB432C20A919 /* PlaybackServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaybackServiceTests.swift; sourceTree = "<group>"; };
 		3EE4FB43F0E12E4292BAD138 /* SongDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SongDecodingTests.swift; sourceTree = "<group>"; };
 		432B409E97B302AF6CFFC31C /* ExplicitStatusTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExplicitStatusTests.swift; sourceTree = "<group>"; };
+		4A0A3A849C5FEAFB7E57BE5C /* flo watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flo watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D5CDC0FFBED576BEE3A0C01 /* UserDefaultsManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UserDefaultsManagerTests.swift; sourceTree = "<group>"; };
 		4EBE53668B154717D97E0654 /* WatchPlaylistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlaylistDetailView.swift; sourceTree = "<group>"; };
 		5055C3CF1C4E3BB88F96CCCD /* WatchStarredSongsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchStarredSongsView.swift; sourceTree = "<group>"; };
@@ -779,6 +799,7 @@
 				C42B258D2F4458ED00E62008 /* flo Watch Watch App.app */,
 				6A9F81F9C96481A86DE61DC9 /* floTests.xctest */,
 				9A72287ACF3C11B43C138CED /* flo Watch App.app */,
+				4A0A3A849C5FEAFB7E57BE5C /* flo watch.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -872,6 +893,23 @@
 			productName = floTests;
 			productReference = 6A9F81F9C96481A86DE61DC9 /* floTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		5347DDA072AEC3079466EC5A /* flo watch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9844D625FD0D829BB0948447 /* Build configuration list for PBXNativeTarget "flo watch" */;
+			buildPhases = (
+				C0B2F17FDC7E286A263EA133 /* Resources */,
+				E1CC4580D66755B6FDAEA436 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8C86730EA0E14E37FA55D0E7 /* PBXTargetDependency */,
+			);
+			name = "flo watch";
+			productName = "flo watch";
+			productReference = 4A0A3A849C5FEAFB7E57BE5C /* flo watch.app */;
+			productType = "com.apple.product-type.application.watchapp2-container";
 		};
 		7CC9530350C4CC7D7AC9BC22 /* flo Watch App */ = {
 			isa = PBXNativeTarget;
@@ -980,6 +1018,7 @@
 				C42B258C2F4458ED00E62008 /* flo Watch Watch App */,
 				1320193087A52EB195D8BD49 /* floTests */,
 				7CC9530350C4CC7D7AC9BC22 /* flo Watch App */,
+				5347DDA072AEC3079466EC5A /* flo watch */,
 			);
 		};
 /* End PBXProject section */
@@ -998,6 +1037,13 @@
 			files = (
 				AF8F4066A6464664404ECF80 /* Assets.xcassets in Resources */,
 				FB66DABB7F1FED68A499E009 /* PlusJakartaSans-VariableFont_wght.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0B2F17FDC7E286A263EA133 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1278,6 +1324,12 @@
 			target = C4E8D9572B763BA900C2353E /* flo */;
 			targetProxy = B80C8A13C1435D0785A7B14B /* PBXContainerItemProxy */;
 		};
+		8C86730EA0E14E37FA55D0E7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "flo Watch App";
+			target = 7CC9530350C4CC7D7AC9BC22 /* flo Watch App */;
+			targetProxy = 73FDF984DE28DB5AE8911740 /* PBXContainerItemProxy */;
+		};
 		C42B25962F4458EF00E62008 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			platformFilter = ios;
@@ -1345,10 +1397,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch;
+				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
-				SKIP_INSTALL = NO;
+				SKIP_INSTALL = YES;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG FLO_STANDALONE $(inherited)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1358,6 +1410,47 @@
 				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Debug;
+		};
+		87F9A307070CCD1154265E86 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7K3G973VGB;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "flo watch";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		8D9FFD74093E4723854CC58E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7K3G973VGB;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "flo watch";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
 		};
 		C42B25992F4458EF00E62008 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -1699,10 +1792,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch;
+				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
-				SKIP_INSTALL = NO;
+				SKIP_INSTALL = YES;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "FLO_STANDALONE $(inherited)";
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -1722,6 +1815,15 @@
 			buildConfigurations = (
 				42503E6FF37BE95282C63A1F /* Release */,
 				00F9006B3FEDC232AE05B8B7 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9844D625FD0D829BB0948447 /* Build configuration list for PBXNativeTarget "flo watch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8D9FFD74093E4723854CC58E /* Release */,
+				87F9A307070CCD1154265E86 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
