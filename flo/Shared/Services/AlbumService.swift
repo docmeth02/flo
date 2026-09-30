@@ -35,15 +35,22 @@ class AlbumService {
       "\(UserDefaultsManager.serverBaseURL)\(API.SubsonicEndpoint.stream)\(AuthService.shared.getCreds(key: "subsonicToken"))&id=\(id)&maxBitRate=\(maxBitrate)&format=\(format)"
   }
 
-  func getStreamUrl(id: String) -> String {
-    if let localStream = CoreDataManager.shared.getRecordByKey(
-      entity: SongEntity.self, key: \SongEntity.mediaFileId, value: id
-    ).first,
+  /// The downloaded file for a media id, if one exists on disk. Main thread.
+  func downloadedFileURL(mediaFileId id: String) -> URL? {
+    guard
+      let localStream = CoreDataManager.shared.getRecordByKey(
+        entity: SongEntity.self, key: \SongEntity.mediaFileId, value: id
+      ).first,
       let localPath = localStream.fileURL,
       !localPath.isEmpty,
-      LocalFileManager.shared.fileExists(fileName: localPath),
-      let fileUrl = LocalFileManager.shared.fileURL(for: localPath)
-    {
+      LocalFileManager.shared.fileExists(fileName: localPath)
+    else { return nil }
+
+    return LocalFileManager.shared.fileURL(for: localPath)
+  }
+
+  func getStreamUrl(id: String) -> String {
+    if let fileUrl = downloadedFileURL(mediaFileId: id) {
       return fileUrl.absoluteString
     }
 
