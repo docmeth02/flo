@@ -215,6 +215,7 @@ class WatchPlayerViewModel: ObservableObject {
       return
     }
 
+    self.persistActiveIndex()
     self.isLocallySaved = false
     self.hasTriggeredCache = false
     self.secondsListened = 0
@@ -726,13 +727,27 @@ class WatchPlayerViewModel: ObservableObject {
       self.unshuffledQueue = []
       self.activeQueueIdx = self.queue.firstIndex(where: { $0.id == currentId }) ?? 0
     }
+
+    persistActiveIndex()
+  }
+
+  /// Saves the current song's position in the persisted queue order, which is
+  /// the unshuffled one, so a relaunch restores the song that was playing.
+  private func persistActiveIndex() {
+    guard queue.indices.contains(activeQueueIdx) else { return }
+
+    var index = activeQueueIdx
+    if isShuffling, let currentId = nowPlaying.id,
+      let unshuffledIndex = unshuffledQueue.firstIndex(where: { $0.id == currentId })
+    {
+      index = unshuffledIndex
+    }
+    UserDefaultsManager.queueActiveIdx = index
   }
 
   func playFromQueue(idx: Int) {
     self.activeQueueIdx = idx
     self.setNowPlaying()
-
-    UserDefaultsManager.queueActiveIdx = self.activeQueueIdx
   }
 
   func prevSong() {
@@ -780,7 +795,6 @@ class WatchPlayerViewModel: ObservableObject {
       }
     }
 
-    UserDefaultsManager.queueActiveIdx = self.activeQueueIdx
     WKInterfaceDevice.current().play(.click)
   }
 
