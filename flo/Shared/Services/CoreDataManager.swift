@@ -11,6 +11,10 @@ import Foundation
 class CoreDataManager: ObservableObject {
   static let shared = CoreDataManager()
 
+  /// True when the store could not be opened and the app runs on a memory
+  /// store: nothing written this session survives a relaunch.
+  private(set) var isUsingVolatileStore = false
+
   init() {}
 
   private static func inMemoryContainer() -> NSPersistentContainer {
@@ -33,7 +37,21 @@ class CoreDataManager: ObservableObject {
   }
 
   lazy var persistentContainer: NSPersistentContainer = {
-    let container = NSPersistentContainer(name: "flo")  //FIXME: constants?
+    // A transient failure (e.g. storage briefly unavailable at launch) gets a
+    // second attempt before falling back to a memory store.
+    for attempt in 1...2 {
+      if let container = Self.loadPersistentContainer() {
+        return container
+      }
+      if attempt == 1 { Thread.sleep(forTimeInterval: 0.5) }
+    }
+
+    isUsingVolatileStore = true
+    return Self.inMemoryContainer()
+  }()
+
+  private static func loadPersistentContainer() -> NSPersistentContainer? {
+    let container = NSPersistentContainer(name: "flo")
     container.persistentStoreDescriptions.forEach { description in
       description.shouldAddStoreAsynchronously = false
       description.shouldMigrateStoreAutomatically = true
@@ -50,14 +68,13 @@ class CoreDataManager: ObservableObject {
 
     if let loadError {
       print("failed to load persistent stores: \(loadError.localizedDescription)")
-
-      return Self.inMemoryContainer()
+      return nil
     }
 
     container.viewContext.automaticallyMergesChangesFromParent = true
 
     return container
-  }()
+  }
 
   var viewContext: NSManagedObjectContext {
     return self.persistentContainer.viewContext
