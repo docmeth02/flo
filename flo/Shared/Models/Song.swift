@@ -130,54 +130,50 @@ struct Song: Codable, Identifiable, Hashable {
     self.explicitStatus = explicitStatus
   }
 
-  #if os(iOS) || FLO_STANDALONE
-    init(from cache: CacheEntity) {
-      self.id = cache.mediaFileId ?? ""
-      self.title = cache.title ?? "Unknown"
-      self.artist = cache.artistName ?? "Unknown"
-      self.albumId = cache.albumId ?? ""
-      self.albumName = cache.albumName ?? ""
-      self.trackNumber = 0
-      self.discNumber = 0
-      self.bitRate = Int(cache.bitRate)
-      self.sampleRate = Int(cache.sampleRate)
-      self.suffix = cache.suffix ?? ""
-      self.duration = cache.duration
-      self.mediaFileId = cache.mediaFileId ?? ""
-      self.explicitStatus = ExplicitStatus(from: cache.explicitStatus)
-    }
-  #endif
+  init(from cache: CacheEntity) {
+    self.id = cache.mediaFileId ?? ""
+    self.title = cache.title ?? "Unknown"
+    self.artist = cache.artistName ?? "Unknown"
+    self.albumId = cache.albumId ?? ""
+    self.albumName = cache.albumName ?? ""
+    self.trackNumber = 0
+    self.discNumber = 0
+    self.bitRate = Int(cache.bitRate)
+    self.sampleRate = Int(cache.sampleRate)
+    self.suffix = cache.suffix ?? ""
+    self.duration = cache.duration
+    self.mediaFileId = cache.mediaFileId ?? ""
+    self.explicitStatus = ExplicitStatus(from: cache.explicitStatus)
+  }
 
-  #if os(iOS) || FLO_STANDALONE
-    init(from song: SongEntity) {
-      self.id = song.id ?? ""
-      self.title = song.title ?? "N/A"
-      self.artist = song.artistName ?? "N/A"
-      self.albumId = song.albumId ?? ""
+  init(from song: SongEntity) {
+    self.id = song.id ?? ""
+    self.title = song.title ?? "N/A"
+    self.artist = song.artistName ?? "N/A"
+    self.albumId = song.albumId ?? ""
 
-      if let storedAlbumName = song.albumName, !storedAlbumName.isEmpty {
-        self.albumName = storedAlbumName
-      } else if let fileURL = song.fileURL {
-        let parts = fileURL.split(separator: "/")
+    if let storedAlbumName = song.albumName, !storedAlbumName.isEmpty {
+      self.albumName = storedAlbumName
+    } else if let fileURL = song.fileURL {
+      let parts = fileURL.split(separator: "/")
 
-        if parts.count >= 3 {
-          self.albumName = String(parts[2])
-        } else {
-          self.albumName = ""
-        }
+      if parts.count >= 3 {
+        self.albumName = String(parts[2])
       } else {
         self.albumName = ""
       }
-
-      self.trackNumber = Int(song.trackNumber)
-      self.discNumber = Int(song.discNumber)
-      self.bitRate = Int(song.bitRate)
-      self.sampleRate = Int(song.sampleRate)
-      self.suffix = song.suffix ?? "N/A"
-      self.duration = song.duration
-      self.fileUrl = song.fileURL ?? ""
-      self.mediaFileId = song.mediaFileId ?? ""
-      self.explicitStatus = ExplicitStatus(from: song.explicitStatus)
+    } else {
+      self.albumName = ""
     }
-  #endif
+
+    self.trackNumber = Int(song.trackNumber)
+    self.discNumber = Int(song.discNumber)
+    self.bitRate = Int(song.bitRate)
+    self.sampleRate = Int(song.sampleRate)
+    self.suffix = song.suffix ?? "N/A"
+    self.duration = song.duration
+    self.fileUrl = song.fileURL ?? ""
+    self.mediaFileId = song.mediaFileId ?? ""
+    self.explicitStatus = ExplicitStatus(from: song.explicitStatus)
+  }
 }

@@ -63,12 +63,7 @@ struct CustomFont: ViewModifier {
 
 extension View {
   func customFont(_ textStyle: TextStyle) -> some View {
-    #if os(watchOS)
-      self.modifier(CustomFont(textStyle: textStyle))
-    #else
-      // FIXME: this is fishy
-      self.modifier(CustomFont(textStyle: textStyle)).foregroundColor(.accent)
-    #endif
+    self.modifier(CustomFont(textStyle: textStyle))
   }
 }
 

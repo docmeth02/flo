@@ -8,36 +8,6 @@
 import Alamofire
 import Foundation
 
-#if canImport(PulseUI)
-  import Pulse
-
-  // TODO: refactor this
-  struct NetworkLoggerEventMonitor: EventMonitor {
-    var logger: NetworkLogger = .shared
-
-    func request(_ request: Request, didCreateTask task: URLSessionTask) {
-      logger.logTaskCreated(task)
-    }
-
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-      logger.logDataTask(dataTask, didReceive: data)
-    }
-
-    func urlSession(
-      _ session: URLSession, task: URLSessionTask,
-      didFinishCollecting metrics: URLSessionTaskMetrics
-    ) {
-      logger.logTask(task, didFinishCollecting: metrics)
-    }
-
-    func urlSession(
-      _ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?
-    ) {
-      logger.logTask(task, didCompleteWithError: error)
-    }
-  }
-#endif
-
 class APIManager {
   static let shared = APIManager()
 
@@ -60,18 +30,8 @@ class APIManager {
 
     let retrier = RetryPolicy(retryLimit: 3)
 
-    #if canImport(PulseUI)
-      LoggerStore.shared.removeAll()
-
-      let monitor = NetworkLoggerEventMonitor()
-
-      return Alamofire.Session(
-        configuration: configuration, interceptor: retrier,
-        eventMonitors: UserDefaultsManager.enableDebug ? [monitor] : [])
-    #else
-      return Alamofire.Session(
-        configuration: configuration, interceptor: retrier)
-    #endif
+    return Alamofire.Session(
+      configuration: configuration, interceptor: retrier)
   }
 
   func reconfigureSession() {

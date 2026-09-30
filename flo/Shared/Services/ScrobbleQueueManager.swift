@@ -1,16 +1,6 @@
 import CoreData
 import Foundation
-#if os(watchOS)
-  import WatchKit
-
-  private typealias PlatformApplication = WKApplication
-  private func isApplicationActive() -> Bool { WKApplication.shared().applicationState == .active }
-#else
-  import UIKit
-
-  private typealias PlatformApplication = UIApplication
-  private func isApplicationActive() -> Bool { UIApplication.shared.applicationState == .active }
-#endif
+import WatchKit
 
 enum ScrobbleQueueStatus {
   static let pending = "pending"
@@ -33,12 +23,12 @@ final class ScrobbleQueueManager: ObservableObject {
       self, selector: #selector(handleNetworkBecameOnline), name: .networkBecameOnline, object: nil)
     NotificationCenter.default.addObserver(
       self, selector: #selector(handleAppBecameActive),
-      name: PlatformApplication.didBecomeActiveNotification, object: nil)
+      name: WKApplication.didBecomeActiveNotification, object: nil)
 
     purgeSent()
     reload()
 
-    if isApplicationActive() {
+    if WKApplication.shared().applicationState == .active {
       flush()
     }
   }

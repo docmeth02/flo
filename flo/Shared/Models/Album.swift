@@ -115,18 +115,16 @@ struct Album: Codable, Identifiable, Playable {
     return artistId
   }
 
-  #if os(iOS) || FLO_STANDALONE
-    init(from playlist: PlaylistEntity) {
-      self.id = playlist.id ?? UUID().uuidString
-      self.name = playlist.name ?? "Unknown Album"
-      self.albumArtist = playlist.albumArtist ?? playlist.artistName ?? "Unknown Artist"
-      self.artist = playlist.artistName ?? "Unknown Artist"
-      self.genre = playlist.genre ?? "Unknown Genre"
-      self.minYear = Int(playlist.minYear)
-      self.albumCover = playlist.albumCover ?? ""
-      self.explicitStatus = ExplicitStatus(from: playlist.explicitStatus)
-    }
-  #endif
+  init(from playlist: PlaylistEntity) {
+    self.id = playlist.id ?? UUID().uuidString
+    self.name = playlist.name ?? "Unknown Album"
+    self.albumArtist = playlist.albumArtist ?? playlist.artistName ?? "Unknown Artist"
+    self.artist = playlist.artistName ?? "Unknown Artist"
+    self.genre = playlist.genre ?? "Unknown Genre"
+    self.minYear = Int(playlist.minYear)
+    self.albumCover = playlist.albumCover ?? ""
+    self.explicitStatus = ExplicitStatus(from: playlist.explicitStatus)
+  }
 
   init(from playlist: Playlist) {
     self.id = playlist.id

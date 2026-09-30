@@ -8,10 +8,6 @@
 import Alamofire
 import Foundation
 
-#if canImport(PulseUI)
-  import Pulse
-#endif
-
 enum IAPSessionCheckResult {
   case valid
   case invalid(String)
@@ -125,21 +121,6 @@ class AuthService {
         completion(.success(authResponse))
       case .failure(let afError):
         ErrorHandler.handleFailure(afError, response: response) { result in
-          // FIXME: temporary solution
-          let debugResponse = response.debugDescription.replacingOccurrences(
-            of: #"(?s)"password"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)""#,
-            with: #""password":"[REDACTED]""#,
-            options: .regularExpression
-          )
-
-          // FIXME: move to general Logger
-          #if canImport(PulseUI)
-            LoggerStore.shared.storeMessage(
-              label: "AuthService.login",
-              level: .debug,
-              message: debugResponse
-            )
-          #endif
           completion(AuthResult(result: result))
         }
       }
