@@ -77,32 +77,6 @@ class CoreDataManager: ObservableObject {
     }
   }
 
-  func getRecordsByEntityBatched<T: NSManagedObject>(
-    entity: T.Type, sortDescriptors: [NSSortDescriptor]? = nil,
-    batchSize: Int = 100
-  ) async -> [T] {
-    let request: NSFetchRequest<T> = NSFetchRequest<T>(entityName: String(describing: T.self))
-
-    request.sortDescriptors = sortDescriptors
-    request.fetchBatchSize = batchSize
-
-    let context = self.viewContext
-
-    return await withCheckedContinuation { continuation in
-      context.perform {
-        do {
-          let results = try context.fetch(request)
-
-          continuation.resume(returning: results)
-        } catch {
-          print("Fetch error: \(error)")
-
-          continuation.resume(returning: [])
-        }
-      }
-    }
-  }
-
   func getRecordByKey<T: NSManagedObject, V>(
     entity: T.Type,
     key: KeyPath<T, V>,

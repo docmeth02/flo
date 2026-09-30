@@ -32,8 +32,6 @@ class AuthViewModel: ObservableObject {
   // refresh only persists its result while the generation is unchanged.
   private var sessionGeneration: Int = 0
 
-  @Published var authMode: AuthMode = .standard
-
   static let shared = AuthViewModel()
 
   private func validateURL() {
@@ -58,26 +56,7 @@ class AuthViewModel: ObservableObject {
         serverUrl = UserDefaultsManager.serverBaseURL
         username = data.username
 
-        authMode = AuthService.shared.getAuthMode()
-
-        if authMode == .iap {
-          user = UserAuth(
-            id: data.id, username: data.username, name: data.name, isAdmin: data.isAdmin,
-            lastFMApiKey: data.lastFMApiKey
-          )
-          AuthService.shared.setCreds(data)
-          isLoggedIn = true
-          let verificationSession = AuthService.shared.sessionSnapshot()
-
-          AuthService.shared.verifySubsonicAccess(data, serverUrl: serverUrl) { result in
-            if case .invalid = result {
-              DispatchQueue.main.async {
-                guard AuthService.shared.isCurrentSession(verificationSession) else { return }
-                self.logout()
-              }
-            }
-          }
-        } else if UserDefaultsManager.saveLoginInfo {
+        if UserDefaultsManager.saveLoginInfo {
           do {
             password = try KeychainManager.getAuthPassword() ?? ""
           } catch {
@@ -106,12 +85,8 @@ class AuthViewModel: ObservableObject {
           isLoggedIn = true
           let verificationSession = AuthService.shared.sessionSnapshot()
 
-          // Standard auth was previously never revalidated (only IAP via
-          // verifySubsonicAccess in 7a9f844). A stale ND JWT therefore
-          // produced a ghost isLoggedIn=true while every /api/* returned
-          // 401. Verify ND token in background; on 401/403 clear the
-          // session so UI flips to .expired / login sheet instead of
-          // hanging empty.
+          // Without a saved password the session cannot be refreshed, so a
+          // stale token must log out instead of leaving a ghost session.
           AuthService.shared.verifyNDSession(serverUrl: serverUrl, token: data.token) {
             result in
             if case .invalid = result {
@@ -223,15 +198,10 @@ class AuthViewModel: ObservableObject {
 
       destroySavedPassword()
 
-      if authMode == .iap {
-        try? KeychainManager.removeAuthMode()
-      }
-
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.serverURL)
 
       user = nil
       isLoggedIn = false
-      authMode = .standard
     } catch {
       print("error>>>>> \(error)")
     }

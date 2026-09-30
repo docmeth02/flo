@@ -19,7 +19,6 @@ enum API {
     static let getArtists = "/api/artist"
     static let getPlaylists = "/api/playlist"
     static let getSong = "/api/song"
-    static let getGenre = "/api/genre"
     static let shareAlbum = "/api/share"
     static let listenBrainzLink = "/api/listenbrainz/link"
     static let lastFMLink = "/api/lastfm/link"
@@ -29,7 +28,6 @@ enum API {
     static let stream = "/rest/stream"
     static let coverArt = "/rest/getCoverArt"
     static let albuminfo = "/rest/getAlbumInfo"
-    static let scanStatus = "/rest/getScanStatus"
     static let download = "/rest/download"
     static let scrobble = "/rest/scrobble"
     static let radios = "/rest/getInternetRadioStations"
@@ -59,16 +57,10 @@ enum UserDefaultsKeys {
   static let queueActiveIdx = "queueActiveIdx"
   static let nowPlayingProgress = "nowPlayingProgress"
   static let playbackMode = "playbackMode"
-  static let enableDebug = "enableDebug"
   static let enableMaxBitRate = "enableMaxBitRate"
-  static let playerBackground = "playerBackground"
   static let saveLoginInfo = "saveLoginInfo"
-  static let LRCLIBServerURL = "LRCLIBServerURL"
   static let streamCacheMaxSize = "streamCacheMaxSize"
   static let keepPlaying = "keepPlaying"
-  static let libraryViewV2 = "libraryViewV2"
-  static let playbackVolume = "playbackVolume"
-  static let uiFontScale = "uiFontScale"
 }
 
 enum KeychainKeys {
@@ -78,31 +70,8 @@ enum KeychainKeys {
 }
 
 enum TranscodingSettings {
-  static let availableBitRate = [
-    "0", "32", "48", "64", "80", "96", "112", "128", "160", "192", "224", "256", "320",
-  ]
   static let sourceBitRate = "0"
   static let sourceFormat = "raw"
   static let targetFormat = "mp3"
-}
-
-enum PlayerBackground {
-  static let availablePlayerBackground = ["solid", "translucent"]
-  static let solid = "solid"
-  static let translucent = "translucent"
-}
-
-enum LRCLIBSource {
-  static func displayName(for urlString: String) -> String? {
-    guard !urlString.isEmpty else { return nil }
-    switch urlString {
-    case "https://lrclib.net":
-      return "lrclib.net"
-    case "https://lrclib.flooo.club":
-      return "lrclib.flooo.club"
-    default:
-      return "Custom"
-    }
-  }
 }
 

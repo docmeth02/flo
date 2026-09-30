@@ -24,37 +24,35 @@ enum TextStyle {
 
 struct CustomFont: ViewModifier {
   var textStyle: TextStyle
-  @AppStorage(UserDefaultsKeys.uiFontScale) private var uiFontScale: Double = 1.0
 
   func body(content: Content) -> some View {
-    let scale = CGFloat(min(max(uiFontScale, 0.8), 1.4))
     let font: Font
 
     switch textStyle {
     case .largeTitle:
-      font = .custom("Plus Jakarta Sans", size: 34 * scale)
+      font = .custom("Plus Jakarta Sans", size: 34)
     case .title:
-      font = .custom("Plus Jakarta Sans", size: 28 * scale)
+      font = .custom("Plus Jakarta Sans", size: 28)
     case .title1:
-      font = .custom("Plus Jakarta Sans", size: 28 * scale)
+      font = .custom("Plus Jakarta Sans", size: 28)
     case .title2:
-      font = .custom("Plus Jakarta Sans", size: 22 * scale)
+      font = .custom("Plus Jakarta Sans", size: 22)
     case .title3:
-      font = .custom("Plus Jakarta Sans", size: 20 * scale)
+      font = .custom("Plus Jakarta Sans", size: 20)
     case .headline:
-      font = .custom("Plus Jakarta Sans", size: 17 * scale).weight(.bold)
+      font = .custom("Plus Jakarta Sans", size: 17).weight(.bold)
     case .body:
-      font = .custom("Plus Jakarta Sans", size: 17 * scale)
+      font = .custom("Plus Jakarta Sans", size: 17)
     case .callout:
-      font = .custom("Plus Jakarta Sans", size: 16 * scale)
+      font = .custom("Plus Jakarta Sans", size: 16)
     case .subheadline:
-      font = .custom("Plus Jakarta Sans", size: 15 * scale)
+      font = .custom("Plus Jakarta Sans", size: 15)
     case .footnote:
-      font = .custom("Plus Jakarta Sans", size: 13 * scale)
+      font = .custom("Plus Jakarta Sans", size: 13)
     case .caption1:
-      font = .custom("Plus Jakarta Sans", size: 12 * scale)
+      font = .custom("Plus Jakarta Sans", size: 12)
     case .caption2:
-      font = .custom("Plus Jakarta Sans", size: 11 * scale)
+      font = .custom("Plus Jakarta Sans", size: 11)
     }
 
     return content.font(font)

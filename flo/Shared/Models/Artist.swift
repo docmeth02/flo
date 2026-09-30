@@ -18,7 +18,6 @@ struct Artist: Codable, Hashable, Identifiable {
   
   let id, name: String
   let orderArtistName: String
-  let stats: ArtistStats?
   let size: Int64
   let albumCount, songCount: Int
   let missing: Bool
@@ -32,7 +31,7 @@ struct Artist: Codable, Hashable, Identifiable {
   let fullText: String?
 
   enum CodingKeys: String, CodingKey {
-    case id, name, orderArtistName, stats, size, albumCount, songCount, missing, createdAt,
+    case id, name, orderArtistName, size, albumCount, songCount, missing, createdAt,
       updatedAt, sortArtistName, playCount, playDate, fullText
     case mbzArtistID = "mbzArtistId"
     case biography
@@ -42,57 +41,6 @@ struct Artist: Codable, Hashable, Identifiable {
     case externalURL = "externalUrl"
     case externalInfoUpdatedAt
   }
-
-  static func placeholder(id: String, name: String) -> Artist {
-    Artist(
-      id: id,
-      name: name,
-      orderArtistName: name,
-      stats: ArtistStats(
-        producer: nil,
-        composer: nil,
-        artist: nil,
-        maincredit: nil,
-        albumartist: nil,
-        arranger: nil,
-        engineer: nil,
-        performer: nil,
-        mixer: nil,
-        lyricist: nil,
-        conductor: nil
-      ),
-      size: 0,
-      albumCount: 0,
-      songCount: 0,
-      missing: false,
-      createdAt: "",
-      updatedAt: "",
-      sortArtistName: nil,
-      playCount: nil,
-      playDate: nil,
-      mbzArtistID: nil,
-      biography: nil,
-      smallImageURL: nil,
-      mediumImageURL: nil,
-      largeImageURL: nil,
-      externalURL: nil,
-      externalInfoUpdatedAt: nil,
-      fullText: nil
-    )
-  }
-}
-
-// MARK: - Stats
-struct ArtistStats: Codable {
-  let producer, composer, artist, maincredit: Albumartist?
-  let albumartist, arranger, engineer, performer: Albumartist?
-  let mixer, lyricist, conductor: Albumartist?
-}
-
-// MARK: - Albumartist
-struct Albumartist: Codable {
-  let songCount, albumCount: Int
-  let size: Int64
 }
 
 extension Artist {
@@ -102,7 +50,6 @@ extension Artist {
     self.id = try container.decode(String.self, forKey: .id)
     self.name = try container.decode(String.self, forKey: .name)
     self.orderArtistName = try container.decodeIfPresent(String.self, forKey: .orderArtistName) ?? ""
-    self.stats = try container.decodeIfPresent(ArtistStats.self, forKey: .stats)
     self.size = try container.decodeIfPresent(Int64.self, forKey: .size) ?? 0
     self.albumCount = try container.decodeIfPresent(Int.self, forKey: .albumCount) ?? 0
     self.songCount = try container.decodeIfPresent(Int.self, forKey: .songCount) ?? 0

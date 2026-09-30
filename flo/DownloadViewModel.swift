@@ -58,10 +58,6 @@ class DownloadViewModel: ObservableObject {
     return false
   }
 
-  func getRemainingDownloadItems() -> Int {
-    return downloadItems.count - downloadItems.filter({ $0.status == .completed }).count
-  }
-
   func addItem(_ album: Album, forceAll: Bool = false, isFromPlaylist: Bool = false) {
     let songsToDownload: [(index: Int, song: Song)] = album.songs.enumerated().compactMap {
       index, song in
@@ -88,24 +84,6 @@ class DownloadViewModel: ObservableObject {
         playlistIndex: isFromPlaylist ? index : -1)
       downloadItems.append(queue)
     }
-
-    processQueue()
-  }
-
-  func addIndividualItem(
-    album: Album, song: Song, isFromPlaylist: Bool = false, playlistIndex: Int = -1
-  ) {
-    let songId = isFromPlaylist ? song.mediaFileId : song.id
-
-    guard !downloadItems.contains(where: { $0.id == songId }) else { return }
-
-    let albumId = isFromPlaylist ? album.id : song.albumId
-
-    let queue = DownloadItem(
-      id: songId, albumId: albumId, album: album.name, isPlaylist: isFromPlaylist,
-      title: "\(song.artist) - \(song.title)", song: song,
-      playlistIndex: isFromPlaylist ? playlistIndex : -1)
-    downloadItems.append(queue)
 
     processQueue()
   }
@@ -231,14 +209,6 @@ class DownloadViewModel: ObservableObject {
     }
   }
 
-  func clearCurrentAlbumDownload(albumName: String) {
-    let newDownloadItems = downloadItems.filter {
-      $0.album != albumName
-    }
-
-    downloadItems = newDownloadItems
-  }
-
   func cancelCurrentAlbumDownload(albumName: String) {
     downloadItems
       .filter { $0.album == albumName }
@@ -266,24 +236,6 @@ class DownloadViewModel: ObservableObject {
       downloadItems[index].status = .queued
       self.processQueue()
     }
-  }
-
-  func hasDownloadQueue() -> Bool {
-    return !downloadItems.isEmpty
-  }
-
-  func removeFromQueue(_ itemId: String) {
-    let newDownloadItems = downloadItems.filter { $0.id != itemId }
-
-    downloadItems = newDownloadItems
-  }
-
-  func retryAllFailedQueue() {
-    downloadItems
-      .filter { $0.status == .failed }
-      .forEach { self.updateItemStatus(itemId: $0.id, status: .queued) }
-
-    processQueue()
   }
 
   func clearCompletedQueue() {

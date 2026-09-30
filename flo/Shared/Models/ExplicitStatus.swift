@@ -25,7 +25,4 @@ enum ExplicitStatus: String, Codable, Hashable {
     }
   }
 
-  func annotatedTitle(_ title: String) -> String {
-    isExplicit ? "\(title) 🅴" : title
-  }
 }

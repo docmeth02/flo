@@ -17,10 +17,6 @@ class AlbumViewModel: ObservableObject {
   @Published var album: Album = Album()
   @Published var starredSongs: [Song] = []
   @Published var downloadedAlbums: [Album] = []
-  @Published var recentlyPlayedAlbums: [Album] = []
-  @Published var recentlyAddedAlbums: [Album] = []
-
-  @Published var isDownloadingAlbumId: String = ""
   @Published var isDownloaded = false
   @Published var isViewingPlaylistDownload = false
 
@@ -30,24 +26,6 @@ class AlbumViewModel: ObservableObject {
   init(album: Album = Album(), albums: [Album] = []) {
     self.album = album
     self.albums = albums
-  }
-
-  func ifNotSharable(isDownloadScreen: Bool) -> Bool {
-    //TODO: add logic to check server-side config
-    if isDownloadScreen {
-      return true
-    }
-
-    return false
-  }
-
-  func ifNotDownloadable() -> Bool {
-    //TODO: add logic to check server-side config
-    if isDownloaded {
-      return true
-    }
-
-    return false
   }
 
   func setActiveAlbum(album: Album) {
@@ -199,32 +177,6 @@ class AlbumViewModel: ObservableObject {
       assign: { self.starredSongs = $0 }, request: AlbumService.shared.getStarredSongs)
   }
 
-  func fetchRecentlyPlayedAlbums() {
-    AlbumService.shared.getRecentlyPlayedAlbums { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let albums):
-          self.recentlyPlayedAlbums = albums
-        case .failure(let error):
-          self.error = error
-        }
-      }
-    }
-  }
-
-  func fetchRecentlyAddedAlbums() {
-    AlbumService.shared.getRecentlyAddedAlbums { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let albums):
-          self.recentlyAddedAlbums = albums
-        case .failure(let error):
-          self.error = error
-        }
-      }
-    }
-  }
-
   // MARK: - Fetch methods
 
   func fetchAllSongs() {
@@ -270,17 +222,6 @@ class AlbumViewModel: ObservableObject {
       artistName: artistName, albumName: albumName, albumId: id, albumCover: albumCover)
   }
 
-  func getPlaylistCoverArt(
-    id: String, coverArtId: String? = nil, playlistName: String? = nil
-  ) -> String {
-    return AlbumService.shared.getPlaylistCover(
-      playlistId: coverArtId ?? id, playlistName: playlistName)
-  }
-
-  func getArtistCoverArt(id: String, imageURL: String = "") -> String {
-    return AlbumService.shared.getArtistCover(artistId: id, imageURL: imageURL)
-  }
-
   func shareAlbum(description: String, completion: @escaping (String) -> Void) {
     AlbumService.shared.share(albumId: self.album.id, description: description, downloadable: false)
     { result in
@@ -313,10 +254,7 @@ class AlbumViewModel: ObservableObject {
           }
         }
       case .failure(let error):
-        DispatchQueue.main.async {
-          self.isDownloadingAlbumId = ""
-          print("Failed to save image: \(error.localizedDescription)")
-        }
+        print("Failed to save image: \(error.localizedDescription)")
       }
     }
   }
@@ -359,15 +297,6 @@ class AlbumViewModel: ObservableObject {
     }
   }
 
-  func downloadSong(_ albumToDownload: Album, songIdx: Int) {
-    var album = albumToDownload
-    let songToDownload = albumToDownload.songs[songIdx]
-
-    album.songs = [songToDownload]
-
-    self.downloadAlbum(album)
-  }
-
   func removeDownloadedAlbum(album: Album) {
     AlbumService.shared.removeDownloadedAlbum(
       artistName: album.artist, albumId: album.id, albumName: album.name
@@ -392,23 +321,6 @@ class AlbumViewModel: ObservableObject {
         switch result {
         case .success:
           self.setActivePlaylist(playlist: playlist)
-        case .failure(let error):
-          print("error >>>", error)
-        }
-      }
-    }
-  }
-
-  func removeDownloadSong(album: Playable, songId: String, isFromPlaylist: Bool = false) {
-    AlbumService.shared.removeDownloadedSong(albumId: album.id, songId: songId) { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success:
-          if isFromPlaylist {
-            self.fetchSongsByPlaylist(id: album.id)
-          } else {
-            self.fetchSongs(id: album.id)
-          }
         case .failure(let error):
           print("error >>>", error)
         }
@@ -498,72 +410,6 @@ class AlbumViewModel: ObservableObject {
       assign: { self.artists = $0 }, request: AlbumService.shared.getArtists)
   }
 
-  func artistForNavigation(id: String = "", name: String) -> Artist? {
-    let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-    let hasName = !trimmedName.isEmpty && trimmedName != "N/A"
-
-    if !id.isEmpty, let match = artists.first(where: { $0.id == id }) {
-      return match
-    }
-
-    if hasName,
-      let match = artists.first(where: {
-        $0.name.caseInsensitiveCompare(trimmedName) == .orderedSame
-      })
-    {
-      return match
-    }
-
-    if !id.isEmpty {
-      return Artist.placeholder(id: id, name: hasName ? trimmedName : name)
-    }
-
-    return nil
-  }
-
-  func albumForNavigation(id: String = "", name: String, artist: String = "") -> Album? {
-    let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-    let hasName = !trimmedName.isEmpty && trimmedName != "N/A"
-
-    if !id.isEmpty {
-      if let match = albums.first(where: { $0.id == id }) {
-        return match
-      }
-
-      if let match = downloadedAlbums.first(where: { $0.id == id }) {
-        return match
-      }
-
-      return Album(
-        id: id,
-        name: hasName ? trimmedName : name,
-        albumArtist: artist,
-        artist: artist
-      )
-    }
-
-    guard hasName else { return nil }
-
-    let matchingAlbums = albums.filter {
-      $0.name.caseInsensitiveCompare(trimmedName) == .orderedSame
-    }
-
-    if matchingAlbums.isEmpty {
-      return downloadedAlbums.first(where: {
-        $0.name.caseInsensitiveCompare(trimmedName) == .orderedSame
-      })
-    }
-
-    if artist.isEmpty || artist == "N/A" {
-      return matchingAlbums.first
-    }
-
-    return matchingAlbums.first(where: {
-      $0.albumArtist.caseInsensitiveCompare(artist) == .orderedSame
-        || $0.artist.caseInsensitiveCompare(artist) == .orderedSame
-    }) ?? matchingAlbums.first
-  }
-
   // MARK: - Async refresh variants
 
   @MainActor func refreshAlbums() async {
@@ -584,48 +430,10 @@ class AlbumViewModel: ObservableObject {
       request: AlbumService.shared.getPlaylists)
   }
 
-  @MainActor func refreshAllSongs() async {
-    await refreshCached(
-      cacheKey: .songs, assign: { self.songs = $0 },
-      request: AlbumService.shared.getAllSongs)
-  }
-
   @MainActor func refreshStarredSongs() async {
     await refreshCached(
       cacheKey: .starredSongs, assign: { self.starredSongs = $0 },
       request: AlbumService.shared.getStarredSongs)
-  }
-
-  @MainActor func refreshRecentlyPlayedAlbums() async {
-    await withCheckedContinuation { continuation in
-      AlbumService.shared.getRecentlyPlayedAlbums { result in
-        DispatchQueue.main.async {
-          switch result {
-          case .success(let albums):
-            self.recentlyPlayedAlbums = albums
-          case .failure(let error):
-            self.error = error
-          }
-          continuation.resume()
-        }
-      }
-    }
-  }
-
-  @MainActor func refreshRecentlyAddedAlbums() async {
-    await withCheckedContinuation { continuation in
-      AlbumService.shared.getRecentlyAddedAlbums { result in
-        DispatchQueue.main.async {
-          switch result {
-          case .success(let albums):
-            self.recentlyAddedAlbums = albums
-          case .failure(let error):
-            self.error = error
-          }
-          continuation.resume()
-        }
-      }
-    }
   }
 
   func fetchDownloadedAlbums() {

@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		01805F1E44CC1B1244CA864C /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4100A6A2CE78B5F001BC9BE /* Playlist.swift */; };
 		039F16C6B65D4284E6989F70 /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134522C15BE0C00CCF2EB /* Strings.swift */; };
-		0492785B34424AF5CCDAD005 /* AuthMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C912872F5DD9280087EE61 /* AuthMode.swift */; };
 		0D25BDE8239F8A39D2BC630E /* FloooService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* FloooService.swift */; };
 		1DD438B1C8D7D5AEC7562A6A /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FB5C179BC0B76201835B86 /* WatchContentView.swift */; };
 		2C0356A72AB4F01AA810FE73 /* WatchPlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EBE53668B154717D97E0654 /* WatchPlaylistDetailView.swift */; };
@@ -19,7 +18,6 @@
 		3334D3E1F41C3BD65DD6E300 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */; };
 		3911EF003135778456337152 /* ScrobbleQueueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */; };
 		3FED4C4043890696D075FFBC /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
-		47A870594A9F53F6C888BC3B /* ScanStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49495802C1C25E5006B4D1E /* ScanStatus.swift */; };
 		48426E09F42798E3F16C85E2 /* WatchQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BDA0AFDF99572D783F7433F /* WatchQueueView.swift */; };
 		4CC28174B1DBFE6CDF8AD636 /* WatchStarredSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5055C3CF1C4E3BB88F96CCCD /* WatchStarredSongsView.swift */; };
 		4F8E0BD04AC14F52D5C8E033 /* ExplicitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */; };
@@ -38,7 +36,6 @@
 		7629BD4F6227A8E16A2BBB5E /* CoverArtCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */; };
 		79A34A805FA50EE0C4B7810D /* StreamCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */; };
 		7CB0AF2CAF287CB275F8E58B /* WatchPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88D8350161966488618D240F /* WatchPlayerViewModel.swift */; };
-		80E9928F3EE8386AAF1C8235 /* Stats.swift in Sources */ = {isa = PBXBuildFile; fileRef = C46B8DD62CF4B88E00B40644 /* Stats.swift */; };
 		854D35E557CBD828EC654F35 /* UserDefaultsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */; };
 		918D91B96EB2612541200A7F /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F5592C11953000E3E1D2 /* Constants.swift */; };
 		928BF54D766E3F6E6EBACD85 /* WatchPlaylistsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AD5E1FE518457926B00D341 /* WatchPlaylistsListView.swift */; };
@@ -114,7 +111,6 @@
 		4A0A3A849C5FEAFB7E57BE5C /* flo watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flo watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4EBE53668B154717D97E0654 /* WatchPlaylistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlaylistDetailView.swift; sourceTree = "<group>"; };
 		5055C3CF1C4E3BB88F96CCCD /* WatchStarredSongsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchStarredSongsView.swift; sourceTree = "<group>"; };
-		50C912872F5DD9280087EE61 /* AuthMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthMode.swift; sourceTree = "<group>"; };
 		5C0FF0012F8B0001000000A1 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrobbleQueueManager.swift; sourceTree = "<group>"; };
 		638B2D1AECAA38268427598A /* WatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
@@ -149,13 +145,11 @@
 		C467AD502D3264AE00644E68 /* FloooViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloooViewModel.swift; sourceTree = "<group>"; };
 		C467AD522D3267CE00644E68 /* Subsonic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subsonic.swift; sourceTree = "<group>"; };
 		C467AD542D329C8500644E68 /* AccountLinkStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountLinkStatus.swift; sourceTree = "<group>"; };
-		C46B8DD62CF4B88E00B40644 /* Stats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stats.swift; sourceTree = "<group>"; };
 		C4824D222CE8C41D003EAB52 /* Playable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Playable.swift; sourceTree = "<group>"; };
 		C4875DFF2C149D9000D9BAEB /* AlbumService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumService.swift; sourceTree = "<group>"; };
 		C4875E012C149DDD00D9BAEB /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		C4875E032C149F9A00D9BAEB /* APIManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIManager.swift; sourceTree = "<group>"; };
 		C49134522C15BE0C00CCF2EB /* Strings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Strings.swift; sourceTree = "<group>"; };
-		C49495802C1C25E5006B4D1E /* ScanStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanStatus.swift; sourceTree = "<group>"; };
 		C49495842C1C26D4006B4D1E /* ScanStatusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanStatusService.swift; sourceTree = "<group>"; };
 		C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamCacheManager.swift; sourceTree = "<group>"; };
 		C4D7F84C2C7F2AE900165EFD /* flo.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = flo.xcdatamodel; sourceTree = "<group>"; };
@@ -268,7 +262,6 @@
 				B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */,
 				C467AD542D329C8500644E68 /* AccountLinkStatus.swift */,
 				C467AD522D3267CE00644E68 /* Subsonic.swift */,
-				C46B8DD62CF4B88E00B40644 /* Stats.swift */,
 				C4824D222CE8C41D003EAB52 /* Playable.swift */,
 				C4100A6A2CE78B5F001BC9BE /* Playlist.swift */,
 				C41470BA2CE65808008BDCE8 /* Artist.swift */,
@@ -276,7 +269,6 @@
 				C446A6B62C08DE8800CC9787 /* UserAuth.swift */,
 				C4120FDC2C15E1C300E712BE /* Song.swift */,
 				C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */,
-				C49495802C1C25E5006B4D1E /* ScanStatus.swift */,
 				B0BAAAAA2F3214F7002A5FBB /* Radio.swift */,
 				C4EAA4852C297E35007EB2E0 /* NowPlaying.swift */,
 			);
@@ -365,7 +357,6 @@
 				B0AD2E702F4B037400577062 /* Artists */,
 				C467AD502D3264AE00644E68 /* FloooViewModel.swift */,
 				C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */,
-				50C912872F5DD9280087EE61 /* AuthMode.swift */,
 			);
 			path = flo;
 			sourceTree = "<group>";
@@ -515,8 +506,6 @@
 				937DBDB438F8A8C386E0C7A4 /* UserAuth.swift in Sources */,
 				A59D3A76D831697134462DB7 /* NowPlaying.swift in Sources */,
 				31853D55BC2448BE9766D45E /* Subsonic.swift in Sources */,
-				47A870594A9F53F6C888BC3B /* ScanStatus.swift in Sources */,
-				80E9928F3EE8386AAF1C8235 /* Stats.swift in Sources */,
 				A9B94AB857BA8220121A3A0B /* AccountLinkStatus.swift in Sources */,
 				6A17041A9B41B54D4EF1673F /* APIManager.swift in Sources */,
 				F603ADBA32F245B193DE927F /* AuthService.swift in Sources */,
@@ -548,7 +537,6 @@
 				5493F47DE4E5039A5F602A32 /* ArtistRadio.swift in Sources */,
 				FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */,
 				4F8E0BD04AC14F52D5C8E033 /* ExplicitStatus.swift in Sources */,
-				0492785B34424AF5CCDAD005 /* AuthMode.swift in Sources */,
 				BD3D1C826D4DCF07A8043948 /* NetworkMonitor.swift in Sources */,
 				3911EF003135778456337152 /* ScrobbleQueueManager.swift in Sources */,
 			);

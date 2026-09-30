@@ -17,25 +17,14 @@ class APIManager {
     session = Self.createSession()
   }
 
-  /// Test-only hook: extra URLProtocol subclasses to register on the session.
-  static var extraProtocolClasses: [AnyClass] = []
-
   private static func createSession() -> Session {
     let configuration = URLSessionConfiguration.default
     configuration.timeoutIntervalForRequest = 30
-
-    if !extraProtocolClasses.isEmpty {
-      configuration.protocolClasses = extraProtocolClasses + (configuration.protocolClasses ?? [])
-    }
 
     let retrier = RetryPolicy(retryLimit: 3)
 
     return Alamofire.Session(
       configuration: configuration, interceptor: retrier)
-  }
-
-  func reconfigureSession() {
-    session = Self.createSession()
   }
 
   func NDEndpointRequest<T: Decodable>(
@@ -174,22 +163,6 @@ extension APIManager {
       requestModifier: { request in
         request.timeoutInterval = 10
       }
-    )
-    .validate(statusCode: 200..<300)
-    .responseDecodable(of: T.self) { response in
-      completion(response)
-    }
-  }
-  func externalRequest<T: Decodable>(
-    url: String,
-    method: HTTPMethod = .get,
-    parameters: Parameters? = nil,
-    encoding: ParameterEncoding = URLEncoding.queryString,
-    headers: HTTPHeaders? = nil,
-    completion: @escaping (DataResponse<T, AFError>) -> Void
-  ) {
-    session.request(
-      url, method: method, parameters: parameters, encoding: encoding, headers: headers
     )
     .validate(statusCode: 200..<300)
     .responseDecodable(of: T.self) { response in

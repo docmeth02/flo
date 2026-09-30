@@ -8,51 +8,18 @@
 import SwiftUI
 
 class FloooViewModel: ObservableObject {
-  @Published var scanStatus: SubsonicResponse<ScanStatus>? = nil
   @Published var downloadedAlbums: Int = 0
   @Published var downloadedSongs: Int = 0
 
   @Published var localDirectorySize: String = "0 MB"
   @Published var streamCacheSize: String = "0 MB"
 
-  @Published var stats: Stats?
-  @Published var totalPlay: Int = 0
-
   @Published var isListenBrainzLinked: Bool = false
   @Published var isLastFmLinked: Bool = false
 
-  @Published var userDefaultsItems: [String: Any] = [:]
-  @Published var keychainItems: [String: Any] = [:]
-
-  private var isGeneratingStats = false
   private var isScrobbleAccountStatusChecked = false
 
   static let shared = FloooViewModel()
-
-  func getUserDefaults() {
-    userDefaultsItems = UserDefaultsManager.getAll()
-    keychainItems = KeychainManager.getAuthCredsAndPasswords()
-  }
-
-  // FIXME: i think everything that is related to listening history
-  // and stats should live in FloooViewModel
-  func getListeningHistory() {
-    // TODO: is this ok?
-    Task { @MainActor in
-      let totalListens = await FloooService.shared.getListeningHistory()
-
-      self.totalPlay = totalListens.count
-
-      guard !isGeneratingStats else { return }
-      isGeneratingStats = true
-
-      self.stats = await FloooService.shared.generateStats(totalListens)
-    }
-  }
-
-  func clearListeningHistory() {
-    FloooService.shared.clearListeningHistory()
-  }
 
   func getLocalStorageInformation() {
     self.downloadedAlbums = ScanStatusService.shared.getDownloadedAlbumsCount()
@@ -101,23 +68,6 @@ class FloooViewModel: ObservableObject {
 
       case .failure(let error):
         completion(.failure(error))
-      }
-    }
-  }
-
-  func checkAccountLinkStatus() {
-    self.fetchAccountLinkStatus { _ in }
-  }
-
-  func checkScanStatus() {
-    ScanStatusService.shared.getScanStatus { [weak self] result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let status):
-          self?.scanStatus = status.subsonicResponse
-        case .failure(let error):
-          print("error>>>", error)
-        }
       }
     }
   }

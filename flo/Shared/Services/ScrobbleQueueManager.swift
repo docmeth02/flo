@@ -37,10 +37,6 @@ final class ScrobbleQueueManager: ObservableObject {
     scrobbles.filter { $0.status != ScrobbleQueueStatus.sent }.count
   }
 
-  var sentCount: Int {
-    scrobbles.filter { $0.status == ScrobbleQueueStatus.sent }.count
-  }
-
   func enqueue(nowPlaying: QueueEntity) {
     guard let songId = nowPlaying.id, !songId.isEmpty else { return }
 
@@ -123,40 +119,6 @@ final class ScrobbleQueueManager: ObservableObject {
     if pendingCount == 0 {
       cancelRetry()
     }
-  }
-
-  func retry(_ entry: ScrobbleEntity) {
-    guard entry.status == ScrobbleQueueStatus.failed else { return }
-
-    entry.status = ScrobbleQueueStatus.pending
-    entry.errorReason = nil
-
-    CoreDataManager.shared.saveRecord()
-    reload()
-
-    NetworkMonitor.shared.probeServerReachability()
-    flush()
-  }
-
-  func clearSent() {
-    let sent = scrobbles.filter { $0.status == ScrobbleQueueStatus.sent }
-
-    guard !sent.isEmpty else { return }
-
-    sent.forEach { CoreDataManager.shared.viewContext.delete($0) }
-
-    CoreDataManager.shared.saveRecord()
-    reload()
-  }
-
-  func clearAll() {
-    guard !scrobbles.isEmpty else { return }
-
-    scrobbles.forEach { CoreDataManager.shared.viewContext.delete($0) }
-
-    CoreDataManager.shared.saveRecord()
-    reload()
-    cancelRetry()
   }
 
   private func submitPending(_ entries: [ScrobbleEntity]) {

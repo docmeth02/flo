@@ -19,15 +19,6 @@ class PlaybackService {
     CoreDataManager.shared.deleteRecords(entity: QueueEntity.self)
   }
 
-  func shuffleQueue(currentIdx: Int) -> [QueueEntity] {
-    let queue = getQueue()
-
-    let head = Array(queue[...currentIdx])
-    let tail = Array(queue[(currentIdx + 1)...]).shuffled()
-
-    return head + tail
-  }
-
   func addToQueue<T: Playable>(item: T, isFromLocal: Bool = false) -> [QueueEntity] {
     self.clearQueue()
 

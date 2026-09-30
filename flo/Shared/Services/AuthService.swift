@@ -8,7 +8,7 @@
 import Alamofire
 import Foundation
 
-enum IAPSessionCheckResult {
+enum SessionCheckResult {
   case valid
   case invalid(String)
   case unreachable
@@ -27,7 +27,6 @@ class AuthService {
   private var subsonicParams: String?
   private var credentialGeneration: UInt64 = 0
   private let credentialsLock = NSLock()
-  private var authMode: AuthMode = .standard
 
   private init() {
     if let jsonString = try? KeychainManager.getAuthCreds(),
@@ -39,10 +38,6 @@ class AuthService {
           "?u=\(data.username)&t=\(data.subsonicToken)&s=\(data.subsonicSalt)&v=\(AppMeta.subsonicApiVersion)&c=\(AppMeta.name)&f=json"
         credentialGeneration = 1
       }
-    }
-
-    if let mode = try? KeychainManager.getAuthMode() {
-      authMode = mode
     }
   }
 
@@ -73,10 +68,6 @@ class AuthService {
     sessionSnapshot() == snapshot
   }
 
-  func getAuthMode() -> AuthMode {
-    return authMode
-  }
-
   func setCreds(_ data: UserAuth) {
     let subsonicParams =
       "?u=\(data.username)&t=\(data.subsonicToken)&s=\(data.subsonicSalt)&v=\(AppMeta.subsonicApiVersion)&c=\(AppMeta.name)&f=json"
@@ -96,11 +87,6 @@ class AuthService {
     subsonicParams = nil
   }
 
-  func setAuthMode(_ mode: AuthMode) {
-    self.authMode = mode
-    try? KeychainManager.setAuthMode(mode)
-  }
-
   func login(
     serverUrl: String, username: String, password: String,
     completion: @escaping (AuthResult<UserAuth>) -> Void
@@ -116,8 +102,6 @@ class AuthService {
       (response: DataResponse<UserAuth, AFError>) in
       switch response.result {
       case .success(let authResponse):
-        // Set auth mode to standard for username/password login
-        self.setAuthMode(.standard)
         completion(.success(authResponse))
       case .failure(let afError):
         ErrorHandler.handleFailure(afError, response: response) { result in
@@ -127,14 +111,11 @@ class AuthService {
     }
   }
 
-  /// Lightweight ND JWT liveness check for standard auth.
-  /// Standard mode previously never revalidated (ghost session when ND token
-  /// expires but Subsonic token still returns 200 for getScanStatus). Hits
-  /// `GET /api/album?_start=0&_end=1` with Bearer token and maps 401/403 →
-  /// .invalid so the caller can clear isLoggedIn.
+  /// Lightweight Navidrome JWT liveness check: hits `GET /api/album?_start=0&_end=1`
+  /// with the bearer token and maps 401/403 to .invalid so the caller can log out.
   func verifyNDSession(
     serverUrl: String, token: String,
-    completion: @escaping (IAPSessionCheckResult) -> Void
+    completion: @escaping (SessionCheckResult) -> Void
   ) {
     guard !serverUrl.isEmpty, !token.isEmpty,
       let url = URL(string: "\(serverUrl)/api/album?_start=0&_end=1")
@@ -156,61 +137,6 @@ class AuthService {
         completion(.valid)
       } else {
         completion(.unreachable)
-      }
-    }.resume()
-  }
-
-  func verifySubsonicAccess(
-    _ userAuth: UserAuth,
-    serverUrl: String,
-    completion: @escaping (IAPSessionCheckResult) -> Void
-  ) {
-    guard var components = URLComponents(string: "\(serverUrl)/rest/ping") else {
-      completion(.unreachable)
-      return
-    }
-
-    components.queryItems = [
-      URLQueryItem(name: "u", value: userAuth.username),
-      URLQueryItem(name: "t", value: userAuth.subsonicToken),
-      URLQueryItem(name: "s", value: userAuth.subsonicSalt),
-      URLQueryItem(name: "v", value: AppMeta.subsonicApiVersion),
-      URLQueryItem(name: "c", value: AppMeta.name),
-      URLQueryItem(name: "f", value: "json"),
-    ]
-
-    guard let url = components.url else {
-      completion(.unreachable)
-      return
-    }
-
-    URLSession.shared.dataTask(with: URLRequest(url: url)) { data, response, _ in
-      guard let httpResponse = response as? HTTPURLResponse else {
-        completion(.unreachable)
-        return
-      }
-
-      if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-        completion(.invalid("Authentication rejected by the server."))
-        return
-      }
-
-      guard let data = data,
-        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-        let subsonicResponse = json["subsonic-response"] as? [String: Any],
-        let status = subsonicResponse["status"] as? String
-      else {
-        completion(.unreachable)
-        return
-      }
-
-      if status == "ok" {
-        completion(.valid)
-      } else {
-        let subsonicError = subsonicResponse["error"] as? [String: Any]
-        let message =
-          subsonicError?["message"] as? String ?? "Something went wrong with IAP Authentication."
-        completion(.invalid(message))
       }
     }.resume()
   }

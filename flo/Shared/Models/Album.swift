@@ -107,14 +107,6 @@ struct Album: Codable, Identifiable, Playable {
     self.explicitStatus = explicitStatus
   }
 
-  var resolvedArtistId: String {
-    if !albumArtistId.isEmpty {
-      return albumArtistId
-    }
-
-    return artistId
-  }
-
   init(from playlist: PlaylistEntity) {
     self.id = playlist.id ?? UUID().uuidString
     self.name = playlist.name ?? "Unknown Album"

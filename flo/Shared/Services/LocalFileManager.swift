@@ -86,21 +86,6 @@ class LocalFileManager {
     return self.fileManager.fileExists(atPath: fileURL.path)
   }
 
-  func deleteFile(fileName: String, completion: @escaping (Result<Bool, Error>) -> Void) {
-    guard let fileURL = self.fileURL(for: fileName) else {
-      completion(.success(false))
-
-      return
-    }
-
-    do {
-      try self.fileManager.removeItem(at: fileURL)
-      completion(.success(true))
-    } catch {
-      completion(.failure(error))
-    }
-  }
-
   func moveFile(
     source: URL, target: URL, forceOverride: Bool = true,
     completion: @escaping (Result<URL?, Error>) -> Void
@@ -123,28 +108,6 @@ class LocalFileManager {
       try? self.fileManager.setAttributes(
         [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: target.path)
       completion(.success(target))
-    } catch {
-      completion(.failure(error))
-    }
-  }
-
-  func saveFile(
-    target: URL, fileName: String, content: Data,
-    completion: @escaping (Result<URL?, Error>) -> Void
-  ) {
-    do {
-      if !self.fileExists(fileName: target.path) {
-        try self.fileManager.createDirectory(
-          at: target, withIntermediateDirectories: true, attributes: nil)
-      }
-
-      let fileURL = target.appendingPathComponent(fileName)
-
-      try content.write(to: fileURL)
-      try? self.fileManager.setAttributes(
-        [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: fileURL.path)
-      completion(.success(fileURL))
-
     } catch {
       completion(.failure(error))
     }
