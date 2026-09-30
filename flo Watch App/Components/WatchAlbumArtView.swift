@@ -10,10 +10,31 @@ struct WatchAlbumArtView: View {
   var size: CGFloat = 36
   var albumId: String = ""
 
-  @State private var cachedPath: String?
-  @State private var cacheFailed = false
+  // The cover cache's answer, remembered together with the album it is for,
+  // so a view reused for another album never shows the previous cover.
+  @State private var cached: (albumId: String, path: String?)?
+
+  private var cachedPath: String? {
+    cached?.albumId == albumId ? cached?.path : nil
+  }
+
+  private var cacheFailed: Bool {
+    cached?.albumId == albumId && cached?.path == nil
+  }
 
   var body: some View {
+    content
+      .task(id: albumId) {
+        guard !url.hasPrefix("/"), !albumId.isEmpty, cached?.albumId != albumId else { return }
+        // One download through the cover cache serves this view, every other
+        // view of the album and the Now Playing artwork.
+        let path = await CoverArtCacheManager.shared.coverPath(albumId: albumId)
+        cached = (albumId, path)
+      }
+  }
+
+  @ViewBuilder
+  private var content: some View {
     if let path = url.hasPrefix("/") ? url : cachedPath,
       let uiImage = UIImage(contentsOfFile: path)
     {
@@ -22,14 +43,8 @@ struct WatchAlbumArtView: View {
         .aspectRatio(contentMode: .fill)
         .frame(width: size, height: size)
     } else if !albumId.isEmpty, !cacheFailed {
-      // One download through the cover cache serves this view, every other
-      // view of the album and the Now Playing artwork.
       ProgressView()
         .frame(width: size, height: size)
-        .task(id: albumId) {
-          cachedPath = await CoverArtCacheManager.shared.coverPath(albumId: albumId)
-          cacheFailed = cachedPath == nil
-        }
     } else if let imageURL = URL(string: url) {
       AsyncImage(url: imageURL) { phase in
         switch phase {

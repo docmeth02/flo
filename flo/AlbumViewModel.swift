@@ -134,6 +134,12 @@ class AlbumViewModel: ObservableObject {
     let cacheGeneration = LibraryCacheManager.shared.generation
     request { result in
       DispatchQueue.main.async {
+        // Logout clears the cache and bumps its generation; an answer for the
+        // previous account must not refill the lists either.
+        guard LibraryCacheManager.shared.generation == cacheGeneration else {
+          done()
+          return
+        }
         switch result {
         case .success(let items):
           assign(items)
