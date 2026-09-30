@@ -29,8 +29,7 @@ struct WatchRadiosView: View {
       } else {
         ForEach(viewModel.radios, id: \.id) { radio in
           Button(action: {
-            playerViewModel.playRadioItem(radio: radio)
-            showNowPlaying = true
+            showNowPlaying = playerViewModel.playRadioItem(radio: radio)
           }) {
             HStack(spacing: 10) {
               Image(systemName: "dot.radiowaves.up.forward")

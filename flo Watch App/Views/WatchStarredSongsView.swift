@@ -31,8 +31,7 @@ struct WatchStarredSongsView: View {
             isPlaying: isCurrentlyPlaying
           ) {
             let liked = SongCollection(id: "starred-songs", name: "Liked Songs", songs: albumViewModel.starredSongs)
-            playerViewModel.playBySong(idx: idx, item: liked, isFromLocal: false)
-            showNowPlaying = true
+            showNowPlaying = playerViewModel.playBySong(idx: idx, item: liked, isFromLocal: false)
           }
         }
       }

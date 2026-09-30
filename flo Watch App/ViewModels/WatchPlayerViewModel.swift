@@ -512,27 +512,41 @@ class WatchPlayerViewModel: ObservableObject {
     UserDefaultsManager.playbackMode = self.playbackMode
   }
 
-  func playBySong<T: Playable>(idx: Int, item: T, isFromLocal: Bool) {
+  // The play functions return whether playback started. An item without
+  // songs (e.g. an album whose tracks are still loading) leaves the current
+  // queue untouched, so callers only show Now Playing on success.
+
+  @discardableResult
+  func playBySong<T: Playable>(idx: Int, item: T, isFromLocal: Bool) -> Bool {
+    guard item.songs.indices.contains(idx) else { return false }
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
     self.addToQueue(idx: idx, item: queue)
+    return true
   }
 
-  func playItem<T: Playable>(item: T, isFromLocal: Bool) {
+  @discardableResult
+  func playItem<T: Playable>(item: T, isFromLocal: Bool) -> Bool {
+    guard !item.songs.isEmpty else { return false }
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
     self.addToQueue(idx: 0, item: queue)
+    return true
   }
 
-  func shuffleItem<T: Playable>(item: T, isFromLocal: Bool) {
+  @discardableResult
+  func shuffleItem<T: Playable>(item: T, isFromLocal: Bool) -> Bool {
+    guard !item.songs.isEmpty else { return false }
     var shuffledItem = item
     shuffledItem.songs.shuffle()
 
     let queue = PlaybackService.shared.addToQueue(item: shuffledItem, isFromLocal: isFromLocal)
     self.addToQueue(idx: 0, item: queue)
+    return true
   }
 
-  func playRadioItem(radio: Radio) {
+  @discardableResult
+  func playRadioItem(radio: Radio) -> Bool {
     guard let radioUrl = Self.normalizedRadioURL(from: radio.streamUrl) else {
-      return
+      return false
     }
 
     let item = radio.toPlayable()
@@ -594,6 +608,7 @@ class WatchPlayerViewModel: ObservableObject {
       playbackDuration: 0)
     PlaybackService.shared.clearQueue()
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
+    return true
   }
 
   private static func normalizedRadioURL(from streamUrl: String) -> URL? {

@@ -16,8 +16,13 @@ struct WatchNowPlayingView: View {
 
   var body: some View {
     ViewThatFits(in: .vertical) {
-      nowPlayingContent
-      ScrollView { nowPlayingContent }
+      if playerViewModel.hasNowPlaying() {
+        nowPlayingContent
+        ScrollView { nowPlayingContent }
+      } else {
+        Text("Nothing playing")
+          .foregroundStyle(.secondary)
+      }
     }
     .focusable(true)
     .focused($crownFocused)

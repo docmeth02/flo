@@ -64,16 +64,15 @@ struct WatchAlbumDetailView: View {
         // Play/Shuffle buttons
         HStack(spacing: 12) {
           Button(action: {
-            playerViewModel.playItem(item: displayAlbum, isFromLocal: isDownloaded)
-            showNowPlaying = true
+            showNowPlaying = playerViewModel.playItem(item: displayAlbum, isFromLocal: isDownloaded)
           }) {
             Label("Play", systemImage: "play.fill")
               .customFont(.caption2)
           }
 
           Button(action: {
-            playerViewModel.shuffleItem(item: displayAlbum, isFromLocal: isDownloaded)
-            showNowPlaying = true
+            showNowPlaying = playerViewModel.shuffleItem(
+              item: displayAlbum, isFromLocal: isDownloaded)
           }) {
             Label("Shuffle", systemImage: "shuffle")
               .customFont(.caption2)
@@ -95,8 +94,8 @@ struct WatchAlbumDetailView: View {
             artist: song.artist,
             isPlaying: isCurrentlyPlaying
           ) {
-            playerViewModel.playBySong(idx: index, item: displayAlbum, isFromLocal: isDownloaded)
-            showNowPlaying = true
+            showNowPlaying = playerViewModel.playBySong(
+              idx: index, item: displayAlbum, isFromLocal: isDownloaded)
           }
           .padding(.vertical, 2)
         }
