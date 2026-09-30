@@ -483,6 +483,14 @@ class AlbumService {
     CoreDataManager.shared.saveRecord()
   }
 
+  /// Media ids of the collection's downloaded songs.
+  func downloadedMediaFileIds(collectionId: String) -> Set<String> {
+    Set(
+      CoreDataManager.shared.getRecordByKey(
+        entity: SongEntity.self, key: \SongEntity.albumId, value: collectionId
+      ).compactMap(\.mediaFileId))
+  }
+
   func checkIfAlbumDownloaded(albumID: String) -> Bool {
     let isPlaylistEntityExist = CoreDataManager.shared.getRecordByKey(
       entity: PlaylistEntity.self, key: \PlaylistEntity.id, value: albumID, limit: 1)
@@ -522,10 +530,25 @@ class AlbumService {
     }
   }
 
+  /// Deletes an old-layout artist/album or playlist-name folder only once it
+  /// holds nothing but cover images: a same-named collection downloaded by an
+  /// older build may still keep its songs there.
+  private func removeLegacyDirectoryIfUnused(_ path: String) {
+    guard let url = LocalFileManager.shared.fileURL(for: path),
+      let contents = try? FileManager.default.contentsOfDirectory(atPath: url.path)
+    else { return }
+
+    let onlyCovers = contents.allSatisfy { $0 == "cover.png" || $0 == "cover" || $0 == ".DS_Store" }
+    if onlyCovers {
+      try? FileManager.default.removeItem(at: url)
+    }
+  }
+
   /// Removes a downloaded album or playlist: every song file at its stored
   /// path (older downloads used artist/album folders), the collection folder,
-  /// the legacy folder and the collection's cover, then its records. Records
-  /// go even when a folder is already missing, so nothing is left dangling.
+  /// the collection's cover and, once empty, its legacy folder, then its
+  /// records. Records go even when a folder is already missing, so nothing is
+  /// left dangling.
   func removeDownloadedCollection(
     id: String, legacyDirectory: String,
     completion: @escaping (Result<Bool, Error>) -> Void
@@ -534,7 +557,7 @@ class AlbumService {
       entity: SongEntity.self, key: \SongEntity.albumId, value: id)
 
     var paths = songs.compactMap(\.fileURL).filter { !$0.isEmpty }
-    paths += ["Media/\(id)", legacyDirectory, Self.coverPath(id: id)]
+    paths += ["Media/\(id)", Self.coverPath(id: id)]
 
     for path in paths {
       guard let url = LocalFileManager.shared.fileURL(for: path),
@@ -548,6 +571,8 @@ class AlbumService {
         return
       }
     }
+
+    removeLegacyDirectoryIfUnused(legacyDirectory)
 
     CoreDataManager.shared.deleteRecordByKey(
       entity: PlaylistEntity.self, key: \PlaylistEntity.id, value: id)

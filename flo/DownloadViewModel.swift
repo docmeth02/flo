@@ -48,19 +48,12 @@ class DownloadViewModel: ObservableObject {
 
   private var activeDownloads: [String: DownloadRequest] = [:]
 
-  func isDownloading(_ albumName: String) -> Bool {
+  // Collections are identified by id throughout: two albums may share a name.
+  func isDownloading(collectionId: String) -> Bool {
     downloadItems.contains { item in
-      item.album == albumName
+      item.albumId == collectionId
         && (item.status == .downloading || item.status == .queued || item.status == .idle)
     }
-  }
-
-  func isDownloaded(_ albumName: String) -> Bool {
-    if let index = downloadedTrackCount.firstIndex(where: { $0.name == albumName }) {
-      return downloadedTrackCount[index].elapsed >= 1.0
-    }
-
-    return false
   }
 
   func addItem(_ album: Album, forceAll: Bool = false, isFromPlaylist: Bool = false) {
@@ -71,11 +64,13 @@ class DownloadViewModel: ObservableObject {
 
     let downloadingAlbum = DownloadTrackCount(
       id: album.id, name: album.name, elapsed: 0, total: songsToDownload.count)
+    downloadedTrackCount.removeAll { $0.id == album.id }
     downloadedTrackCount.append(downloadingAlbum)
 
     for (index, song) in songsToDownload {
       let songId = isFromPlaylist ? song.mediaFileId : song.id
-      let albumId = isFromPlaylist ? album.id : song.albumId
+      // The collection's id names its download folder and groups its songs.
+      let albumId = album.id
       let itemId = "\(albumId):\(songId)"
 
       guard !downloadItems.contains(where: { $0.id == itemId }) else {
@@ -118,8 +113,8 @@ class DownloadViewModel: ObservableObject {
     }
   }
 
-  func getDownloadedTrackProgress(albumName: String) -> Double {
-    if let index = self.downloadedTrackCount.firstIndex(where: { $0.name == albumName }) {
+  func getDownloadedTrackProgress(collectionId: String) -> Double {
+    if let index = self.downloadedTrackCount.firstIndex(where: { $0.id == collectionId }) {
       return self.downloadedTrackCount[index].elapsed * 100
     } else {
       return .zero
@@ -139,7 +134,7 @@ class DownloadViewModel: ObservableObject {
       self.updateItemProgress(itemId: item.id, progress: progress)
 
       if let index = self.downloadedTrackCount.firstIndex(where: {
-        $0.name == item.album
+        $0.id == item.albumId
       }) {
         let totalTracks = self.downloadedTrackCount[index].total
 
@@ -182,7 +177,7 @@ class DownloadViewModel: ObservableObject {
           self.downloadWatcher = true
 
           if let index = self.downloadedTrackCount.firstIndex(where: {
-            $0.name == item.album && $0.total == 1
+            $0.id == item.albumId && $0.total == 1
           }) {
             self.downloadedTrackCount.remove(at: index)
           }
@@ -195,7 +190,7 @@ class DownloadViewModel: ObservableObject {
             self.updateItemStatus(itemId: item.id, status: .cancelled)
 
             if let index = self.downloadedTrackCount.firstIndex(where: {
-              $0.name == item.album && $0.total == 1
+              $0.id == item.albumId && $0.total == 1
             }) {
               self.downloadedTrackCount[index].elapsed = 0
             }
@@ -214,18 +209,18 @@ class DownloadViewModel: ObservableObject {
     processQueue()
   }
 
-  func cancelCurrentAlbumDownload(albumName: String) {
+  func cancelCurrentAlbumDownload(collectionId: String) {
     // Waiting items go first: cancelling the running one schedules the next
     // waiting item, which must not belong to the collection being cancelled.
     for index in downloadItems.indices
-    where downloadItems[index].album == albumName
+    where downloadItems[index].albumId == collectionId
       && (downloadItems[index].status == .idle || downloadItems[index].status == .queued)
     {
       downloadItems[index].status = .cancelled
     }
 
     downloadItems
-      .filter { $0.album == albumName }
+      .filter { $0.albumId == collectionId }
       .forEach { cancelDownload($0.id) }
   }
 

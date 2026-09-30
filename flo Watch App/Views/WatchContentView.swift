@@ -110,7 +110,7 @@ struct WatchContentView: View {
       debugLog("downloading \(kind) \(album.id) with \(album.songs.count) songs")
       downloadViewModel.addItem(album, isFromPlaylist: playlist != nil)
 
-      for _ in 0..<120 where downloadViewModel.isDownloading(album.name) {
+      for _ in 0..<120 where downloadViewModel.isDownloading(collectionId: album.id) {
         try? await Task.sleep(nanoseconds: 1_000_000_000)
       }
       try? await Task.sleep(nanoseconds: 2_000_000_000)

@@ -15,6 +15,7 @@ struct WatchAlbumDetailView: View {
   @State private var localAlbum: Album?
   @State private var showNowPlaying = false
   @State private var downloaded = false
+  @State private var downloadedIds: Set<String> = []
 
   private var displayAlbum: Album {
     localAlbum ?? album
@@ -24,16 +25,19 @@ struct WatchAlbumDetailView: View {
     downloaded
   }
 
+  // From the downloaded records, so it is right as soon as a download ends.
   private var missingTrackCount: Int {
-    displayAlbum.songs.filter { $0.fileUrl.isEmpty }.count
+    displayAlbum.songs.filter {
+      !downloadedIds.contains($0.mediaFileId.isEmpty ? $0.id : $0.mediaFileId)
+    }.count
   }
 
   private var isDownloading: Bool {
-    downloadViewModel.isDownloading(album.name)
+    downloadViewModel.isDownloading(collectionId: album.id)
   }
 
   private var downloadProgress: Double {
-    downloadViewModel.getDownloadedTrackProgress(albumName: album.name)
+    downloadViewModel.getDownloadedTrackProgress(collectionId: album.id)
   }
 
   var body: some View {
@@ -117,7 +121,7 @@ struct WatchAlbumDetailView: View {
                 .foregroundColor(.secondary)
               Spacer()
               Button(action: {
-                downloadViewModel.cancelCurrentAlbumDownload(albumName: album.name)
+                downloadViewModel.cancelCurrentAlbumDownload(collectionId: album.id)
               }) {
                 Label("Cancel", systemImage: "xmark.circle")
                   .customFont(.caption2)
@@ -131,8 +135,7 @@ struct WatchAlbumDetailView: View {
           // An interrupted download leaves some tracks behind; offer the rest.
           if missingTrackCount > 0 {
             Button(action: {
-              albumViewModel.downloadAlbum(displayAlbum)
-              downloadViewModel.addItem(displayAlbum)
+              downloadCollection()
             }) {
               Label("Download \(missingTrackCount) missing", systemImage: "arrow.down.circle")
                 .customFont(.caption2)
@@ -151,8 +154,7 @@ struct WatchAlbumDetailView: View {
           .padding(.vertical, 4)
         } else {
           Button(action: {
-            albumViewModel.downloadAlbum(displayAlbum)
-            downloadViewModel.addItem(displayAlbum)
+            downloadCollection()
           }) {
             Label("Download", systemImage: "arrow.down.circle")
               .customFont(.caption2)
@@ -168,11 +170,11 @@ struct WatchAlbumDetailView: View {
     .navigationTitle(album.name)
     .onAppear {
       loadAlbumDetail()
-      downloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: album.id)
+      refreshDownloadState()
     }
     .onReceive(downloadViewModel.$downloadWatcher) { newValue in
       if newValue {
-        downloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: album.id)
+        refreshDownloadState()
         downloadViewModel.downloadWatcher = false
       }
     }
@@ -185,5 +187,21 @@ struct WatchAlbumDetailView: View {
 
   private func loadAlbumDetail() {
     albumViewModel.setActiveAlbum(album: album)
+  }
+
+  private func refreshDownloadState() {
+    downloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: album.id)
+    downloadedIds = AlbumService.shared.downloadedMediaFileIds(collectionId: album.id)
+  }
+
+  /// Downloaded playlists open here from Downloads; they keep playlist
+  /// semantics (playlist folder, media ids) when missing tracks are fetched.
+  private func downloadCollection() {
+    if AlbumService.shared.isPlaylistDownload(id: album.id) {
+      downloadViewModel.addItem(displayAlbum, isFromPlaylist: true)
+    } else {
+      albumViewModel.downloadAlbum(displayAlbum)
+      downloadViewModel.addItem(displayAlbum)
+    }
   }
 }

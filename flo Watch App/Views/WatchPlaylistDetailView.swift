@@ -14,21 +14,25 @@ struct WatchPlaylistDetailView: View {
 
   @State private var showNowPlaying = false
   @State private var downloaded = false
+  @State private var downloadedIds: Set<String> = []
 
   private var isDownloaded: Bool {
     downloaded
   }
 
+  // From the downloaded records, so it is right as soon as a download ends.
   private var missingTrackCount: Int {
-    displayPlaylist.songs.filter { $0.fileUrl.isEmpty }.count
+    displayPlaylist.songs.filter {
+      !downloadedIds.contains($0.mediaFileId.isEmpty ? $0.id : $0.mediaFileId)
+    }.count
   }
 
   private var isDownloading: Bool {
-    downloadViewModel.isDownloading(playlist.name)
+    downloadViewModel.isDownloading(collectionId: playlist.id)
   }
 
   private var downloadProgress: Double {
-    downloadViewModel.getDownloadedTrackProgress(albumName: playlist.name)
+    downloadViewModel.getDownloadedTrackProgress(collectionId: playlist.id)
   }
 
   private var displayPlaylist: Playlist {
@@ -115,7 +119,7 @@ struct WatchPlaylistDetailView: View {
                 .foregroundColor(.secondary)
               Spacer()
               Button(action: {
-                downloadViewModel.cancelCurrentAlbumDownload(albumName: playlist.name)
+                downloadViewModel.cancelCurrentAlbumDownload(collectionId: playlist.id)
               }) {
                 Label("Cancel", systemImage: "xmark.circle")
                   .customFont(.caption2)
@@ -168,13 +172,18 @@ struct WatchPlaylistDetailView: View {
     .navigationTitle(playlist.name)
     .onAppear {
       albumViewModel.setActivePlaylist(playlist: playlist)
-      downloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: playlist.id)
+      refreshDownloadState()
     }
     .onReceive(downloadViewModel.$downloadWatcher) { newValue in
       if newValue {
-        downloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: playlist.id)
+        refreshDownloadState()
         downloadViewModel.downloadWatcher = false
       }
     }
+  }
+
+  private func refreshDownloadState() {
+    downloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: playlist.id)
+    downloadedIds = AlbumService.shared.downloadedMediaFileIds(collectionId: playlist.id)
   }
 }
