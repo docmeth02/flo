@@ -19,6 +19,10 @@ struct WatchPlaylistDetailView: View {
     downloaded
   }
 
+  private var missingTrackCount: Int {
+    displayPlaylist.songs.filter { $0.fileUrl.isEmpty }.count
+  }
+
   private var isDownloading: Bool {
     downloadViewModel.isDownloading(playlist.name)
   }
@@ -122,6 +126,19 @@ struct WatchPlaylistDetailView: View {
           }
           .padding(.vertical, 4)
         } else if isDownloaded {
+          // An interrupted download leaves some tracks behind; offer the rest.
+          if missingTrackCount > 0 {
+            Button(action: {
+              let playablePlaylist = Album(from: displayPlaylist)
+              albumViewModel.downloadPlaylist(displayPlaylist)
+              downloadViewModel.addItem(playablePlaylist, isFromPlaylist: true)
+            }) {
+              Label("Download \(missingTrackCount) missing", systemImage: "arrow.down.circle")
+                .customFont(.caption2)
+            }
+            .padding(.vertical, 4)
+          }
+
           Button(action: {
             albumViewModel.removeDownloadedPlaylist(playlist: playlist)
             downloaded = false

@@ -18,7 +18,10 @@ enum DownloadStatus {
 }
 
 struct DownloadItem: Identifiable {
+  // Collection and track together: the same song downloaded for an album and
+  // for a playlist is two jobs with two destinations.
   let id: String
+  let mediaFileId: String
   let albumId: String
   let album: String
   let isPlaylist: Bool
@@ -46,8 +49,10 @@ class DownloadViewModel: ObservableObject {
   private var activeDownloads: [String: DownloadRequest] = [:]
 
   func isDownloading(_ albumName: String) -> Bool {
-    return downloadItems.filter({ $0.status == .downloading }).count > 0
-      && downloadItems.filter({ $0.album == albumName }).count > 0
+    downloadItems.contains { item in
+      item.album == albumName
+        && (item.status == .downloading || item.status == .queued || item.status == .idle)
+    }
   }
 
   func isDownloaded(_ albumName: String) -> Bool {
@@ -71,15 +76,17 @@ class DownloadViewModel: ObservableObject {
     for (index, song) in songsToDownload {
       let songId = isFromPlaylist ? song.mediaFileId : song.id
       let albumId = isFromPlaylist ? album.id : song.albumId
+      let itemId = "\(albumId):\(songId)"
 
-      guard !downloadItems.contains(where: { $0.id == songId }) else {
-        retryDownload(songId)
+      guard !downloadItems.contains(where: { $0.id == itemId }) else {
+        retryDownload(itemId)
 
         continue
       }
 
       let queue = DownloadItem(
-        id: songId, albumId: albumId, album: album.name, isPlaylist: isFromPlaylist,
+        id: itemId, mediaFileId: songId, albumId: albumId, album: album.name,
+        isPlaylist: isFromPlaylist,
         title: "\(song.artist) - \(song.title)", song: song,
         playlistIndex: isFromPlaylist ? index : -1)
       downloadItems.append(queue)
@@ -152,7 +159,7 @@ class DownloadViewModel: ObservableObject {
     // The request is created and registered on the main thread before any
     // completion can run, so a fast failure never leaves a stale entry.
     activeDownloads[item.id] = AlbumService.shared.downloadNew(
-      collectionId: item.albumId, mediaFileId: item.id, suffix: item.song.suffix,
+      collectionId: item.albumId, mediaFileId: item.mediaFileId, suffix: item.song.suffix,
       progressUpdate: progressUpdate
     ) { [weak self] result in
       Task { @MainActor in
@@ -208,6 +215,15 @@ class DownloadViewModel: ObservableObject {
   }
 
   func cancelCurrentAlbumDownload(albumName: String) {
+    // Waiting items go first: cancelling the running one schedules the next
+    // waiting item, which must not belong to the collection being cancelled.
+    for index in downloadItems.indices
+    where downloadItems[index].album == albumName
+      && (downloadItems[index].status == .idle || downloadItems[index].status == .queued)
+    {
+      downloadItems[index].status = .cancelled
+    }
+
     downloadItems
       .filter { $0.album == albumName }
       .forEach { cancelDownload($0.id) }

@@ -257,18 +257,13 @@ class AlbumViewModel: ObservableObject {
   }
 
   func downloadAlbum(_ albumToDownload: Album) {
-    AlbumService.shared.downloadAlbumCover(albumId: albumToDownload.id) { [weak self] result in
-      guard let self = self else { return }
+    // The album record must exist even when its cover cannot be fetched,
+    // otherwise its downloaded songs never show up in Downloads.
+    AlbumService.shared.saveAlbum(albumToDownload)
 
-      switch result {
-      case .success:
-        DispatchQueue.main.async {
-          if !AlbumService.shared.checkIfAlbumDownloaded(albumID: albumToDownload.id) {
-            AlbumService.shared.saveAlbum(albumToDownload)
-          }
-        }
-      case .failure(let error):
-        print("Failed to save image: \(error.localizedDescription)")
+    AlbumService.shared.downloadAlbumCover(albumId: albumToDownload.id) { result in
+      if case .failure(let error) = result {
+        print("Failed to save album cover: \(error.localizedDescription)")
       }
     }
   }

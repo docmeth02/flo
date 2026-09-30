@@ -24,6 +24,10 @@ struct WatchAlbumDetailView: View {
     downloaded
   }
 
+  private var missingTrackCount: Int {
+    displayAlbum.songs.filter { $0.fileUrl.isEmpty }.count
+  }
+
   private var isDownloading: Bool {
     downloadViewModel.isDownloading(album.name)
   }
@@ -124,6 +128,18 @@ struct WatchAlbumDetailView: View {
           }
           .padding(.vertical, 4)
         } else if isDownloaded {
+          // An interrupted download leaves some tracks behind; offer the rest.
+          if missingTrackCount > 0 {
+            Button(action: {
+              albumViewModel.downloadAlbum(displayAlbum)
+              downloadViewModel.addItem(displayAlbum)
+            }) {
+              Label("Download \(missingTrackCount) missing", systemImage: "arrow.down.circle")
+                .customFont(.caption2)
+            }
+            .padding(.vertical, 4)
+          }
+
           Button(action: {
             albumViewModel.removeDownloadedAlbum(album: album)
             downloaded = false

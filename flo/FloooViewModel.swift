@@ -38,10 +38,9 @@ class FloooViewModel: ObservableObject {
   func optimizeLocalStorage() {
     LocalFileManager.shared.deleteDownloadedAlbums { result in
       switch result {
-      case .success(let shouldProceed):
-        if shouldProceed {
-          CoreDataManager.shared.clearDownloads()
-        }
+      case .success:
+        // Records go even when the media folder was already missing.
+        CoreDataManager.shared.clearDownloads()
 
         self.getLocalStorageInformation()
 
