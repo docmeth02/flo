@@ -257,10 +257,7 @@ class AlbumViewModel: ObservableObject {
   }
 
   func downloadAlbum(_ albumToDownload: Album) {
-    AlbumService.shared.downloadAlbumCover(
-      artistName: albumToDownload.artist, albumId: albumToDownload.id,
-      albumName: albumToDownload.name
-    ) { [weak self] result in
+    AlbumService.shared.downloadAlbumCover(albumId: albumToDownload.id) { [weak self] result in
       guard let self = self else { return }
 
       switch result {
@@ -290,8 +287,7 @@ class AlbumViewModel: ObservableObject {
     // The playlist's own cover lives next to its tracks so the Downloads tab
     // can pick it up; failure must not affect the song downloads.
     AlbumService.shared.downloadPlaylistCover(
-      playlistId: playlistToDownload.id, playlistName: playlistToDownload.name,
-      coverArtId: playlistToDownload.coverArtId
+      playlistId: playlistToDownload.id, coverArtId: playlistToDownload.coverArtId
     ) { result in
       if case .failure(let error) = result {
         print("Failed to save playlist cover: \(error.localizedDescription)")
@@ -304,9 +300,7 @@ class AlbumViewModel: ObservableObject {
       DispatchQueue.global(qos: .background).async {
         downloadSemaphore.wait()
 
-        AlbumService.shared.downloadAlbumCoverForPlaylist(
-          albumId: song.albumId, playlistName: playlistToDownload.name, trackId: song.mediaFileId
-        ) { result in
+        AlbumService.shared.downloadAlbumCoverForPlaylist(albumId: song.albumId) { _ in
           downloadSemaphore.signal()
           downloadGroup.leave()
         }
@@ -315,8 +309,8 @@ class AlbumViewModel: ObservableObject {
   }
 
   func removeDownloadedAlbum(album: Album) {
-    AlbumService.shared.removeDownloadedAlbum(
-      artistName: album.artist, albumId: album.id, albumName: album.name
+    AlbumService.shared.removeDownloadedCollection(
+      id: album.id, name: album.name, legacyDirectory: "Media/\(album.artist)/\(album.name)"
     ) { result in
       DispatchQueue.main.async {
         switch result {
@@ -330,9 +324,9 @@ class AlbumViewModel: ObservableObject {
   }
 
   func removeDownloadedPlaylist(playlist: Playlist) {
-    AlbumService.shared.removeDownloadedPlaylist(
-      playlistId: playlist.id,
-      playlistName: playlist.name
+    AlbumService.shared.removeDownloadedCollection(
+      id: playlist.id, name: playlist.name,
+      legacyDirectory: "Media/Various Artists/\(playlist.name)"
     ) { result in
       DispatchQueue.main.async {
         switch result {

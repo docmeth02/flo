@@ -152,12 +152,7 @@ class DownloadViewModel: ObservableObject {
     // The request is created and registered on the main thread before any
     // completion can run, so a fast failure never leaves a stale entry.
     activeDownloads[item.id] = AlbumService.shared.downloadNew(
-      artistName: item.isPlaylist ? "Various Artists" : item.song.artist,
-      albumName: item.album,
-      id: item.id,
-      trackNumber: item.song.trackNumber.description,
-      title: item.song.title,
-      suffix: item.song.suffix,
+      collectionId: item.albumId, mediaFileId: item.id, suffix: item.song.suffix,
       progressUpdate: progressUpdate
     ) { [weak self] result in
       Task { @MainActor in

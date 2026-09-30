@@ -11,6 +11,19 @@ import Foundation
 class AlbumService {
   static let shared = AlbumService()
 
+  // Downloads live in one folder per collection (album or playlist) named by
+  // its id, with files named by media file id, so equal titles or track
+  // numbers can never overwrite each other. Covers are stored once per album
+  // or playlist id. Older downloads keep the artist/album paths stored in
+  // SongEntity.fileURL and stay playable.
+  static func downloadPath(collectionId: String, mediaFileId: String, suffix: String) -> String {
+    "Media/\(collectionId)/\(mediaFileId).\(suffix)"
+  }
+
+  static func coverPath(id: String) -> String {
+    "Media/covers/\(id).png"
+  }
+
   func buildRemoteStreamUrl(id: String) -> String {
     let maxBitrate = UserDefaultsManager.maxBitRate
 
@@ -324,6 +337,11 @@ class AlbumService {
       }
     }
 
+    let coverTarget = Self.coverPath(id: albumId)
+    if !albumId.isEmpty, LocalFileManager.shared.fileExists(fileName: coverTarget) {
+      return LocalFileManager.shared.fileURL(for: coverTarget)?.path ?? ""
+    }
+
     let target = "Media/\(artistName)/\(albumName)/cover.png"
     let anotherTarget = "Media/Various Artists/\(albumName)/cover/\(trackId).png"
     let contextTarget =
@@ -344,7 +362,7 @@ class AlbumService {
   }
 
   func downloadAlbumCover(
-    artistName: String, albumId: String, albumName: String,
+    albumId: String,
     completion: @escaping (Result<URL?, Error>) -> Void
   ) {
     let params: [String: Any] = ["id": "al-\(albumId)", "size": 300]
@@ -354,11 +372,8 @@ class AlbumService {
     ) { result in
       switch result {
       case .success(let tempFile):
-        guard
-          let target = LocalFileManager.shared.documentsDirectory?.appendingPathComponent("Media")
-            .appendingPathComponent(artistName).appendingPathComponent(albumName)
-            .appendingPathComponent("cover.png")
-        else {
+        guard let target = LocalFileManager.shared.fileURL(for: Self.coverPath(id: albumId)) else {
+          completion(.success(nil))
           return
         }
         LocalFileManager.shared.moveFile(source: tempFile, target: target, completion: completion)
@@ -368,10 +383,9 @@ class AlbumService {
     }
   }
 
+  /// Cover of a playlist track's album, stored once per album id.
   func downloadAlbumCoverForPlaylist(
     albumId: String,
-    playlistName: String,
-    trackId: String,
     completion: @escaping (Result<URL?, Error>) -> Void
   ) {
     let params: [String: Any] = ["id": "al-\(albumId)", "size": 300]
@@ -381,12 +395,8 @@ class AlbumService {
     ) { result in
       switch result {
       case .success(let tempFile):
-        guard
-          let target = LocalFileManager.shared.documentsDirectory?.appendingPathComponent("Media")
-            .appendingPathComponent("Various Artists").appendingPathComponent(playlistName)
-            .appendingPathComponent("cover")
-            .appendingPathComponent("\(trackId).png")
-        else {
+        guard let target = LocalFileManager.shared.fileURL(for: Self.coverPath(id: albumId)) else {
+          completion(.success(nil))
           return
         }
 
@@ -400,7 +410,6 @@ class AlbumService {
 
   func downloadPlaylistCover(
     playlistId: String,
-    playlistName: String,
     coverArtId: String?,
     completion: @escaping (Result<URL?, Error>) -> Void
   ) {
@@ -412,11 +421,9 @@ class AlbumService {
     ) { result in
       switch result {
       case .success(let tempFile):
-        guard
-          let target = LocalFileManager.shared.documentsDirectory?.appendingPathComponent("Media")
-            .appendingPathComponent("Various Artists").appendingPathComponent(playlistName)
-            .appendingPathComponent("cover.png")
+        guard let target = LocalFileManager.shared.fileURL(for: Self.coverPath(id: playlistId))
         else {
+          completion(.success(nil))
           return
         }
 
@@ -437,14 +444,14 @@ class AlbumService {
     let checkExistingSong = CoreDataManager.shared.getRecordByKey(
       entity: SongEntity.self, key: \SongEntity.id, value: songId, limit: 1)
 
-    let fileURL =
-      "Media/\(isFromPlaylist ? "Various Artists" : song.artist)/\(albumName ?? "Unknown Albums")/\(Int16(song.trackNumber)) \(song.title).\(song.suffix)"
+    let fileURL = Self.downloadPath(
+      collectionId: albumId, mediaFileId: isFromPlaylist ? song.mediaFileId : song.id,
+      suffix: song.suffix)
 
     let resolvedAlbumName = !song.albumName.isEmpty ? song.albumName : (albumName ?? "")
 
     if let existingSong = checkExistingSong.first {
-      existingSong.fileURL =
-        "Media/\(isFromPlaylist ? "Various Artists" : song.artist)/\(albumName ?? "Unknown Albums")/\(Int16(song.trackNumber)) \(song.title).\(song.suffix)"
+      existingSong.fileURL = fileURL
       existingSong.albumName = resolvedAlbumName
       existingSong.status = status
       existingSong.position = position
@@ -513,24 +520,22 @@ class AlbumService {
     }
   }
 
-  // FIXME: refactor later
   func downloadNew(
-    artistName: String, albumName: String, id: String, bitrate: Int = 0, trackNumber: String,
-    title: String, suffix: String, progressUpdate: ((Double) -> Void)?,
+    collectionId: String, mediaFileId: String, suffix: String,
+    progressUpdate: ((Double) -> Void)?,
     completion: @escaping (Result<URL?, Error>) -> Void
   ) -> DownloadRequest {
-    let params: [String: Any] = ["id": id, "format": "raw", "bitrate": bitrate]
+    let params: [String: Any] = ["id": mediaFileId, "format": "raw", "bitrate": 0]
+    let path = Self.downloadPath(
+      collectionId: collectionId, mediaFileId: mediaFileId, suffix: suffix)
 
     return APIManager.shared.SubsonicEndpointDownloadNew(
       endpoint: API.SubsonicEndpoint.download, parameters: params, progressUpdate: progressUpdate
     ) { result in
       switch result {
       case .success(let tempFile):
-        guard
-          let target = LocalFileManager.shared.documentsDirectory?.appendingPathComponent("Media")
-            .appendingPathComponent(artistName).appendingPathComponent(albumName)
-            .appendingPathComponent("\(trackNumber) \(title).\(suffix)")
-        else {
+        guard let target = LocalFileManager.shared.fileURL(for: path) else {
+          completion(.success(nil))
           return
         }
 
@@ -541,94 +546,38 @@ class AlbumService {
     }
   }
 
-  // FIXME: the parameters are so damn long
-  func download(
-    artistName: String, albumName: String, id: String, bitrate: Int = 0, trackNumber: String,
-    title: String, suffix: String, completion: @escaping (Result<URL?, Error>) -> Void
+  /// Removes a downloaded album or playlist: every song file at its stored
+  /// path (older downloads used artist/album folders), the collection folder,
+  /// the legacy folder and the collection's cover, then its records. Records
+  /// go even when a folder is already missing, so nothing is left dangling.
+  func removeDownloadedCollection(
+    id: String, name: String, legacyDirectory: String,
+    completion: @escaping (Result<Bool, Error>) -> Void
   ) {
-    let params: [String: Any] = ["id": id, "format": "raw", "bitrate": bitrate]
+    let songs = CoreDataManager.shared.getRecordByKey(
+      entity: SongEntity.self, key: \SongEntity.albumId, value: id)
 
-    APIManager.shared.SubsonicEndpointDownload(
-      endpoint: API.SubsonicEndpoint.download, parameters: params
-    ) { result in
-      switch result {
-      case .success(let tempFile):
-        guard
-          let target = LocalFileManager.shared.documentsDirectory?.appendingPathComponent("Media")
-            .appendingPathComponent(artistName).appendingPathComponent(albumName)
-            .appendingPathComponent("\(trackNumber) \(title).\(suffix)")
-        else {
-          return
-        }
+    var paths = songs.compactMap(\.fileURL).filter { !$0.isEmpty }
+    paths += ["Media/\(id)", legacyDirectory, Self.coverPath(id: id)]
 
-        LocalFileManager.shared.moveFile(source: tempFile, target: target, completion: completion)
-      case .failure(let error):
+    for path in paths {
+      guard let url = LocalFileManager.shared.fileURL(for: path),
+        FileManager.default.fileExists(atPath: url.path)
+      else { continue }
+
+      do {
+        try FileManager.default.removeItem(at: url)
+      } catch {
         completion(.failure(error))
+        return
       }
     }
-  }
 
-  func removeDownloadedAlbum(
-    artistName: String, albumId: String, albumName: String,
-    completion: @escaping (Result<Bool, Error>) -> Void
-  ) {
-    let checkExistingAlbum = CoreDataManager.shared.getRecordByKey(
-      entity: PlaylistEntity.self, key: \PlaylistEntity.name, value: albumName, limit: 1)
+    CoreDataManager.shared.deleteRecordByKey(
+      entity: PlaylistEntity.self, key: \PlaylistEntity.name, value: name)
+    CoreDataManager.shared.deleteRecordByKey(
+      entity: SongEntity.self, key: \SongEntity.albumId, value: id)
 
-    if checkExistingAlbum.first != nil {
-      guard
-        let target = LocalFileManager.shared.documentsDirectory?.appendingPathComponent("Media")
-          .appendingPathComponent(artistName).appendingPathComponent(albumName)
-      else { return }
-
-      LocalFileManager.shared.deleteDownloadedAlbum(target: target) { result in
-        switch result {
-        case .success(let success):
-          if success {
-            CoreDataManager.shared.deleteRecordByKey(
-              entity: PlaylistEntity.self, key: \PlaylistEntity.name, value: albumName)
-
-            CoreDataManager.shared.deleteRecordByKey(
-              entity: SongEntity.self, key: \SongEntity.albumId, value: albumId)
-          }
-
-          completion(.success(true))
-        case .failure(let error):
-          completion(.failure(error))
-        }
-      }
-    }
-  }
-
-  func removeDownloadedPlaylist(
-    playlistId: String, playlistName: String,
-    completion: @escaping (Result<Bool, Error>) -> Void
-  ) {
-    let checkExistingAlbum = CoreDataManager.shared.getRecordByKey(
-      entity: PlaylistEntity.self, key: \PlaylistEntity.name, value: playlistName, limit: 1)
-
-    if checkExistingAlbum.first != nil {
-      guard
-        let target = LocalFileManager.shared.documentsDirectory?.appendingPathComponent("Media")
-          .appendingPathComponent("Various Artists").appendingPathComponent(playlistName)
-      else { return }
-
-      LocalFileManager.shared.deleteDownloadedAlbum(target: target) { result in
-        switch result {
-        case .success(let success):
-          if success {
-            CoreDataManager.shared.deleteRecordByKey(
-              entity: PlaylistEntity.self, key: \PlaylistEntity.name, value: playlistName)
-
-            CoreDataManager.shared.deleteRecordByKey(
-              entity: SongEntity.self, key: \SongEntity.albumId, value: playlistId)
-          }
-
-          completion(.success(true))
-        case .failure(let error):
-          completion(.failure(error))
-        }
-      }
-    }
+    completion(.success(true))
   }
 }
