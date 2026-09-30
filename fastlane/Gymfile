@@ -1,7 +1,0 @@
-scheme("flo")
-
-export_method("app-store")
-
-output_directory("./fastlane/builds")
-
-include_symbols(false)

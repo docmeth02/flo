@@ -1,6 +1,0 @@
-git_url("git@github.com:kepelet/match.git")
-storage_mode("git")
-
-type("appstore")
-
-username(ENV["APPLE_ID"])
