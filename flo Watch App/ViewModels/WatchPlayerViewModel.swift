@@ -843,6 +843,9 @@ class WatchPlayerViewModel: ObservableObject {
       albumId: self.nowPlaying.albumId ?? "")
     let queueIdList = self.queue.compactMap { $0.id }
     let queueIds = Set(queueIdList)
+    // Any play, pause or stop while the mix is generated bumps this; the user
+    // took over and the mix must not start playing behind their back.
+    let generation = self.playGeneration
 
     Task { [weak self] in
       let songs = await SmartPlaybackService.shared.generateMix(
@@ -857,7 +860,8 @@ class WatchPlayerViewModel: ObservableObject {
         // new queue that happens to start on the same song is not overwritten.
         guard self.queue.indices.contains(self.activeQueueIdx),
           self.nowPlaying.id == lastPlayedId,
-          self.queue.compactMap({ $0.id }) == queueIdList
+          self.queue.compactMap({ $0.id }) == queueIdList,
+          self.playGeneration == generation, UserDefaultsManager.keepPlaying
         else { return }
 
         guard !songs.isEmpty else {
