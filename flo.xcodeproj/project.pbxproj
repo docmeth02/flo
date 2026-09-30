@@ -87,7 +87,6 @@
 		C42B25842F44551B00E62008 /* PlaybackCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25832F44551B00E62008 /* PlaybackCoordinator.swift */; };
 		C42B25862F44551B00E62008 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25852F44551B00E62008 /* WatchConnectivityManager.swift */; };
 		C42B25882F4456BF00E62008 /* WatchLibraryResponder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42B25872F4456BF00E62008 /* WatchLibraryResponder.swift */; };
-		C42B25972F4458EF00E62008 /* flo Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 71493F8E741F7D5134E12AF4 /* flo Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C42E7E182CE7EF5500505B4E /* PlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42E7E172CE7EF4D00505B4E /* PlaylistDetailView.swift */; };
 		C440228D2C09BE2E004EE9CD /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C440228C2C09BE2E004EE9CD /* PlayerView.swift */; };
 		C446A6B72C08DE8800CC9787 /* UserAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = C446A6B62C08DE8800CC9787 /* UserAuth.swift */; };
@@ -159,28 +158,7 @@
 		FEA112E9C57BEE96828064FB /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FD82C15D58E00E712BE /* Errors.swift */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		C42B25952F4458EF00E62008 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = C4E8D9502B763BA900C2353E /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 3F9908B854E0D019A7945A9E;
-			remoteInfo = "flo Watch App";
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXCopyFilesBuildPhase section */
-		C42B259B2F4458EF00E62008 /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				C42B25972F4458EF00E62008 /* flo Watch App.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -622,12 +600,10 @@
 				C4E8D9542B763BA900C2353E /* Sources */,
 				C4E8D9552B763BA900C2353E /* Frameworks */,
 				C4E8D9562B763BA900C2353E /* Resources */,
-				C42B259B2F4458EF00E62008 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				C42B25962F4458EF00E62008 /* PBXTargetDependency */,
 			);
 			name = flo;
 			packageProductDependencies = (
@@ -858,14 +834,6 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXTargetDependency section */
-		C42B25962F4458EF00E62008 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 3F9908B854E0D019A7945A9E /* flo Watch App */;
-			targetProxy = C42B25952F4458EF00E62008 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
 /* Begin XCBuildConfiguration section */
 		57B5C7BB2C2C90CEC18966BB /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -874,23 +842,24 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "flo Watch App/flo_Watch_App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 211;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 7K3G973VGB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "flo Watch App/Info.plist";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.penerbangwalet.flo;
-				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "flo watch";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.penerbangwalet.flo.watchkitapp2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
+				SKIP_INSTALL = NO;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -908,23 +877,24 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "flo Watch App/flo_Watch_App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 211;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 7K3G973VGB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "flo Watch App/Info.plist";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.penerbangwalet.flo;
-				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "flo watch";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.penerbangwalet.flo.watchkitapp2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
+				SKIP_INSTALL = NO;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
