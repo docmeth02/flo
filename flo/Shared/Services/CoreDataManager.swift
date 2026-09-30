@@ -54,18 +54,20 @@ class CoreDataManager: ObservableObject {
   }()
 
   /// Model version 3 makes downloaded collections unique by id, and the
-  /// migration fails on a version 2 store that holds the same id twice (an
+  /// migration fails on an older store that holds the same id twice (an
   /// album renamed on the server and downloaded again). Opens such a store
-  /// with the version 2 model and keeps one record per id. Does nothing for
-  /// stores in any other version.
+  /// with the bundled model it was written with and keeps one record per id.
+  /// Version 3 stores already enforce the constraint and are left alone.
   private static func removeDuplicateCollectionIds() {
+    let storeURL = NSPersistentContainer.defaultDirectoryURL()
+      .appendingPathComponent("flo.sqlite")
     guard
-      let storeURL = NSPersistentContainer.defaultDirectoryURL()
-        .appendingPathComponent("flo.sqlite") as URL?,
       FileManager.default.fileExists(atPath: storeURL.path),
-      let modelURL = Bundle.main.url(
-        forResource: "flo 2", withExtension: "mom", subdirectory: "flo.momd"),
-      let model = NSManagedObjectModel(contentsOf: modelURL)
+      let metadata = try? NSPersistentStoreCoordinator.metadataForPersistentStore(
+        ofType: NSSQLiteStoreType, at: storeURL),
+      let model = Bundle.main.urls(forResourcesWithExtension: "mom", subdirectory: "flo.momd")?
+        .lazy.compactMap({ NSManagedObjectModel(contentsOf: $0) })
+        .first(where: { $0.isConfiguration(withName: nil, compatibleWithStoreMetadata: metadata) })
     else { return }
 
     let coordinator = NSPersistentStoreCoordinator(managedObjectModel: model)

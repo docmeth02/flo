@@ -180,7 +180,9 @@ class AuthViewModel: ObservableObject {
             self.alertMessage = message
 
           case .sessionExpired:
-            self.alertMessage = "Session expired. Please log in again."
+            // A bare 401/403 without Navidrome's error body, e.g. from a
+            // reverse proxy in front of the server.
+            self.alertMessage = "The server refused the request. Please try again."
 
           case .unknown:
             self.alertMessage = "Unknown error ocurred"

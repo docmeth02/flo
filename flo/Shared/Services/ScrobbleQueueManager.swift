@@ -109,7 +109,11 @@ final class ScrobbleQueueManager {
   }
 
   private func flush() {
-    guard !isFlushing else { return }
+    guard !isFlushing else {
+      // A retry landing mid-flush must not be lost.
+      scheduleRetry()
+      return
+    }
 
     guard !scrobbles.isEmpty else {
       cancelRetry()

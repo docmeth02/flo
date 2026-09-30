@@ -58,6 +58,9 @@ class WatchPlayerViewModel: ObservableObject {
   // goes through the capped skip instead of reloading again.
   private var reloadedFailedTrackId: String?
   private var radioURL: URL?
+  // The item whose failure was already counted; KVO, the failure notification
+  // and Play can all report the same one.
+  private weak var countedFailedItem: AVPlayerItem?
 
   var nowPlaying: QueueEntity {
     return self.queue[self.activeQueueIdx]
@@ -232,16 +235,21 @@ class WatchPlayerViewModel: ObservableObject {
     loadWatchdog?.cancel()
     // Paused playback stays paused; pressing Play reloads the failed item.
     guard isPlaying, queue.indices.contains(activeQueueIdx), nowPlaying.id == trackId,
-      !isLiveRadio
+      !isLiveRadio, playerItem == nil || playerItem !== countedFailedItem
     else {
       return
     }
+    countedFailedItem = playerItem
     consecutiveFailures += 1
     debugLog(
       "stream failed: \(trackId ?? "") (\(consecutiveFailures) in a row) "
         + "item=\(String(describing: playerItem?.status.rawValue)) "
         + "error=\(String(describing: playerItem?.error))")
     guard consecutiveFailures <= Self.maxConsecutiveFailures else {
+      // Give up: nothing is playing any more, and the UI must say so.
+      isPlaying = false
+      player?.pause()
+      updateNowPlayingInfo(progress: progress, rate: 0.0)
       // Several songs in a row failing on a reachable server usually means the
       // server rebuilt its library and the cached song ids are gone.
       if consecutiveFailures == Self.maxConsecutiveFailures + 1,
@@ -324,6 +332,7 @@ class WatchPlayerViewModel: ObservableObject {
 
     if let timeObserverToken = timeObserverToken {
       player?.removeTimeObserver(timeObserverToken)
+      self.timeObserverToken = nil
     }
 
     self.replacePlayerIfFailed()
