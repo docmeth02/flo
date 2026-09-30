@@ -28,11 +28,27 @@ class AuthService {
     {
       if let data: UserAuth = try? JSONDecoder().decode(UserAuth.self, from: jsonData) {
         NDToken = data.token
-        subsonicParams =
-          "?u=\(data.username)&t=\(data.subsonicToken)&s=\(data.subsonicSalt)&v=\(AppMeta.subsonicApiVersion)&c=\(AppMeta.name)&f=json"
+        subsonicParams = Self.subsonicQuery(for: data)
         credentialGeneration = 1
       }
     }
+  }
+
+  /// Subsonic token authentication as a query string. Values are percent
+  /// encoded so usernames with spaces, "&" or "+" reach the server intact;
+  /// URLComponents leaves "+" alone, which servers read as a space.
+  private static func subsonicQuery(for data: UserAuth) -> String {
+    var components = URLComponents()
+    components.queryItems = [
+      URLQueryItem(name: "u", value: data.username),
+      URLQueryItem(name: "t", value: data.subsonicToken),
+      URLQueryItem(name: "s", value: data.subsonicSalt),
+      URLQueryItem(name: "v", value: AppMeta.subsonicApiVersion),
+      URLQueryItem(name: "c", value: AppMeta.name),
+      URLQueryItem(name: "f", value: "json"),
+    ]
+    let query = components.percentEncodedQuery ?? ""
+    return "?" + query.replacingOccurrences(of: "+", with: "%2B")
   }
 
   func getCreds(key: String = "") -> String {
@@ -63,8 +79,7 @@ class AuthService {
   }
 
   func setCreds(_ data: UserAuth) {
-    let subsonicParams =
-      "?u=\(data.username)&t=\(data.subsonicToken)&s=\(data.subsonicSalt)&v=\(AppMeta.subsonicApiVersion)&c=\(AppMeta.name)&f=json"
+    let subsonicParams = Self.subsonicQuery(for: data)
 
     credentialsLock.lock()
     defer { credentialsLock.unlock() }
@@ -93,10 +108,9 @@ class AuthService {
     serverUrl: String, username: String, password: String,
     completion: @escaping (AuthResult<UserAuth>) -> Void
   ) {
-    let serverBaseUrl = UserDefaultsManager.serverBaseURL
-    let isServerBaseURLExist = serverBaseUrl != ""
-
-    let url = "\(isServerBaseURLExist ? serverBaseUrl : serverUrl)\(API.NDEndpoint.login)"
+    // The server the user typed wins over a stored one.
+    let baseUrl = serverUrl.isEmpty ? UserDefaultsManager.serverBaseURL : serverUrl
+    let url = "\(baseUrl)\(API.NDEndpoint.login)"
 
     let parameters: [String: Any] = ["username": username, "password": password]
 
