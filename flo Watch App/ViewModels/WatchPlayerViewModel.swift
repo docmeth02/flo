@@ -443,16 +443,12 @@ class WatchPlayerViewModel: ObservableObject {
         info[MPMediaItemPropertyArtwork] = artwork
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
       }
-    } else if let imageURL = URL(string: albumCoverArt) {
-      // Remote URL - use URLSession for reliable download on watchOS
-      URLSession.shared.dataTask(with: imageURL) { [weak self] data, _, error in
-        guard let data = data, let image = UIImage(data: data) else {
-          if let error = error {
-            print("Now Playing artwork download failed: \(error)")
-          }
-          return
-        }
-
+    } else if let albumId = self.queue.indices.contains(self.activeQueueIdx)
+      ? self.nowPlaying.albumId : nil
+    {
+      // Shares the cover cache's single download with the album art views.
+      CoverArtCacheManager.shared.coverPath(albumId: albumId) { [weak self] path in
+        guard let path, let image = UIImage(contentsOfFile: path) else { return }
         let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
 
         DispatchQueue.main.async {
@@ -464,7 +460,7 @@ class WatchPlayerViewModel: ObservableObject {
           info[MPMediaItemPropertyArtwork] = artwork
           MPNowPlayingInfoCenter.default().nowPlayingInfo = info
         }
-      }.resume()
+      }
     }
   }
 
