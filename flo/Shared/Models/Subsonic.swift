@@ -13,12 +13,19 @@ struct BasicResponse: SubsonicResponseData {
   static var key = ""
 }
 
+/// The `error` object of a Subsonic response whose status is "failed".
+struct SubsonicError: Codable, Error {
+  let code: Int
+  let message: String?
+}
+
 struct SubsonicResponse<T: SubsonicResponseData>: Codable {
   let status: String
   let version: String
   let type: String
   let serverVersion: String
   let openSubsonic: Bool
+  let error: SubsonicError?
   let data: T?
 
   enum CodingKeys: String, CodingKey {
@@ -27,6 +34,7 @@ struct SubsonicResponse<T: SubsonicResponseData>: Codable {
     case type
     case serverVersion
     case openSubsonic
+    case error
   }
 
   init(from decoder: Decoder) throws {
@@ -37,6 +45,7 @@ struct SubsonicResponse<T: SubsonicResponseData>: Codable {
     type = try container.decode(String.self, forKey: .type)
     serverVersion = try container.decode(String.self, forKey: .serverVersion)
     openSubsonic = try container.decode(Bool.self, forKey: .openSubsonic)
+    error = try container.decodeIfPresent(SubsonicError.self, forKey: .error)
 
     let rootContainer = try decoder.container(keyedBy: ExtraField.self)
     data = try rootContainer.decodeIfPresent(T.self, forKey: ExtraField(stringValue: T.key))
@@ -50,6 +59,7 @@ struct SubsonicResponse<T: SubsonicResponseData>: Codable {
     try container.encode(type, forKey: .type)
     try container.encode(serverVersion, forKey: .serverVersion)
     try container.encode(openSubsonic, forKey: .openSubsonic)
+    try container.encodeIfPresent(error, forKey: .error)
 
     if let data = data, let dynamicKey = CodingKeys(rawValue: T.key) {
       try container.encode(data, forKey: dynamicKey)
@@ -74,7 +84,15 @@ extension SubsonicResponse {
   }
 }
 
-typealias BasicSubsonicResponse = SubsonicResponse<BasicResponse>
+/// A Subsonic response without payload, unwrapped from its
+/// `subsonic-response` envelope.
+struct BasicSubsonicResponse: Codable {
+  let subsonicResponse: SubsonicResponse<BasicResponse>
+
+  enum CodingKeys: String, CodingKey {
+    case subsonicResponse = "subsonic-response"
+  }
+}
 
 struct Starred2Response: Codable {
   struct SubsonicResponseBody: Codable {

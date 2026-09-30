@@ -92,10 +92,10 @@ class FloooViewModel: ObservableObject {
       result in
       switch result {
       case .success:
-        break
+        debugLog("scrobble delivered: \(songId) submission=\(submission)")
 
       case .failure(let error):
-        if submission && FloooService.shared.shouldQueueOfflineScrobble(error) {
+        if submission && !FloooService.shared.isPermanentScrobbleFailure(error) {
           ScrobbleQueueManager.shared.enqueue(nowPlaying: nowPlaying)
         }
       }

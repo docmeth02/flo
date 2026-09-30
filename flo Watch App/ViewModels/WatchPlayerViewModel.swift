@@ -78,6 +78,10 @@ class WatchPlayerViewModel: ObservableObject {
     }
 
     self.setupRemoteCommandCenter()
+
+    #if DEBUG
+      runDebugLaunchActions()
+    #endif
   }
 
   func observeInterruptionNotifications() {
@@ -787,3 +791,37 @@ class WatchPlayerViewModel: ObservableObject {
     }
   }
 }
+
+#if DEBUG
+  // Simulator verification only. FLO_DEBUG_PLAY_SOMETHING=1 starts a smart mix
+  // a few seconds after launch; FLO_DEBUG_SEEK=<0...1> then seeks the first
+  // track to that position; the queue state is logged along the way.
+  extension WatchPlayerViewModel {
+    fileprivate func runDebugLaunchActions() {
+      let env = ProcessInfo.processInfo.environment
+      guard env["FLO_DEBUG_PLAY_SOMETHING"] == "1" else { return }
+
+      DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+        Task { @MainActor in
+          let songs = await SmartPlaybackService.shared.generateMix(count: 15)
+          debugLog("mix generated: \(songs.count) songs")
+          let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs)
+          self.playItem(item: mix, isFromLocal: false)
+
+          if let seek = env["FLO_DEBUG_SEEK"].flatMap(Double.init) {
+            try? await Task.sleep(nanoseconds: 6_000_000_000)
+            self.seek(to: seek)
+            debugLog("seeked to \(seek)")
+          }
+        }
+      }
+
+      Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
+        guard let self = self, self.hasNowPlaying() else { return }
+        debugLog(
+          "queue=\(self.queue.count) idx=\(self.activeQueueIdx) playing=\(self.isPlaying) "
+            + "song=\(self.nowPlaying.id ?? "") progress=\(String(format: "%.2f", self.progress))")
+      }
+    }
+  }
+#endif

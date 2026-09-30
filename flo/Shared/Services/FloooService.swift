@@ -26,8 +26,8 @@ class FloooService {
   }
 
   func scrobbleToBuiltinEndpoint(
-    submission: Bool, songId: String, time: Date? = nil, timeout: TimeInterval? = nil,
-    completion: @escaping (Result<BasicSubsonicResponse, Error>) -> Void
+    submission: Bool, songId: String, time: Date? = nil,
+    completion: @escaping (Result<Void, Error>) -> Void
   ) {
     var params: [String: Any] = ["submission": String(submission), "id": songId]
 
@@ -36,33 +36,33 @@ class FloooService {
     }
 
     APIManager.shared.SubsonicEndpointRequest(
-      endpoint: API.SubsonicEndpoint.scrobble, parameters: params, timeout: timeout
+      endpoint: API.SubsonicEndpoint.scrobble, parameters: params
     ) {
       (response: DataResponse<BasicSubsonicResponse, AFError>) in
       switch response.result {
-      case .success(let response):
-        completion(.success(response))
+      case .success(let body):
+        let reply = body.subsonicResponse
+        if reply.status == "ok" {
+          completion(.success(()))
+        } else {
+          completion(.failure(reply.error ?? SubsonicError(code: 0, message: reply.status)))
+        }
       case .failure(let error):
         completion(.failure(error))
       }
     }
   }
-}
 
-extension AFError {
-  var receivedServerResponse: Bool {
-    switch self {
-    case .responseValidationFailed, .responseSerializationFailed:
-      return true
-    default:
-      return false
+  /// Whether a failed scrobble can never succeed and should be dropped instead
+  /// of retried: the song is gone or the server refuses the request itself.
+  /// Offline, timeouts, server errors, rate limits and expired sessions all
+  /// stay queued.
+  func isPermanentScrobbleFailure(_ error: Error) -> Bool {
+    if let subsonicError = error as? SubsonicError {
+      // 10: required parameter missing, 70: requested data not found
+      return subsonicError.code == 10 || subsonicError.code == 70
     }
-  }
-}
-
-extension FloooService {
-  func shouldQueueOfflineScrobble(_ error: Error) -> Bool {
-    guard let afError = error as? AFError else { return true }
-    return !afError.receivedServerResponse
+    guard let status = (error as? AFError)?.responseCode else { return false }
+    return (400..<500).contains(status) && ![401, 403, 408, 429].contains(status)
   }
 }

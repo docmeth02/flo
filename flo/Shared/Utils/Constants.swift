@@ -73,3 +73,9 @@ enum TranscodingSettings {
   static let targetFormat = "mp3"
 }
 
+/// Prints verification traces in debug builds only.
+func debugLog(_ message: @autoclosure () -> String) {
+  #if DEBUG
+    print("[flo-debug] \(message())")
+  #endif
+}
