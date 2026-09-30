@@ -81,7 +81,7 @@ final class ScrobbleQueueManager: ObservableObject {
       return
     }
 
-    guard NetworkMonitor.shared.isOnline, NetworkMonitor.shared.isServerReachable else {
+    guard ConnectivityMonitor.shared.isOnline, ConnectivityMonitor.shared.isServerReachable else {
       scheduleRetry()
       return
     }
@@ -185,12 +185,12 @@ final class ScrobbleQueueManager: ObservableObject {
       [weak self] _ in
       DispatchQueue.main.async {
         guard let self = self else { return }
-        guard NetworkMonitor.shared.isOnline else {
+        guard ConnectivityMonitor.shared.isOnline else {
           self.nextRetryAt = nil
           return
         }
 
-        NetworkMonitor.shared.probeServerReachability()
+        ConnectivityMonitor.shared.probeServerReachability()
         self.flush()
       }
     }
@@ -214,12 +214,12 @@ final class ScrobbleQueueManager: ObservableObject {
   }
 
   @objc private func handleNetworkBecameOnline() {
-    NetworkMonitor.shared.probeServerReachability()
+    ConnectivityMonitor.shared.probeServerReachability()
     flush()
   }
 
   @objc private func handleAppBecameActive() {
-    NetworkMonitor.shared.probeServerReachability()
+    ConnectivityMonitor.shared.probeServerReachability()
     flush()
   }
 }

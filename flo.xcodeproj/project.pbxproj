@@ -56,7 +56,6 @@
 		BB9009B8D9D67F2A01F6A722 /* Playable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4824D222CE8C41D003EAB52 /* Playable.swift */; };
 		BBA7A0BDCD8BAFA9B2088999 /* AlbumViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4289F472C12391300C3A4FD /* AlbumViewModel.swift */; };
 		BD0EE3C15900C43F8F8F05A2 /* NowPlayingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCECEB2E491539A0CCEFF67F /* NowPlayingIndicator.swift */; };
-		BD3D1C826D4DCF07A8043948 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0012F8B0001000000A1 /* NetworkMonitor.swift */; };
 		BE5C5E81B4634769556BAB00 /* WatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A31EF1F3148DA550C9A9567 /* WatchHomeView.swift */; };
 		D25AF44BCEB4F1ECC4EAA971 /* WatchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE281A2946A2E18C84927D8 /* WatchSettingsView.swift */; };
 		D349080D92950A1C67EDADB6 /* TrackRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA601DF6D60F70D262CE557B /* TrackRowView.swift */; };
@@ -111,7 +110,6 @@
 		4A0A3A849C5FEAFB7E57BE5C /* flo watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flo watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4EBE53668B154717D97E0654 /* WatchPlaylistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlaylistDetailView.swift; sourceTree = "<group>"; };
 		5055C3CF1C4E3BB88F96CCCD /* WatchStarredSongsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchStarredSongsView.swift; sourceTree = "<group>"; };
-		5C0FF0012F8B0001000000A1 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrobbleQueueManager.swift; sourceTree = "<group>"; };
 		638B2D1AECAA38268427598A /* WatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
 		64FB5C179BC0B76201835B86 /* WatchContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
@@ -306,7 +304,6 @@
 			isa = PBXGroup;
 			children = (
 				C4F870CD2CEFCC5B00312F8A /* FloooService.swift */,
-				5C0FF0012F8B0001000000A1 /* NetworkMonitor.swift */,
 				5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */,
 				C4875DFF2C149D9000D9BAEB /* AlbumService.swift */,
 				C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */,
@@ -537,7 +534,6 @@
 				5493F47DE4E5039A5F602A32 /* ArtistRadio.swift in Sources */,
 				FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */,
 				4F8E0BD04AC14F52D5C8E033 /* ExplicitStatus.swift in Sources */,
-				BD3D1C826D4DCF07A8043948 /* NetworkMonitor.swift in Sources */,
 				3911EF003135778456337152 /* ScrobbleQueueManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
