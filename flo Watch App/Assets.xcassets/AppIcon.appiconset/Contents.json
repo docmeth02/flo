@@ -2,9 +2,8 @@
   "images" : [
     {
       "filename" : "flo.png",
-      "idiom" : "watch",
-      "platform" : "watchOS",
-      "scale" : "2x",
+      "idiom" : "universal",
+      "platform" : "watchos",
       "size" : "1024x1024"
     }
   ],
