@@ -19,6 +19,10 @@ struct FloWatchApp: App {
     }
 
     StreamCacheManager.shared.reconcile()
+
+    // Deliver scrobbles queued in an earlier session; the outbox otherwise only
+    // wakes up when the next listen fails.
+    _ = ScrobbleQueueManager.shared
   }
 
   var body: some Scene {
