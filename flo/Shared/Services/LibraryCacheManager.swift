@@ -10,6 +10,8 @@ class LibraryCacheManager {
 
   private let fileManager = FileManager.default
   private let cacheDirectory: URL?
+  private let lock = NSLock()
+  private var currentGeneration = 0
 
   private init() {
     self.cacheDirectory =
@@ -21,11 +23,20 @@ class LibraryCacheManager {
     }
   }
 
-  func save<T: Encodable>(_ items: T, forKey key: String) {
-    guard let dir = cacheDirectory else { return }
+  /// Bumped by `clearCache()`. Capture it before a library request and pass it
+  /// to `save`, so a fetch that outlived a logout cannot refill the cache with
+  /// the previous account's library.
+  var generation: Int {
+    lock.withLock { currentGeneration }
+  }
+
+  func save<T: Encodable>(_ items: T, forKey key: String, generation: Int) {
+    guard let dir = cacheDirectory, let data = try? JSONEncoder().encode(items) else { return }
     let file = dir.appendingPathComponent("\(key).json")
-    guard let data = try? JSONEncoder().encode(items) else { return }
-    try? data.write(to: file, options: .atomic)
+    lock.withLock {
+      guard generation == currentGeneration else { return }
+      try? data.write(to: file, options: .atomic)
+    }
   }
 
   func load<T: Decodable>(_ type: T.Type, forKey key: String) -> T? {
@@ -36,8 +47,11 @@ class LibraryCacheManager {
   }
 
   func clearCache() {
-    guard let dir = cacheDirectory, fileManager.fileExists(atPath: dir.path) else { return }
-    try? fileManager.removeItem(at: dir)
-    try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+    lock.withLock {
+      currentGeneration += 1
+      guard let dir = cacheDirectory, fileManager.fileExists(atPath: dir.path) else { return }
+      try? fileManager.removeItem(at: dir)
+      try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+    }
   }
 }

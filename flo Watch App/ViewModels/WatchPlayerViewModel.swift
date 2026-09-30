@@ -41,6 +41,9 @@ class WatchPlayerViewModel: ObservableObject {
 
   private var scrobbleThreshold = 0.5
   private var hasTriggeredCache: Bool = false
+  // Audible playback of the current item; unlike the playhead position,
+  // seeking cannot inflate or erase it.
+  private var secondsListened: Double = 0
   private var playGeneration: Int = 0
 
   var nowPlaying: QueueEntity {
@@ -144,6 +147,7 @@ class WatchPlayerViewModel: ObservableObject {
 
     self.isLocallySaved = false
     self.hasTriggeredCache = false
+    self.secondsListened = 0
 
     StreamCacheManager.shared.cancelAllInFlight()
     StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: self.nowPlaying.id ?? "")
@@ -266,6 +270,12 @@ class WatchPlayerViewModel: ObservableObject {
       }
       self.currentTimeString = timeString(for: currentTime)
 
+      // The observer also fires on seeks and rate changes; only count time
+      // that was actually playing.
+      if (self.player?.rate ?? 0) > 0 {
+        self.secondsListened += 1
+      }
+
       UserDefaultsManager.nowPlayingProgress = self.progress
 
       if !self.hasTriggeredCache && currentTime >= 10.0 && !self.isLiveRadio {
@@ -374,7 +384,7 @@ class WatchPlayerViewModel: ObservableObject {
     commandCenter.nextTrackCommand.isEnabled = true
     commandCenter.nextTrackCommand.addTarget { [weak self] event in
       guard let self = self else { return .commandFailed }
-      DispatchQueue.main.async { self.nextSong() }
+      DispatchQueue.main.async { self.nextSong(userInitiated: true) }
       return .success
     }
 
@@ -626,7 +636,11 @@ class WatchPlayerViewModel: ObservableObject {
     WKInterfaceDevice.current().play(.click)
   }
 
-  func nextSong() {
+  func nextSong(userInitiated: Bool = false) {
+    if userInitiated {
+      logSkipIfAbandoned()
+    }
+
     if self.queue.count == 1 {
       if self.playbackMode == PlaybackMode.defaultPlayback {
         self.autoPlayOrStop()
@@ -656,6 +670,26 @@ class WatchPlayerViewModel: ObservableObject {
 
     UserDefaultsManager.queueActiveIdx = self.activeQueueIdx
     WKInterfaceDevice.current().play(.click)
+  }
+
+  /// Pressing next on a barely heard song is a negative signal for smart
+  /// shuffle. Only early, user-initiated abandonment counts: natural track
+  /// ends, radio, repeat modes that restart the same track and accidental
+  /// starts under five seconds do not.
+  private func logSkipIfAbandoned() {
+    guard self.queue.indices.contains(self.activeQueueIdx), !self.isLiveRadio else { return }
+    guard !self.isLocallySaved else { return }
+
+    let restartsSameTrack =
+      self.playbackMode == PlaybackMode.repeatOnce
+      || (self.queue.count == 1 && self.playbackMode != PlaybackMode.defaultPlayback)
+    guard !restartsSameTrack else { return }
+
+    guard self.totalDuration.isFinite, self.totalDuration > 0,
+      self.secondsListened >= 5, self.progress < 0.3
+    else { return }
+
+    FloooViewModel.shared.logSkip(nowPlaying: self.nowPlaying)
   }
 
   private func autoPlayOrStop() {

@@ -200,6 +200,10 @@ class AuthViewModel: ObservableObject {
 
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.serverURL)
 
+      // The library caches feed smart shuffle; the next account must not
+      // inherit this account's songs, albums or starred list.
+      LibraryCacheManager.shared.clearCache()
+
       user = nil
       isLoggedIn = false
     } catch {

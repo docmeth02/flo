@@ -158,7 +158,7 @@ struct WatchNowPlayingView: View {
           .buttonStyle(.plain)
           .background(Circle().strokeBorder(Color.accentColor, lineWidth: 2))
 
-          Button(action: { playerViewModel.nextSong() }) {
+          Button(action: { playerViewModel.nextSong(userInitiated: true) }) {
             Image(systemName: "forward.fill")
               .font(.system(size: 18, weight: .semibold))
               .frame(width: 40, height: 40)

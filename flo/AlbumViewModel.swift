@@ -125,6 +125,7 @@ class AlbumViewModel: ObservableObject {
       assign(cached)
     }
     if showsLoading { isLoading = true }
+    let cacheGeneration = LibraryCacheManager.shared.generation
     request { result in
       DispatchQueue.main.async {
         if showsLoading { self.isLoading = false }
@@ -133,7 +134,8 @@ class AlbumViewModel: ObservableObject {
           assign(items)
           if !items.isEmpty {
             DispatchQueue.global(qos: .utility).async {
-              LibraryCacheManager.shared.save(items, forKey: cacheKey.rawValue)
+              LibraryCacheManager.shared.save(
+                items, forKey: cacheKey.rawValue, generation: cacheGeneration)
             }
           }
         case .failure(let error):
@@ -151,6 +153,7 @@ class AlbumViewModel: ObservableObject {
   ) async {
     isLoading = true
     defer { isLoading = false }
+    let cacheGeneration = LibraryCacheManager.shared.generation
     await withCheckedContinuation { continuation in
       request { result in
         DispatchQueue.main.async {
@@ -159,7 +162,8 @@ class AlbumViewModel: ObservableObject {
             assign(items)
             if !items.isEmpty {
               DispatchQueue.global(qos: .utility).async {
-                LibraryCacheManager.shared.save(items, forKey: cacheKey.rawValue)
+                LibraryCacheManager.shared.save(
+                items, forKey: cacheKey.rawValue, generation: cacheGeneration)
               }
             }
           case .failure(let error):

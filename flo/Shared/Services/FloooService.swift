@@ -11,7 +11,7 @@ import Foundation
 class FloooService {
   static let shared: FloooService = FloooService()
 
-  func saveListeningHistory(payload: QueueEntity) {
+  func saveListeningHistory(payload: QueueEntity, skipped: Bool = false) {
     let currentSession = HistoryEntity(context: CoreDataManager.shared.viewContext)
 
     currentSession.albumId = payload.albumId
@@ -20,6 +20,7 @@ class FloooService {
     currentSession.albumName = payload.albumName
     currentSession.songId = payload.id
     currentSession.timestamp = Date()
+    currentSession.skipped = skipped
 
     CoreDataManager.shared.saveRecord()
   }
