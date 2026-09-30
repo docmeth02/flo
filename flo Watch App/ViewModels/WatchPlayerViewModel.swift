@@ -53,6 +53,7 @@ class WatchPlayerViewModel: ObservableObject {
   private static let loadTimeout: TimeInterval = 20
   private var loadWatchdog: DispatchWorkItem?
   private var playbackFailureObservation: AnyCancellable?
+  private var needsNowPlayingAnnouncement = false
 
   var nowPlaying: QueueEntity {
     return self.queue[self.activeQueueIdx]
@@ -329,9 +330,23 @@ class WatchPlayerViewModel: ObservableObject {
       artist: self.nowPlaying.artistName ?? "",
       playbackDuration: self.totalDuration)
 
+    self.isStarred = false
+    // A queue restored at launch stays paused; telling the server it is
+    // playing, or asking about it, waits until the user actually plays it.
+    self.needsNowPlayingAnnouncement = true
+    if playAudio {
+      self.announceNowPlaying()
+    }
+  }
+
+  /// Reports the current song as playing to the server and loads its starred
+  /// state, once per song.
+  private func announceNowPlaying() {
+    guard needsNowPlayingAnnouncement, queue.indices.contains(activeQueueIdx) else { return }
+    needsNowPlayingAnnouncement = false
+
     FloooViewModel.shared.setNowPlayingToScrobbleServer(nowPlaying: self.nowPlaying)
 
-    self.isStarred = false
     if let songId = self.nowPlaying.id, !songId.isEmpty {
       AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
         DispatchQueue.main.async {
@@ -528,6 +543,7 @@ class WatchPlayerViewModel: ObservableObject {
         }
 
         self.player?.play()
+        self.announceNowPlaying()
 
         self.isFinished = false
         self.isPlaying = true
