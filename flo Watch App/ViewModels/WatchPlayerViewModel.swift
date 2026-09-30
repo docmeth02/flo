@@ -45,6 +45,7 @@ class WatchPlayerViewModel: ObservableObject {
   // Audible playback of the current item; unlike the playhead position,
   // seeking cannot inflate or erase it.
   private var secondsListened: Double = 0
+  private var lastObservedTime: Double = 0
   private var playGeneration: Int = 0
   private var consecutiveFailures: Int = 0
   private static let maxConsecutiveFailures = 3
@@ -219,6 +220,7 @@ class WatchPlayerViewModel: ObservableObject {
     self.isLocallySaved = false
     self.hasTriggeredCache = false
     self.secondsListened = 0
+    self.lastObservedTime = 0
 
     StreamCacheManager.shared.cancelAllInFlight()
     StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: self.nowPlaying.id ?? "")
@@ -366,11 +368,13 @@ class WatchPlayerViewModel: ObservableObject {
       }
       self.currentTimeString = timeString(for: currentTime)
 
-      // The observer also fires on seeks and rate changes; only count time
-      // that was actually playing.
-      if (self.player?.rate ?? 0) > 0 {
-        self.secondsListened += 1
+      // The observer also fires on seeks and rate changes. Count only small
+      // forward steps while playing; a seek jumps further or backwards.
+      let step = currentTime - self.lastObservedTime
+      if (self.player?.rate ?? 0) > 0, step > 0, step <= 1.5 {
+        self.secondsListened += step
       }
+      self.lastObservedTime = currentTime
 
       UserDefaultsManager.nowPlayingProgress = self.progress
 
