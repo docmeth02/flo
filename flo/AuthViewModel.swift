@@ -11,95 +11,47 @@ import KeychainAccess
 class AuthViewModel: ObservableObject {
   @Published var user: UserAuth?
 
-  @Published var serverUrl: String = "" {
-    didSet {
-      validateURL()
-    }
-  }
-
+  @Published var serverUrl: String = ""
   @Published var username: String = ""
   @Published var password: String = ""
 
   @Published var showAlert: Bool = false
   @Published var alertMessage: String = ""
-  @Published var extraMessage: String = ""
   @Published var experimentalSaveLoginInfo: Bool = false
 
   @Published var isSubmitting: Bool = false
   @Published var isLoggedIn: Bool = false
 
-  // Bumped by every interactive login and logout; a background session
-  // refresh only persists its result while the generation is unchanged.
+  // Bumped by every interactive login and logout; a background re-login only
+  // persists its result while the generation is unchanged.
   private var sessionGeneration: Int = 0
-
-  static let shared = AuthViewModel()
-
-  private func validateURL() {
-    if serverUrl.lowercased().hasPrefix("http://") {
-      extraMessage =
-        "http:// is only supported within private IP ranges: 192.168.0.0/16, 10.0.0.0/8, and 172.16.0.0/12 — learn more at https://dub.sh/flo-ats"
-    } else {
-      extraMessage = ""
-    }
-  }
+  private var isReauthenticating = false
+  // Set while the session could not be renewed for lack of a connection, so
+  // the next time the network comes back triggers another attempt.
+  private var needsReauthentication = false
 
   init() {
     NotificationCenter.default.addObserver(
       self, selector: #selector(handleSessionExpired(_:)), name: .sessionExpired, object: nil)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(handleNetworkBecameOnline), name: .networkBecameOnline,
+      object: nil)
 
-    do {
-      if let jsonString = try KeychainManager.getAuthCreds(),
-        let jsonData = jsonString.data(using: .utf8)
-      {
-        let data: UserAuth = try JSONDecoder().decode(UserAuth.self, from: jsonData)
+    if let data = Self.storedAuth() {
+      // Trust cached creds immediately; a cold launch must never block on a
+      // login that can only time out while offline. AuthService already loaded
+      // them from the Keychain. Navidrome tokens expire, so renew the session
+      // once the first connectivity verdict is online, or later when the
+      // network comes back.
+      user = UserAuth(
+        id: data.id, username: data.username, name: data.name, isAdmin: data.isAdmin,
+        lastFMApiKey: data.lastFMApiKey)
+      isLoggedIn = true
+      needsReauthentication = true
 
-        serverUrl = UserDefaultsManager.serverBaseURL
-        username = data.username
-
-        if UserDefaultsManager.saveLoginInfo {
-          do {
-            password = try KeychainManager.getAuthPassword() ?? ""
-          } catch {
-            print("Error loading password from Keychain: \(error)")
-          }
-
-          // Trust cached creds immediately — a cold launch must never block on
-          // a login that can only time out while offline. Refresh the session
-          // once the first real connectivity verdict lands; a stale session
-          // surfaces as a 401 on the first call after that.
-          // AuthService.shared reads creds from Keychain on first access — no setCreds needed.
-          self.user = UserAuth(
-            id: data.id, username: data.username, name: data.name, isAdmin: data.isAdmin,
-            lastFMApiKey: data.lastFMApiKey)
-          self.isLoggedIn = true
-
-          ConnectivityMonitor.shared.onFirstVerdict { [weak self] online in
-            if online { self?.refreshSession() }
-          }
-        } else {
-          user = UserAuth(
-            id: data.id, username: data.username, name: data.name, isAdmin: data.isAdmin,
-            lastFMApiKey: data.lastFMApiKey
-          )
-          AuthService.shared.setCreds(data)
-          isLoggedIn = true
-          let verificationSession = AuthService.shared.sessionSnapshot()
-
-          // Without a saved password the session cannot be refreshed, so a
-          // stale token must log out instead of leaving a ghost session.
-          AuthService.shared.verifyNDSession(serverUrl: serverUrl, token: data.token) {
-            result in
-            if case .invalid = result {
-              DispatchQueue.main.async {
-                guard AuthService.shared.isCurrentSession(verificationSession) else { return }
-                self.logout()
-              }
-            }
-          }
-        }
+      ConnectivityMonitor.shared.onFirstVerdict { [weak self] online in
+        if online { self?.reauthenticate() }
       }
-    } catch {
-      print("Error loading data from Keychain: \(error)")
     }
 
     #if DEBUG
@@ -107,27 +59,50 @@ class AuthViewModel: ObservableObject {
     #endif
   }
 
-  // Non-interactive session refresh after the optimistic cached login: no
-  // spinner, no alerts, no form-field resets. Any failure keeps the cached
-  // session — a transport error is indistinguishable from a rejected
-  // credential here (ErrorHandler maps URLErrors to .server too), and stale
-  // credentials surface as 401s on real calls where the user can act.
-  private func refreshSession() {
-    // A delayed connectivity verdict can arrive after a logout, when the form
-    // fields may already hold half-typed credentials for another account.
-    guard isLoggedIn else { return }
+  private static func storedAuth() -> UserAuth? {
+    guard let json = try? KeychainManager.getAuthCreds(), let data = json.data(using: .utf8)
+    else { return nil }
+    return try? JSONDecoder().decode(UserAuth.self, from: data)
+  }
+
+  private static func storedPassword() -> String? {
+    guard let password = try? KeychainManager.getAuthPassword(), !password.isEmpty else {
+      return nil
+    }
+    return password
+  }
+
+  /// Silent re-login with the stored server, username and saved password. Only
+  /// a rejected password logs out; any other failure keeps the session and
+  /// retries once the network comes back.
+  private func reauthenticate() {
+    let serverUrl = UserDefaultsManager.serverBaseURL
+    guard isLoggedIn, !isReauthenticating, !serverUrl.isEmpty,
+      let stored = Self.storedAuth(), let password = Self.storedPassword()
+    else { return }
+
+    isReauthenticating = true
     let generation = sessionGeneration
 
-    AuthService.shared.login(serverUrl: serverUrl, username: username, password: password) {
+    AuthService.shared.login(serverUrl: serverUrl, username: stored.username, password: password) {
       [weak self] result in
       DispatchQueue.main.async {
-        // The generation check drops a refresh that outlived its session —
-        // a logout or an interactive login into another account must never
-        // be overwritten by this stale completion.
-        guard let self = self, self.isLoggedIn, self.sessionGeneration == generation,
-          case .success(let data) = result
-        else { return }
-        self.persistAuthData(data)
+        guard let self = self else { return }
+        self.isReauthenticating = false
+
+        // A logout or an interactive login into another account while this was
+        // in flight must never be overwritten by the stale completion.
+        guard self.isLoggedIn, self.sessionGeneration == generation else { return }
+
+        switch result {
+        case .success(let data):
+          self.needsReauthentication = false
+          self.persistAuthData(data, serverUrl: serverUrl)
+        case .failure(.invalidCredentials):
+          self.logout()
+        case .failure:
+          self.needsReauthentication = true
+        }
       }
     }
   }
@@ -136,7 +111,18 @@ class AuthViewModel: ObservableObject {
     guard let requestSession = notification.object as? AuthSessionSnapshot,
       AuthService.shared.isCurrentSession(requestSession)
     else { return }
-    logout()
+
+    if Self.storedPassword() != nil {
+      reauthenticate()
+    } else {
+      logout()
+    }
+  }
+
+  @objc private func handleNetworkBecameOnline() {
+    if needsReauthentication {
+      reauthenticate()
+    }
   }
 
   func login() {
@@ -151,7 +137,8 @@ class AuthViewModel: ObservableObject {
         // whole success path runs on the main actor regardless of which queue
         // Alamofire delivered the response on.
         DispatchQueue.main.async {
-          self.persistAuthData(data)
+          self.persistAuthData(data, serverUrl: self.serverUrl)
+          self.needsReauthentication = false
 
           if self.experimentalSaveLoginInfo {
             do {
@@ -176,7 +163,7 @@ class AuthViewModel: ObservableObject {
           self.isSubmitting = false
 
           switch error {
-          case .server(let message):
+          case .server(let message), .invalidCredentials(let message):
             self.alertMessage = message
 
           case .sessionExpired:
@@ -210,6 +197,7 @@ class AuthViewModel: ObservableObject {
 
       user = nil
       isLoggedIn = false
+      needsReauthentication = false
     } catch {
       print("error>>>>> \(error)")
     }
@@ -226,7 +214,7 @@ class AuthViewModel: ObservableObject {
     }
   }
 
-  func persistAuthData(_ data: UserAuth) {
+  func persistAuthData(_ data: UserAuth, serverUrl: String) {
     do {
       let jsonData = try JSONEncoder().encode(data)
       let jsonString = String(data: jsonData, encoding: .utf8)!
@@ -253,8 +241,9 @@ class AuthViewModel: ObservableObject {
 
 #if DEBUG
   // Simulator verification only. FLO_DEBUG_LOGIN="url|user|password" signs in
-  // when nobody is logged in; FLO_DEBUG_EXPIRE_TOKEN=1 swaps the Navidrome
-  // token for an invalid one so the expired-session path can be exercised.
+  // when nobody is logged in; FLO_DEBUG_EXPIRE_TOKEN=1 expires the Navidrome
+  // token ten seconds after launch, provokes a 401 and logs whether the
+  // session recovered.
   extension AuthViewModel {
     fileprivate func applyDebugLaunchOptions() {
       let env = ProcessInfo.processInfo.environment
@@ -268,7 +257,16 @@ class AuthViewModel: ObservableObject {
         experimentalSaveLoginInfo = true
         login()
       } else if isLoggedIn, env["FLO_DEBUG_EXPIRE_TOKEN"] == "1" {
-        AuthService.shared.invalidateNDTokenForTesting()
+        // After the launch-time re-login has settled, expire the token and
+        // make one authenticated request to provoke the 401.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+          AuthService.shared.invalidateNDTokenForTesting()
+          AlbumService.shared.isStarred(songId: "debug") { _ in }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in
+          let renewed = AuthService.shared.getCreds(key: "NDToken") != "expired"
+          print("[flo-debug] loggedIn=\(self?.isLoggedIn ?? false) tokenRenewed=\(renewed)")
+        }
       }
     }
   }

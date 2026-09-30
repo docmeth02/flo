@@ -28,6 +28,8 @@ enum AuthResult<T> {
 
 enum AuthError: Error, Equatable {
   case server(message: String)
+  // The server rejected the username or password.
+  case invalidCredentials(message: String)
   case sessionExpired
   case unknown
 }

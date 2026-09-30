@@ -8,12 +8,6 @@
 import Alamofire
 import Foundation
 
-enum SessionCheckResult {
-  case valid
-  case invalid(String)
-  case unreachable
-}
-
 struct AuthSessionSnapshot: Equatable {
   let generation: UInt64
   let ndToken: String
@@ -113,39 +107,21 @@ class AuthService {
         completion(.success(authResponse))
       case .failure(let afError):
         ErrorHandler.handleFailure(afError, response: response) { result in
-          completion(AuthResult(result: result))
+          let authResult = AuthResult(result: result)
+
+          // A 401/403 from the login endpoint itself is a rejected password;
+          // callers must be able to tell it apart from an unreachable server.
+          guard ErrorHandler.isSessionExpired(error: afError), case .failure(let error) = authResult
+          else {
+            completion(authResult)
+            return
+          }
+
+          var message = "Invalid username or password."
+          if case .server(let serverMessage) = error { message = serverMessage }
+          completion(.failure(.invalidCredentials(message: message)))
         }
       }
     }
-  }
-
-  /// Lightweight Navidrome JWT liveness check: hits `GET /api/album?_start=0&_end=1`
-  /// with the bearer token and maps 401/403 to .invalid so the caller can log out.
-  func verifyNDSession(
-    serverUrl: String, token: String,
-    completion: @escaping (SessionCheckResult) -> Void
-  ) {
-    guard !serverUrl.isEmpty, !token.isEmpty,
-      let url = URL(string: "\(serverUrl)/api/album?_start=0&_end=1")
-    else {
-      completion(.unreachable)
-      return
-    }
-    var request = URLRequest(url: url)
-    request.setValue("Bearer \(token)", forHTTPHeaderField: API.NDAuthHeader)
-    request.timeoutInterval = 10
-    URLSession.shared.dataTask(with: request) { _, response, _ in
-      guard let http = response as? HTTPURLResponse else {
-        completion(.unreachable)
-        return
-      }
-      if http.statusCode == 401 || http.statusCode == 403 {
-        completion(.invalid("Session expired"))
-      } else if (200..<300).contains(http.statusCode) {
-        completion(.valid)
-      } else {
-        completion(.unreachable)
-      }
-    }.resume()
   }
 }
