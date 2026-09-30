@@ -137,6 +137,11 @@ class AuthViewModel: ObservableObject {
     sessionGeneration += 1
     isSubmitting = true
 
+    // Watch text input often adds a trailing space, and a trailing slash
+    // would double up with every endpoint path.
+    serverUrl = serverUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+    while serverUrl.hasSuffix("/") { serverUrl.removeLast() }
+
     AuthService.shared.login(serverUrl: serverUrl, username: username, password: password) {
       result in
       switch result {
