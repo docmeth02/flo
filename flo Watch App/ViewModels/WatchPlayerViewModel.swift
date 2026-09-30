@@ -37,6 +37,7 @@ class WatchPlayerViewModel: ObservableObject {
   private var playerItemObservation: AnyCancellable?
   private var playbackEndObservation: AnyCancellable?
   private var interruptionObservation = Set<AnyCancellable>()
+  private var logoutObservation: AnyCancellable?
   private var unshuffledQueue: [QueueEntity] = []
 
   private var scrobbleThreshold = 0.5
@@ -58,6 +59,10 @@ class WatchPlayerViewModel: ObservableObject {
   init() {
     self.player = AVPlayer()
     self.observeInterruptionNotifications()
+
+    logoutObservation = NotificationCenter.default.publisher(for: .didLogout)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in self?.clearForLogout() }
 
     let lastPlayData = PlaybackService.shared.getQueue()
     let queueActiveIdx = UserDefaultsManager.queueActiveIdx
@@ -116,6 +121,34 @@ class WatchPlayerViewModel: ObservableObject {
     @unknown default:
       break
     }
+  }
+
+  /// Stops playback and forgets the queue; its songs belong to the account
+  /// that just logged out.
+  private func clearForLogout() {
+    playGeneration += 1
+    player?.pause()
+    player?.replaceCurrentItem(with: nil)
+    if let timeObserverToken = timeObserverToken {
+      player?.removeTimeObserver(timeObserverToken)
+      self.timeObserverToken = nil
+    }
+    playerItemObservation?.cancel()
+    playbackEndObservation?.cancel()
+    playbackEndObservation = nil
+    playerItem = nil
+
+    queue = []
+    activeQueueIdx = 0
+    unshuffledQueue = []
+    isShuffling = false
+    isPlaying = false
+    progress = 0
+
+    PlaybackService.shared.clearQueue()
+    UserDefaultsManager.removeObject(key: UserDefaultsKeys.queueActiveIdx)
+    UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
+    MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
   }
 
   func addToQueue(idx: Int, item: [QueueEntity], playAudio: Bool = true) {

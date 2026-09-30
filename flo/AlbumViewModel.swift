@@ -26,6 +26,19 @@ class AlbumViewModel: ObservableObject {
   init(album: Album = Album(), albums: [Album] = []) {
     self.album = album
     self.albums = albums
+
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(handleLogout), name: .didLogout, object: nil)
+  }
+
+  /// The next account must not see this account's library.
+  @objc private func handleLogout() {
+    artists = []
+    playlists = []
+    songs = []
+    artistAlbums = []
+    albums = []
+    starredSongs = []
   }
 
   func setActiveAlbum(album: Album) {

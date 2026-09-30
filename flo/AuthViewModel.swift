@@ -192,12 +192,16 @@ class AuthViewModel: ObservableObject {
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.serverURL)
 
       // The library caches feed smart shuffle; the next account must not
-      // inherit this account's songs, albums or starred list.
+      // inherit this account's songs, albums or starred list. Queued scrobbles
+      // would be submitted with the next account's credentials.
       LibraryCacheManager.shared.clearCache()
+      ScrobbleQueueManager.shared.clearAll()
 
       user = nil
       isLoggedIn = false
       needsReauthentication = false
+
+      NotificationCenter.default.post(name: .didLogout, object: nil)
     } catch {
       print("error>>>>> \(error)")
     }
@@ -243,7 +247,7 @@ class AuthViewModel: ObservableObject {
   // Simulator verification only. FLO_DEBUG_LOGIN="url|user|password" signs in
   // when nobody is logged in; FLO_DEBUG_EXPIRE_TOKEN=1 expires the Navidrome
   // token ten seconds after launch, provokes a 401 and logs whether the
-  // session recovered.
+  // session recovered; FLO_DEBUG_LOGOUT_AFTER=<seconds> logs out.
   extension AuthViewModel {
     fileprivate func applyDebugLaunchOptions() {
       let env = ProcessInfo.processInfo.environment
@@ -256,6 +260,11 @@ class AuthViewModel: ObservableObject {
         password = parts[2]
         experimentalSaveLoginInfo = true
         login()
+      } else if isLoggedIn, let delay = env["FLO_DEBUG_LOGOUT_AFTER"].flatMap(Double.init) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+          self?.logout()
+          debugLog("logged out")
+        }
       } else if isLoggedIn, env["FLO_DEBUG_EXPIRE_TOKEN"] == "1" {
         // After the launch-time re-login has settled, expire the token and
         // make one authenticated request to provoke the 401.

@@ -173,4 +173,5 @@ extension APIManager {
 
 extension Notification.Name {
   static let sessionExpired = Notification.Name("flo.sessionExpired")
+  static let didLogout = Notification.Name("flo.didLogout")
 }
