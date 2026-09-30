@@ -283,32 +283,32 @@ class AlbumViewModel: ObservableObject {
 
     let songs = targetIdx == -1 ? playlistToDownload.songs : [playlistToDownload.songs[targetIdx]]
 
-    Task(priority: .background) {
-      AlbumService.shared.savePlaylist(playlistToDownload)
+    // Core Data work stays on the main thread with the view context; only the
+    // cover downloads below go to a background queue.
+    AlbumService.shared.savePlaylist(playlistToDownload)
 
-      // The playlist's own cover lives next to its tracks so the Downloads tab
-      // can pick it up; failure must not affect the song downloads.
-      AlbumService.shared.downloadPlaylistCover(
-        playlistId: playlistToDownload.id, playlistName: playlistToDownload.name,
-        coverArtId: playlistToDownload.coverArtId
-      ) { result in
-        if case .failure(let error) = result {
-          print("Failed to save playlist cover: \(error.localizedDescription)")
-        }
+    // The playlist's own cover lives next to its tracks so the Downloads tab
+    // can pick it up; failure must not affect the song downloads.
+    AlbumService.shared.downloadPlaylistCover(
+      playlistId: playlistToDownload.id, playlistName: playlistToDownload.name,
+      coverArtId: playlistToDownload.coverArtId
+    ) { result in
+      if case .failure(let error) = result {
+        print("Failed to save playlist cover: \(error.localizedDescription)")
       }
+    }
 
-      songs.forEach { song in
-        downloadGroup.enter()
+    songs.forEach { song in
+      downloadGroup.enter()
 
-        DispatchQueue.global(qos: .background).async {
-          downloadSemaphore.wait()
+      DispatchQueue.global(qos: .background).async {
+        downloadSemaphore.wait()
 
-          AlbumService.shared.downloadAlbumCoverForPlaylist(
-            albumId: song.albumId, playlistName: playlistToDownload.name, trackId: song.mediaFileId
-          ) { result in
-            downloadSemaphore.signal()
-            downloadGroup.leave()
-          }
+        AlbumService.shared.downloadAlbumCoverForPlaylist(
+          albumId: song.albumId, playlistName: playlistToDownload.name, trackId: song.mediaFileId
+        ) { result in
+          downloadSemaphore.signal()
+          downloadGroup.leave()
         }
       }
     }
