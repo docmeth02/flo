@@ -37,6 +37,14 @@ class AuthViewModel: ObservableObject {
       self, selector: #selector(handleNetworkBecameOnline), name: .networkBecameOnline,
       object: nil)
 
+    // Keychain items outlive an uninstall while the stored server URL does
+    // not; credentials without a server are unusable and would leave the app
+    // "logged in" with every request going nowhere.
+    if Self.storedAuth() != nil, UserDefaultsManager.serverBaseURL.isEmpty {
+      try? KeychainManager.removeAuthCreds()
+      try? KeychainManager.removeAuthPassword()
+    }
+
     if let data = Self.storedAuth() {
       // Trust cached creds immediately; a cold launch must never block on a
       // login that can only time out while offline. AuthService already loaded
