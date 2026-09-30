@@ -149,64 +149,67 @@ class DownloadViewModel: ObservableObject {
 
     self.updateItemStatus(itemId: item.id, status: DownloadStatus.downloading)
 
-    Task(priority: .background) {
-      do {
-        let downloadRequest = AlbumService.shared.downloadNew(
-          artistName: item.isPlaylist ? "Various Artists" : item.song.artist,
-          albumName: item.album,
-          id: item.id,
-          trackNumber: item.song.trackNumber.description,
-          title: item.song.title,
-          suffix: item.song.suffix,
-          progressUpdate: progressUpdate
-        ) { [weak self] result in
-          Task { @MainActor in
-            switch result {
-            case .success(let fileURL):
+    // The request is created and registered on the main thread before any
+    // completion can run, so a fast failure never leaves a stale entry.
+    activeDownloads[item.id] = AlbumService.shared.downloadNew(
+      artistName: item.isPlaylist ? "Various Artists" : item.song.artist,
+      albumName: item.album,
+      id: item.id,
+      trackNumber: item.song.trackNumber.description,
+      title: item.song.title,
+      suffix: item.song.suffix,
+      progressUpdate: progressUpdate
+    ) { [weak self] result in
+      Task { @MainActor in
+        guard let self = self else { return }
+        // Every outcome frees the slot; failed items used to keep theirs,
+        // and once all slots held failures no download could start.
+        defer { self.finishDownload(item.id) }
 
-              if fileURL != nil {
-                AlbumService.shared.saveDownload(
-                  albumId: item.albumId,
-                  albumName: item.album,
-                  song: item.song,
-                  status: "Downloaded",
-                  isFromPlaylist: item.isPlaylist,
-                  playlistIndex: item.playlistIndex
-                )
-                self?.updateItemStatus(itemId: item.id, status: DownloadStatus.completed)
-                self?.currentDownloads.remove(item.id)
-                self?.processQueue()
-                self?.downloadWatcher = true
+        switch result {
+        case .success(.some):
+          AlbumService.shared.saveDownload(
+            albumId: item.albumId,
+            albumName: item.album,
+            song: item.song,
+            status: "Downloaded",
+            isFromPlaylist: item.isPlaylist,
+            playlistIndex: item.playlistIndex
+          )
+          self.updateItemStatus(itemId: item.id, status: DownloadStatus.completed)
+          self.downloadWatcher = true
 
-                if let index = self?.downloadedTrackCount.firstIndex(where: {
-                  $0.name == item.album && $0.total == 1
-                }) {
-                  self?.downloadedTrackCount.remove(at: index)
-                }
-              }
-
-            case .failure(let error):
-              if let afError = error.asAFError, case .explicitlyCancelled = afError {
-                self?.updateItemStatus(itemId: item.id, status: .cancelled)
-
-                if let index = self?.downloadedTrackCount.firstIndex(where: {
-                  $0.name == item.album && $0.total == 1
-                }) {
-                  self?.downloadedTrackCount[index].elapsed = 0
-                }
-              } else {
-                print(error)
-                self?.updateItemStatus(itemId: item.id, status: .failed)
-              }
-            }
+          if let index = self.downloadedTrackCount.firstIndex(where: {
+            $0.name == item.album && $0.total == 1
+          }) {
+            self.downloadedTrackCount.remove(at: index)
           }
-        }
 
-        await MainActor.run {
-          activeDownloads[item.id] = downloadRequest
+        case .success(.none):
+          self.updateItemStatus(itemId: item.id, status: .failed)
+
+        case .failure(let error):
+          if let afError = error.asAFError, case .explicitlyCancelled = afError {
+            self.updateItemStatus(itemId: item.id, status: .cancelled)
+
+            if let index = self.downloadedTrackCount.firstIndex(where: {
+              $0.name == item.album && $0.total == 1
+            }) {
+              self.downloadedTrackCount[index].elapsed = 0
+            }
+          } else {
+            print(error)
+            self.updateItemStatus(itemId: item.id, status: .failed)
+          }
         }
       }
     }
+  }
+
+  private func finishDownload(_ itemId: String) {
+    currentDownloads.remove(itemId)
+    activeDownloads.removeValue(forKey: itemId)
+    processQueue()
   }
 
   func cancelCurrentAlbumDownload(albumName: String) {
