@@ -154,16 +154,7 @@ class CoreDataManager: ObservableObject {
   }
 
   func deleteRecords<T: NSManagedObject>(entity: T.Type) {
-    let request: NSFetchRequest<NSFetchRequestResult> = NSFetchRequest<NSFetchRequestResult>(
-      entityName: String(describing: T.self))
-    let deleteRequest = NSBatchDeleteRequest(fetchRequest: request)
-
-    do {
-      try self.viewContext.execute(deleteRequest)
-      try self.viewContext.save()
-    } catch {
-      print("Failed to delete records: \(error.localizedDescription)")
-    }
+    batchDelete(entityName: String(describing: T.self))
   }
 
   func deleteRecordByKey<T: NSManagedObject, V>(
@@ -183,41 +174,34 @@ class CoreDataManager: ObservableObject {
       predicate = NSPredicate(format: "%K == NULL", keyPathString)
     }
 
-    let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: String(describing: T.self))
-    fetchRequest.predicate = predicate
-
-    let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-
-    do {
-      try self.viewContext.execute(deleteRequest)
-      try self.viewContext.save()
-    } catch {
-      print("Failed to delete records: \(error.localizedDescription)")
-    }
+    batchDelete(entityName: String(describing: T.self), predicate: predicate)
   }
 
   /// Deletes the records of downloaded songs and collections. The play queue
   /// and the stream cache have their own lifecycles and stay untouched.
   func clearDownloads() {
-    let entities = ["SongEntity", "PlaylistEntity"]
+    batchDelete(entityName: "SongEntity")
+    batchDelete(entityName: "PlaylistEntity")
+  }
 
-    for entity in entities {
-      let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: entity)
-      let batchDeleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+  /// Batch-deletes the entity's records matching `predicate` (all when nil)
+  /// and merges the deletions into the view context, so objects it still
+  /// holds become deleted objects instead of stale ones pointing at missing
+  /// rows.
+  func batchDelete(entityName: String, predicate: NSPredicate? = nil) {
+    let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: entityName)
+    fetchRequest.predicate = predicate
 
-      do {
-        try self.viewContext.execute(batchDeleteRequest)
-
-        print("Successfully deleted all records for \(entity).")
-      } catch {
-        print("Failed to delete records for \(entity): \(error.localizedDescription)")
-      }
-    }
+    let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+    deleteRequest.resultType = .resultTypeObjectIDs
 
     do {
-      try self.viewContext.save()
+      let result = try viewContext.execute(deleteRequest) as? NSBatchDeleteResult
+      let deletedIDs = result?.result as? [NSManagedObjectID] ?? []
+      NSManagedObjectContext.mergeChanges(
+        fromRemoteContextSave: [NSDeletedObjectsKey: deletedIDs], into: [viewContext])
     } catch {
-      print("Failed to save context: \(error.localizedDescription)")
+      print("Failed to delete \(entityName) records: \(error.localizedDescription)")
     }
   }
 }

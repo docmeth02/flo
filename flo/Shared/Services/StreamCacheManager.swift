@@ -278,10 +278,7 @@ class StreamCacheManager {
   // CoreDataManager's lazy container into the closure form in Release builds.
   @inline(never)
   private func deleteAllCacheRecords() {
-    let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CacheEntity")
-    let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-    _ = try? CoreDataManager.shared.viewContext.execute(deleteRequest)
-    try? CoreDataManager.shared.viewContext.save()
+    CoreDataManager.shared.batchDelete(entityName: "CacheEntity")
   }
 
   func calculateCacheSize() async -> Int64 {
