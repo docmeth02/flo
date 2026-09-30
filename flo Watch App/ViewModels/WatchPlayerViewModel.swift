@@ -46,6 +46,12 @@ class WatchPlayerViewModel: ObservableObject {
   // seeking cannot inflate or erase it.
   private var secondsListened: Double = 0
   private var playGeneration: Int = 0
+  private var consecutiveFailures: Int = 0
+  private static let maxConsecutiveFailures = 3
+  // Long enough for a slow cellular start, short enough not to feel stuck.
+  private static let loadTimeout: TimeInterval = 20
+  private var loadWatchdog: DispatchWorkItem?
+  private var playbackFailureObservation: AnyCancellable?
 
   var nowPlaying: QueueEntity {
     return self.queue[self.activeQueueIdx]
@@ -123,6 +129,27 @@ class WatchPlayerViewModel: ObservableObject {
     }
   }
 
+  /// A failed stream (deleted file, transcoder error, corrupt cache) never
+  /// reaches its end, so nothing would advance and playback would sit silent.
+  /// Skip ahead after a moment, but stop after a few failures in a row so an
+  /// unreachable server does not burn through the whole queue.
+  private func skipFailedTrack(trackId: String?) {
+    loadWatchdog?.cancel()
+    guard queue.indices.contains(activeQueueIdx), nowPlaying.id == trackId, !isLiveRadio else {
+      return
+    }
+    consecutiveFailures += 1
+    debugLog("stream failed: \(trackId ?? "") (\(consecutiveFailures) in a row)")
+    guard consecutiveFailures <= Self.maxConsecutiveFailures else { return }
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+      guard let self = self, self.queue.indices.contains(self.activeQueueIdx),
+        self.nowPlaying.id == trackId
+      else { return }
+      self.nextSong()
+    }
+  }
+
   /// Stops playback and forgets the queue; its songs belong to the account
   /// that just logged out.
   private func clearForLogout() {
@@ -136,6 +163,8 @@ class WatchPlayerViewModel: ObservableObject {
     playerItemObservation?.cancel()
     playbackEndObservation?.cancel()
     playbackEndObservation = nil
+    playbackFailureObservation = nil
+    loadWatchdog?.cancel()
     playerItem = nil
 
     queue = []
@@ -155,6 +184,7 @@ class WatchPlayerViewModel: ObservableObject {
     // A new queue starts unshuffled; the saved order belongs to the old one.
     self.isShuffling = false
     self.unshuffledQueue = []
+    self.consecutiveFailures = 0
     self.activeQueueIdx = idx
     self.queue = item
     self.setNowPlaying(playAudio: playAudio)
@@ -230,6 +260,8 @@ class WatchPlayerViewModel: ObservableObject {
         guard let self = self else { return }
         switch status {
         case .readyToPlay:
+          self.consecutiveFailures = 0
+          self.loadWatchdog?.cancel()
           DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             guard self.queue.indices.contains(self.activeQueueIdx),
                   self.nowPlaying.id == trackId else { return }
@@ -239,12 +271,35 @@ class WatchPlayerViewModel: ObservableObject {
         case .failed:
           self.isMediaLoading = false
           self.isMediaFailed = true
+          self.skipFailedTrack(trackId: trackId)
         case .unknown:
           self.isMediaLoading = false
         @unknown default:
           self.isMediaLoading = true
         }
       }
+
+    // A server that never answers leaves the item loading forever without
+    // reporting .failed, and a stream can also break mid-song; both count as
+    // failures so playback moves on instead of sitting silent.
+    self.loadWatchdog?.cancel()
+    if playAudio {
+      let watchdog = DispatchWorkItem { [weak self] in
+        // A user who paused while the track was loading must not be pulled
+        // into the next song.
+        guard let self = self, self.isPlaying, self.playerItem?.status != .readyToPlay else {
+          return
+        }
+        self.player?.pause()
+        self.skipFailedTrack(trackId: trackId)
+      }
+      self.loadWatchdog = watchdog
+      DispatchQueue.main.asyncAfter(deadline: .now() + Self.loadTimeout, execute: watchdog)
+    }
+    self.playbackFailureObservation = NotificationCenter.default
+      .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: self.playerItem)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in self?.skipFailedTrack(trackId: trackId) }
 
     // Fallback advance for items whose reported duration is off (VBR, missing
     // metadata): if the periodic check misses the end, the player item itself
@@ -568,6 +623,8 @@ class WatchPlayerViewModel: ObservableObject {
     // radio queue — live streams have no track end.
     self.playbackEndObservation?.cancel()
     self.playbackEndObservation = nil
+    self.playbackFailureObservation = nil
+    self.loadWatchdog?.cancel()
 
     self.playerItem = AVPlayerItem(url: radioUrl)
     self.player?.replaceCurrentItem(with: self.playerItem)
@@ -845,8 +902,9 @@ class WatchPlayerViewModel: ObservableObject {
 
 #if DEBUG
   // Simulator verification only. FLO_DEBUG_PLAY_SOMETHING=1 starts a smart mix
-  // a few seconds after launch; FLO_DEBUG_SEEK=<0...1> then seeks the first
-  // track to that position; the queue state is logged along the way.
+  // a few seconds after launch; FLO_DEBUG_BROKEN_FIRST=1 puts an unknown song
+  // first; FLO_DEBUG_SEEK=<0...1> then seeks the first track to that
+  // position; the queue state is logged along the way.
   extension WatchPlayerViewModel {
     fileprivate func runDebugLaunchActions() {
       let env = ProcessInfo.processInfo.environment
@@ -854,8 +912,17 @@ class WatchPlayerViewModel: ObservableObject {
 
       DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
         Task { @MainActor in
-          let songs = await SmartPlaybackService.shared.generateMix(count: 15)
+          var songs = await SmartPlaybackService.shared.generateMix(count: 15)
           debugLog("mix generated: \(songs.count) songs")
+          if env["FLO_DEBUG_BROKEN_FIRST"] == "1", let first = songs.first {
+            // A song id the server does not know, to exercise failed streams.
+            let broken = Song(
+              id: "broken-\(first.id)", title: "Broken", albumId: first.albumId,
+              albumName: first.albumName, artist: first.artist, trackNumber: 1, discNumber: 1,
+              bitRate: 0, sampleRate: 0, suffix: first.suffix, duration: first.duration,
+              mediaFileId: "broken-\(first.id)")
+            songs.insert(broken, at: 0)
+          }
           let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs)
           self.playItem(item: mix, isFromLocal: false)
 
