@@ -81,9 +81,8 @@ class AlbumViewModel: ObservableObject {
             !self.album.songs.contains(where: { $0.id == song.id })
           }
 
-          if id == self.album.id {
-            self.album.songs.append(contentsOf: remoteSongs)
-          }
+          guard id == self.album.id else { return }
+          self.album.songs.append(contentsOf: remoteSongs)
 
           self.album.songs.sort { (lhs, rhs) in
             if lhs.discNumber == rhs.discNumber {
@@ -109,8 +108,11 @@ class AlbumViewModel: ObservableObject {
         switch result {
         case .success(let remoteSongs):
           let merged = Self.mergePlaylistSongs(local: localSongs, remote: remoteSongs)
-          self.album.songs = merged
           AlbumService.shared.updatePlaylistPositions(playlistId: id, songs: merged)
+          // A late response for a playlist the user already left must not
+          // replace the tracks of the one now shown.
+          guard self.album.id == id else { return }
+          self.album.songs = merged
 
         case .failure(let error):
           self.error = error
@@ -362,8 +364,9 @@ class AlbumViewModel: ObservableObject {
         switch result {
         case .success(let remoteSongs):
           let merged = Self.mergePlaylistSongs(local: localSongs, remote: remoteSongs)
-          self.playlist.songs = merged
           AlbumService.shared.updatePlaylistPositions(playlistId: id, songs: merged)
+          guard self.playlist.id == id else { return }
+          self.playlist.songs = merged
 
         case .failure(let error):
           self.error = error
