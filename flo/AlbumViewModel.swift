@@ -310,7 +310,7 @@ class AlbumViewModel: ObservableObject {
 
   func removeDownloadedAlbum(album: Album) {
     AlbumService.shared.removeDownloadedCollection(
-      id: album.id, name: album.name, legacyDirectory: "Media/\(album.artist)/\(album.name)"
+      id: album.id, legacyDirectory: "Media/\(album.artist)/\(album.name)"
     ) { result in
       DispatchQueue.main.async {
         switch result {
@@ -325,8 +325,7 @@ class AlbumViewModel: ObservableObject {
 
   func removeDownloadedPlaylist(playlist: Playlist) {
     AlbumService.shared.removeDownloadedCollection(
-      id: playlist.id, name: playlist.name,
-      legacyDirectory: "Media/Various Artists/\(playlist.name)"
+      id: playlist.id, legacyDirectory: "Media/Various Artists/\(playlist.name)"
     ) { result in
       DispatchQueue.main.async {
         switch result {

@@ -112,6 +112,7 @@
 		5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrobbleQueueManager.swift; sourceTree = "<group>"; };
 		638B2D1AECAA38268427598A /* WatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
 		64FB5C179BC0B76201835B86 /* WatchContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
+		664CAB98EC12ABB56EB036FA /* flo 3.xcdatamodel */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcdatamodel; path = "flo 3.xcdatamodel"; sourceTree = "<group>"; };
 		66B14F36AC2C06239FAD68BF /* WatchAlbumDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumDetailView.swift; sourceTree = "<group>"; };
 		703CA328A69040E6CCF954B4 /* WatchAlbumsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumsListView.swift; sourceTree = "<group>"; };
 		7A31EF1F3148DA550C9A9567 /* WatchHomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchHomeView.swift; sourceTree = "<group>"; };
@@ -148,6 +149,7 @@
 		C49134522C15BE0C00CCF2EB /* Strings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Strings.swift; sourceTree = "<group>"; };
 		C49495842C1C26D4006B4D1E /* ScanStatusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanStatusService.swift; sourceTree = "<group>"; };
 		C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamCacheManager.swift; sourceTree = "<group>"; };
+		E376D21B3DA37CD2A6C1E8A0 /* flo 2.xcdatamodel */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcdatamodel; path = "flo 2.xcdatamodel"; sourceTree = "<group>"; };
 		C4D7F84C2C7F2AE900165EFD /* flo.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = flo.xcdatamodel; sourceTree = "<group>"; };
 		C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackService.swift; sourceTree = "<group>"; };
 		C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
@@ -159,7 +161,6 @@
 		C4FE524C2C14E71B0053763A /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
 		C533CDA257C450543A1A341D /* SmartPlaybackService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SmartPlaybackService.swift; sourceTree = "<group>"; };
 		CCECEB2E491539A0CCEFF67F /* NowPlayingIndicator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NowPlayingIndicator.swift; sourceTree = "<group>"; };
-		E376D21B3DA37CD2A6C1E8A0 /* flo 2.xcdatamodel */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcdatamodel; path = "flo 2.xcdatamodel"; sourceTree = "<group>"; };
 		EA601DF6D60F70D262CE557B /* TrackRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrackRowView.swift; sourceTree = "<group>"; };
 		F94DAD74D58A8EBD6F580A81 /* WatchRadiosView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
 		FABF85F19B541FE12696A0E5 /* WatchNowPlayingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNowPlayingView.swift; sourceTree = "<group>"; };
@@ -851,8 +852,9 @@
 			children = (
 				C4D7F84C2C7F2AE900165EFD /* flo.xcdatamodel */,
 				E376D21B3DA37CD2A6C1E8A0 /* flo 2.xcdatamodel */,
+				664CAB98EC12ABB56EB036FA /* flo 3.xcdatamodel */,
 			);
-			currentVersion = E376D21B3DA37CD2A6C1E8A0 /* flo 2.xcdatamodel */;
+			currentVersion = 664CAB98EC12ABB56EB036FA /* flo 3.xcdatamodel */;
 			path = flo.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

@@ -480,8 +480,16 @@ class AlbumService {
     CoreDataManager.shared.saveRecord()
   }
 
+  /// The downloaded collection record for `id`, reused when it exists so a
+  /// repeated download updates it instead of colliding with it.
+  private func collectionEntity(id: String) -> PlaylistEntity {
+    CoreDataManager.shared.getRecordByKey(
+      entity: PlaylistEntity.self, key: \PlaylistEntity.id, value: id, limit: 1
+    ).first ?? PlaylistEntity(context: CoreDataManager.shared.viewContext)
+  }
+
   func saveAlbum(_ albumToDownload: Album) {
-    let album = PlaylistEntity(context: CoreDataManager.shared.viewContext)
+    let album = collectionEntity(id: albumToDownload.id)
 
     album.id = albumToDownload.id
     album.name = albumToDownload.name
@@ -495,7 +503,7 @@ class AlbumService {
   }
 
   func savePlaylist(_ playlistToDownload: Playlist) {
-    let playlist = PlaylistEntity(context: CoreDataManager.shared.viewContext)
+    let playlist = collectionEntity(id: playlistToDownload.id)
 
     playlist.id = playlistToDownload.id
     playlist.name = playlistToDownload.name
@@ -551,7 +559,7 @@ class AlbumService {
   /// the legacy folder and the collection's cover, then its records. Records
   /// go even when a folder is already missing, so nothing is left dangling.
   func removeDownloadedCollection(
-    id: String, name: String, legacyDirectory: String,
+    id: String, legacyDirectory: String,
     completion: @escaping (Result<Bool, Error>) -> Void
   ) {
     let songs = CoreDataManager.shared.getRecordByKey(
@@ -574,7 +582,7 @@ class AlbumService {
     }
 
     CoreDataManager.shared.deleteRecordByKey(
-      entity: PlaylistEntity.self, key: \PlaylistEntity.name, value: name)
+      entity: PlaylistEntity.self, key: \PlaylistEntity.id, value: id)
     CoreDataManager.shared.deleteRecordByKey(
       entity: SongEntity.self, key: \SongEntity.albumId, value: id)
 
