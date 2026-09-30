@@ -19,6 +19,9 @@ final class ConnectivityMonitor: ObservableObject {
   private var hasVerdict = false
   private var verdictWaiters: [(Bool) -> Void] = []
   private var serverProbe: NWConnection?
+  // Identifies the latest probe; callbacks from a cancelled one must not
+  // overwrite its result.
+  private var probeGeneration = 0
 
   private init() {
     monitor.pathUpdateHandler = { [weak self] path in
@@ -62,6 +65,8 @@ final class ConnectivityMonitor: ObservableObject {
   /// apart from a working connection. Main thread only.
   func probeServerReachability() {
     serverProbe?.cancel()
+    probeGeneration += 1
+    let generation = probeGeneration
 
     guard isOnline else {
       isServerReachable = false
@@ -86,7 +91,7 @@ final class ConnectivityMonitor: ObservableObject {
 
     connection.stateUpdateHandler = { [weak self] state in
       DispatchQueue.main.async {
-        guard let self = self else { return }
+        guard let self = self, self.probeGeneration == generation else { return }
 
         switch state {
         case .ready:
@@ -104,7 +109,7 @@ final class ConnectivityMonitor: ObservableObject {
     connection.start(queue: queue)
 
     DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-      guard let self = self, !didResolve else { return }
+      guard let self = self, self.probeGeneration == generation, !didResolve else { return }
       self.isServerReachable = false
       connection.cancel()
     }
