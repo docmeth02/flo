@@ -43,12 +43,56 @@ class CoreDataManager: ObservableObject {
       if let container = Self.loadPersistentContainer() {
         return container
       }
-      if attempt == 1 { Thread.sleep(forTimeInterval: 0.5) }
+      if attempt == 1 {
+        Self.removeDuplicateCollectionIds()
+        Thread.sleep(forTimeInterval: 0.5)
+      }
     }
 
     isUsingVolatileStore = true
     return Self.inMemoryContainer()
   }()
+
+  /// Model version 3 makes downloaded collections unique by id, and the
+  /// migration fails on a version 2 store that holds the same id twice (an
+  /// album renamed on the server and downloaded again). Opens such a store
+  /// with the version 2 model and keeps one record per id. Does nothing for
+  /// stores in any other version.
+  private static func removeDuplicateCollectionIds() {
+    guard
+      let storeURL = NSPersistentContainer.defaultDirectoryURL()
+        .appendingPathComponent("flo.sqlite") as URL?,
+      FileManager.default.fileExists(atPath: storeURL.path),
+      let modelURL = Bundle.main.url(
+        forResource: "flo 2", withExtension: "mom", subdirectory: "flo.momd"),
+      let model = NSManagedObjectModel(contentsOf: modelURL)
+    else { return }
+
+    let coordinator = NSPersistentStoreCoordinator(managedObjectModel: model)
+    guard
+      let store = try? coordinator.addPersistentStore(
+        ofType: NSSQLiteStoreType, configurationName: nil, at: storeURL, options: nil)
+    else { return }
+    defer { try? coordinator.remove(store) }
+
+    let context = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
+    context.persistentStoreCoordinator = coordinator
+    context.performAndWait {
+      let request = NSFetchRequest<NSManagedObject>(entityName: "PlaylistEntity")
+      guard let collections = try? context.fetch(request) else { return }
+
+      var seen = Set<String>()
+      for collection in collections.reversed() {
+        let id = collection.value(forKey: "id") as? String ?? ""
+        if !seen.insert(id).inserted {
+          context.delete(collection)
+        }
+      }
+      if context.hasChanges {
+        try? context.save()
+      }
+    }
+  }
 
   private static func loadPersistentContainer() -> NSPersistentContainer? {
     let container = NSPersistentContainer(name: "flo")

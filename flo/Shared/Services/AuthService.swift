@@ -123,16 +123,17 @@ class AuthService {
         ErrorHandler.handleFailure(afError, response: response) { result in
           let authResult = AuthResult(result: result)
 
-          // A 401/403 from the login endpoint itself is a rejected password;
-          // callers must be able to tell it apart from an unreachable server.
-          guard ErrorHandler.isSessionExpired(error: afError), case .failure(let error) = authResult
+          // A 401/403 carrying Navidrome's own error body is a rejected
+          // password; callers must tell it apart from an unreachable server.
+          // A bare 401/403 from a reverse proxy (expired proxy session, bot
+          // challenge) stays a transient failure and keeps the session.
+          guard ErrorHandler.isSessionExpired(error: afError),
+            case .failure(.server(let message)) = authResult
           else {
             completion(authResult)
             return
           }
 
-          var message = "Invalid username or password."
-          if case .server(let serverMessage) = error { message = serverMessage }
           completion(.failure(.invalidCredentials(message: message)))
         }
       }
