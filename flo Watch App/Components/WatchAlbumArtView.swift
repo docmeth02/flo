@@ -29,6 +29,8 @@ struct WatchAlbumArtView: View {
         // One download through the cover cache serves this view, every other
         // view of the album and the Now Playing artwork.
         let path = await CoverArtCacheManager.shared.coverPath(albumId: albumId)
+        // The view may have moved on to another album while this loaded.
+        guard !Task.isCancelled else { return }
         cached = (albumId, path)
       }
   }

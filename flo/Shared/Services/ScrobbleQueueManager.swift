@@ -12,6 +12,9 @@ struct ScrobblePayload {
   let artistName: String?
   let albumName: String?
   let listenTime: Date
+  // Logout bumps the outbox generation; a submission that fails afterwards
+  // belongs to the previous account and must not be queued.
+  let accountGeneration: Int
 
   init?(nowPlaying: QueueEntity) {
     guard let songId = nowPlaying.id, !songId.isEmpty else { return nil }
@@ -20,6 +23,7 @@ struct ScrobblePayload {
     self.artistName = nowPlaying.artistName
     self.albumName = nowPlaying.albumName
     self.listenTime = Date()
+    self.accountGeneration = ScrobbleQueueManager.shared.accountGeneration
   }
 }
 
@@ -45,6 +49,7 @@ final class ScrobbleQueueManager {
   private var retryTimer: Timer?
   private var retryDelay = initialRetryDelay
   private var reachability: AnyCancellable?
+  private(set) var accountGeneration = 0
 
   private init() {
     NotificationCenter.default.addObserver(
@@ -63,6 +68,8 @@ final class ScrobbleQueueManager {
   }
 
   func enqueue(_ payload: ScrobblePayload) {
+    guard payload.accountGeneration == accountGeneration else { return }
+
     let isDuplicate = scrobbles.contains { entry in
       entry.songId == payload.songId
         && (entry.listenTime.map { abs($0.timeIntervalSince(payload.listenTime)) < 10 } ?? false)
@@ -88,6 +95,7 @@ final class ScrobbleQueueManager {
   /// Drops every queued entry, e.g. on logout: they belong to the previous
   /// account and must not be submitted with the next account's credentials.
   func clearAll() {
+    accountGeneration += 1
     cancelRetry()
     scrobbles.forEach { CoreDataManager.shared.viewContext.delete($0) }
     CoreDataManager.shared.saveRecord()

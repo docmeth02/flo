@@ -54,6 +54,10 @@ class WatchPlayerViewModel: ObservableObject {
   private var loadWatchdog: DispatchWorkItem?
   private var playbackFailureObservation: AnyCancellable?
   private var needsNowPlayingAnnouncement = false
+  // The song whose failed item Play already reloaded once; a second failure
+  // goes through the capped skip instead of reloading again.
+  private var reloadedFailedTrackId: String?
+  private var radioURL: URL?
 
   var nowPlaying: QueueEntity {
     return self.queue[self.activeQueueIdx]
@@ -145,6 +149,7 @@ class WatchPlayerViewModel: ObservableObject {
         switch status {
         case .readyToPlay:
           self.consecutiveFailures = 0
+          self.reloadedFailedTrackId = nil
           self.loadWatchdog?.cancel()
           DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             guard self.queue.indices.contains(self.activeQueueIdx),
@@ -174,6 +179,18 @@ class WatchPlayerViewModel: ObservableObject {
     player = AVPlayer()
     player?.volume = volume
     debugLog("replaced failed player")
+  }
+
+  /// Reconnects a failed radio station to its own stream URL; the song
+  /// stream endpoint knows nothing about stations.
+  private func reloadRadioItem() {
+    guard let radioURL = radioURL else { return }
+    tearDownItemObservers()
+    replacePlayerIfFailed()
+    playerItem = AVPlayerItem(url: radioURL)
+    player?.replaceCurrentItem(with: playerItem)
+    observeItemStatus(trackId: hasNowPlaying() ? nowPlaying.id : nil)
+    addPeriodicTimeObserver()
   }
 
   /// Detaches every observer tied to the current item.
@@ -585,10 +602,22 @@ class WatchPlayerViewModel: ObservableObject {
           self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
         }
 
-        // A failed item cannot play; a fresh one gets another chance.
-        if self.playerItem?.status == .failed {
-          self.setNowPlaying()
-          return
+        // A failed item cannot play; a fresh one gets one more chance.
+        if self.playerItem?.status == .failed, self.hasNowPlaying() {
+          let trackId = self.nowPlaying.id
+          if self.reloadedFailedTrackId != trackId {
+            self.reloadedFailedTrackId = trackId
+            if self.isLiveRadio {
+              self.reloadRadioItem()
+            } else {
+              self.setNowPlaying()
+              return
+            }
+          } else {
+            self.isPlaying = true
+            self.skipFailedTrack(trackId: trackId)
+            return
+          }
         }
 
         self.player?.play()
@@ -690,6 +719,7 @@ class WatchPlayerViewModel: ObservableObject {
     tearDownItemObservers()
     replacePlayerIfFailed()
 
+    self.radioURL = radioUrl
     self.playerItem = AVPlayerItem(url: radioUrl)
     self.player?.replaceCurrentItem(with: self.playerItem)
 
