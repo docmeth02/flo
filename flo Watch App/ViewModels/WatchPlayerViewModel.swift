@@ -75,7 +75,12 @@ class WatchPlayerViewModel: ObservableObject {
     let lastPlayData = PlaybackService.shared.getQueue()
     let queueActiveIdx = UserDefaultsManager.queueActiveIdx
 
-    if !lastPlayData.isEmpty && queueActiveIdx < lastPlayData.count {
+    // A radio station stays in the stored queue while it plays (its object
+    // must stay alive for isLiveRadio and the metadata), but a live stream is
+    // not something to resume at launch.
+    let isRadioQueue = lastPlayData.first.map { !$0.duration.isFinite } ?? false
+
+    if !lastPlayData.isEmpty && queueActiveIdx < lastPlayData.count && !isRadioQueue {
       self.progress = UserDefaultsManager.nowPlayingProgress
       self.playbackMode = UserDefaultsManager.playbackMode
       self.addToQueue(
@@ -160,6 +165,17 @@ class WatchPlayerViewModel: ObservableObject {
       }
   }
 
+  /// A player whose item failed can end up failed itself, and a failed
+  /// AVPlayer refuses every later item; start over with a fresh one. Callers
+  /// have already removed the time observer from the old player.
+  private func replacePlayerIfFailed() {
+    guard let old = player, old.status == .failed else { return }
+    let volume = old.volume
+    player = AVPlayer()
+    player?.volume = volume
+    debugLog("replaced failed player")
+  }
+
   /// Detaches every observer tied to the current item.
   private func tearDownItemObservers() {
     if let timeObserverToken = timeObserverToken {
@@ -173,22 +189,57 @@ class WatchPlayerViewModel: ObservableObject {
     loadWatchdog?.cancel()
   }
 
+  /// Treats an item that is still not ready after `loadTimeout` of playing as
+  /// failed. A user who paused in the meantime is left alone.
+  private func armLoadWatchdog() {
+    loadWatchdog?.cancel()
+    guard let item = playerItem, item.status != .readyToPlay, !isLiveRadio else { return }
+
+    let trackId = hasNowPlaying() ? nowPlaying.id : nil
+    let watchdog = DispatchWorkItem { [weak self, weak item] in
+      guard let self = self, self.isPlaying, let item = item, self.playerItem === item,
+        item.status != .readyToPlay
+      else { return }
+      self.player?.pause()
+      self.skipFailedTrack(trackId: trackId)
+    }
+    loadWatchdog = watchdog
+    DispatchQueue.main.asyncAfter(deadline: .now() + Self.loadTimeout, execute: watchdog)
+  }
+
   /// A failed stream (deleted file, transcoder error, corrupt cache) never
   /// reaches its end, so nothing would advance and playback would sit silent.
   /// Skip ahead after a moment, but stop after a few failures in a row so an
   /// unreachable server does not burn through the whole queue.
   private func skipFailedTrack(trackId: String?) {
     loadWatchdog?.cancel()
-    guard queue.indices.contains(activeQueueIdx), nowPlaying.id == trackId, !isLiveRadio else {
+    // Paused playback stays paused; pressing Play reloads the failed item.
+    guard isPlaying, queue.indices.contains(activeQueueIdx), nowPlaying.id == trackId,
+      !isLiveRadio
+    else {
       return
     }
     consecutiveFailures += 1
-    debugLog("stream failed: \(trackId ?? "") (\(consecutiveFailures) in a row)")
-    guard consecutiveFailures <= Self.maxConsecutiveFailures else { return }
+    debugLog(
+      "stream failed: \(trackId ?? "") (\(consecutiveFailures) in a row) "
+        + "item=\(String(describing: playerItem?.status.rawValue)) "
+        + "error=\(String(describing: playerItem?.error))")
+    guard consecutiveFailures <= Self.maxConsecutiveFailures else {
+      // Several songs in a row failing on a reachable server usually means the
+      // server rebuilt its library and the cached song ids are gone.
+      if consecutiveFailures == Self.maxConsecutiveFailures + 1,
+        ConnectivityMonitor.shared.isServerReachable
+      {
+        SmartPlaybackService.shared.refreshSongLibrary()
+      }
+      return
+    }
 
+    let generation = playGeneration
     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-      guard let self = self, self.queue.indices.contains(self.activeQueueIdx),
-        self.nowPlaying.id == trackId
+      // A pause or play in the meantime means the user took over.
+      guard let self = self, self.playGeneration == generation,
+        self.queue.indices.contains(self.activeQueueIdx), self.nowPlaying.id == trackId
       else { return }
       self.nextSong()
     }
@@ -258,6 +309,8 @@ class WatchPlayerViewModel: ObservableObject {
       player?.removeTimeObserver(timeObserverToken)
     }
 
+    self.replacePlayerIfFailed()
+
     let streamUrl = AlbumService.shared.getStreamUrl(id: self.nowPlaying.id ?? "")
 
     guard let audioURL = URL(string: streamUrl), !streamUrl.isEmpty else {
@@ -291,20 +344,9 @@ class WatchPlayerViewModel: ObservableObject {
     // A server that never answers leaves the item loading forever without
     // reporting .failed, and a stream can also break mid-song; both count as
     // failures so playback moves on instead of sitting silent.
+    // The load watchdog is armed by play(), whenever playback starts on an
+    // item that is not ready yet.
     self.loadWatchdog?.cancel()
-    if playAudio {
-      let watchdog = DispatchWorkItem { [weak self] in
-        // A user who paused while the track was loading must not be pulled
-        // into the next song.
-        guard let self = self, self.isPlaying, self.playerItem?.status != .readyToPlay else {
-          return
-        }
-        self.player?.pause()
-        self.skipFailedTrack(trackId: trackId)
-      }
-      self.loadWatchdog = watchdog
-      DispatchQueue.main.asyncAfter(deadline: .now() + Self.loadTimeout, execute: watchdog)
-    }
     self.playbackFailureObservation = NotificationCenter.default
       .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: self.playerItem)
       .receive(on: DispatchQueue.main)
@@ -543,8 +585,15 @@ class WatchPlayerViewModel: ObservableObject {
           self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
         }
 
+        // A failed item cannot play; a fresh one gets another chance.
+        if self.playerItem?.status == .failed {
+          self.setNowPlaying()
+          return
+        }
+
         self.player?.play()
         self.announceNowPlaying()
+        self.armLoadWatchdog()
 
         self.isFinished = false
         self.isPlaying = true
@@ -639,6 +688,7 @@ class WatchPlayerViewModel: ObservableObject {
     // A queued end notification from the previous track must not advance the
     // radio queue; live streams have no track end.
     tearDownItemObservers()
+    replacePlayerIfFailed()
 
     self.playerItem = AVPlayerItem(url: radioUrl)
     self.player?.replaceCurrentItem(with: self.playerItem)
@@ -659,7 +709,6 @@ class WatchPlayerViewModel: ObservableObject {
       title: item.name,
       artist: item.artist,
       playbackDuration: 0)
-    PlaybackService.shared.clearQueue()
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
     return true
   }
@@ -859,9 +908,10 @@ class WatchPlayerViewModel: ObservableObject {
         }
 
         let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: songs)
-        self.queue = PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false)
-        self.activeQueueIdx = 0
-        self.setNowPlaying()
+        // Through addToQueue, so shuffle state and failure counts reset like
+        // for any other new queue.
+        self.addToQueue(
+          idx: 0, item: PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false))
       }
     }
   }
@@ -876,8 +926,11 @@ class WatchPlayerViewModel: ObservableObject {
     action(songId) { [weak self] success in
       if !success {
         DispatchQueue.main.async {
-          guard self?.nowPlaying.id == songId else { return }
-          self?.isStarred = !shouldStar
+          // The queue may have been cleared (logout) while the request ran.
+          guard let self = self, self.queue.indices.contains(self.activeQueueIdx),
+            self.nowPlaying.id == songId
+          else { return }
+          self.isStarred = !shouldStar
         }
       }
     }

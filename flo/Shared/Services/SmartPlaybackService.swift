@@ -77,6 +77,12 @@ final class SmartPlaybackService {
       seed: seed, queueIds: queueIds, count: count, rng: &rng)
   }
 
+  /// Refetches the cached song library in the background, e.g. when its
+  /// songs keep failing to stream because the server rebuilt its ids.
+  func refreshSongLibrary() {
+    Task(priority: .utility) { _ = await fetchAllSongs() }
+  }
+
   // MARK: - Data loading
 
   private static func isSongCacheStale() -> Bool {
