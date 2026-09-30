@@ -34,19 +34,33 @@ class StreamCacheManager {
     let bitrate = UserDefaultsManager.maxBitRate
     let key = cacheKey(mediaFileId: mediaFileId, bitrate: bitrate)
 
-    guard
-      let record = CoreDataManager.shared.getRecordByKey(
-        entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1
-      ).first,
-      record.state == "ready",
-      let filePath = record.filePath,
-      let dir = cacheDirectory
+    let exact = CoreDataManager.shared.getRecordByKey(
+      entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1
+    ).first
+    if let exact, let url = readyFileURL(for: exact) {
+      return url
+    }
+
+    // Without the server, a copy cached at another bitrate beats no playback.
+    let connectivity = ConnectivityMonitor.shared
+    guard !(connectivity.isOnline && connectivity.isServerReachable) else { return nil }
+
+    return CoreDataManager.shared.getRecordByKey(
+      entity: CacheEntity.self, key: \CacheEntity.mediaFileId, value: mediaFileId
+    )
+    .lazy.compactMap { self.readyFileURL(for: $0) }.first
+  }
+
+  /// The file of a ready cache record, refreshing its access time; records
+  /// whose file vanished are dropped.
+  private func readyFileURL(for record: CacheEntity) -> URL? {
+    guard record.state == "ready", let filePath = record.filePath, let dir = cacheDirectory
     else { return nil }
 
     let fileURL = dir.appendingPathComponent(filePath)
     guard fileManager.fileExists(atPath: fileURL.path) else {
-      CoreDataManager.shared.deleteRecordByKey(
-        entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key)
+      CoreDataManager.shared.viewContext.delete(record)
+      CoreDataManager.shared.saveRecord()
       return nil
     }
 
@@ -55,6 +69,7 @@ class StreamCacheManager {
 
     return fileURL
   }
+
 
   func cacheSong(mediaFileId: String, originalSuffix: String? = nil, from queueItem: QueueEntity? = nil) {
     guard UserDefaultsManager.streamCacheMaxSize > 0 else { return }
