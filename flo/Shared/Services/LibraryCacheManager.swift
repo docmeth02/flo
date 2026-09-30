@@ -46,6 +46,13 @@ class LibraryCacheManager {
     return try? JSONDecoder().decode(T.self, from: data)
   }
 
+  /// When the entry for `key` was last written, or nil if there is none.
+  func modificationDate(forKey key: String) -> Date? {
+    guard let dir = cacheDirectory else { return nil }
+    let file = dir.appendingPathComponent("\(key).json")
+    return (try? fileManager.attributesOfItem(atPath: file.path))?[.modificationDate] as? Date
+  }
+
   func clearCache() {
     lock.withLock {
       currentGeneration += 1

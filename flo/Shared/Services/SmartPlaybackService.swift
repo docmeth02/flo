@@ -39,6 +39,7 @@ final class SmartPlaybackService {
   private static let replayCooldownMinutes = 30
   private static let skipWindowDays = 30
   private static let coldStartThreshold = 20
+  private static let songCacheMaxAge: TimeInterval = 24 * 60 * 60
 
   private init() {}
 
@@ -48,11 +49,22 @@ final class SmartPlaybackService {
     guard count > 0 else { return [] }
 
     var (songs, albums, starredIds) = await loadCachedLibrary()
-    if await ConnectivityMonitor.shared.firstVerdict() {
+
+    // Library songs are only playable when the server answers; with the
+    // network up but the server away they would all fail to stream.
+    let online = await ConnectivityMonitor.shared.firstVerdict()
+    let canStream = await MainActor.run { online && ConnectivityMonitor.shared.isServerReachable }
+
+    if canStream {
       if songs.isEmpty {
         songs = await fetchAllSongs()
+      } else if Self.isSongCacheStale() {
+        // Use the cached library now and refresh it for the next mix, so new
+        // songs show up and deleted ones drop out.
+        Task(priority: .utility) { _ = await self.fetchAllSongs() }
       }
-    } else {
+    }
+    if !canStream || songs.isEmpty {
       songs = await offlinePlayableSongs()
     }
     guard !songs.isEmpty else { return [] }
@@ -66,6 +78,13 @@ final class SmartPlaybackService {
   }
 
   // MARK: - Data loading
+
+  private static func isSongCacheStale() -> Bool {
+    guard let written = LibraryCacheManager.shared.modificationDate(forKey: "songs") else {
+      return true
+    }
+    return Date().timeIntervalSince(written) > songCacheMaxAge
+  }
 
   /// Blocking JSON cache reads run on a GCD queue so the cooperative thread
   /// pool never blocks on disk.
