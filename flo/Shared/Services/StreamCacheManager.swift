@@ -249,17 +249,21 @@ class StreamCacheManager {
     }
 
     // Delete all CacheEntity records (synchronous — callers expect cache to be clear on return)
-    let deleteBlock = {
-      let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CacheEntity")
-      let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-      try? CoreDataManager.shared.viewContext.execute(deleteRequest)
-      try? CoreDataManager.shared.viewContext.save()
-    }
     if Thread.isMainThread {
-      deleteBlock()
+      deleteAllCacheRecords()
     } else {
-      DispatchQueue.main.sync { deleteBlock() }
+      DispatchQueue.main.sync { deleteAllCacheRecords() }
     }
+  }
+
+  // A method rather than a closure: the Swift 6.4 optimizer crashes inlining
+  // CoreDataManager's lazy container into the closure form in Release builds.
+  @inline(never)
+  private func deleteAllCacheRecords() {
+    let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CacheEntity")
+    let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+    _ = try? CoreDataManager.shared.viewContext.execute(deleteRequest)
+    try? CoreDataManager.shared.viewContext.save()
   }
 
   func calculateCacheSize() async -> Int64 {
