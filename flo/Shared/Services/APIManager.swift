@@ -48,6 +48,8 @@ class APIManager {
     .responseDecodable(of: T.self) { response in
       Self.notifyIfSessionExpired(
         response: response.response, error: response.error, authSession: authSession)
+      ConnectivityMonitor.shared.record(
+        response: response.response, error: response.error?.underlyingError)
       completion(response)
     }
   }
@@ -75,6 +77,8 @@ class APIManager {
     .responseDecodable(of: T.self) { response in
       Self.notifyIfSessionExpired(
         response: response.response, error: response.error, authSession: authSession)
+      ConnectivityMonitor.shared.record(
+        response: response.response, error: response.error?.underlyingError)
       completion(response)
     }
   }
