@@ -64,7 +64,7 @@ class FloooViewModel: ObservableObject {
   }
 
   private func processScrobble(submission: Bool, nowPlaying: QueueEntity) {
-    guard let songId = nowPlaying.id, !songId.isEmpty else { return }
+    guard let payload = ScrobblePayload(nowPlaying: nowPlaying) else { return }
 
     // Navidrome records every scrobble for its own play counts and forwards it
     // to Last.fm or ListenBrainz when the user linked them there, so the watch
@@ -72,26 +72,21 @@ class FloooViewModel: ObservableObject {
     let connectivity = ConnectivityMonitor.shared
     guard connectivity.isOnline, connectivity.isServerReachable else {
       if submission {
-        ScrobbleQueueManager.shared.enqueue(nowPlaying: nowPlaying)
+        ScrobbleQueueManager.shared.enqueue(payload)
       }
       return
     }
 
-    sendScrobble(submission: submission, nowPlaying: nowPlaying)
-  }
-
-  private func sendScrobble(submission: Bool, nowPlaying: QueueEntity) {
-    guard let songId = nowPlaying.id else { return }
-
-    FloooService.shared.scrobbleToBuiltinEndpoint(submission: submission, songId: songId) {
-      result in
+    FloooService.shared.scrobbleToBuiltinEndpoint(
+      submission: submission, songId: payload.songId, time: payload.listenTime
+    ) { result in
       switch result {
       case .success:
-        debugLog("scrobble delivered: \(songId) submission=\(submission)")
+        debugLog("scrobble delivered: \(payload.songId) submission=\(submission)")
 
       case .failure(let error):
         if submission && !FloooService.shared.isPermanentScrobbleFailure(error) {
-          ScrobbleQueueManager.shared.enqueue(nowPlaying: nowPlaying)
+          DispatchQueue.main.async { ScrobbleQueueManager.shared.enqueue(payload) }
         }
       }
     }

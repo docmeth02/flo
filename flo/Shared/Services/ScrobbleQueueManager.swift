@@ -3,6 +3,26 @@ import CoreData
 import Foundation
 import WatchKit
 
+/// What a scrobble needs, copied from the queue entry when the listen
+/// happens: the entry itself can be deleted by the time a failed submission
+/// has to be queued.
+struct ScrobblePayload {
+  let songId: String
+  let trackName: String?
+  let artistName: String?
+  let albumName: String?
+  let listenTime: Date
+
+  init?(nowPlaying: QueueEntity) {
+    guard let songId = nowPlaying.id, !songId.isEmpty else { return nil }
+    self.songId = songId
+    self.trackName = nowPlaying.songName
+    self.artistName = nowPlaying.artistName
+    self.albumName = nowPlaying.albumName
+    self.listenTime = Date()
+  }
+}
+
 /// Persistent outbox for scrobble submissions that could not be delivered
 /// right away. Entries are deleted once the server acknowledges them, retried
 /// with a growing delay while the server is unreachable, and dropped only when
@@ -42,25 +62,21 @@ final class ScrobbleQueueManager {
       .sink { [weak self] _ in self?.flush() }
   }
 
-  func enqueue(nowPlaying: QueueEntity) {
-    guard let songId = nowPlaying.id, !songId.isEmpty else { return }
-
-    let listenTime = Date()
-
+  func enqueue(_ payload: ScrobblePayload) {
     let isDuplicate = scrobbles.contains { entry in
-      entry.songId == songId
-        && (entry.listenTime.map { abs($0.timeIntervalSince(listenTime)) < 10 } ?? false)
+      entry.songId == payload.songId
+        && (entry.listenTime.map { abs($0.timeIntervalSince(payload.listenTime)) < 10 } ?? false)
     }
 
     guard !isDuplicate else { return }
 
     let entry = ScrobbleEntity(context: CoreDataManager.shared.viewContext)
 
-    entry.songId = songId
-    entry.trackName = nowPlaying.songName
-    entry.artistName = nowPlaying.artistName
-    entry.albumName = nowPlaying.albumName
-    entry.listenTime = listenTime
+    entry.songId = payload.songId
+    entry.trackName = payload.trackName
+    entry.artistName = payload.artistName
+    entry.albumName = payload.albumName
+    entry.listenTime = payload.listenTime
     entry.queuedAt = Date()
     entry.status = Status.pending
 
@@ -95,6 +111,7 @@ final class ScrobbleQueueManager {
     guard ConnectivityMonitor.shared.isOnline, ConnectivityMonitor.shared.isServerReachable else {
       // A successful probe comes back through the reachability subscription.
       ConnectivityMonitor.shared.probeServerReachability()
+      backOff()
       scheduleRetry()
       return
     }
@@ -143,6 +160,7 @@ final class ScrobbleQueueManager {
 
           self.isFlushing = false
           self.reload()
+          self.backOff()
           self.scheduleRetry()
         }
       }
@@ -154,17 +172,25 @@ final class ScrobbleQueueManager {
     CoreDataManager.shared.saveRecord()
   }
 
-  /// Retries back off from 30 seconds to 30 minutes so an unreachable server
-  /// does not keep the watch radio busy.
+  /// Schedules the next delivery attempt unless one is already pending, so
+  /// new listens never push an existing retry further out.
   private func scheduleRetry() {
-    cancelRetry()
+    guard retryTimer == nil else { return }
 
-    let delay = retryDelay
-    retryDelay = min(retryDelay * 2, Self.maxRetryDelay)
-
-    retryTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-      DispatchQueue.main.async { self?.flush() }
+    retryTimer = Timer.scheduledTimer(withTimeInterval: retryDelay, repeats: false) {
+      [weak self] _ in
+      DispatchQueue.main.async {
+        self?.retryTimer = nil
+        self?.flush()
+      }
     }
+  }
+
+  /// After a failed attempt the next one waits twice as long, from 30 seconds
+  /// up to 30 minutes, so an unreachable server does not keep the radio busy.
+  private func backOff() {
+    cancelRetry()
+    retryDelay = min(retryDelay * 2, Self.maxRetryDelay)
   }
 
   private func cancelRetry() {
