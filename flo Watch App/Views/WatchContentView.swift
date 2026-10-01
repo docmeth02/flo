@@ -32,7 +32,7 @@ struct WatchContentView: View {
               .tag(Tab.home)
 
             if playerViewModel.hasNowPlaying() {
-              WatchNowPlayingView()
+              WatchNowPlayingView(ownsCrown: selectedTab == .nowPlaying)
                 .tag(Tab.nowPlaying)
             }
           }
@@ -58,7 +58,7 @@ struct WatchContentView: View {
         .transition(.opacity)
       }
     }
-    .onChange(of: scenePhase) { phase in
+    .onChange(of: scenePhase) { _, phase in
       // Like the system Now Playing app: coming back to the watch while music
       // plays shows the player. A short glance away keeps the browsing place.
       if phase != .active {
@@ -67,11 +67,13 @@ struct WatchContentView: View {
         self.leftAt = nil
         if playerViewModel.isPlaying, Date().timeIntervalSince(leftAt) > 8 {
           stackID = UUID()
-          selectedTab = .nowPlaying
+          // The rebuilt page view starts on its first page; select the player
+          // once it is in place.
+          DispatchQueue.main.async { selectedTab = .nowPlaying }
         }
       }
     }
-    .onChange(of: playerViewModel.hasNowPlaying()) { hasNowPlaying in
+    .onChange(of: playerViewModel.hasNowPlaying()) { _, hasNowPlaying in
       if !hasNowPlaying { selectedTab = .home }
     }
     .environmentObject(authViewModel)

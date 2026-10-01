@@ -178,9 +178,7 @@ class WatchPlayerViewModel: ObservableObject {
   /// have already removed the time observer from the old player.
   private func replacePlayerIfFailed() {
     guard let old = player, old.status == .failed else { return }
-    let volume = old.volume
     player = AVPlayer()
-    player?.volume = volume
     debugLog("replaced failed player")
   }
 

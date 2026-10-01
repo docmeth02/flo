@@ -9,13 +9,9 @@ import WatchKit
 struct WatchNowPlayingView: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
 
-  @State private var volume: Double = 1
-  // The crown drives 1 - volume: with the system indicator drawing the bound
-  // value, turning the crown so the indicator moves up raises the volume.
-  @State private var crownValue: Double = 0
-  @State private var showVolume: Bool = false
-  @State private var volumeHideTask: Task<Void, Never>?
-  @FocusState private var crownFocused: Bool
+  // Next to the library page, the crown belongs to the volume control only
+  // while the player is the selected page, so the library still scrolls.
+  var ownsCrown = true
 
   var body: some View {
     ViewThatFits(in: .vertical) {
@@ -25,42 +21,6 @@ struct WatchNowPlayingView: View {
       } else {
         Text("Nothing playing")
           .foregroundStyle(.secondary)
-      }
-    }
-    .focusable(true)
-    .focused($crownFocused)
-    .digitalCrownRotation(
-      $crownValue,
-      from: 0,
-      through: 1,
-      by: 0.01,
-      sensitivity: .medium,
-      isContinuous: false,
-      isHapticFeedbackEnabled: true
-    )
-    .onAppear {
-      // Start from the player's real volume so the first crown notch does not
-      // jump to a default.
-      volume = Double(playerViewModel.player?.volume ?? 1)
-      crownValue = 1 - volume
-      crownFocused = true
-    }
-    .onDisappear {
-      volumeHideTask?.cancel()
-    }
-    .onChange(of: crownValue) { _, newValue in
-      let newVolume = 1 - newValue
-      // Seeding the crown on appear is not a user change.
-      guard abs(newVolume - Double(playerViewModel.player?.volume ?? 1)) > 0.001 else { return }
-      volume = newVolume
-      playerViewModel.player?.volume = Float(volume)
-      showVolume = true
-      volumeHideTask?.cancel()
-      volumeHideTask = Task {
-        try? await Task.sleep(for: .seconds(2))
-        if !Task.isCancelled {
-          showVolume = false
-        }
       }
     }
     .navigationBarTitleDisplayMode(.inline)
@@ -96,16 +56,12 @@ struct WatchNowPlayingView: View {
             .font(.system(size: 11))
             .foregroundColor(.secondary)
             .lineLimit(1)
-
-          if showVolume {
-            Label("\(Int(volume * 100))%", systemImage: "speaker.wave.2.fill")
-              .font(.system(size: 10))
-              .foregroundColor(.secondary)
-              .transition(.opacity)
-          }
         }
 
         Spacer(minLength: 0)
+
+        SystemVolumeControl(isFocused: ownsCrown)
+          .frame(width: 32, height: 32)
       }
 
       if playerViewModel.isLiveRadio {
@@ -230,5 +186,25 @@ struct WatchNowPlayingView: View {
       }
     }
     .padding(.horizontal, 8)
+  }
+}
+
+/// The system volume control, as in the Now Playing app: the crown sets the
+/// output volume of the watch, including the headphones it plays through.
+private struct SystemVolumeControl: WKInterfaceObjectRepresentable {
+  let isFocused: Bool
+
+  func makeWKInterfaceObject(context: Context) -> WKInterfaceVolumeControl {
+    let control = WKInterfaceVolumeControl(origin: .local)
+    control.setTintColor(UIColor(Color.accentColor))
+    return control
+  }
+
+  func updateWKInterfaceObject(_ control: WKInterfaceVolumeControl, context: Context) {
+    if isFocused {
+      control.focus()
+    } else {
+      control.resignFocus()
+    }
   }
 }
