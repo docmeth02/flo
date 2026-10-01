@@ -50,6 +50,7 @@ final class ConnectivityMonitor: ObservableObject {
   /// Main thread only.
   func probeServerReachability() {
     serverProbe?.cancel()
+    serverProbe = nil
     retryWork?.cancel()
     probeGeneration += 1
     let generation = probeGeneration
@@ -69,6 +70,7 @@ final class ConnectivityMonitor: ObservableObject {
     let task = session.dataTask(with: request) { [weak self] _, response, error in
       DispatchQueue.main.async {
         guard let self = self, self.probeGeneration == generation else { return }
+        self.serverProbe = nil
         self.apply(response: response, error: error)
       }
     }
@@ -85,17 +87,18 @@ final class ConnectivityMonitor: ObservableObject {
     DispatchQueue.main.async {
       let reachable = response != nil
       let online = reachable || !Self.isOfflineError(error)
-      // A probe still in flight would overwrite this newer evidence when it
-      // fails late, so it is replaced even when nothing changes.
-      let probeInFlight = self.serverProbe?.state == .running
+      // A probe whose answer is not applied yet would overwrite this newer
+      // evidence when it failed, so it is replaced even when nothing changes.
+      let probePending = self.serverProbe != nil
       guard
         reachable != self.isServerReachable || online != self.isOnline || !self.hasVerdict
-          || probeInFlight
+          || probePending
       else {
         self.lastVerdictAt = Date()
         return
       }
       self.serverProbe?.cancel()
+      self.serverProbe = nil
       self.probeGeneration += 1
       self.apply(response: response, error: error)
     }
