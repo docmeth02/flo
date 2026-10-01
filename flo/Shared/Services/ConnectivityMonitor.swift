@@ -26,6 +26,8 @@ final class ConnectivityMonitor: ObservableObject {
 
   private var hasVerdict = false
   private var verdictWaiters: [(Bool) -> Void] = []
+  private var lastVerdictAt: Date?
+  private var probeWaiters: [() -> Void] = []
   private var serverProbe: URLSessionDataTask?
   // Identifies the latest probe; the answer of a cancelled one must not
   // overwrite its result.
@@ -57,6 +59,7 @@ final class ConnectivityMonitor: ObservableObject {
       let host = url.host, !host.isEmpty
     else {
       deliverVerdict(isOnline)
+      deliverProbeResult()
       return
     }
 
@@ -82,7 +85,16 @@ final class ConnectivityMonitor: ObservableObject {
     DispatchQueue.main.async {
       let reachable = response != nil
       let online = reachable || !Self.isOfflineError(error)
-      guard reachable != self.isServerReachable || online != self.isOnline else { return }
+      // A probe still in flight would overwrite this newer evidence when it
+      // fails late, so it is replaced even when nothing changes.
+      let probeInFlight = self.serverProbe?.state == .running
+      guard
+        reachable != self.isServerReachable || online != self.isOnline || !self.hasVerdict
+          || probeInFlight
+      else {
+        self.lastVerdictAt = Date()
+        return
+      }
       self.serverProbe?.cancel()
       self.probeGeneration += 1
       self.apply(response: response, error: error)
@@ -100,7 +112,9 @@ final class ConnectivityMonitor: ObservableObject {
     if isOnline != online { isOnline = online }
     // Assigned on every probe: the scrobble outbox delivers on each success.
     isServerReachable = reachable
+    lastVerdictAt = Date()
     deliverVerdict(online)
+    deliverProbeResult()
 
     if cameOnline {
       NotificationCenter.default.post(name: .networkBecameOnline, object: nil)
@@ -138,12 +152,30 @@ final class ConnectivityMonitor: ObservableObject {
     }
   }
 
-  /// Async variant of `onFirstVerdict`. After the first verdict this returns
-  /// the current state immediately.
-  func firstVerdict() async -> Bool {
+  /// Whether songs can be streamed now. A verdict older than `maxAge` is
+  /// renewed with a probe first: without a path monitor nothing else notices
+  /// a connection that dropped after the last request.
+  func canStream(maxAge: TimeInterval = 60) async -> Bool {
     await withCheckedContinuation { continuation in
-      onFirstVerdict { continuation.resume(returning: $0) }
+      DispatchQueue.main.async {
+        if let lastVerdictAt = self.lastVerdictAt,
+          Date().timeIntervalSince(lastVerdictAt) < maxAge
+        {
+          continuation.resume(returning: self.isOnline && self.isServerReachable)
+          return
+        }
+        self.probeWaiters.append {
+          continuation.resume(returning: self.isOnline && self.isServerReachable)
+        }
+        self.probeServerReachability()
+      }
     }
+  }
+
+  private func deliverProbeResult() {
+    let waiters = probeWaiters
+    probeWaiters = []
+    for waiter in waiters { waiter() }
   }
 
   private func deliverVerdict(_ online: Bool) {

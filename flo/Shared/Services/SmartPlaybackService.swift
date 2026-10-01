@@ -52,8 +52,7 @@ final class SmartPlaybackService {
 
     // Library songs are only playable when the server answers; with the
     // network up but the server away they would all fail to stream.
-    let online = await ConnectivityMonitor.shared.firstVerdict()
-    let canStream = await MainActor.run { online && ConnectivityMonitor.shared.isServerReachable }
+    let canStream = await ConnectivityMonitor.shared.canStream()
 
     if canStream {
       if songs.isEmpty {
