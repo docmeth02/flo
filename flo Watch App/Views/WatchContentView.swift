@@ -14,20 +14,31 @@ struct WatchContentView: View {
   @StateObject private var floooViewModel = FloooViewModel.shared
   @StateObject private var downloadViewModel = DownloadViewModel()
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
+  @Environment(\.scenePhase) private var scenePhase
+
+  @State private var selectedTab = Tab.home
+  // Recreating the stack pops whatever was browsed on top of the tabs.
+  @State private var stackID = UUID()
+  @State private var leftAt: Date?
+
+  private enum Tab { case home, nowPlaying }
 
   var body: some View {
     Group {
       if authViewModel.isLoggedIn {
         NavigationStack {
-          TabView {
+          TabView(selection: $selectedTab) {
             WatchHomeView()
+              .tag(Tab.home)
 
             if playerViewModel.hasNowPlaying() {
               WatchNowPlayingView()
+                .tag(Tab.nowPlaying)
             }
           }
           .tabViewStyle(.page)
         }
+        .id(stackID)
       } else {
         WatchLoginView(viewModel: authViewModel)
       }
@@ -46,6 +57,22 @@ struct WatchContentView: View {
         .padding(.top, 2)
         .transition(.opacity)
       }
+    }
+    .onChange(of: scenePhase) { phase in
+      // Like the system Now Playing app: coming back to the watch while music
+      // plays shows the player. A short glance away keeps the browsing place.
+      if phase != .active {
+        if leftAt == nil { leftAt = Date() }
+      } else if let leftAt {
+        self.leftAt = nil
+        if playerViewModel.isPlaying, Date().timeIntervalSince(leftAt) > 8 {
+          stackID = UUID()
+          selectedTab = .nowPlaying
+        }
+      }
+    }
+    .onChange(of: playerViewModel.hasNowPlaying()) { hasNowPlaying in
+      if !hasNowPlaying { selectedTab = .home }
     }
     .environmentObject(authViewModel)
     .environmentObject(playerViewModel)
