@@ -13,6 +13,13 @@ struct WatchNowPlayingView: View {
   // while the player is the selected page, so the library still scrolls.
   var ownsCrown = true
 
+  @Environment(\.scenePhase) private var scenePhase
+  // False while a view such as the queue is pushed on top of the player.
+  @State private var isShown = false
+  // Bumped when the volume control must claim the crown again: the system
+  // takes it back while the app is in the background.
+  @State private var focusRequest = 0
+
   var body: some View {
     ViewThatFits(in: .vertical) {
       if playerViewModel.hasNowPlaying() {
@@ -22,6 +29,14 @@ struct WatchNowPlayingView: View {
         Text("Nothing playing")
           .foregroundStyle(.secondary)
       }
+    }
+    .onAppear {
+      isShown = true
+      focusRequest += 1
+    }
+    .onDisappear { isShown = false }
+    .onChange(of: scenePhase) { _, phase in
+      if phase == .active { focusRequest += 1 }
     }
     .navigationBarTitleDisplayMode(.inline)
     .navigationTitle("")
@@ -60,7 +75,7 @@ struct WatchNowPlayingView: View {
 
         Spacer(minLength: 0)
 
-        SystemVolumeControl(isFocused: ownsCrown)
+        SystemVolumeControl(isFocused: ownsCrown && isShown, focusRequest: focusRequest)
           .frame(width: 32, height: 32)
       }
 
@@ -193,6 +208,14 @@ struct WatchNowPlayingView: View {
 /// output volume of the watch, including the headphones it plays through.
 private struct SystemVolumeControl: WKInterfaceObjectRepresentable {
   let isFocused: Bool
+  let focusRequest: Int
+
+  final class Coordinator {
+    var isFocused = false
+    var focusRequest = 0
+  }
+
+  func makeCoordinator() -> Coordinator { Coordinator() }
 
   func makeWKInterfaceObject(context: Context) -> WKInterfaceVolumeControl {
     let control = WKInterfaceVolumeControl(origin: .local)
@@ -201,10 +224,21 @@ private struct SystemVolumeControl: WKInterfaceObjectRepresentable {
   }
 
   func updateWKInterfaceObject(_ control: WKInterfaceVolumeControl, context: Context) {
-    if isFocused {
-      control.focus()
-    } else {
-      control.resignFocus()
+    // Focus only moves on a change. Moving it on every update lets the focus
+    // change trigger the next update, which locked up the app.
+    let coordinator = context.coordinator
+    let refocus = isFocused && focusRequest != coordinator.focusRequest
+    guard isFocused != coordinator.isFocused || refocus else { return }
+    coordinator.isFocused = isFocused
+    coordinator.focusRequest = focusRequest
+
+    let focus = isFocused
+    DispatchQueue.main.async {
+      if focus {
+        control.focus()
+      } else {
+        control.resignFocus()
+      }
     }
   }
 }
