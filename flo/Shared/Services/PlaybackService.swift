@@ -11,8 +11,17 @@ import Foundation
 class PlaybackService {
   static let shared = PlaybackService()
 
+  /// The queue in play order. The entity has no position attribute, but the
+  /// batch insert assigns primary keys in queue order; an unsorted fetch
+  /// returns the rows in no particular order.
   func getQueue() -> [QueueEntity] {
     return CoreDataManager.shared.getRecordsByEntity(entity: QueueEntity.self)
+      .sorted { Self.primaryKey($0) < Self.primaryKey($1) }
+  }
+
+  private static func primaryKey(_ entity: QueueEntity) -> Int {
+    // Permanent object IDs end in "p<primary key>".
+    Int(entity.objectID.uriRepresentation().lastPathComponent.dropFirst()) ?? .max
   }
 
   func clearQueue() {
