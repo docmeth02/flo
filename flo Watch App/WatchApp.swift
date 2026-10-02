@@ -31,6 +31,10 @@ struct FloWatchApp: App {
     PlaybackJournal.shared.pruneOld()
     // Sends rating edits the server has not confirmed yet.
     _ = RatingStore.shared
+
+    #if DEBUG
+      SmartPlaybackService.shared.runDebugLaunchActions()
+    #endif
   }
 
   var body: some Scene {
