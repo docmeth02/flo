@@ -20,6 +20,8 @@ struct ImportState: Sendable, Equatable {
   }
 
   var phase: Phase = .idle
+  /// The account this state describes; a failure shown for another one is stale.
+  var accountKey: String?
   var serverTotal = 0
   var importedCount = 0
   var matchedCount = 0
@@ -117,6 +119,9 @@ actor ListeningHistoryStore {
       Self.stateEntity(for: key, in: context)?.lastImportAt
     }
     if let last, Date().timeIntervalSince(last) < Self.staleAfter { return }
+    // Another trigger may have run and failed while this one waited.
+    guard run == nil, AuthService.shared.accountKey == key else { return }
+    if let failed = lastFailedAt, Date().timeIntervalSince(failed) < Self.staleAfter { return }
     await refresh(reason: reason)
   }
 
@@ -139,6 +144,7 @@ actor ListeningHistoryStore {
       run.task.cancel()
       await run.task.value
     }
+    lastFailedAt = nil
     await start(reason: .rebuild, reset: true)
   }
 
@@ -168,14 +174,19 @@ actor ListeningHistoryStore {
       run.task.cancel()
       await run.task.value
     }
+    // The next account starts without the previous one's failure holding it off.
+    lastFailedAt = nil
     await publish(ImportState())
     guard !CoreDataManager.shared.isUsingVolatileStore else { return }
 
+    // Off the main thread: a multi-year mirror is tens of thousands of rows,
+    // and nothing holds these entities in the view context.
     let current = AuthService.shared.accountKey
-    await MainActor.run {
-      let predicate = current.map { NSPredicate(format: "accountKey != %@", $0) }
+    await CoreDataManager.shared.performBackground { context in
+      let predicate =
+        current.map { NSPredicate(format: "accountKey != %@", $0) } ?? NSPredicate(value: true)
       for entity in ["PlayEntity", "AffinityEntity", "HistorySyncStateEntity"] {
-        CoreDataManager.shared.batchDelete(entityName: entity, predicate: predicate)
+        Self.batchDelete(entity, predicate, in: context)
       }
     }
     debugLog("history: forgot logged out accounts")
@@ -206,13 +217,16 @@ actor ListeningHistoryStore {
       await publishState(key, phase: .skipped("storage unavailable"))
       return
     }
-    guard await ConnectivityMonitor.shared.canStream() else {
-      await publishState(key, phase: .failed("server unreachable"))
-      return
-    }
-
+    // A requested rebuild is recorded before anything can fail, so an
+    // unreachable server only postpones it to the next run.
     var progress = await CoreDataManager.shared.performBackground { context in
       Self.loadProgress(for: key, reset: reset, in: context)
+    }
+    let canStream = await ConnectivityMonitor.shared.canStream()
+    guard isCurrent(key) else { return }
+    guard canStream else {
+      await publishState(key, phase: .failed("server unreachable"))
+      return
     }
     let index = await SmartPlaybackService.shared.libraryIndex()
     guard isCurrent(key) else { return }
@@ -292,6 +306,7 @@ actor ListeningHistoryStore {
       var state = result.state
       state.pages = pages
       if done {
+        lastFailedAt = nil
         state.phase = .complete
         await publish(state)
         return
@@ -543,6 +558,7 @@ actor ListeningHistoryStore {
 
   private static func importState(of state: HistorySyncStateEntity) -> ImportState {
     var result = ImportState()
+    result.accountKey = state.accountKey
     result.phase = state.bootstrapComplete ? .complete : .idle
     result.serverTotal = Int(state.serverTotal)
     result.importedCount = Int(state.importedCount)
@@ -596,11 +612,15 @@ actor ListeningHistoryStore {
 
   /// Publishes the stored state of `key` with `phase`.
   private func publishState(_ key: String, phase: ImportState.Phase, pages: Int = 0) async {
+    // A cancelled run (rebuild, logout) has nothing to report, least of all
+    // a failure that would hold the next account's import off.
+    guard isCurrent(key) else { return }
     if case .failed = phase { lastFailedAt = Date() }
     var state = await CoreDataManager.shared.performBackground { context in
       Self.stateEntity(for: key, in: context).map(Self.importState(of:)) ?? ImportState()
     }
     state.phase = phase
+    state.accountKey = key
     state.pages = pages
     await publish(state)
   }
@@ -615,13 +635,18 @@ actor ListeningHistoryStore {
     guard run == nil, let key = AuthService.shared.accountKey,
       !CoreDataManager.shared.isUsingVolatileStore
     else { return }
-    switch await MainActor.run(body: { HistoryStatus.shared.state.phase }) {
-    case .failed, .skipped: return
-    default: break
+    let shown = await MainActor.run { HistoryStatus.shared.state }
+    if shown.accountKey == key {
+      switch shown.phase {
+      case .failed, .skipped: return
+      default: break
+      }
     }
     let state = await CoreDataManager.shared.performBackground { context in
       Self.stateEntity(for: key, in: context).map(Self.importState(of:))
     }
-    if let state { await publish(state) }
+    // A run that started meanwhile publishes its own progress.
+    guard run == nil, let state else { return }
+    await publish(state)
   }
 }

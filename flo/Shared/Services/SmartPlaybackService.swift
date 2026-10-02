@@ -174,8 +174,12 @@ final class SmartPlaybackService {
         continuation.resume(returning: (songs, stamp?.format))
       }
     }
+    // Remembered as of before the songs were read: a sync landing meanwhile
+    // leaves a newer stamp, so the next call builds the index again.
+    var builtFrom = stampDate
     var songs = cached
     if cached.isEmpty || format != LibraryStamp.currentFormat {
+      builtFrom = nil
       songs = await syncSongLibrary()
       // A failed sync hands back the old cache; plays folded from it would
       // keep missing genres and artist ids for good, so the import waits.
@@ -185,7 +189,10 @@ final class SmartPlaybackService {
           continuation.resume(returning: stamp?.format == LibraryStamp.currentFormat)
         }
       }
-      guard synced else { return LibraryIndex(songs: [:]) }
+      // A stamp can outlive an evicted song cache; an empty library is never
+      // remembered as the index.
+      guard synced, !songs.isEmpty else { return LibraryIndex(songs: [:]) }
+      builtFrom = LibraryCacheManager.shared.modificationDate(forKey: "songs.stamp")
     }
 
     var entries: [String: LibraryIndex.Entry] = [:]
@@ -201,7 +208,6 @@ final class SmartPlaybackService {
         era: song.year.flatMap { $0 > 0 ? "\($0 / 10 * 10)s" : nil })
     }
     let index = LibraryIndex(songs: entries)
-    let builtFrom = LibraryCacheManager.shared.modificationDate(forKey: "songs.stamp")
     indexLock.withLock { indexCache = (builtFrom, index) }
     return index
   }
