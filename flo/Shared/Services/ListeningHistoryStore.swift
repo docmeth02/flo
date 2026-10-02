@@ -290,6 +290,15 @@ actor ListeningHistoryStore {
       }
       state.phase = .importing(page: pages + 1)
       await publish(state)
+
+      // FLO_DEBUG_HISTORY_PAGE_DELAY=<s> leaves time to interrupt a bootstrap.
+      #if DEBUG
+        if let delay = ProcessInfo.processInfo.environment["FLO_DEBUG_HISTORY_PAGE_DELAY"]
+          .flatMap(Double.init)
+        {
+          try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+        }
+      #endif
     }
   }
 

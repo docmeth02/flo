@@ -86,6 +86,7 @@ struct WatchContentView: View {
     #if DEBUG
       .task { await runDebugDownloadActions() }
       .task { await runDebugSyncActions() }
+      .task { await runDebugHistoryActions() }
     #endif
   }
 }
@@ -167,6 +168,44 @@ struct WatchContentView: View {
       try? await Task.sleep(nanoseconds: 1_000_000_000)
       let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: "songs.stamp")
       debugLog("sync hook: \(songs.count) songs, stamp=\(String(describing: stamp))")
+    }
+
+    // FLO_DEBUG_HISTORY=1|rebuild imports the server's play log (after
+    // throwing the mirror away for rebuild) and logs the import state, the
+    // strongest artist and genre aggregates and the start of the share log.
+    fileprivate func runDebugHistoryActions() async {
+      guard let value = ProcessInfo.processInfo.environment["FLO_DEBUG_HISTORY"] else { return }
+      try? await Task.sleep(nanoseconds: 6_000_000_000)
+      let store = ListeningHistoryStore.shared
+      if value == "rebuild" {
+        await store.rebuild()
+      } else {
+        await store.refresh(reason: .debug)
+      }
+
+      let evaluatedAt = Date()
+      let snapshot = await store.snapshot()
+      let state = HistoryStatus.shared.state
+      debugLog(
+        "history state at \(String(format: "%.3f", evaluatedAt.timeIntervalSince1970)): phase=\(state.phase) pages=\(state.pages) total=\(state.serverTotal) "
+          + "imported=\(state.importedCount) matched=\(state.matchedCount) "
+          + "unmatched=\(state.unmatchedCount) watermark=\(state.watermarkId) "
+          + "bootstrapComplete=\(state.bootstrapComplete) "
+          + "earliest=\(state.earliestPlayAt.map { "\($0)" } ?? "-") future=\(snapshot.futurePlays)")
+      for kind in [AffinitySnapshot.Kind.artist, .genre] {
+        let top = (snapshot.aggregates[kind] ?? [:]).sorted { $0.value.weight > $1.value.weight }
+        for (key, aggregate) in top.prefix(5) {
+          debugLog(
+            "  \(kind) \(key) weight=\(String(format: "%.9f", aggregate.weight)) "
+              + "plays=\(aggregate.plays)")
+        }
+      }
+
+      let export = WatchDiagnosticsView.exportText()
+      debugLog("share log: \(export.count) characters")
+      for line in export.split(separator: "\n", omittingEmptySubsequences: false).prefix(10) {
+        debugLog("  | \(line)")
+      }
     }
 
     private func logMediaFiles(_ label: String) {
