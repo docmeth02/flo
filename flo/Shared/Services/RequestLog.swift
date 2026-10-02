@@ -33,7 +33,7 @@ final class RequestLog: ObservableObject {
   /// Newest first. Main thread only.
   @Published private(set) var entries: [Entry] = []
 
-  private let maxEntries = 40
+  private let maxEntries = 80
 
   private init() {}
 

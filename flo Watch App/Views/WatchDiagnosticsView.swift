@@ -5,18 +5,28 @@
 
 import SwiftUI
 
-/// Connection state and the latest server requests, to tell a slow or broken
-/// server from an app problem on the device itself. Shows no secrets.
+/// Connection state, the history import and the latest server requests, to
+/// tell a slow or broken server from an app problem on the device itself.
+/// Shows no secrets, and neither does the shared log.
 struct WatchDiagnosticsView: View {
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @ObservedObject private var log = RequestLog.shared
+  @ObservedObject private var history = HistoryStatus.shared
 
   var body: some View {
     List {
       Section {
-        row("Online", connectivity.isOnline ? "Yes" : "No")
-        row("Server reachable", connectivity.isServerReachable ? "Yes" : "No")
-        row("Token expires", tokenExpiry)
+        ShareLink(item: Self.exportText(), subject: Text("flo watch log")) {
+          Label("Share log", systemImage: "square.and.arrow.up")
+        }
+      }
+
+      Section {
+        ForEach(Self.connectionLines(), id: \.0) { row($0.0, $0.1) }
+      }
+
+      Section("History") {
+        ForEach(Self.historyLines(history.state), id: \.0) { row($0.0, $0.1) }
       }
 
       Section("Requests") {
@@ -35,6 +45,75 @@ struct WatchDiagnosticsView: View {
       }
     }
     .navigationTitle("Diagnostics")
+    .task { await ListeningHistoryStore.shared.publishStoredState() }
+  }
+
+  private static func connectionLines() -> [(String, String)] {
+    let connectivity = ConnectivityMonitor.shared
+    return [
+      ("Online", connectivity.isOnline ? "Yes" : "No"),
+      ("Server reachable", connectivity.isServerReachable ? "Yes" : "No"),
+      ("Token expires", tokenExpiry),
+    ]
+  }
+
+  private static func historyLines(_ state: ImportState) -> [(String, String)] {
+    let relative = RelativeDateTimeFormatter()
+    relative.unitsStyle = .abbreviated
+    relative.dateTimeStyle = .named
+
+    // A partial total would read as the server's whole history.
+    var plays = state.importedCount == 0 ? "not imported" : "incomplete"
+    if case .importing = state.phase { plays = "importing" }
+    if state.bootstrapComplete {
+      plays = "\(state.serverTotal) plays"
+      if let earliest = state.earliestPlayAt {
+        plays += ", earliest \(earliest.formatted(date: .abbreviated, time: .omitted))"
+      }
+    }
+
+    var status: String
+    switch state.phase {
+    case .idle: status = state.bootstrapComplete ? "complete" : "waiting"
+    case .importing(let page): status = "importing (page \(page))"
+    case .complete: status = "complete"
+    case .failed(let reason): status = "failed \(reason)"
+    case .skipped(let reason): status = "skipped, \(reason)"
+    }
+    if let last = state.lastImportAt {
+      status += ", refreshed \(relative.localizedString(for: last, relativeTo: Date()))"
+    }
+
+    return [
+      ("Server history", plays),
+      ("Matched to library", String(state.matchedCount)),
+      ("Import", status),
+      ("Pending submissions", String(ScrobbleQueueManager.shared.pendingCount)),
+      ("Unmatched", String(state.unmatchedCount)),
+    ]
+  }
+
+  /// The diagnostics as plain text with the request log newest first.
+  /// Main thread only.
+  static func exportText() -> String {
+    let info = Bundle.main.infoDictionary
+    let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+    let build = info?["CFBundleVersion"] as? String ?? "?"
+    var lines = [
+      "flo watch \(version) (\(build)), \(Date().formatted(.iso8601))"
+    ]
+    lines += connectionLines().map { "\($0.0): \($0.1)" }
+    lines.append("")
+    lines.append("History")
+    lines += historyLines(HistoryStatus.shared.state).map { "\($0.0): \($0.1)" }
+    lines.append("")
+    lines.append("Requests, newest first")
+    for entry in RequestLog.shared.entries {
+      lines.append(
+        "  \(String(format: "%.1f", entry.startedAt)) \(entry.text) "
+          + "status=\(entry.status.map(String.init) ?? "-") error=\(entry.error ?? "-")")
+    }
+    return lines.joined(separator: "\n")
   }
 
   private func row(_ title: String, _ value: String) -> some View {
@@ -68,7 +147,7 @@ struct WatchDiagnosticsView: View {
   }
 
   /// The `exp` claim of the Navidrome JWT, relative to now.
-  private var tokenExpiry: String {
+  private static var tokenExpiry: String {
     let segments = AuthService.shared.sessionSnapshot().ndToken.split(separator: ".")
     guard segments.count == 3 else { return "none" }
     var payload = segments[1].replacingOccurrences(of: "-", with: "+")

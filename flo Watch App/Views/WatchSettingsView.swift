@@ -13,6 +13,7 @@ struct WatchSettingsView: View {
   @State private var showLogoutAlert = false
   @State private var showClearAlert = false
   @State private var showClearCacheAlert = false
+  @State private var showRebuildHistoryAlert = false
   @State private var selectedCacheSize: Int64 = UserDefaultsManager.streamCacheMaxSize
 
   private let watchBitRates = ["0", "32", "64", "96", "128"]
@@ -130,6 +131,12 @@ struct WatchSettingsView: View {
         NavigationLink(destination: WatchDiagnosticsView()) {
           Label("Diagnostics", systemImage: "waveform.path.ecg")
         }
+
+        Button(role: .destructive, action: {
+          showRebuildHistoryAlert = true
+        }) {
+          Label("Rebuild History", systemImage: "arrow.clockwise")
+        }
       }
 
       Section {
@@ -160,6 +167,14 @@ struct WatchSettingsView: View {
       }
     } message: {
       Text("All cached streams will be removed.")
+    }
+    .alert("Rebuild History?", isPresented: $showRebuildHistoryAlert) {
+      Button("Cancel", role: .cancel) {}
+      Button("Rebuild", role: .destructive) {
+        Task { await ListeningHistoryStore.shared.rebuild() }
+      }
+    } message: {
+      Text("Your listening history is imported from the server again.")
     }
     .alert("Clear Downloads?", isPresented: $showClearAlert) {
       Button("Cancel", role: .cancel) {}
