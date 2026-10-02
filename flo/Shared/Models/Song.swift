@@ -25,6 +25,18 @@ struct Song: Codable, Identifiable, Hashable {
   var fileUrl: String = ""
   var starred: Bool = false
 
+  // Server metadata for smart shuffle, absent from downloads and the queue.
+  var genre: String?
+  var genres: [String]?
+  var year: Int?
+  var playCount: Int?
+  var playDate: String?
+  var rating: Int?
+  var ratedAt: String?
+  var starredAt: String?
+  var artistId: String?
+  var albumArtistId: String?
+
   var isExplicit: Bool {
     explicitStatus.isExplicit
   }
@@ -45,6 +57,16 @@ struct Song: Codable, Identifiable, Hashable {
     case mediaFileId
     case starred
     case explicitStatus
+    case genre
+    case genres
+    case year
+    case playCount
+    case playDate
+    case rating
+    case ratedAt
+    case starredAt
+    case artistId
+    case albumArtistId
   }
 
   enum EncodeKeys: String, CodingKey {
@@ -62,6 +84,21 @@ struct Song: Codable, Identifiable, Hashable {
     case mediaFileId
     case starred
     case explicitStatus
+    case genre
+    case genres
+    case year
+    case playCount
+    case playDate
+    case rating
+    case ratedAt
+    case starredAt
+    case artistId
+    case albumArtistId
+  }
+
+  /// The shape of an entry in the server's `genres` list; only the name is kept.
+  private struct GenreName: Codable {
+    let name: String
   }
 
   init(from decoder: any Decoder) throws {
@@ -86,6 +123,17 @@ struct Song: Codable, Identifiable, Hashable {
     self.starred = try container.decodeIfPresent(Bool.self, forKey: .starred) ?? false
     self.explicitStatus = ExplicitStatus(
       from: try container.decodeIfPresent(String.self, forKey: .explicitStatus))
+    // Metadata is optional: a field of an unexpected type must not fail the song.
+    self.genre = try? container.decodeIfPresent(String.self, forKey: .genre)
+    self.genres = (try? container.decodeIfPresent([GenreName].self, forKey: .genres))?.map(\.name)
+    self.year = try? container.decodeIfPresent(Int.self, forKey: .year)
+    self.playCount = try? container.decodeIfPresent(Int.self, forKey: .playCount)
+    self.playDate = try? container.decodeIfPresent(String.self, forKey: .playDate)
+    self.rating = try? container.decodeIfPresent(Int.self, forKey: .rating)
+    self.ratedAt = try? container.decodeIfPresent(String.self, forKey: .ratedAt)
+    self.starredAt = try? container.decodeIfPresent(String.self, forKey: .starredAt)
+    self.artistId = try? container.decodeIfPresent(String.self, forKey: .artistId)
+    self.albumArtistId = try? container.decodeIfPresent(String.self, forKey: .albumArtistId)
   }
 
   func encode(to encoder: any Encoder) throws {
@@ -105,6 +153,16 @@ struct Song: Codable, Identifiable, Hashable {
     try container.encode(mediaFileId, forKey: .mediaFileId)
     try container.encode(starred, forKey: .starred)
     try container.encode(explicitStatus.rawValue, forKey: .explicitStatus)
+    try container.encodeIfPresent(genre, forKey: .genre)
+    try container.encodeIfPresent(genres?.map(GenreName.init), forKey: .genres)
+    try container.encodeIfPresent(year, forKey: .year)
+    try container.encodeIfPresent(playCount, forKey: .playCount)
+    try container.encodeIfPresent(playDate, forKey: .playDate)
+    try container.encodeIfPresent(rating, forKey: .rating)
+    try container.encodeIfPresent(ratedAt, forKey: .ratedAt)
+    try container.encodeIfPresent(starredAt, forKey: .starredAt)
+    try container.encodeIfPresent(artistId, forKey: .artistId)
+    try container.encodeIfPresent(albumArtistId, forKey: .albumArtistId)
   }
 
   init(

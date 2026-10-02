@@ -11,8 +11,12 @@ import Foundation
 /// What the server's list of an entity looks like right now: how many items
 /// and when the newest one changed. Equal stamps mean an unchanged list.
 struct LibraryStamp: Codable, Equatable {
+  /// Bumped when cached items gain fields; an older cache is refetched whole.
+  static let currentFormat = 2
+
   let total: Int?  // nil when the server sent no X-Total-Count
   let newestUpdatedAt: String?
+  var format: Int? = currentFormat
 }
 
 private struct UpdatedAtOnly: Decodable {

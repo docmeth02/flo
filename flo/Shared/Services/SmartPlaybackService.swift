@@ -20,6 +20,20 @@ final class SmartPlaybackService {
     let albumId: String
   }
 
+  /// The cached library keyed by playback id, with the keys listening history
+  /// is aggregated under: plays mirrored from the server join songs through it.
+  struct LibraryIndex: Sendable {
+    struct Entry: Sendable {
+      let artistKey: String
+      let albumId: String
+      let genres: [String]
+      /// Decade such as "1990s"; nil without a year.
+      let era: String?
+    }
+
+    let songs: [String: Entry]
+  }
+
   /// Immutable aggregate of listening history, built in a single pass on a
   /// background Core Data context so scoring never touches managed objects.
   private struct ListeningSnapshot {
@@ -138,6 +152,35 @@ final class SmartPlaybackService {
     }
   }
 
+  /// Built from the cached song library on every call. A library that is
+  /// missing or cached without the metadata is synced first, so plays are
+  /// never folded without their genres and decades.
+  func libraryIndex() async -> LibraryIndex {
+    let (cached, format) = await withCheckedContinuation { continuation in
+      DispatchQueue.global(qos: .utility).async {
+        let songs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
+        let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: "songs.stamp")
+        continuation.resume(returning: (songs, stamp?.format))
+      }
+    }
+    let songs =
+      cached.isEmpty || format != LibraryStamp.currentFormat ? await syncSongLibrary() : cached
+
+    var entries: [String: LibraryIndex.Entry] = [:]
+    entries.reserveCapacity(songs.count)
+    for song in songs {
+      let artistId = song.artistId ?? ""
+      var genres = song.genres ?? []
+      if genres.isEmpty, let genre = song.genre { genres = [genre] }
+      entries[song.playbackID] = LibraryIndex.Entry(
+        artistKey: artistId.isEmpty ? Self.artistKey(song.artist) : artistId,
+        albumId: song.albumId,
+        genres: genres.filter { !$0.isEmpty },
+        era: song.year.flatMap { $0 > 0 ? "\($0 / 10 * 10)s" : nil })
+    }
+    return LibraryIndex(songs: entries)
+  }
+
   private func performSongSync(force: Bool, generation: Int) async -> [Song] {
     let (cached, cachedStamp) = await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .userInitiated).async {
@@ -171,6 +214,8 @@ final class SmartPlaybackService {
       }
     }
 
+    // Songs cached before the metadata fields lack them.
+    let force = force || cachedStamp?.format != stamp.format
     let unchanged =
       !force && stamp.total != nil && stamp == cachedStamp && cached.count == stamp.total
     var mode = unchanged ? "unchanged" : "full"
