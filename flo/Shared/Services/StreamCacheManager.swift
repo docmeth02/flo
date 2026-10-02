@@ -98,17 +98,12 @@ class StreamCacheManager {
       return
     }
 
-    let format =
-      bitrate == TranscodingSettings.sourceBitRate
-      ? TranscodingSettings.sourceFormat : TranscodingSettings.targetFormat
-    let suffix = format == "raw" ? ((originalSuffix?.isEmpty == false) ? originalSuffix! : "raw") : format
-
-    // Create CacheEntity with downloading state
+    // Create CacheEntity with downloading state now, while the queue item
+    // behind the metadata is alive; the file name waits for the server's
+    // transcode decision.
     let entity = CacheEntity(context: CoreDataManager.shared.viewContext)
     entity.cacheKey = key
     entity.mediaFileId = mediaFileId
-    entity.filePath = "\(key).\(suffix)"
-    entity.suffix = suffix
     entity.state = "downloading"
     entity.cachedAt = Date()
     entity.lastAccessedAt = Date()
@@ -128,18 +123,34 @@ class StreamCacheManager {
 
     CoreDataManager.shared.saveRecord()
 
-    let params: [String: Any] = [
-      "id": mediaFileId,
-      "maxBitRate": bitrate,
-      "format": format,
-    ]
+    Task { @MainActor in
+      let source = await AlbumService.shared.resolveStreamSource(
+        songId: mediaFileId, originalSuffix: originalSuffix, offset: 0)
+      // cancelAllInFlight may have run while the decision was pending.
+      guard self.syncQueue.sync(execute: { self.inFlightKeys.contains(key) }) else {
+        self.removeCacheRecord(key: key)
+        return
+      }
+      self.startCacheDownload(key: key, source: source)
+    }
+  }
+
+  private func startCacheDownload(key: String, source: StreamSource) {
+    let suffix = source.suffix
+    if let record = CoreDataManager.shared.getRecordByKey(
+      entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1
+    ).first {
+      record.filePath = "\(key).\(suffix)"
+      record.suffix = suffix
+      CoreDataManager.shared.saveRecord()
+    }
 
     let progressUpdate: (Double) -> Void = { [weak self] progress in
       self?.syncQueue.async { self?.inFlightProgress[key] = progress / 100.0 }
     }
 
     let request = APIManager.shared.SubsonicEndpointDownloadNew(
-      endpoint: API.SubsonicEndpoint.stream, parameters: params, progressUpdate: progressUpdate
+      endpoint: source.endpoint, parameters: source.parameters, progressUpdate: progressUpdate
     ) { [weak self] result in
       guard let self = self else { return }
 
