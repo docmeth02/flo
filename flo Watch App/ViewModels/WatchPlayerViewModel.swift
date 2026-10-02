@@ -1295,6 +1295,7 @@ class WatchPlayerViewModel: ObservableObject {
           self.stop()
           return
         }
+        debugLog("keep playing: \(songs.count) songs follow")
 
         let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: songs)
         // Through addToQueue, so shuffle state and failure counts reset like

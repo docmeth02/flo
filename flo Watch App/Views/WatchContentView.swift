@@ -20,6 +20,9 @@ struct WatchContentView: View {
   // Recreating the stack pops whatever was browsed on top of the tabs.
   @State private var stackID = UUID()
   @State private var leftAt: Date?
+  #if DEBUG
+    @State private var showsDebugDiagnostics = false
+  #endif
 
   private enum Tab { case home, nowPlaying }
 
@@ -87,6 +90,11 @@ struct WatchContentView: View {
       .task { await runDebugDownloadActions() }
       .task { await runDebugSyncActions() }
       .task { await runDebugHistoryActions() }
+      .task { await runDebugKeepPlaying() }
+      .task { await runDebugRatingUI() }
+      .task { await runDebugMixDump() }
+      .task { await runDebugDiagnostics() }
+      .sheet(isPresented: $showsDebugDiagnostics) { NavigationStack { WatchDiagnosticsView() } }
     #endif
   }
 }
@@ -208,6 +216,74 @@ struct WatchContentView: View {
       for line in export.split(separator: "\n", omittingEmptySubsequences: false).prefix(10) {
         debugLog("  | \(line)")
       }
+    }
+
+    // FLO_DEBUG_KEEP_PLAYING=1 turns Keep Playing on and plays the first
+    // cached song alone, seeked close to its end so the continuation follows
+    // at once; =short plays the shortest one through, so it qualifies first.
+    fileprivate func runDebugKeepPlaying() async {
+      guard let mode = ProcessInfo.processInfo.environment["FLO_DEBUG_KEEP_PLAYING"] else { return }
+      try? await Task.sleep(nanoseconds: 6_000_000_000)
+      UserDefaultsManager.keepPlaying = true
+      let songs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
+      let song =
+        mode == "short"
+        ? songs.filter { $0.duration > 0 }.min { $0.duration < $1.duration } : songs.first
+      guard let song else { return debugLog("keep playing hook: no cached songs") }
+      debugLog("keep playing hook: \(song.id) \(song.title) \(Int(song.duration))s")
+      playerViewModel.playItem(
+        item: SongCollection(id: "debug", name: "Debug", songs: [song]), isFromLocal: false)
+      selectedTab = .nowPlaying
+      guard mode != "short" else { return }
+      try? await Task.sleep(nanoseconds: 3_000_000_000)
+      playerViewModel.seek(to: 0.97)
+    }
+
+    // FLO_DEBUG_RATE_UI=<0|1|5> rates the playing song the way the rating
+    // dialog does, with the player shown.
+    fileprivate func runDebugRatingUI() async {
+      guard let rating = ProcessInfo.processInfo.environment["FLO_DEBUG_RATE_UI"].flatMap(Int.init)
+      else { return }
+      for _ in 0..<60 where !playerViewModel.isPlaying {
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+      }
+      try? await Task.sleep(nanoseconds: 2_000_000_000)
+      guard playerViewModel.hasNowPlaying() else { return debugLog("rating hook: nothing playing") }
+      selectedTab = .nowPlaying
+      playerViewModel.rateNowPlaying(rating)
+      debugLog("rating hook: \(playerViewModel.nowPlaying.id ?? "") rated \(rating)")
+    }
+
+    // FLO_DEBUG_DUMP_MIX=<s> logs the newest mix record at that time.
+    fileprivate func runDebugMixDump() async {
+      guard let delay = ProcessInfo.processInfo.environment["FLO_DEBUG_DUMP_MIX"].flatMap(Double.init)
+      else { return }
+      try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+      guard let mix = RecommendationLog.shared.mixes.first else {
+        return debugLog("mix dump: no mix recorded")
+      }
+      debugLog(
+        "mix dump: \(mix.mode) picks=\(mix.picks.count) eligible=\(mix.eligible) "
+          + "explore=\(String(format: "%.2f", mix.exploreShare)) notes=\(mix.notes)")
+      for pick in mix.picks {
+        debugLog("  \(pick.slot) \(pick.title) — \(pick.artist) | \(pick.reason) | \(pick.scores)")
+      }
+    }
+
+    // FLO_DEBUG_DIAGNOSTICS=<s> shows Diagnostics at that time and logs the
+    // size of the shared log.
+    fileprivate func runDebugDiagnostics() async {
+      guard let delay = ProcessInfo.processInfo.environment["FLO_DEBUG_DIAGNOSTICS"].flatMap(Double.init)
+      else { return }
+      try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+      showsDebugDiagnostics = true
+      let export = WatchDiagnosticsView.exportText()
+      debugLog(
+        "diagnostics: share log \(export.count) characters, "
+          + "last mixes=\(export.contains("\nLast mixes\n") || export.hasSuffix("\nLast mixes"))")
+      let lines = export.split(separator: "\n", omittingEmptySubsequences: false)
+      for line in lines where line.hasPrefix("Rated songs") { debugLog("  | \(line)") }
+      for line in lines.drop(while: { $0 != "Last mixes" }) { debugLog("  | \(line)") }
     }
 
     private func logMediaFiles(_ label: String) {
