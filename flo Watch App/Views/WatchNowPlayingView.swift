@@ -8,6 +8,7 @@ import WatchKit
 
 struct WatchNowPlayingView: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @ObservedObject private var ratings = RatingStore.shared
 
   // Next to the library page, the crown belongs to the volume control only
   // while the player is the selected page, so the library still scrolls.
@@ -19,6 +20,7 @@ struct WatchNowPlayingView: View {
   // Bumped when the volume control must claim the crown again: the system
   // takes it back while the app is in the background.
   @State private var focusRequest = 0
+  @State private var showRating = false
 
   var body: some View {
     ViewThatFits(in: .vertical) {
@@ -37,6 +39,17 @@ struct WatchNowPlayingView: View {
     .onDisappear { isShown = false }
     .onChange(of: scenePhase) { _, phase in
       if phase == .active { focusRequest += 1 }
+    }
+    .confirmationDialog(
+      rating == 0 ? "Not rated" : "Rated \(rating)", isPresented: $showRating,
+      titleVisibility: .visible
+    ) {
+      Button("Boost") { playerViewModel.rateNowPlaying(5) }
+      Button("Avoid in Smart Shuffle", role: .destructive) { playerViewModel.rateNowPlaying(1) }
+      if rating > 0 {
+        Button("Clear rating") { playerViewModel.rateNowPlaying(0) }
+      }
+      Button("Cancel", role: .cancel) {}
     }
     .navigationBarTitleDisplayMode(.inline)
     .navigationTitle("")
@@ -174,12 +187,18 @@ struct WatchNowPlayingView: View {
           }) {
             Image(systemName: playerViewModel.isStarred ? "heart.fill" : "heart")
               .font(.system(size: 21, weight: .semibold))
-              .frame(width: 44, height: 44)
               .foregroundColor(playerViewModel.isStarred ? .red : .secondary)
+              .overlay(alignment: .topTrailing) { ratingGlyph.offset(x: 7, y: -5) }
+              .frame(width: 44, height: 44)
           }
           .buttonStyle(.plain)
           .contentShape(Circle())
           .id("star-\(playerViewModel.isStarred)")
+          // Holding the heart rates the song for smart shuffle.
+          .onLongPressGesture {
+            showRating = true
+            WKInterfaceDevice.current().play(.click)
+          }
 
           Button(action: {
             playerViewModel.setPlaybackMode()
@@ -201,6 +220,23 @@ struct WatchNowPlayingView: View {
       }
     }
     .padding(.horizontal, 8)
+  }
+
+  private var rating: Int {
+    playerViewModel.hasNowPlaying() ? ratings.rating(for: playerViewModel.nowPlaying.id ?? "") : 0
+  }
+
+  /// A boosted or avoided song is marked on the heart; 3 is no statement.
+  @ViewBuilder private var ratingGlyph: some View {
+    if rating >= 4 {
+      Image(systemName: "sparkle")
+        .font(.system(size: 9, weight: .bold))
+        .foregroundColor(.accentColor)
+    } else if (1...2).contains(rating) {
+      Image(systemName: "hand.thumbsdown.fill")
+        .font(.system(size: 9, weight: .bold))
+        .foregroundColor(.secondary)
+    }
   }
 }
 

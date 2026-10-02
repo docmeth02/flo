@@ -88,6 +88,7 @@ class WatchPlayerViewModel: ObservableObject {
   private var lastAcceptedSong: (id: String, artist: String, albumId: String)?
   private var anchorGenres: Set<String> = []
   private static let sessionTimeout: TimeInterval = 30 * 60
+  private var ratingObservation: AnyCancellable?
 
   var nowPlaying: QueueEntity {
     return self.queue[self.activeQueueIdx]
@@ -129,6 +130,12 @@ class WatchPlayerViewModel: ObservableObject {
     }
 
     self.setupRemoteCommandCenter()
+    // Like and dislike follow the rating, wherever it was changed.
+    Task { @MainActor [weak self] in
+      self?.ratingObservation = RatingStore.shared.$ratings
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in self?.updateRatingCommands() }
+    }
 
     #if DEBUG
       runDebugLaunchActions()
@@ -472,6 +479,7 @@ class WatchPlayerViewModel: ObservableObject {
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.queueActiveIdx)
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    Task { @MainActor [weak self] in self?.updateRatingCommands() }
   }
 
   func addToQueue(idx: Int, item: [QueueEntity], playAudio: Bool = true) {
@@ -696,6 +704,7 @@ class WatchPlayerViewModel: ObservableObject {
     nowPlayingInfo[MPMediaItemPropertyArtist] = artist
     nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = playbackDuration
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+    Task { @MainActor [weak self] in self?.updateRatingCommands() }
 
     // Load artwork asynchronously and merge it in
     let albumCoverArt = self.getAlbumCoverArt()
@@ -783,6 +792,50 @@ class WatchPlayerViewModel: ObservableObject {
       }
       return .success
     }
+
+    // Like and dislike stand for Boost and Avoid; pressing the active one
+    // clears the rating.
+    commandCenter.likeCommand.localizedTitle = "Boost"
+    commandCenter.likeCommand.localizedShortTitle = "Boost"
+    commandCenter.likeCommand.addTarget { [weak self] _ in
+      Task { @MainActor in
+        guard let self, self.hasNowPlaying() else { return }
+        let rating = RatingStore.shared.rating(for: self.nowPlaying.id ?? "")
+        self.rateNowPlaying(rating >= 4 ? 0 : 5)
+      }
+      return .success
+    }
+
+    commandCenter.dislikeCommand.localizedTitle = "Avoid in Smart Shuffle"
+    commandCenter.dislikeCommand.localizedShortTitle = "Avoid"
+    commandCenter.dislikeCommand.addTarget { [weak self] _ in
+      Task { @MainActor in
+        guard let self, self.hasNowPlaying() else { return }
+        let rating = RatingStore.shared.rating(for: self.nowPlaying.id ?? "")
+        self.rateNowPlaying((1...2).contains(rating) ? 0 : 1)
+      }
+      return .success
+    }
+  }
+
+  /// Rates the now playing song from the rating dialog or the remote like
+  /// and dislike; 0 clears the rating.
+  @MainActor func rateNowPlaying(_ rating: Int) {
+    guard hasNowPlaying(), !isLiveRadio else { return }
+    RatingStore.shared.set(rating, for: nowPlaying)
+  }
+
+  @MainActor private func updateRatingCommands() {
+    let commandCenter = MPRemoteCommandCenter.shared()
+    let isRateable = hasNowPlaying() && !isLiveRadio
+    let rating = isRateable ? RatingStore.shared.rating(for: nowPlaying.id ?? "") : 0
+    commandCenter.likeCommand.isEnabled = isRateable
+    commandCenter.dislikeCommand.isEnabled = isRateable
+    commandCenter.likeCommand.isActive = rating >= 4
+    commandCenter.dislikeCommand.isActive = (1...2).contains(rating)
+    debugLog(
+      "rating commands: rating=\(rating) like=\(commandCenter.likeCommand.isActive) "
+        + "dislike=\(commandCenter.dislikeCommand.isActive)")
   }
 
   func play() {
