@@ -29,7 +29,11 @@ class UserDefaultsManager {
   static var serverBaseURL: String {
     get {
       migrateIfNeeded(UserDefaultsKeys.serverURL)
-      return sharedDefaults.string(forKey: UserDefaultsKeys.serverURL) ?? ""
+      // Endpoints start with "/"; a stored trailing slash would double it.
+      var url = (sharedDefaults.string(forKey: UserDefaultsKeys.serverURL) ?? "")
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+      while url.hasSuffix("/") { url.removeLast() }
+      return url
     }
     set {
       sharedDefaults.set(newValue, forKey: UserDefaultsKeys.serverURL)
