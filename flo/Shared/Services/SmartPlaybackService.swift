@@ -644,7 +644,7 @@ final class SmartPlaybackService {
 
   /// Case- and diacritic-insensitive key so "Beyoncé" and "beyonce" pool
   /// their plays.
-  private static func artistKey(_ artist: String) -> String {
+  static func artistKey(_ artist: String) -> String {
     artist.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
       .trimmingCharacters(in: .whitespaces)
   }

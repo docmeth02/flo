@@ -27,6 +27,8 @@ struct FloWatchApp: App {
     _ = RequestLog.shared
     // Imports the server's play log when the app becomes active.
     _ = ListeningHistoryStore.shared
+    // Journal rows older than its windows only take space.
+    PlaybackJournal.shared.pruneOld()
     // Sends rating edits the server has not confirmed yet.
     _ = RatingStore.shared
   }

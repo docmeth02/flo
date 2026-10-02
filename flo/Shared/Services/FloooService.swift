@@ -11,20 +11,6 @@ import Foundation
 class FloooService {
   static let shared: FloooService = FloooService()
 
-  func saveListeningHistory(payload: QueueEntity, skipped: Bool = false) {
-    let currentSession = HistoryEntity(context: CoreDataManager.shared.viewContext)
-
-    currentSession.albumId = payload.albumId
-    currentSession.artistName = payload.artistName
-    currentSession.trackName = payload.songName
-    currentSession.albumName = payload.albumName
-    currentSession.songId = payload.id
-    currentSession.timestamp = Date()
-    currentSession.skipped = skipped
-
-    CoreDataManager.shared.saveRecord()
-  }
-
   func scrobbleToBuiltinEndpoint(
     submission: Bool, songId: String, time: Date? = nil,
     completion: @escaping (Result<Void, Error>) -> Void

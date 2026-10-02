@@ -619,10 +619,13 @@ class WatchPlayerViewModel: ObservableObject {
         }
       }
 
-      // Runs on main (observer queue) — history writes stay on viewContext's
+      // Runs on main (observer queue) — journal writes stay on viewContext's
       // queue and the network submission is async inside the service anyway.
       if !self.isLocallySaved && self.progress >= 0.5 {
         self.isLocallySaved = true
+        PlaybackJournal.shared.recordHeard(
+          self.nowPlaying, origin: self.nowPlaying.playbackOrigin,
+          listenedSeconds: self.secondsListened)
         FloooViewModel.shared.scrobble(submission: true, nowPlaying: self.nowPlaying)
       }
 
@@ -1086,7 +1089,10 @@ class WatchPlayerViewModel: ObservableObject {
       self.secondsListened >= 5, self.progress < 0.3
     else { return }
 
-    FloooViewModel.shared.logSkip(nowPlaying: self.nowPlaying)
+    PlaybackJournal.shared.recordSkip(
+      self.nowPlaying, origin: self.nowPlaying.playbackOrigin,
+      listenedSeconds: self.secondsListened,
+      early: self.secondsListened <= PlaybackJournal.earlySkipSeconds)
   }
 
   private func autoPlayOrStop() {
@@ -1195,7 +1201,8 @@ class WatchPlayerViewModel: ObservableObject {
   // sets the bitrate limit (it stays in the simulator's defaults),
   // FLO_DEBUG_RESUME_AT=<s> breaks the remote stream once it reaches that
   // position, and FLO_DEBUG_DUMP_LOG=<s> logs the request log at that time.
-  // FLO_DEBUG_RATE=<playbackID>:<0-5> rates a song at launch.
+  // FLO_DEBUG_RATE=<playbackID>:<0-5> rates a song at launch;
+  // FLO_DEBUG_SKIP_AFTER=<s> presses next once the first song was heard that long.
   extension WatchPlayerViewModel {
     fileprivate func runDebugLaunchActions() {
       let env = ProcessInfo.processInfo.environment
@@ -1239,6 +1246,15 @@ class WatchPlayerViewModel: ObservableObject {
             userInfo: [
               AVPlayerItemFailedToPlayToEndTimeErrorKey: NSError(domain: "flo-debug", code: -1)
             ])
+        }
+      }
+
+      if let skipAfter = env["FLO_DEBUG_SKIP_AFTER"].flatMap(Double.init) {
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+          guard let self, self.secondsListened >= skipAfter else { return }
+          timer.invalidate()
+          debugLog("skipping after \(self.secondsListened)s")
+          self.nextSong(userInitiated: true)
         }
       }
 

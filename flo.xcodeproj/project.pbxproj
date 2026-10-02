@@ -68,6 +68,7 @@
 		DD189BE105260256B4F4BFCD /* Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41470BA2CE65808008BDCE8 /* Artist.swift */; };
 		E630217EDD6F3306103C7C1D /* WatchDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C00FCB7A37E884BAAC284C9 /* WatchDownloadsView.swift */; };
 		E8AB6CFDF3CCA70D9FD9E2F9 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FD82C15D58E00E712BE /* Errors.swift */; };
+		EBDA29F55177796DB96448C1 /* PlaybackJournal.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */; };
 		ECAFB6C32648B3A1587A499A /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F54D2C11908100E3E1D2 /* AuthViewModel.swift */; };
 		EE8257FFD4E35E3713B38C38 /* SmartPlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C533CDA257C450543A1A341D /* SmartPlaybackService.swift */; };
 		F1F2B828D68321384EA37737 /* Fonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F5632C11AA8700E3E1D2 /* Fonts.swift */; };
@@ -168,6 +169,7 @@
 		C533CDA257C450543A1A341D /* SmartPlaybackService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SmartPlaybackService.swift; sourceTree = "<group>"; };
 		CCECEB2E491539A0CCEFF67F /* NowPlayingIndicator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NowPlayingIndicator.swift; sourceTree = "<group>"; };
 		E376D21B3DA37CD2A6C1E8A0 /* flo 2.xcdatamodel */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcdatamodel; path = "flo 2.xcdatamodel"; sourceTree = "<group>"; };
+		E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaybackJournal.swift; sourceTree = "<group>"; };
 		EA601DF6D60F70D262CE557B /* TrackRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrackRowView.swift; sourceTree = "<group>"; };
 		F94DAD74D58A8EBD6F580A81 /* WatchRadiosView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
 		FABF85F19B541FE12696A0E5 /* WatchNowPlayingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNowPlayingView.swift; sourceTree = "<group>"; };
@@ -329,6 +331,7 @@
 				42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */,
 				65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */,
 				17258430B8997B70CB97CC82 /* RatingStore.swift */,
+				E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -546,6 +549,7 @@
 				4DE465B1CC1E6A07B1AAF79C /* WatchDiagnosticsView.swift in Sources */,
 				24FB8009A829D52B8837011C /* ListeningHistoryStore.swift in Sources */,
 				1024B8B945106964EDB0037E /* RatingStore.swift in Sources */,
+				EBDA29F55177796DB96448C1 /* PlaybackJournal.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
