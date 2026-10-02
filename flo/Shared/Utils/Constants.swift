@@ -13,6 +13,14 @@ import UIKit
 enum API {
   static let NDAuthHeader = "X-ND-Authorization"
 
+  // Watch cover tiles are 36 to 100 points at 2x, so 200 px is the largest
+  // the watch shows.
+  #if os(watchOS)
+    static let coverArtSize = 200
+  #else
+    static let coverArtSize = 300
+  #endif
+
   enum NDEndpoint {
     static let login = "/auth/login"
     static let getAlbum = "/api/album"

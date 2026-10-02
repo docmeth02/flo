@@ -372,7 +372,7 @@ class AlbumService {
       return cached
     } else {
       return
-        "\(UserDefaultsManager.serverBaseURL)\(API.SubsonicEndpoint.coverArt)\(AuthService.shared.getCreds(key: "subsonicToken"))&id=al-\(albumId)&size=300"
+        "\(UserDefaultsManager.serverBaseURL)\(API.SubsonicEndpoint.coverArt)\(AuthService.shared.getCreds(key: "subsonicToken"))&id=al-\(albumId)&size=\(API.coverArtSize)"
     }
   }
 
@@ -380,7 +380,7 @@ class AlbumService {
     albumId: String,
     completion: @escaping (Result<URL?, Error>) -> Void
   ) {
-    let params: [String: Any] = ["id": "al-\(albumId)", "size": 300]
+    let params: [String: Any] = ["id": "al-\(albumId)", "size": API.coverArtSize]
 
     APIManager.shared.SubsonicEndpointDownload(
       endpoint: API.SubsonicEndpoint.coverArt, parameters: params
@@ -403,7 +403,7 @@ class AlbumService {
     albumId: String,
     completion: @escaping (Result<URL?, Error>) -> Void
   ) {
-    let params: [String: Any] = ["id": "al-\(albumId)", "size": 300]
+    let params: [String: Any] = ["id": "al-\(albumId)", "size": API.coverArtSize]
 
     APIManager.shared.SubsonicEndpointDownload(
       endpoint: API.SubsonicEndpoint.coverArt, parameters: params
@@ -429,7 +429,7 @@ class AlbumService {
     completion: @escaping (Result<URL?, Error>) -> Void
   ) {
     let artId = coverArtId ?? (playlistId.hasPrefix("pl-") ? playlistId : "pl-\(playlistId)")
-    let params: [String: Any] = ["id": artId, "size": 300]
+    let params: [String: Any] = ["id": artId, "size": API.coverArtSize]
 
     APIManager.shared.SubsonicEndpointDownload(
       endpoint: API.SubsonicEndpoint.coverArt, parameters: params
