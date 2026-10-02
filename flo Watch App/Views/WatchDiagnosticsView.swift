@@ -5,13 +5,15 @@
 
 import SwiftUI
 
-/// Connection state, the history import and the latest server requests, to
-/// tell a slow or broken server from an app problem on the device itself.
+/// Connection state, the history import, the latest mix and server requests,
+/// to tell a slow or broken server from an app problem on the device itself.
 /// Shows no secrets, and neither does the shared log.
 struct WatchDiagnosticsView: View {
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @ObservedObject private var log = RequestLog.shared
   @ObservedObject private var history = HistoryStatus.shared
+  @ObservedObject private var ratings = RatingStore.shared
+  @ObservedObject private var recommendations = RecommendationLog.shared
 
   var body: some View {
     List {
@@ -27,6 +29,20 @@ struct WatchDiagnosticsView: View {
 
       Section("History") {
         ForEach(Self.historyLines(history.state), id: \.0) { row($0.0, $0.1) }
+      }
+
+      Section("Last mix") {
+        if let mix = recommendations.mixes.first {
+          Text(Self.summary(of: mix))
+            .customFont(.caption1)
+          ForEach(Array(mix.picks.enumerated()), id: \.offset) { _, pick in
+            row("\(pick.slot) · \(pick.reason)", "\(pick.title) — \(pick.artist)")
+          }
+        } else {
+          Text("No mix yet")
+            .customFont(.caption1)
+            .foregroundColor(.secondary)
+        }
       }
 
       Section("Requests") {
@@ -90,7 +106,12 @@ struct WatchDiagnosticsView: View {
       ("Import", status),
       ("Pending submissions", String(ScrobbleQueueManager.shared.pendingCount)),
       ("Unmatched", String(state.unmatchedCount)),
+      ("Rated songs", String(RatingStore.shared.ratings.count)),
     ]
+  }
+
+  private static func summary(of mix: MixRecord) -> String {
+    "\(mix.mode) · \(mix.picks.count) picks · explore \(Int((mix.exploreShare * 100).rounded())) %"
   }
 
   /// The diagnostics as plain text with the request log newest first.
@@ -112,6 +133,16 @@ struct WatchDiagnosticsView: View {
       lines.append(
         "  \(String(format: "%.1f", entry.startedAt)) \(entry.text) "
           + "status=\(entry.status.map(String.init) ?? "-") error=\(entry.error ?? "-")")
+    }
+    lines.append("")
+    lines.append("Last mixes")
+    for mix in RecommendationLog.shared.mixes.prefix(3) {
+      lines.append(
+        "  \(mix.at.formatted(.iso8601)) \(summary(of: mix)), \(mix.eligible) eligible")
+      lines += mix.notes.map { "    \($0)" }
+      lines += mix.picks.map {
+        "    \($0.slot) \($0.title) — \($0.artist) | \($0.reason) | \($0.scores)"
+      }
     }
     return lines.joined(separator: "\n")
   }
