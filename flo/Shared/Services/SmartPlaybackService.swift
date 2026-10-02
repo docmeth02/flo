@@ -20,6 +20,29 @@ final class SmartPlaybackService {
     let albumId: String
   }
 
+  /// What a continuation knows about the session it continues.
+  struct KeepPlayingContext {
+    let seed: Seed
+    let anchorGenres: Set<String>
+    let sessionMinutes: Double
+    let queueIds: Set<String>
+  }
+
+  enum MixMode {
+    case playSomething
+    case keepPlaying(KeepPlayingContext)
+  }
+
+  /// The mix for a mode; the ranking itself follows in the next step.
+  func generateMix(count: Int, mode: MixMode) async -> [Song] {
+    switch mode {
+    case .playSomething:
+      return await generateMix(count: count)
+    case .keepPlaying(let context):
+      return await generateMix(count: count, seed: context.seed, queueIds: context.queueIds)
+    }
+  }
+
   /// The cached library keyed by playback id, with the keys listening history
   /// is aggregated under: plays mirrored from the server join songs through it.
   struct LibraryIndex: Sendable {
