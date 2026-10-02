@@ -34,6 +34,7 @@
 		61F85A23962C669E4FAA3B23 /* RadioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAC2F321697002A5FBB /* RadioService.swift */; };
 		62F4DD11E524061F6A975D7F /* WatchRadiosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F94DAD74D58A8EBD6F580A81 /* WatchRadiosView.swift */; };
 		6A17041A9B41B54D4EF1673F /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E032C149F9A00D9BAEB /* APIManager.swift */; };
+		706F26CB9B6C32A00CD530CF /* RecommendationLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1388C037165FF767131D19D /* RecommendationLog.swift */; };
 		756478A3866CAEE05EB5E04F /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 1E22C1780DE530F41F928A95 /* KeychainAccess */; };
 		757E8B897B4A9B47143D8CCF /* WatchAlbumsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703CA328A69040E6CCF954B4 /* WatchAlbumsListView.swift */; };
 		75D1AF56B31EC146D85A2D00 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 106BAFD6F01D187F29A17A9D /* Alamofire */; };
@@ -168,6 +169,7 @@
 		C4FE524C2C14E71B0053763A /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
 		C533CDA257C450543A1A341D /* SmartPlaybackService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SmartPlaybackService.swift; sourceTree = "<group>"; };
 		CCECEB2E491539A0CCEFF67F /* NowPlayingIndicator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NowPlayingIndicator.swift; sourceTree = "<group>"; };
+		D1388C037165FF767131D19D /* RecommendationLog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecommendationLog.swift; sourceTree = "<group>"; };
 		E376D21B3DA37CD2A6C1E8A0 /* flo 2.xcdatamodel */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcdatamodel; path = "flo 2.xcdatamodel"; sourceTree = "<group>"; };
 		E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaybackJournal.swift; sourceTree = "<group>"; };
 		EA601DF6D60F70D262CE557B /* TrackRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrackRowView.swift; sourceTree = "<group>"; };
@@ -332,6 +334,7 @@
 				65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */,
 				17258430B8997B70CB97CC82 /* RatingStore.swift */,
 				E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */,
+				D1388C037165FF767131D19D /* RecommendationLog.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -550,6 +553,7 @@
 				24FB8009A829D52B8837011C /* ListeningHistoryStore.swift in Sources */,
 				1024B8B945106964EDB0037E /* RatingStore.swift in Sources */,
 				EBDA29F55177796DB96448C1 /* PlaybackJournal.swift in Sources */,
+				706F26CB9B6C32A00CD530CF /* RecommendationLog.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
