@@ -21,6 +21,14 @@ class AuthService {
   private var subsonicParams: String?
   private var credentialGeneration: UInt64 = 0
   private let credentialsLock = NSLock()
+  // Requests held back until a rejected Navidrome token is replaced.
+  private var sessionWaiters: [SessionWaiter] = []
+
+  private struct SessionWaiter {
+    let id: UUID
+    let completion: (Bool) -> Void
+    let timeout: DispatchWorkItem
+  }
 
   private init() {
     if let jsonString = try? KeychainManager.getAuthCreds(),
@@ -82,10 +90,75 @@ class AuthService {
     let subsonicParams = Self.subsonicQuery(for: data)
 
     credentialsLock.lock()
-    defer { credentialsLock.unlock() }
     credentialGeneration &+= 1
     self.NDToken = data.token
     self.subsonicParams = subsonicParams
+    let waiters = drainWaiters()
+    credentialsLock.unlock()
+    Self.resume(waiters, renewed: true)
+  }
+
+  /// Calls `completion` once the session differs from `snapshot` (true), or
+  /// with false after `timeout` or a logout. Completes right away when it
+  /// already differs. The completion runs on an arbitrary queue.
+  func waitForRenewedSession(
+    after snapshot: AuthSessionSnapshot, timeout: TimeInterval,
+    completion: @escaping (Bool) -> Void
+  ) {
+    credentialsLock.lock()
+    if credentialGeneration != snapshot.generation || (NDToken ?? "") != snapshot.ndToken {
+      credentialsLock.unlock()
+      completion(true)
+      return
+    }
+    let id = UUID()
+    let timeoutWork = DispatchWorkItem { [weak self] in
+      guard let self = self else { return }
+      self.credentialsLock.lock()
+      let index = self.sessionWaiters.firstIndex { $0.id == id }
+      let waiter = index.map { self.sessionWaiters.remove(at: $0) }
+      self.credentialsLock.unlock()
+      waiter?.completion(false)
+    }
+    sessionWaiters.append(SessionWaiter(id: id, completion: completion, timeout: timeoutWork))
+    credentialsLock.unlock()
+    DispatchQueue.global(qos: .utility).asyncAfter(
+      deadline: .now() + timeout, execute: timeoutWork)
+  }
+
+  /// Navidrome sends a renewed token with every authenticated /api answer.
+  /// Kept in memory only: the launch re-login stores a fresh one anyway.
+  func adoptRefreshedToken(_ token: String, from snapshot: AuthSessionSnapshot) {
+    var token = token.trimmingCharacters(in: .whitespaces)
+    if token.hasPrefix("Bearer ") {
+      token = String(token.dropFirst("Bearer ".count)).trimmingCharacters(in: .whitespaces)
+    }
+
+    credentialsLock.lock()
+    // An answer to a request of an earlier login must not replace a newer one.
+    guard !token.isEmpty, credentialGeneration == snapshot.generation, NDToken != token else {
+      credentialsLock.unlock()
+      return
+    }
+    NDToken = token
+    let waiters = drainWaiters()
+    credentialsLock.unlock()
+    debugLog("navidrome token refreshed")
+    Self.resume(waiters, renewed: true)
+  }
+
+  /// credentialsLock must be held.
+  private func drainWaiters() -> [SessionWaiter] {
+    let waiters = sessionWaiters
+    sessionWaiters = []
+    return waiters
+  }
+
+  private static func resume(_ waiters: [SessionWaiter], renewed: Bool) {
+    for waiter in waiters {
+      waiter.timeout.cancel()
+      waiter.completion(renewed)
+    }
   }
 
   #if DEBUG
@@ -98,10 +171,12 @@ class AuthService {
 
   func clearCreds() {
     credentialsLock.lock()
-    defer { credentialsLock.unlock() }
     credentialGeneration &+= 1
     NDToken = nil
     subsonicParams = nil
+    let waiters = drainWaiters()
+    credentialsLock.unlock()
+    Self.resume(waiters, renewed: false)
   }
 
   func login(

@@ -67,5 +67,21 @@ struct WatchHomeView: View {
       }
     }
     .navigationTitle("flo")
+    #if DEBUG
+      .task { await runDebugFetchAlbums() }
+    #endif
   }
 }
+
+#if DEBUG
+  // Simulator verification only. FLO_DEBUG_FETCH_ALBUMS=1 loads the album list
+  // two seconds after launch, =now right away (racing the launch re-login).
+  extension WatchHomeView {
+    fileprivate func runDebugFetchAlbums() async {
+      let mode = ProcessInfo.processInfo.environment["FLO_DEBUG_FETCH_ALBUMS"]
+      guard mode == "1" || mode == "now" else { return }
+      if mode == "1" { try? await Task.sleep(nanoseconds: 2_000_000_000) }
+      albumViewModel.fetchAlbums()
+    }
+  }
+#endif

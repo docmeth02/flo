@@ -142,6 +142,7 @@ class AlbumViewModel: ObservableObject {
         }
         switch result {
         case .success(let items):
+          debugLog("\(cacheKey.rawValue) loaded: \(items.count)")
           assign(items)
           DispatchQueue.global(qos: .utility).async {
             LibraryCacheManager.shared.save(

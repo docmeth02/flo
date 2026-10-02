@@ -22,7 +22,7 @@ class APIManager {
     configuration.timeoutIntervalForRequest = 30
 
     return Alamofire.Session(
-      configuration: configuration, interceptor: WatchRetryPolicy())
+      configuration: configuration, interceptor: NDSessionInterceptor())
   }
 
   func NDEndpointRequest<T: Decodable>(
@@ -46,8 +46,11 @@ class APIManager {
     )
     .validate(statusCode: 200..<300)
     .responseDecodable(of: T.self) { response in
-      Self.notifyIfSessionExpired(
-        response: response.response, error: response.error, authSession: authSession)
+      if response.error == nil,
+        let refreshed = response.response?.value(forHTTPHeaderField: "X-Nd-Authorization")
+      {
+        AuthService.shared.adoptRefreshedToken(refreshed, from: authSession)
+      }
       ConnectivityMonitor.shared.record(
         response: response.response, error: response.error?.underlyingError)
       completion(response)
@@ -157,10 +160,86 @@ final class WatchRetryPolicy: RetryPolicy {
   }
 }
 
+/// Renews Navidrome sessions in place: a 401/403 on an /api request is
+/// retried once after the re-login triggered by .sessionExpired, and requests
+/// created meanwhile wait for the new token. Connection failures fall back to
+/// WatchRetryPolicy. Subsonic requests, downloads and the login call carry no
+/// X-ND-Authorization header and pass through untouched.
+final class NDSessionInterceptor: RequestInterceptor {
+  private let fallback = WatchRetryPolicy()
+  private let renewalTimeout: TimeInterval = 15
+  private let lock = NSLock()
+  // The token a server rejected; requests carrying it wait for its successor.
+  private var rejectedToken: String?
+
+  func adapt(
+    _ urlRequest: URLRequest, for session: Session,
+    completion: @escaping (Result<URLRequest, Error>) -> Void
+  ) {
+    guard Self.bearerToken(in: urlRequest) != nil else {
+      completion(.success(urlRequest))
+      return
+    }
+    let snapshot = AuthService.shared.sessionSnapshot()
+    guard !snapshot.ndToken.isEmpty else {
+      completion(.success(urlRequest))
+      return
+    }
+    let rejected = lock.withLock { rejectedToken }
+    guard rejected == snapshot.ndToken else {
+      completion(.success(Self.applying(snapshot.ndToken, to: urlRequest)))
+      return
+    }
+    AuthService.shared.waitForRenewedSession(after: snapshot, timeout: renewalTimeout) { _ in
+      let token = AuthService.shared.sessionSnapshot().ndToken
+      completion(.success(token.isEmpty ? urlRequest : Self.applying(token, to: urlRequest)))
+    }
+  }
+
+  // Alamofire may ask twice for one failure (validation, then serialization),
+  // so this answers right away; the waiting happens in adapt.
+  func retry(
+    _ request: Request, for session: Session, dueTo error: Error,
+    completion: @escaping (RetryResult) -> Void
+  ) {
+    guard let status = request.response?.statusCode, status == 401 || status == 403,
+      request is DataRequest, let sent = Self.bearerToken(in: request.request)
+    else {
+      fallback.retry(request, for: session, dueTo: error, completion: completion)
+      return
+    }
+    let current = AuthService.shared.sessionSnapshot()
+    guard request.retryCount == 0, !current.ndToken.isEmpty else {
+      fallback.retry(request, for: session, dueTo: error, completion: completion)
+      return
+    }
+    if sent == current.ndToken {
+      lock.withLock { rejectedToken = sent }
+    }
+    // AuthViewModel ignores the notice while a re-login is under way.
+    DispatchQueue.main.async {
+      NotificationCenter.default.post(name: .sessionExpired, object: current)
+    }
+    debugLog("session rejected, retrying \(request.request?.url?.path ?? "") after re-login")
+    completion(.retry)
+  }
+
+  private static func bearerToken(in request: URLRequest?) -> String? {
+    guard var value = request?.headers.value(for: API.NDAuthHeader) else { return nil }
+    if value.hasPrefix("Bearer ") { value.removeFirst("Bearer ".count) }
+    return value.isEmpty ? nil : value
+  }
+
+  private static func applying(_ token: String, to request: URLRequest) -> URLRequest {
+    var request = request
+    request.headers.update(name: API.NDAuthHeader, value: "Bearer \(token)")
+    return request
+  }
+}
+
 extension APIManager {
   /// Posts .sessionExpired when the underlying HTTP response is 401/403.
-  /// Centralizes ghost-session recovery so NDEndpoint + Subsonic callers do
-  /// not need to duplicate status-code inspection.
+  /// Covers Subsonic requests; NDSessionInterceptor covers /api.
   fileprivate static func notifyIfSessionExpired(
     response: HTTPURLResponse?, error: AFError?, authSession: AuthSessionSnapshot
   ) {
