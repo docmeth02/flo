@@ -1134,11 +1134,46 @@ class WatchPlayerViewModel: ObservableObject {
   // Simulator verification only. FLO_DEBUG_PLAY_SOMETHING=1 starts a smart mix
   // a few seconds after launch; FLO_DEBUG_BROKEN_FIRST=1 puts an unknown song
   // first; FLO_DEBUG_SEEK=<0...1> then seeks the first track to that
-  // position; the queue state is logged along the way.
+  // position; the queue state is logged along the way. FLO_DEBUG_BITRATE=<kbps>
+  // sets the bitrate limit (it stays in the simulator's defaults),
+  // FLO_DEBUG_RESUME_AT=<s> breaks the remote stream once it reaches that
+  // position, and FLO_DEBUG_DUMP_LOG=<s> logs the request log at that time.
   extension WatchPlayerViewModel {
     fileprivate func runDebugLaunchActions() {
       let env = ProcessInfo.processInfo.environment
+      if let kbps = env["FLO_DEBUG_BITRATE"] {
+        UserDefaultsManager.maxBitRate = kbps
+        debugLog("max bitrate set to \(kbps)")
+      }
+      if let delay = env["FLO_DEBUG_DUMP_LOG"].flatMap(Double.init) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+          let entries = RequestLog.shared.entries
+          debugLog("request log: \(entries.count) entries")
+          for entry in entries.reversed() {
+            debugLog(
+              "  \(String(format: "%.1f", entry.startedAt)) \(entry.text) "
+                + "status=\(entry.status.map(String.init) ?? "-") error=\(entry.error ?? "-")")
+          }
+        }
+      }
       guard env["FLO_DEBUG_PLAY_SOMETHING"] == "1" else { return }
+
+      if let resumeAt = env["FLO_DEBUG_RESUME_AT"].flatMap(Double.init) {
+        // Posts the failure notification AVPlayer sends for a broken stream,
+        // so the real recovery path runs.
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+          guard let self, self.lastObservedTime >= resumeAt, self.currentSourceIsRemote,
+            let item = self.playerItem
+          else { return }
+          timer.invalidate()
+          debugLog("simulating stream failure at \(self.lastObservedTime)")
+          NotificationCenter.default.post(
+            name: .AVPlayerItemFailedToPlayToEndTime, object: item,
+            userInfo: [
+              AVPlayerItemFailedToPlayToEndTimeErrorKey: NSError(domain: "flo-debug", code: -1)
+            ])
+        }
+      }
 
       DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
         Task { @MainActor in
