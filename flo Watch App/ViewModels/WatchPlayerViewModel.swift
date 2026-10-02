@@ -40,7 +40,6 @@ class WatchPlayerViewModel: ObservableObject {
   private var logoutObservation: AnyCancellable?
   private var unshuffledQueue: [QueueEntity] = []
 
-  private var scrobbleThreshold = 0.5
   private var hasTriggeredCache: Bool = false
   // Audible playback of the current item; unlike the playhead position,
   // seeking cannot inflate or erase it.
@@ -113,10 +112,9 @@ class WatchPlayerViewModel: ObservableObject {
       self.playbackMode = UserDefaultsManager.playbackMode
       self.addToQueue(
         idx: UserDefaultsManager.queueActiveIdx, item: lastPlayData, playAudio: false)
-
-      if self.progress > scrobbleThreshold {
-        self.isLocallySaved = true
-      }
+      // A song that already counted must not count again after a relaunch.
+      self.isLocallySaved = UserDefaultsManager.nowPlayingQualified
+      debugLog("restored \(self.nowPlaying.id ?? "") qualified=\(self.isLocallySaved)")
     } else {
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.queueActiveIdx)
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
@@ -527,6 +525,7 @@ class WatchPlayerViewModel: ObservableObject {
       // The first observer tick now waits for the stream decision; a kill in
       // between must not restore this song at the previous one's position.
       UserDefaultsManager.nowPlayingProgress = 0
+      UserDefaultsManager.nowPlayingQualified = false
     }
     self.pendingStartPosition = self.progress * playbackDuration
     self.currentTimeString = timeString(for: self.pendingStartPosition)
@@ -619,10 +618,18 @@ class WatchPlayerViewModel: ObservableObject {
         }
       }
 
+      // Navidrome's rule: a play counts after half the song or four minutes
+      // of listening, whichever comes first; seeking ahead does not count.
       // Runs on main (observer queue) — journal writes stay on viewContext's
       // queue and the network submission is async inside the service anyway.
-      if !self.isLocallySaved && self.progress >= 0.5 {
+      if !self.isLocallySaved, self.totalDuration.isFinite, self.totalDuration > 0,
+        self.secondsListened >= min(0.5 * self.totalDuration, 240)
+      {
         self.isLocallySaved = true
+        UserDefaultsManager.nowPlayingQualified = true
+        debugLog(
+          "qualified after \(String(format: "%.1f", self.secondsListened))s of "
+            + "\(String(format: "%.0f", self.totalDuration))s")
         PlaybackJournal.shared.recordHeard(
           self.nowPlaying, origin: self.nowPlaying.playbackOrigin,
           listenedSeconds: self.secondsListened)

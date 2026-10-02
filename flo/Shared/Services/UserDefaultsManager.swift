@@ -58,6 +58,16 @@ class UserDefaultsManager {
     }
   }
 
+  /// Whether the current song already counted as a play.
+  static var nowPlayingQualified: Bool {
+    get {
+      return UserDefaults.standard.bool(forKey: UserDefaultsKeys.nowPlayingQualified)
+    }
+    set {
+      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.nowPlayingQualified)
+    }
+  }
+
   static var playbackMode: String {
     get {
       return UserDefaults.standard.string(forKey: UserDefaultsKeys.playbackMode)
