@@ -19,6 +19,7 @@ class AuthService {
 
   private var NDToken: String?
   private var subsonicParams: String?
+  private var userId: String?
   private var credentialGeneration: UInt64 = 0
   private let credentialsLock = NSLock()
   // Requests held back until a rejected Navidrome token is replaced.
@@ -37,6 +38,7 @@ class AuthService {
       if let data: UserAuth = try? JSONDecoder().decode(UserAuth.self, from: jsonData) {
         NDToken = data.token
         subsonicParams = Self.subsonicQuery(for: data)
+        userId = data.id
         credentialGeneration = 1
       }
     }
@@ -88,6 +90,19 @@ class AuthService {
     sessionSnapshot().generation == snapshot.generation
   }
 
+  /// Server and user the locally stored history belongs to, nil when logged
+  /// out. Built from the stored login, never from a token, so it survives
+  /// token renewals.
+  var accountKey: String? {
+    let id = credentialsLock.withLock { userId } ?? ""
+    guard !id.isEmpty, let url = URLComponents(string: UserDefaultsManager.serverBaseURL),
+      let host = url.host, !host.isEmpty
+    else { return nil }
+    var server = host + (url.port.map { ":\($0)" } ?? "") + url.path
+    while server.hasSuffix("/") { server.removeLast() }
+    return "\(server.lowercased())|\(id)"
+  }
+
   func setCreds(_ data: UserAuth) {
     let subsonicParams = Self.subsonicQuery(for: data)
 
@@ -95,6 +110,7 @@ class AuthService {
     credentialGeneration &+= 1
     self.NDToken = data.token
     self.subsonicParams = subsonicParams
+    self.userId = data.id
     let waiters = drainWaiters()
     credentialsLock.unlock()
     Self.resume(waiters, renewed: true)
@@ -191,6 +207,7 @@ class AuthService {
     credentialGeneration &+= 1
     NDToken = nil
     subsonicParams = nil
+    userId = nil
     let waiters = drainWaiters()
     credentialsLock.unlock()
     Self.resume(waiters, renewed: false)
