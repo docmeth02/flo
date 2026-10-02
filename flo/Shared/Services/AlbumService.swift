@@ -152,7 +152,7 @@ class AlbumService {
 
   /// Asks for the next song's decision ahead of time. Main thread.
   func prefetchTranscodeDecision(songId: String) {
-    guard !decisionUnsupported, downloadedFileURL(mediaFileId: songId) == nil else { return }
+    guard !decisionUnsupported, localFileURL(mediaFileId: songId) == nil else { return }
     let kbps = Int(UserDefaultsManager.maxBitRate) ?? 0
     Task { @MainActor in _ = await transcodeDecision(songId: songId, kbps: kbps) }
   }
@@ -206,9 +206,9 @@ class AlbumService {
 
     switch response.result {
     case .success(let body):
-      // Code 0 is the generic error of a server without the extension.
+      // A server without the extension answers 404 below; a failed decision
+      // (ffprobe on a damaged file, a database hiccup) concerns this song only.
       if let error = body.subsonicResponse.error {
-        if error.code == 0 { decisionUnsupported = true }
         debugLog("transcode decision for \(songId) failed: \(error.code) \(error.message ?? "")")
         return nil
       }

@@ -69,9 +69,10 @@ class WatchPlayerViewModel: ObservableObject {
   private var pendingStartPosition: Double = 0
   private var currentSourceIsRemote = false
   private var currentSourceIsTranscoded = false
-  // Where the last mid-song resume started; a stream that breaks again soon
-  // after it is skipped rather than resumed over and over.
-  private var resumedAtPosition: Double?
+  // Listening time at the last mid-song resume; a stream that breaks again
+  // before 30 s more were heard is skipped rather than resumed over and over.
+  // Listening time, not position: a seek back must not block the next resume.
+  private var resumedAtListened: Double?
   // Bumped whenever the item is detached; a stream source resolved for an
   // older load is dropped. playGeneration moves with play/pause and cannot
   // tell.
@@ -337,16 +338,26 @@ class WatchPlayerViewModel: ObservableObject {
       AlbumService.shared.forgetTranscodeDecision(songId: trackId)
     }
 
-    guard isNowPlaying, !isLiveRadio, currentSourceIsRemote, lastObservedTime > 5,
-      resumedAtPosition.map({ lastObservedTime - $0 >= 30 }) ?? true
+    // A song that never got going is asked for once more: the server rejects a
+    // decision's token after a rescan touched the file. Paused, the reload in
+    // play() resumes at the last position anyway.
+    guard isNowPlaying, !isLiveRadio, currentSourceIsRemote, isPlaying, lastObservedTime > 5,
+      resumedAtListened.map({ secondsListened - $0 >= 30 }) ?? true
     else {
+      if isNowPlaying, !isLiveRadio, currentSourceIsRemote, isPlaying, lastObservedTime <= 5,
+        reloadedFailedTrackId != trackId
+      {
+        reloadedFailedTrackId = trackId
+        loadItem(at: pendingStartPosition)
+        return
+      }
       isMediaFailed = true
       skipFailedTrack(trackId: trackId)
       return
     }
 
     let position = floor(lastObservedTime)
-    resumedAtPosition = position
+    resumedAtListened = secondsListened
     debugLog("stream broke at \(position) s, resuming: \(trackId ?? "")")
     loadItem(at: position)
   }
@@ -466,7 +477,7 @@ class WatchPlayerViewModel: ObservableObject {
     self.hasTriggeredCache = false
     self.secondsListened = 0
     self.lastObservedTime = 0
-    self.resumedAtPosition = nil
+    self.resumedAtListened = nil
 
     StreamCacheManager.shared.cancelAllInFlight()
     StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: self.nowPlaying.id ?? "")
@@ -488,6 +499,9 @@ class WatchPlayerViewModel: ObservableObject {
 
     if playAudio {
       self.progress = 0
+      // The first observer tick now waits for the stream decision; a kill in
+      // between must not restore this song at the previous one's position.
+      UserDefaultsManager.nowPlayingProgress = 0
     }
     self.pendingStartPosition = self.progress * playbackDuration
     self.currentTimeString = timeString(for: self.pendingStartPosition)
@@ -500,6 +514,10 @@ class WatchPlayerViewModel: ObservableObject {
       title: self.nowPlaying.songName ?? "",
       artist: self.nowPlaying.artistName ?? "",
       playbackDuration: self.totalDuration)
+    // Nothing is attached yet, so the restored position is published here.
+    if !playAudio {
+      self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
+    }
 
     self.isStarred = false
     // A queue restored at launch stays paused; telling the server it is
@@ -542,7 +560,7 @@ class WatchPlayerViewModel: ObservableObject {
     timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) {
       [weak self, weak observedItem] time in
       guard let self = self, let observedItem = observedItem,
-        self.playerItem === observedItem
+        self.playerItem === observedItem, time.isNumeric
       else { return }
       let currentTime = self.streamOffset + CMTimeGetSeconds(time)
       let roundedTotalDuration = floor(self.totalDuration)
@@ -729,6 +747,7 @@ class WatchPlayerViewModel: ObservableObject {
             } else {
               // A stream that was well under way picks up where it broke.
               self.isPlaying = true
+              self.resumedAtListened = self.secondsListened
               self.loadItem(
                 at: self.currentSourceIsRemote && self.lastObservedTime > 5
                   ? floor(self.lastObservedTime) : 0)
@@ -770,6 +789,8 @@ class WatchPlayerViewModel: ObservableObject {
       detachItem()
       progress = 0
       currentTimeString = timeString(for: 0)
+      // No observer tick follows to persist the reset.
+      UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
     } else {
       player?.seek(to: CMTime.zero)
     }
@@ -786,8 +807,12 @@ class WatchPlayerViewModel: ObservableObject {
     currentTimeString = timeString(for: target)
 
     if playerItem == nil, !isPlaying {
+      // A load still under way would attach at its old target.
+      detachItem()
       pendingStartPosition = target
-    } else if playerItem == nil || (currentSourceIsTranscoded && abs(target - lastObservedTime) > 3) {
+    } else if playerItem == nil
+      || (currentSourceIsTranscoded && (target < streamOffset || abs(target - lastObservedTime) > 3))
+    {
       // A load under way restarts at the target; a transcode cannot seek far,
       // so the server starts a new one there.
       loadItem(at: target)
