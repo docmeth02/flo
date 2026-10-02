@@ -235,3 +235,10 @@ struct Song: Codable, Identifiable, Hashable {
     self.explicitStatus = ExplicitStatus(from: song.explicitStatus)
   }
 }
+
+extension Song {
+  /// The id the queue, the server's play log and the ratings use for a song.
+  var playbackID: String {
+    mediaFileId.isEmpty ? id : mediaFileId
+  }
+}

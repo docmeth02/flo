@@ -10,6 +10,7 @@
 		01805F1E44CC1B1244CA864C /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4100A6A2CE78B5F001BC9BE /* Playlist.swift */; };
 		039F16C6B65D4284E6989F70 /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134522C15BE0C00CCF2EB /* Strings.swift */; };
 		0D25BDE8239F8A39D2BC630E /* FloooService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* FloooService.swift */; };
+		1024B8B945106964EDB0037E /* RatingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17258430B8997B70CB97CC82 /* RatingStore.swift */; };
 		1DD438B1C8D7D5AEC7562A6A /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FB5C179BC0B76201835B86 /* WatchContentView.swift */; };
 		24FB8009A829D52B8837011C /* ListeningHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */; };
 		2C0356A72AB4F01AA810FE73 /* WatchPlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EBE53668B154717D97E0654 /* WatchPlaylistDetailView.swift */; };
@@ -104,6 +105,7 @@
 		0727D9D472758F5B95F301F6 /* WatchArtistsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchArtistsListView.swift; sourceTree = "<group>"; };
 		0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCacheManager.swift; sourceTree = "<group>"; };
 		0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverArtCacheManager.swift; sourceTree = "<group>"; };
+		17258430B8997B70CB97CC82 /* RatingStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RatingStore.swift; sourceTree = "<group>"; };
 		1AD5E1FE518457926B00D341 /* WatchPlaylistsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlaylistsListView.swift; sourceTree = "<group>"; };
 		1B4EC1A2350C8A0C34B7AE02 /* WatchLoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLoginView.swift; sourceTree = "<group>"; };
 		1BDA0AFDF99572D783F7433F /* WatchQueueView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchQueueView.swift; sourceTree = "<group>"; };
@@ -326,6 +328,7 @@
 				AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */,
 				42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */,
 				65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */,
+				17258430B8997B70CB97CC82 /* RatingStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -542,6 +545,7 @@
 				2C95BE4D2933E3895658C87D /* RequestLog.swift in Sources */,
 				4DE465B1CC1E6A07B1AAF79C /* WatchDiagnosticsView.swift in Sources */,
 				24FB8009A829D52B8837011C /* ListeningHistoryStore.swift in Sources */,
+				1024B8B945106964EDB0037E /* RatingStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

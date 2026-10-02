@@ -244,6 +244,8 @@ final class SmartPlaybackService {
         }
       }
     }
+    // Ratings leave updatedAt alone as well.
+    await RatingStore.shared.refreshFromServer()
 
     // Songs cached before the metadata fields lack them.
     let force = force || cachedStamp?.format != stamp.format
@@ -663,11 +665,5 @@ final class SmartPlaybackService {
     t = t.replacingOccurrences(
       of: #"\s*(feat\.|ft\.)\s.*$"#, with: "", options: .regularExpression)
     return t.trimmingCharacters(in: .whitespacesAndNewlines)
-  }
-}
-
-extension Song {
-  fileprivate var playbackID: String {
-    mediaFileId.isEmpty ? id : mediaFileId
   }
 }

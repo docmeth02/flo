@@ -35,22 +35,8 @@ class FloooService {
       params["time"] = Int64((time ?? Date()).timeIntervalSince1970 * 1000)
     }
 
-    APIManager.shared.SubsonicEndpointRequest(
-      endpoint: API.SubsonicEndpoint.scrobble, parameters: params
-    ) {
-      (response: DataResponse<BasicSubsonicResponse, AFError>) in
-      switch response.result {
-      case .success(let body):
-        let reply = body.subsonicResponse
-        if reply.status == "ok" {
-          completion(.success(()))
-        } else {
-          completion(.failure(reply.error ?? SubsonicError(code: 0, message: reply.status)))
-        }
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    APIManager.shared.SubsonicActionRequest(
+      endpoint: API.SubsonicEndpoint.scrobble, parameters: params, completion: completion)
   }
 
   /// Whether a failed scrobble can never succeed and should be dropped instead

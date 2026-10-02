@@ -87,6 +87,28 @@ class APIManager {
     }
   }
 
+  /// A Subsonic call without payload. Subsonic reports failures with HTTP
+  /// 200, so only a body whose status is "ok" counts as success.
+  func SubsonicActionRequest(
+    endpoint: String, parameters: Parameters?,
+    completion: @escaping (Result<Void, Error>) -> Void
+  ) {
+    SubsonicEndpointRequest(endpoint: endpoint, parameters: parameters) {
+      (response: DataResponse<BasicSubsonicResponse, AFError>) in
+      switch response.result {
+      case .success(let body):
+        let reply = body.subsonicResponse
+        if reply.status == "ok" {
+          completion(.success(()))
+        } else {
+          completion(.failure(reply.error ?? SubsonicError(code: 0, message: reply.status)))
+        }
+      case .failure(let error):
+        completion(.failure(error))
+      }
+    }
+  }
+
   // FIXME: refactor later
   func SubsonicEndpointDownloadNew(
     endpoint: String, method: HTTPMethod = .get, parameters: Parameters?,

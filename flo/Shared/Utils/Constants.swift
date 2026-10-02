@@ -40,6 +40,7 @@ enum API {
     static let topSongs = "/rest/getTopSongs"
     static let star = "/rest/star"
     static let unstar = "/rest/unstar"
+    static let setRating = "/rest/setRating"
     static let getStarred2 = "/rest/getStarred2"
     static let getTranscodeDecision = "/rest/getTranscodeDecision"
     static let getTranscodeStream = "/rest/getTranscodeStream"
@@ -67,6 +68,7 @@ enum UserDefaultsKeys {
   static let saveLoginInfo = "saveLoginInfo"
   static let streamCacheMaxSize = "streamCacheMaxSize"
   static let keepPlaying = "keepPlaying"
+  static let pendingRatings = "pendingRatings"
 }
 
 enum KeychainKeys {

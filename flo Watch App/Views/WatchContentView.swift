@@ -168,6 +168,7 @@ struct WatchContentView: View {
       try? await Task.sleep(nanoseconds: 1_000_000_000)
       let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: "songs.stamp")
       debugLog("sync hook: \(songs.count) songs, stamp=\(String(describing: stamp))")
+      debugLog("ratings: \(RatingStore.shared.ratings.count) \(RatingStore.shared.ratings)")
     }
 
     // FLO_DEBUG_HISTORY=1|rebuild imports the server's play log (after
@@ -192,6 +193,7 @@ struct WatchContentView: View {
           + "unmatched=\(state.unmatchedCount) watermark=\(state.watermarkId) "
           + "bootstrapComplete=\(state.bootstrapComplete) "
           + "earliest=\(state.earliestPlayAt.map { "\($0)" } ?? "-") future=\(snapshot.futurePlays)")
+      debugLog("ratings: \(RatingStore.shared.ratings.count) \(RatingStore.shared.ratings)")
       for kind in [AffinitySnapshot.Kind.artist, .genre] {
         let top = (snapshot.aggregates[kind] ?? [:]).sorted { $0.value.weight > $1.value.weight }
         for (key, aggregate) in top.prefix(5) {

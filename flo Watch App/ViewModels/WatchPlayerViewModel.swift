@@ -1195,12 +1195,22 @@ class WatchPlayerViewModel: ObservableObject {
   // sets the bitrate limit (it stays in the simulator's defaults),
   // FLO_DEBUG_RESUME_AT=<s> breaks the remote stream once it reaches that
   // position, and FLO_DEBUG_DUMP_LOG=<s> logs the request log at that time.
+  // FLO_DEBUG_RATE=<playbackID>:<0-5> rates a song at launch.
   extension WatchPlayerViewModel {
     fileprivate func runDebugLaunchActions() {
       let env = ProcessInfo.processInfo.environment
       if let kbps = env["FLO_DEBUG_BITRATE"] {
         UserDefaultsManager.maxBitRate = kbps
         debugLog("max bitrate set to \(kbps)")
+      }
+      if let rate = env["FLO_DEBUG_RATE"]?.split(separator: ":"), rate.count == 2,
+        let rating = Int(rate[1])
+      {
+        let id = String(rate[0])
+        Task { @MainActor in
+          RatingStore.shared.set(rating, playbackID: id)
+          debugLog("rated \(id) \(rating)")
+        }
       }
       if let delay = env["FLO_DEBUG_DUMP_LOG"].flatMap(Double.init) {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {

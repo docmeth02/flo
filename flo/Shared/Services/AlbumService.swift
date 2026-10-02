@@ -254,25 +254,32 @@ class AlbumService {
   }
 
   func starSong(id: String, completion: @escaping (Bool) -> Void) {
-    let url =
-      "\(UserDefaultsManager.serverBaseURL)\(API.SubsonicEndpoint.star)\(AuthService.shared.getCreds(key: "subsonicToken"))&id=\(id)"
-
-    APIManager.shared.session.request(url)
-      .validate(statusCode: 200..<300)
-      .response { response in
-        completion(response.error == nil)
-      }
+    APIManager.shared.SubsonicActionRequest(
+      endpoint: API.SubsonicEndpoint.star, parameters: ["id": id]
+    ) { completion((try? $0.get()) != nil) }
   }
 
   func unstarSong(id: String, completion: @escaping (Bool) -> Void) {
-    let url =
-      "\(UserDefaultsManager.serverBaseURL)\(API.SubsonicEndpoint.unstar)\(AuthService.shared.getCreds(key: "subsonicToken"))&id=\(id)"
+    APIManager.shared.SubsonicActionRequest(
+      endpoint: API.SubsonicEndpoint.unstar, parameters: ["id": id]
+    ) { completion((try? $0.get()) != nil) }
+  }
 
-    APIManager.shared.session.request(url)
-      .validate(statusCode: 200..<300)
-      .response { response in
-        completion(response.error == nil)
-      }
+  /// Rates a song 1 to 5; 0 removes its rating.
+  func setRating(id: String, rating: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+    APIManager.shared.SubsonicActionRequest(
+      endpoint: API.SubsonicEndpoint.setRating, parameters: ["id": id, "rating": rating],
+      completion: completion)
+  }
+
+  /// Every song the account rated, with its rating.
+  func getRatedSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
+    let params: [String: Any] = ["has_rating": "true", "_start": 0, "_end": 0]
+
+    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
+      (response: DataResponse<[Song], AFError>) in
+      completion(response.result.mapError { $0 })
+    }
   }
 
   func getStarredSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
