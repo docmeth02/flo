@@ -118,24 +118,28 @@ class AlbumService {
   {
     let kbps = Int(UserDefaultsManager.maxBitRate) ?? 0
 
-    if let decision = await transcodeDecision(songId: songId, kbps: kbps),
+    // With the server away the decision would only add its timeout to the
+    // stream's own failure.
+    if ConnectivityMonitor.shared.isServerReachable,
+      let decision = await transcodeDecision(songId: songId, kbps: kbps),
       let token = decision.transcodeParams, !token.isEmpty
     {
       // Never estimateContentLength: the estimate ignores the offset.
       var parameters: [String: Any] = [
         "mediaId": songId, "mediaType": "song", "transcodeParams": token,
       ]
-      if decision.canTranscode == true, let stream = decision.transcodeStream {
-        if offset > 0 { parameters["offset"] = offset }
-        return StreamSource(
-          endpoint: API.SubsonicEndpoint.getTranscodeStream, parameters: parameters,
-          suffix: stream.container ?? TranscodingSettings.targetFormat, isTranscoded: true)
-      }
+      // The original file first whenever the server allows it.
       if decision.canDirectPlay == true {
         return StreamSource(
           endpoint: API.SubsonicEndpoint.getTranscodeStream, parameters: parameters,
           suffix: decision.sourceStream?.container ?? Self.rawSuffix(originalSuffix),
           isTranscoded: false)
+      }
+      if decision.canTranscode == true, let stream = decision.transcodeStream {
+        if offset > 0 { parameters["offset"] = offset }
+        return StreamSource(
+          endpoint: API.SubsonicEndpoint.getTranscodeStream, parameters: parameters,
+          suffix: stream.container ?? TranscodingSettings.targetFormat, isTranscoded: true)
       }
     }
 
