@@ -40,6 +40,8 @@ enum API {
     static let star = "/rest/star"
     static let unstar = "/rest/unstar"
     static let getStarred2 = "/rest/getStarred2"
+    static let getTranscodeDecision = "/rest/getTranscodeDecision"
+    static let getTranscodeStream = "/rest/getTranscodeStream"
   }
 }
 

@@ -33,8 +33,50 @@ struct SongPageItem: Decodable {
   }
 }
 
+/// Where a remote song streams from: a server-decided direct play or
+/// transcode (getTranscodeStream), or the classic stream endpoint.
+struct StreamSource {
+  let endpoint: String
+  let parameters: [String: Any]
+  let suffix: String
+  /// A decided transcode, which starts at the requested offset. Anything else
+  /// starts at 0 and is seeked by the client.
+  let isTranscoded: Bool
+
+  var url: String { subsonicURL(endpoint: endpoint, parameters: parameters) }
+}
+
+/// A Subsonic URL with the credentials (which start with "?") and the
+/// percent-encoded parameters in its query.
+private func subsonicURL(endpoint: String, parameters: [String: Any]) -> String {
+  let query = parameters.sorted { $0.key < $1.key }
+    .flatMap { URLEncoding.queryString.queryComponents(fromKey: $0.key, value: $0.value) }
+    .map { "\($0)=\($1)" }
+    .joined(separator: "&")
+  return
+    "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(AuthService.shared.getCreds(key: "subsonicToken"))&\(query)"
+}
+
 class AlbumService {
   static let shared = AlbumService()
+
+  // Transcode decisions per song and bitrate setting. The Task is cached so
+  // the player and the pre-cache share one request. Main actor only.
+  private var transcodeDecisions: [String: (task: Task<TranscodeDecision?, Never>, at: Date)] = [:]
+  // The server lacks the transcoding extension; asked once per launch.
+  private var decisionUnsupported = false
+  // The token is signed for 48 hours.
+  private static let decisionLifetime: TimeInterval = 24 * 3600
+  private var logoutObserver: NSObjectProtocol?
+
+  private init() {
+    logoutObserver = NotificationCenter.default.addObserver(
+      forName: .didLogout, object: nil, queue: .main
+    ) { [weak self] _ in
+      self?.transcodeDecisions = [:]
+      self?.decisionUnsupported = false
+    }
+  }
 
   // Downloads live in one folder per collection (album or playlist) named by
   // its id, with files named by media file id, so equal titles or track
@@ -84,6 +126,121 @@ class AlbumService {
     }
 
     return buildRemoteStreamUrl(id: id)
+  }
+
+  /// A downloaded or stream-cached copy of the song, if one exists. Main thread.
+  func localFileURL(mediaFileId id: String) -> URL? {
+    downloadedFileURL(mediaFileId: id) ?? StreamCacheManager.shared.cachedFileURL(mediaFileId: id)
+  }
+
+  /// How to stream a song from the server. Asks for the server's decision and
+  /// falls back to the classic stream endpoint when there is none. `offset`
+  /// (seconds) only applies to a transcode.
+  @MainActor func resolveStreamSource(songId: String, originalSuffix: String?, offset: Int) async
+    -> StreamSource
+  {
+    let kbps = Int(UserDefaultsManager.maxBitRate) ?? 0
+
+    if let decision = await transcodeDecision(songId: songId, kbps: kbps),
+      let token = decision.transcodeParams, !token.isEmpty
+    {
+      // Never estimateContentLength: the estimate ignores the offset.
+      var parameters: [String: Any] = [
+        "mediaId": songId, "mediaType": "song", "transcodeParams": token,
+      ]
+      if decision.canTranscode == true, let stream = decision.transcodeStream {
+        if offset > 0 { parameters["offset"] = offset }
+        return StreamSource(
+          endpoint: API.SubsonicEndpoint.getTranscodeStream, parameters: parameters,
+          suffix: stream.container ?? TranscodingSettings.targetFormat, isTranscoded: true)
+      }
+      if decision.canDirectPlay == true {
+        return StreamSource(
+          endpoint: API.SubsonicEndpoint.getTranscodeStream, parameters: parameters,
+          suffix: decision.sourceStream?.container ?? Self.rawSuffix(originalSuffix),
+          isTranscoded: false)
+      }
+    }
+
+    let maxBitRate = UserDefaultsManager.maxBitRate
+    let format =
+      maxBitRate == TranscodingSettings.sourceBitRate
+      ? TranscodingSettings.sourceFormat : TranscodingSettings.targetFormat
+    return StreamSource(
+      endpoint: API.SubsonicEndpoint.stream,
+      parameters: ["id": songId, "maxBitRate": maxBitRate, "format": format],
+      suffix: format == TranscodingSettings.sourceFormat ? Self.rawSuffix(originalSuffix) : format,
+      isTranscoded: false)
+  }
+
+  /// Asks for the next song's decision ahead of time. Main thread.
+  func prefetchTranscodeDecision(songId: String) {
+    guard !decisionUnsupported, downloadedFileURL(mediaFileId: songId) == nil else { return }
+    let kbps = Int(UserDefaultsManager.maxBitRate) ?? 0
+    Task { @MainActor in _ = await transcodeDecision(songId: songId, kbps: kbps) }
+  }
+
+  /// Drops a song's decision, whose token the server may no longer accept.
+  /// Main thread.
+  func forgetTranscodeDecision(songId: String) {
+    transcodeDecisions = transcodeDecisions.filter { !$0.key.hasPrefix("\(songId)_") }
+  }
+
+  private static func rawSuffix(_ originalSuffix: String?) -> String {
+    (originalSuffix?.isEmpty == false) ? originalSuffix! : TranscodingSettings.sourceFormat
+  }
+
+  @MainActor private func transcodeDecision(songId: String, kbps: Int) async -> TranscodeDecision? {
+    guard !decisionUnsupported, !songId.isEmpty else { return nil }
+    let key = "\(songId)_\(kbps)"
+
+    if let cached = transcodeDecisions[key],
+      Date().timeIntervalSince(cached.at) < Self.decisionLifetime
+    {
+      return await cached.task.value
+    }
+
+    let task = Task { await self.fetchTranscodeDecision(songId: songId, kbps: kbps) }
+    transcodeDecisions[key] = (task, Date())
+    let decision = await task.value
+    // A failed request is asked again next time.
+    if decision == nil, transcodeDecisions[key]?.task == task {
+      transcodeDecisions[key] = nil
+    }
+    return decision
+  }
+
+  @MainActor private func fetchTranscodeDecision(songId: String, kbps: Int) async
+    -> TranscodeDecision?
+  {
+    let url = subsonicURL(
+      endpoint: API.SubsonicEndpoint.getTranscodeDecision,
+      parameters: ["mediaId": songId, "mediaType": "song"])
+
+    let response = await APIManager.shared.session.request(
+      url, method: .post, parameters: TranscodeClientInfo(maxBitRateKbps: kbps),
+      encoder: JSONParameterEncoder.default, requestModifier: { $0.timeoutInterval = 10 }
+    )
+    .validate(statusCode: 200..<300)
+    .serializingDecodable(TranscodeDecisionResponse.self).response
+
+    ConnectivityMonitor.shared.record(
+      response: response.response, error: response.error?.underlyingError)
+
+    switch response.result {
+    case .success(let body):
+      // Code 0 is the generic error of a server without the extension.
+      if let error = body.subsonicResponse.error {
+        if error.code == 0 { decisionUnsupported = true }
+        debugLog("transcode decision for \(songId) failed: \(error.code) \(error.message ?? "")")
+        return nil
+      }
+      return body.subsonicResponse.data
+    case .failure:
+      // Only a missing endpoint means unsupported; transport errors do not.
+      if response.response?.statusCode == 404 { decisionUnsupported = true }
+      return nil
+    }
   }
 
   func isStarred(songId: String, completion: @escaping (Bool) -> Void) {

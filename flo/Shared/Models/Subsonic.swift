@@ -137,3 +137,69 @@ struct SubsonicSong: Codable {
       explicitStatus: ExplicitStatus(from: explicitStatus))
   }
 }
+
+/// The server's answer to "how should this watch play this song"
+/// (OpenSubsonic `transcoding` extension).
+struct TranscodeDecision: SubsonicResponseData {
+  static var key = "transcodeDecision"
+
+  struct StreamInfo: Codable {
+    let container: String?
+    let codec: String?
+    let audioBitrate: Int?
+  }
+
+  let canDirectPlay: Bool?
+  let canTranscode: Bool?
+  /// Signed token for getTranscodeStream; the server rejects it once stale.
+  let transcodeParams: String?
+  let sourceStream: StreamInfo?
+  let transcodeStream: StreamInfo?
+  let errorReason: String?
+}
+
+struct TranscodeDecisionResponse: Codable {
+  let subsonicResponse: SubsonicResponse<TranscodeDecision>
+
+  enum CodingKeys: String, CodingKey {
+    case subsonicResponse = "subsonic-response"
+  }
+}
+
+/// What the watch can play, sent with every transcode decision request.
+/// The server only transcodes to mp3: 0.64 drops AAC transcoding profiles.
+struct TranscodeClientInfo: Encodable {
+  struct DirectPlayProfile: Encodable {
+    let containers: [String]
+    let audioCodecs: [String]
+    let protocols: [String]
+  }
+
+  struct TranscodingProfile: Encodable {
+    let container: String
+    let audioCodec: String
+    let `protocol`: String
+    let maxAudioChannels: Int
+  }
+
+  let name = AppMeta.name
+  let platform = "watchOS"
+  // Bits per second; left out when there is no limit.
+  let maxAudioBitrate: Int?
+  let maxTranscodingAudioBitrate: Int?
+  let directPlayProfiles = [
+    DirectPlayProfile(
+      containers: ["mp3", "m4a", "mp4", "aac", "flac", "wav", "aif", "aiff"],
+      audioCodecs: ["mp3", "aac", "alac", "flac", "pcm_s16le", "pcm_s24le"],
+      protocols: ["http"])
+  ]
+  let transcodingProfiles = [
+    TranscodingProfile(container: "mp3", audioCodec: "mp3", protocol: "http", maxAudioChannels: 2)
+  ]
+  let codecProfiles: [String] = []
+
+  init(maxBitRateKbps kbps: Int) {
+    maxAudioBitrate = kbps > 0 ? kbps * 1000 : nil
+    maxTranscodingAudioBitrate = maxAudioBitrate
+  }
+}
