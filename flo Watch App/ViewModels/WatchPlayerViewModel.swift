@@ -554,6 +554,8 @@ class WatchPlayerViewModel: ObservableObject {
     }
     self.pendingStartPosition = self.progress * playbackDuration
     self.currentTimeString = timeString(for: self.pendingStartPosition)
+    // The first tick after a restore must not count the way to the position.
+    self.lastObservedTime = self.pendingStartPosition
 
     // A queue restored at launch stays paused; telling the server it is
     // playing, or asking about it, waits until the user actually plays it.
@@ -663,6 +665,7 @@ class WatchPlayerViewModel: ObservableObject {
       }
 
       UserDefaultsManager.nowPlayingProgress = self.progress
+      UserDefaultsManager.nowPlayingListened = self.secondsListened
 
       if !self.hasTriggeredCache && currentTime >= 10.0 && !self.isLiveRadio {
         self.hasTriggeredCache = true

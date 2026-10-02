@@ -9,6 +9,9 @@ import Foundation
 /// affinity, ratings and stars, plus a share of lesser-played songs from the
 /// listener's own artists and genres. Pure and synchronous: every input is a
 /// snapshot, so the same inputs and generator state give the same mix.
+/// Which caps a refill may step over.
+private enum Relax { case none, genre, all }
+
 struct MixRanker {
   struct Config {
     // Saturation points of the affinity features: f(x; k) reaches 1 at x = k.
@@ -442,17 +445,20 @@ struct MixRanker {
     var overflow: [Int] = []
     let genreLimit = context == nil ? Int((Double(count) * cfg.genreCeiling).rounded(.up)) : count
 
-    func fits(_ n: Int) -> Bool {
+    // The genre ceiling gives way first; the artist and album caps only when
+    // the mix cannot be filled otherwise.
+    func fits(_ n: Int, _ relax: Relax) -> Bool {
       let entry = entries[candidates[n].index]
       return artistCounts[entry.artistKey, default: 0] < cfg.perArtistCap
         && (entry.albumId.isEmpty || albumCounts[entry.albumId, default: 0] < cfg.perAlbumCap)
-        && entry.genres.first.map { genreCounts[$0, default: 0] < genreLimit } ?? true
+        && (relax == .genre
+          || entry.genres.first.map { genreCounts[$0, default: 0] < genreLimit } ?? true)
     }
-    func admit(_ n: Int, relaxed: Bool = false) -> Admission {
+    func admit(_ n: Int, relax: Relax = .none) -> Admission {
       let i = candidates[n].index
       let entry = entries[i]
       guard !chosen.contains(n), !titles.contains(titleKey(i)) else { return .rejected }
-      if !relaxed, !fits(n) { return .capped }
+      if relax != .all, !fits(n, relax) { return .capped }
       let genre = entry.genres.first
       chosen.insert(n)
       titles.insert(titleKey(i))
@@ -504,10 +510,19 @@ struct MixRanker {
         let s = pickWeighted(exploreSongs[a].map { candidates[$0].explore }, rng: &rng)
         let n = exploreSongs[a].remove(at: s)
         exploreTotals[a] -= candidates[n].explore
+        // A drained artist must read exactly zero: a float residue would
+        // keep the loop alive with nothing left to draw.
+        if exploreSongs[a].isEmpty { exploreTotals[a] = 0 }
         let taken = admit(n) == .taken
         if taken { explorePicks.append(n) }
+        let artistKey = entries[candidates[n].index].artistKey
+        let artistFull = artistCounts[artistKey, default: 0] >= cfg.perArtistCap
         if round == 0, taken || exploreSongs[a].isEmpty {
           exploreReserve[a] = exploreSongs[a]
+          exploreSongs[a] = []
+          exploreTotals[a] = 0
+        } else if round == 1, taken || artistFull || exploreSongs[a].isEmpty {
+          // No more draws on an artist the caps are closed for.
           exploreSongs[a] = []
           exploreTotals[a] = 0
         }
@@ -554,8 +569,10 @@ struct MixRanker {
       }
     }
     let capped = preferredPicks.count
-    for n in overflow where preferredPicks.count + explorePicks.count < count {
-      if admit(n, relaxed: true) == .taken { preferredPicks.append(n) }
+    for relax in [Relax.genre, .all] {
+      for n in overflow where preferredPicks.count + explorePicks.count < count {
+        if admit(n, relax: relax) == .taken { preferredPicks.append(n) }
+      }
     }
     if preferredPicks.count > capped { notes.append("caps relaxed") }
 

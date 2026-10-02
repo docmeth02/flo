@@ -112,8 +112,21 @@ class FloooViewModel: ObservableObject {
     sendNextReport()
   }
 
+  private static func saysUnsupported(_ error: Error) -> Bool {
+    guard let error = error as? SubsonicError, error.code == 0 else { return false }
+    let message = error.message?.lowercased() ?? ""
+    return message.contains("not supported") || message.contains("not implemented")
+      || message.contains("unknown")
+  }
+
   private func sendNextReport() {
     guard !reportInFlight, !waitingReports.isEmpty else { return }
+    // Nothing waits out a dead link: a report describes this moment only.
+    let connectivity = ConnectivityMonitor.shared
+    guard connectivity.isOnline, connectivity.isServerReachable else {
+      waitingReports = []
+      return
+    }
     let report = waitingReports.removeFirst()
     reportInFlight = true
 
@@ -123,10 +136,11 @@ class FloooViewModel: ObservableObject {
       guard let self else { return }
       self.reportInFlight = false
 
-      // Only a server without the route answers 404; Subsonic errors come
-      // from one that has it (70: this song is unknown to it).
+      // A server without the route answers 404, or a generic Subsonic error
+      // saying so; Navidrome's own code 0 is an internal error and code 70
+      // means this song is unknown to it.
       if case .failure(let error) = result, !self.reportPlaybackUnsupported,
-        (error as? AFError)?.responseCode == 404
+        (error as? AFError)?.responseCode == 404 || Self.saysUnsupported(error)
       {
         debugLog("reportPlayback unsupported, now playing falls back to scrobble")
         self.reportPlaybackUnsupported = true
@@ -138,6 +152,9 @@ class FloooViewModel: ObservableObject {
       }
       if case .failure(let error) = result, (error as? SubsonicError)?.code == 70 {
         self.waitingReports.removeAll { $0.payload.songId == report.payload.songId }
+      } else if case .failure(let error) = result, !(error is SubsonicError) {
+        // The link is gone; the reports behind this one are stale already.
+        self.waitingReports = []
       }
       self.sendNextReport()
     }

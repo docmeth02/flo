@@ -19,8 +19,9 @@ import WatchKit
   private var serverFetched = false
   private var pending = UserDefaultsManager.pendingRatings
   private var inFlight = Set<String>()
-  // Edits the server took but a refresh has not stored in the cache yet.
-  private var confirmed = Set<String>()
+  // Edits the server took but no refresh has stored in the cache yet; a
+  // successful refresh is newer than all of them, whatever it says.
+  private var confirmed = UserDefaultsManager.confirmedRatings
   // Bumped when the server confirms an edit; a refresh asked for before that
   // may answer with the old rating and is dropped.
   private var confirmedEdits = 0
@@ -31,7 +32,14 @@ import WatchKit
     let center = NotificationCenter.default
     for name: Notification.Name in [.networkBecameOnline, WKApplication.didBecomeActiveNotification] {
       center.addObserver(forName: name, object: nil, queue: .main) { _ in
-        Task { @MainActor in RatingStore.shared.flush() }
+        Task { @MainActor in
+          let store = RatingStore.shared
+          store.flush()
+          // After a login the server set is unknown until the next song sync.
+          if !store.serverFetched, AuthService.shared.accountKey != nil {
+            await store.refreshFromServer()
+          }
+        }
       }
     }
     center.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
@@ -56,6 +64,9 @@ import WatchKit
   func set(_ rating: Int, playbackID id: String) {
     pending[id] = min(max(rating, 0), 5)
     UserDefaultsManager.pendingRatings = pending
+    // A new edit supersedes what the server took before it.
+    confirmed[id] = nil
+    UserDefaultsManager.confirmedRatings = confirmed
     publish()
     flush()
   }
@@ -80,12 +91,9 @@ import WatchKit
 
     server = Self.ratings(of: songs)
     serverFetched = true
-    // Edits the server now reports back are settled.
-    for (id, rating) in pending where confirmed.contains(id) && (server[id] ?? 0) == rating {
-      pending[id] = nil
-      confirmed.remove(id)
-    }
-    UserDefaultsManager.pendingRatings = pending
+    // The server's answer is newer than every edit it took before.
+    confirmed = [:]
+    UserDefaultsManager.removeObject(key: UserDefaultsKeys.confirmedRatings)
     publish()
     debugLog("ratings refreshed: \(server.count) rated, \(pending.count) pending")
     await Task.detached(priority: .utility) {
@@ -97,6 +105,9 @@ import WatchKit
 
   private func publish() {
     var merged = server
+    for (id, rating) in confirmed {
+      merged[id] = rating > 0 ? rating : nil
+    }
     for (id, rating) in pending {
       merged[id] = rating > 0 ? rating : nil
     }
@@ -129,7 +140,7 @@ import WatchKit
       debugLog("ratings: \(pending.count) pending while offline")
       return
     }
-    for (id, rating) in pending where !inFlight.contains(id) && !confirmed.contains(id) {
+    for (id, rating) in pending where !inFlight.contains(id) {
       send(rating, playbackID: id)
     }
   }
@@ -155,9 +166,13 @@ import WatchKit
       debugLog("rating confirmed: \(id)=\(rating)")
       confirmedEdits += 1
       server[id] = rating > 0 ? rating : nil
-      // Stays pending on disk until a refresh stored it in the cache, so a
-      // relaunch before then still knows it; the flush skips confirmed ones.
-      if pending[id] == rating { confirmed.insert(id) }
+      // Kept on disk until a refresh stored it in the cache, so a relaunch
+      // before then still knows it without sending it again.
+      if pending[id] == rating {
+        pending[id] = nil
+        confirmed[id] = rating
+        UserDefaultsManager.confirmedRatings = confirmed
+      }
     case .failure(let error):
       // A song the server no longer knows cannot be rated; anything else
       // waits for the next flush.
@@ -171,10 +186,10 @@ import WatchKit
     UserDefaultsManager.pendingRatings = pending
     publish()
 
-    if pending[id] != nil, !confirmed.contains(id) {
+    if pending[id] != nil {
       // Changed again while this one was under way.
       flush()
-    } else if inFlight.isEmpty {
+    } else if inFlight.isEmpty, pending.isEmpty {
       // Brings the cached list up to date for the next launch.
       Task { await refreshFromServer() }
     }
@@ -186,8 +201,9 @@ import WatchKit
     serverFetched = false
     pending = [:]
     inFlight = []
-    confirmed = []
+    confirmed = [:]
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.pendingRatings)
+    UserDefaultsManager.removeObject(key: UserDefaultsKeys.confirmedRatings)
     publish()
   }
 

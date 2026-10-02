@@ -72,6 +72,7 @@ enum UserDefaultsKeys {
   static let streamCacheMaxSize = "streamCacheMaxSize"
   static let keepPlaying = "keepPlaying"
   static let pendingRatings = "pendingRatings"
+  static let confirmedRatings = "confirmedRatings"
 }
 
 enum KeychainKeys {
