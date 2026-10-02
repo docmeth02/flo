@@ -24,7 +24,7 @@ struct WatchHomeView: View {
         isGeneratingMix = true
 
         Task { @MainActor in
-          let songs = await SmartPlaybackService.shared.generateMix(count: 15)
+          let songs = await SmartPlaybackService.shared.generateMix(count: 15, mode: .playSomething)
           isGeneratingMix = false
 
           guard !songs.isEmpty else { return }

@@ -81,6 +81,13 @@ class WatchPlayerViewModel: ObservableObject {
   // older load is dropped. playGeneration moves with play/pause and cannot
   // tell.
   private var loadGeneration = 0
+  // The listening session Keep Playing continues: when it began, the last
+  // song heard out (never a skip) and the genres the first such song set.
+  private var sessionStartedAt: Date?
+  private var lastPlaybackAt: Date?
+  private var lastAcceptedSong: (id: String, artist: String, albumId: String)?
+  private var anchorGenres: Set<String> = []
+  private static let sessionTimeout: TimeInterval = 30 * 60
 
   var nowPlaying: QueueEntity {
     return self.queue[self.activeQueueIdx]
@@ -446,6 +453,7 @@ class WatchPlayerViewModel: ObservableObject {
   /// Stops playback and forgets the queue; its songs belong to the account
   /// that just logged out.
   private func clearForLogout() {
+    resetSession()
     playGeneration += 1
     player?.pause()
     detachItem()
@@ -605,6 +613,18 @@ class WatchPlayerViewModel: ObservableObject {
       }
       self.lastObservedTime = currentTime
 
+      // Half an hour without playback ends the listening session.
+      if (self.player?.rate ?? 0) > 0 {
+        let now = Date()
+        if self.sessionStartedAt == nil
+          || now.timeIntervalSince(self.lastPlaybackAt ?? .distantPast) > Self.sessionTimeout
+        {
+          self.resetSession()
+          self.sessionStartedAt = now
+        }
+        self.lastPlaybackAt = now
+      }
+
       UserDefaultsManager.nowPlayingProgress = self.progress
 
       if !self.hasTriggeredCache && currentTime >= 10.0 && !self.isLiveRadio {
@@ -635,6 +655,7 @@ class WatchPlayerViewModel: ObservableObject {
           self.nowPlaying, origin: self.nowPlaying.playbackOrigin,
           listenedSeconds: self.secondsListened)
         FloooViewModel.shared.scrobble(submission: true, nowPlaying: self.nowPlaying)
+        self.acceptNowPlaying()
       }
 
       if self.totalDuration.isFinite,
@@ -885,6 +906,7 @@ class WatchPlayerViewModel: ObservableObject {
   @discardableResult
   func playBySong<T: Playable>(idx: Int, item: T, isFromLocal: Bool) -> Bool {
     guard item.songs.indices.contains(idx) else { return false }
+    resetSession()
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
     self.addToQueue(idx: idx, item: queue)
     return true
@@ -893,6 +915,7 @@ class WatchPlayerViewModel: ObservableObject {
   @discardableResult
   func playItem<T: Playable>(item: T, isFromLocal: Bool) -> Bool {
     guard !item.songs.isEmpty else { return false }
+    resetSession()
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
     self.addToQueue(idx: 0, item: queue)
     return true
@@ -901,6 +924,7 @@ class WatchPlayerViewModel: ObservableObject {
   @discardableResult
   func shuffleItem<T: Playable>(item: T, isFromLocal: Bool) -> Bool {
     guard !item.songs.isEmpty else { return false }
+    resetSession()
     var shuffledItem = item
     shuffledItem.songs.shuffle()
 
@@ -914,6 +938,7 @@ class WatchPlayerViewModel: ObservableObject {
     guard let radioUrl = Self.normalizedRadioURL(from: radio.streamUrl) else {
       return false
     }
+    resetSession()
 
     let item = radio.toPlayable()
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: false)
@@ -1103,6 +1128,27 @@ class WatchPlayerViewModel: ObservableObject {
       early: self.secondsListened <= PlaybackJournal.earlySkipSeconds)
   }
 
+  /// Something the user started, a logout or a long break ends the session.
+  private func resetSession() {
+    sessionStartedAt = nil
+    lastAcceptedSong = nil
+    anchorGenres = []
+  }
+
+  /// A song heard out seeds the next continuation; the first one of the
+  /// session also anchors its genres.
+  private func acceptNowPlaying() {
+    guard let id = nowPlaying.id, !id.isEmpty else { return }
+    lastAcceptedSong = (id, nowPlaying.artistName ?? "", nowPlaying.albumId ?? "")
+    guard anchorGenres.isEmpty else { return }
+    let session = sessionStartedAt
+    Task { @MainActor [weak self] in
+      let genres = await SmartPlaybackService.shared.libraryIndex().songs[id]?.genres ?? []
+      guard let self, self.sessionStartedAt == session, self.anchorGenres.isEmpty else { return }
+      self.anchorGenres = Set(genres)
+    }
+  }
+
   private func autoPlayOrStop() {
     guard UserDefaultsManager.keepPlaying else {
       self.stop()
@@ -1115,11 +1161,16 @@ class WatchPlayerViewModel: ObservableObject {
     guard !isAutoContinuing else { return }
     isAutoContinuing = true
 
-    // Capture the playback context before the queue is replaced.
+    // Capture the playback context before the queue is replaced. Until a song
+    // was heard out, the session continues from the one that just ended.
     let lastPlayedId = self.nowPlaying.id
+    let accepted = self.lastAcceptedSong
+    let seedId = accepted?.id ?? lastPlayedId ?? ""
     let seed = SmartPlaybackService.Seed(
-      artist: self.nowPlaying.artistName ?? "",
-      albumId: self.nowPlaying.albumId ?? "")
+      artist: accepted?.artist ?? self.nowPlaying.artistName ?? "",
+      albumId: accepted?.albumId ?? self.nowPlaying.albumId ?? "")
+    let sessionGenres = self.anchorGenres
+    let sessionMinutes = self.sessionStartedAt.map { Date().timeIntervalSince($0) / 60 } ?? 0
     let queueIdList = self.queue.compactMap { $0.id }
     let queueIds = Set(queueIdList)
     // Any play, pause or stop while the mix is generated bumps this; the user
@@ -1127,8 +1178,21 @@ class WatchPlayerViewModel: ObservableObject {
     let generation = self.playGeneration
 
     Task { [weak self] in
+      // A session without an anchor yet keeps to the seed's genres.
+      let anchorGenres =
+        sessionGenres.isEmpty
+        ? Set(await SmartPlaybackService.shared.libraryIndex().songs[seedId]?.genres ?? [])
+        : sessionGenres
+      debugLog(
+        "keep playing: seed=\(seedId) accepted=\(accepted != nil) artist=\(seed.artist) "
+          + "album=\(seed.albumId) anchorGenres=\(anchorGenres.sorted()) "
+          + "sessionMinutes=\(String(format: "%.1f", sessionMinutes)) queueIds=\(queueIds.count)")
       let songs = await SmartPlaybackService.shared.generateMix(
-        count: 10, seed: seed, queueIds: queueIds)
+        count: 10,
+        mode: .keepPlaying(
+          SmartPlaybackService.KeepPlayingContext(
+            seed: seed, anchorGenres: anchorGenres, sessionMinutes: sessionMinutes,
+            queueIds: queueIds)))
 
       await MainActor.run {
         guard let self = self else { return }
@@ -1268,7 +1332,8 @@ class WatchPlayerViewModel: ObservableObject {
 
       DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
         Task { @MainActor in
-          var songs = await SmartPlaybackService.shared.generateMix(count: 15)
+          var songs = await SmartPlaybackService.shared.generateMix(
+            count: 15, mode: .playSomething)
           debugLog("mix generated: \(songs.count) songs")
           if env["FLO_DEBUG_BROKEN_FIRST"] == "1", let first = songs.first {
             // A song id the server does not know, to exercise failed streams.
@@ -1294,7 +1359,8 @@ class WatchPlayerViewModel: ObservableObject {
         guard let self = self, self.hasNowPlaying() else { return }
         debugLog(
           "queue=\(self.queue.count) idx=\(self.activeQueueIdx) playing=\(self.isPlaying) "
-            + "song=\(self.nowPlaying.id ?? "") progress=\(String(format: "%.2f", self.progress))")
+            + "song=\(self.nowPlaying.id ?? "") progress=\(String(format: "%.2f", self.progress)) "
+            + "session=\(self.sessionStartedAt.map { "\(Int(-$0.timeIntervalSinceNow))s" } ?? "none")")
       }
     }
   }
