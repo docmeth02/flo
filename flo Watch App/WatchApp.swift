@@ -23,6 +23,8 @@ struct FloWatchApp: App {
     // Deliver scrobbles queued in an earlier session; the outbox otherwise only
     // wakes up when the next listen fails.
     _ = ScrobbleQueueManager.shared
+    // Request times count from here.
+    _ = RequestLog.shared
   }
 
   var body: some Scene {

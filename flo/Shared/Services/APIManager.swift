@@ -22,7 +22,8 @@ class APIManager {
     configuration.timeoutIntervalForRequest = 30
 
     return Alamofire.Session(
-      configuration: configuration, interceptor: NDSessionInterceptor())
+      configuration: configuration, interceptor: NDSessionInterceptor(),
+      eventMonitors: [RequestLog.shared.monitor])
   }
 
   func NDEndpointRequest<T: Decodable>(

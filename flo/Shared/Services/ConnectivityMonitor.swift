@@ -118,6 +118,7 @@ final class ConnectivityMonitor: ObservableObject {
     let cameOnline = (online && !isOnline) || (reachable && !isServerReachable)
 
     debugLog("connectivity online=\(online) reachable=\(reachable)")
+    RequestLog.shared.note("connectivity online=\(online) reachable=\(reachable)")
     if isOnline != online { isOnline = online }
     // Assigned on every probe: the scrobble outbox delivers on each success.
     isServerReachable = reachable

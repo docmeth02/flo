@@ -127,6 +127,12 @@ struct WatchSettingsView: View {
       }
 
       Section {
+        NavigationLink(destination: WatchDiagnosticsView()) {
+          Label("Diagnostics", systemImage: "waveform.path.ecg")
+        }
+      }
+
+      Section {
         Button(role: .destructive, action: {
           showLogoutAlert = true
         }) {
