@@ -482,17 +482,35 @@ struct MixRanker {
       "explore pool: \(exploreSongs.reduce(0) { $0 + $1.count }) songs by "
         + "\(exploreSongs.count) artists, quota \(exploreQuota)")
     var explorePicks: [Int] = []
-    while explorePicks.count < exploreQuota, exploreTotals.contains(where: { $0 > 0 }) {
-      let a = pickWeighted(exploreTotals, rng: &rng)
-      let s = pickWeighted(exploreSongs[a].map { candidates[$0].explore }, rng: &rng)
-      let n = exploreSongs[a].remove(at: s)
-      exploreTotals[a] -= candidates[n].explore
-      let taken = admit(n) == .taken
-      if taken { explorePicks.append(n) }
-      // One discovery per artist leaves the favourites room in the caps.
-      if taken || exploreSongs[a].isEmpty {
-        exploreSongs[a] = []
-        exploreTotals[a] = 0
+    // One discovery per artist leaves the favourites room in the caps; the
+    // artists' remaining songs are kept for a second round in case the
+    // quota is not met with one each.
+    var exploreReserve: [[Int]] = Array(repeating: [], count: exploreSongs.count)
+    for round in 0..<2 {
+      if round == 1 {
+        guard explorePicks.count < exploreQuota else { break }
+        for a in exploreReserve.indices where !exploreReserve[a].isEmpty {
+          exploreSongs[a] = exploreReserve[a]
+          exploreTotals[a] = exploreReserve[a].reduce(0) { $0 + candidates[$1].explore }
+        }
+      }
+      while explorePicks.count < exploreQuota, exploreTotals.contains(where: { $0 > 0 }) {
+        let a = pickWeighted(exploreTotals, rng: &rng)
+        // Rounding can land the draw on a drained artist.
+        guard !exploreSongs[a].isEmpty else {
+          exploreTotals[a] = 0
+          continue
+        }
+        let s = pickWeighted(exploreSongs[a].map { candidates[$0].explore }, rng: &rng)
+        let n = exploreSongs[a].remove(at: s)
+        exploreTotals[a] -= candidates[n].explore
+        let taken = admit(n) == .taken
+        if taken { explorePicks.append(n) }
+        if round == 0, taken || exploreSongs[a].isEmpty {
+          exploreReserve[a] = exploreSongs[a]
+          exploreSongs[a] = []
+          exploreTotals[a] = 0
+        }
       }
     }
 

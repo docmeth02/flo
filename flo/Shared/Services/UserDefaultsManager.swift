@@ -58,6 +58,16 @@ class UserDefaultsManager {
     }
   }
 
+  /// Listening time of the current song so far, kept across a relaunch.
+  static var nowPlayingListened: Double {
+    get {
+      return UserDefaults.standard.double(forKey: UserDefaultsKeys.nowPlayingListened)
+    }
+    set {
+      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.nowPlayingListened)
+    }
+  }
+
   /// Whether the current song already counted as a play.
   static var nowPlayingQualified: Bool {
     get {

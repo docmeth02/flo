@@ -19,6 +19,8 @@ import WatchKit
   private var serverFetched = false
   private var pending = UserDefaultsManager.pendingRatings
   private var inFlight = Set<String>()
+  // Edits the server took but a refresh has not stored in the cache yet.
+  private var confirmed = Set<String>()
   // Bumped when the server confirms an edit; a refresh asked for before that
   // may answer with the old rating and is dropped.
   private var confirmedEdits = 0
@@ -78,6 +80,12 @@ import WatchKit
 
     server = Self.ratings(of: songs)
     serverFetched = true
+    // Edits the server now reports back are settled.
+    for (id, rating) in pending where confirmed.contains(id) && (server[id] ?? 0) == rating {
+      pending[id] = nil
+      confirmed.remove(id)
+    }
+    UserDefaultsManager.pendingRatings = pending
     publish()
     debugLog("ratings refreshed: \(server.count) rated, \(pending.count) pending")
     await Task.detached(priority: .utility) {
@@ -98,8 +106,11 @@ import WatchKit
   private func loadCache() {
     let generation = account
     Task.detached(priority: .utility) {
-      let songs = LibraryCacheManager.shared.load([Song].self, forKey: "ratedSongs") ?? []
-      await RatingStore.shared.adoptCached(Self.ratings(of: songs), account: generation)
+      let songs = LibraryCacheManager.shared.load([Song].self, forKey: "ratedSongs")
+      await RatingStore.shared.adoptCached(Self.ratings(of: songs ?? []), account: generation)
+      // No cache yet (first launch with ratings, or an upgrade): the song
+      // sync that refreshes ratings may be a day away.
+      if songs == nil { await RatingStore.shared.refreshFromServer() }
     }
   }
 
@@ -118,7 +129,7 @@ import WatchKit
       debugLog("ratings: \(pending.count) pending while offline")
       return
     }
-    for (id, rating) in pending where !inFlight.contains(id) {
+    for (id, rating) in pending where !inFlight.contains(id) && !confirmed.contains(id) {
       send(rating, playbackID: id)
     }
   }
@@ -144,7 +155,9 @@ import WatchKit
       debugLog("rating confirmed: \(id)=\(rating)")
       confirmedEdits += 1
       server[id] = rating > 0 ? rating : nil
-      if pending[id] == rating { pending[id] = nil }
+      // Stays pending on disk until a refresh stored it in the cache, so a
+      // relaunch before then still knows it; the flush skips confirmed ones.
+      if pending[id] == rating { confirmed.insert(id) }
     case .failure(let error):
       // A song the server no longer knows cannot be rated; anything else
       // waits for the next flush.
@@ -158,10 +171,10 @@ import WatchKit
     UserDefaultsManager.pendingRatings = pending
     publish()
 
-    if pending[id] != nil {
+    if pending[id] != nil, !confirmed.contains(id) {
       // Changed again while this one was under way.
       flush()
-    } else if inFlight.isEmpty, pending.isEmpty {
+    } else if inFlight.isEmpty {
       // Brings the cached list up to date for the next launch.
       Task { await refreshFromServer() }
     }
@@ -173,6 +186,7 @@ import WatchKit
     serverFetched = false
     pending = [:]
     inFlight = []
+    confirmed = []
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.pendingRatings)
     publish()
   }

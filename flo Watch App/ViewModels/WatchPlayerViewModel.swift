@@ -120,9 +120,13 @@ class WatchPlayerViewModel: ObservableObject {
       self.playbackMode = UserDefaultsManager.playbackMode
       self.addToQueue(
         idx: UserDefaultsManager.queueActiveIdx, item: lastPlayData, playAudio: false)
-      // A song that already counted must not count again after a relaunch.
+      // A song that already counted must not count again after a relaunch,
+      // and one that did not yet keeps the listening time it had.
       self.isLocallySaved = UserDefaultsManager.nowPlayingQualified
-      debugLog("restored \(self.nowPlaying.id ?? "") qualified=\(self.isLocallySaved)")
+      self.secondsListened = UserDefaultsManager.nowPlayingListened
+      debugLog(
+        "restored \(self.nowPlaying.id ?? "") qualified=\(self.isLocallySaved) "
+          + "listened=\(Int(self.secondsListened))s")
     } else {
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.queueActiveIdx)
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
@@ -328,6 +332,8 @@ class WatchPlayerViewModel: ObservableObject {
           self.handleStreamFailure(trackId: trackId, item: item)
           return
         }
+        self.qualifyIfDue()
+        self.acceptNowPlaying()
         self.nextSong()
         UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
       }
@@ -461,7 +467,7 @@ class WatchPlayerViewModel: ObservableObject {
   /// Stops playback and forgets the queue; its songs belong to the account
   /// that just logged out.
   private func clearForLogout() {
-    reportStopped()
+    // No report: the credentials are gone before this runs.
     resetSession()
     playGeneration += 1
     player?.pause()
@@ -544,10 +550,16 @@ class WatchPlayerViewModel: ObservableObject {
       // between must not restore this song at the previous one's position.
       UserDefaultsManager.nowPlayingProgress = 0
       UserDefaultsManager.nowPlayingQualified = false
+      UserDefaultsManager.nowPlayingListened = 0
     }
     self.pendingStartPosition = self.progress * playbackDuration
     self.currentTimeString = timeString(for: self.pendingStartPosition)
 
+    // A queue restored at launch stays paused; telling the server it is
+    // playing, or asking about it, waits until the user actually plays it.
+    // play() announces once the audio session is active, so a route that
+    // fails to activate reports nothing.
+    self.needsNowPlayingAnnouncement = true
     if playAudio {
       self.play()
     }
@@ -562,12 +574,6 @@ class WatchPlayerViewModel: ObservableObject {
     }
 
     self.isStarred = false
-    // A queue restored at launch stays paused; telling the server it is
-    // playing, or asking about it, waits until the user actually plays it.
-    self.needsNowPlayingAnnouncement = true
-    if playAudio {
-      self.announceNowPlaying()
-    }
   }
 
   /// Reports the current song as playing to the server and loads its starred
@@ -575,6 +581,8 @@ class WatchPlayerViewModel: ObservableObject {
   private func announceNowPlaying() {
     guard needsNowPlayingAnnouncement, queue.indices.contains(activeQueueIdx) else { return }
     needsNowPlayingAnnouncement = false
+    // A station is no song the server knows.
+    guard !isLiveRadio else { return }
 
     FloooViewModel.shared.reportPlayback(
       state: .starting, nowPlaying: self.nowPlaying, positionSeconds: self.pendingStartPosition)
@@ -635,7 +643,9 @@ class WatchPlayerViewModel: ObservableObject {
       // The observer also fires on seeks and rate changes. Count only small
       // forward steps while playing; a seek jumps further or backwards.
       let step = currentTime - self.lastObservedTime
-      if (self.player?.rate ?? 0) > 0, step > 0, step <= 1.5 {
+      // Ticks arrive every second; a larger step is a seek, or a stall whose
+      // time was not heard either way.
+      if (self.player?.rate ?? 0) > 0, step > 0, step <= 3 {
         self.secondsListened += step
       }
       self.lastObservedTime = currentTime
@@ -666,29 +676,17 @@ class WatchPlayerViewModel: ObservableObject {
         }
       }
 
-      // Navidrome's rule: a play counts after half the song or four minutes
-      // of listening, whichever comes first; seeking ahead does not count.
-      // Runs on main (observer queue) — journal writes stay on viewContext's
-      // queue and the network submission is async inside the service anyway.
-      if !self.isLocallySaved, self.totalDuration.isFinite, self.totalDuration > 0,
-        self.secondsListened >= min(0.5 * self.totalDuration, 240)
-      {
-        self.isLocallySaved = true
-        UserDefaultsManager.nowPlayingQualified = true
-        debugLog(
-          "qualified after \(String(format: "%.1f", self.secondsListened))s of "
-            + "\(String(format: "%.0f", self.totalDuration))s")
-        PlaybackJournal.shared.recordHeard(
-          self.nowPlaying, origin: self.nowPlaying.playbackOrigin,
-          listenedSeconds: self.secondsListened)
-        FloooViewModel.shared.scrobble(submission: true, nowPlaying: self.nowPlaying)
-        self.acceptNowPlaying()
-      }
+      self.qualifyIfDue()
 
       if self.totalDuration.isFinite,
         self.totalDuration > 0,
         round(currentTime) >= roundedTotalDuration
       {
+        // A song heard to its end was accepted, also when qualification did
+        // not run this time (counted before a relaunch, or joined late); a
+        // last tick may still owe it the count.
+        self.qualifyIfDue()
+        self.acceptNowPlaying()
         self.nextSong()
         UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
       }
@@ -825,6 +823,12 @@ class WatchPlayerViewModel: ObservableObject {
     RatingStore.shared.set(rating, for: nowPlaying)
   }
 
+  /// Rates the song the dialog was opened for, which may have ended meanwhile.
+  @MainActor func rate(_ rating: Int, playbackID: String) {
+    guard !playbackID.isEmpty else { return }
+    RatingStore.shared.set(rating, playbackID: playbackID)
+  }
+
   @MainActor private func updateRatingCommands() {
     let commandCenter = MPRemoteCommandCenter.shared()
     let isRateable = hasNowPlaying() && !isLiveRadio
@@ -920,10 +924,16 @@ class WatchPlayerViewModel: ObservableObject {
     playGeneration += 1
     player?.pause()
     // No observer tick follows while paused, so the reset is applied here.
+    // Starting the song over is a new listen, which may count again.
     pendingStartPosition = 0
     progress = 0
     currentTimeString = timeString(for: 0)
+    isLocallySaved = false
+    secondsListened = 0
+    lastObservedTime = 0
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
+    UserDefaultsManager.nowPlayingQualified = false
+    UserDefaultsManager.nowPlayingListened = 0
     // A transcode started mid-song has no start to seek back to.
     if streamOffset > 0 || playerItem == nil {
       detachItem()
@@ -948,6 +958,7 @@ class WatchPlayerViewModel: ObservableObject {
       detachItem()
       pendingStartPosition = target
       UserDefaultsManager.nowPlayingProgress = progress
+      UserDefaultsManager.nowPlayingListened = self.secondsListened
     } else if playerItem == nil
       || (currentSourceIsTranscoded && (target < streamOffset || abs(target - lastObservedTime) > 3))
     {
@@ -1219,6 +1230,25 @@ class WatchPlayerViewModel: ObservableObject {
     anchorGenres = []
   }
 
+  /// Navidrome's rule: a play counts after half the song or four minutes of
+  /// listening, whichever comes first; seeking ahead does not count. Runs
+  /// on main: journal writes stay on the view context's queue and the
+  /// submission is asynchronous inside the service.
+  private func qualifyIfDue() {
+    guard !isLocallySaved, queue.indices.contains(activeQueueIdx), totalDuration.isFinite,
+      totalDuration > 0, secondsListened >= min(0.5 * totalDuration, 240)
+    else { return }
+    isLocallySaved = true
+    UserDefaultsManager.nowPlayingQualified = true
+    debugLog(
+      "qualified after \(String(format: "%.1f", secondsListened))s of "
+        + "\(String(format: "%.0f", totalDuration))s")
+    PlaybackJournal.shared.recordHeard(
+      nowPlaying, origin: nowPlaying.playbackOrigin, listenedSeconds: secondsListened)
+    FloooViewModel.shared.scrobble(submission: true, nowPlaying: nowPlaying)
+    acceptNowPlaying()
+  }
+
   /// A song heard out seeds the next continuation; the first one of the
   /// session also anchors its genres.
   private func acceptNowPlaying() {
@@ -1227,7 +1257,8 @@ class WatchPlayerViewModel: ObservableObject {
     guard anchorGenres.isEmpty else { return }
     let session = sessionStartedAt
     Task { @MainActor [weak self] in
-      let genres = await SmartPlaybackService.shared.libraryIndex().songs[id]?.genres ?? []
+      let genres =
+        await SmartPlaybackService.shared.libraryIndex(allowSync: false).songs[id]?.genres ?? []
       guard let self, self.sessionStartedAt == session, self.anchorGenres.isEmpty else { return }
       self.anchorGenres = Set(genres)
     }
@@ -1265,7 +1296,9 @@ class WatchPlayerViewModel: ObservableObject {
       // A session without an anchor yet keeps to the seed's genres.
       let anchorGenres =
         sessionGenres.isEmpty
-        ? Set(await SmartPlaybackService.shared.libraryIndex().songs[seedId]?.genres ?? [])
+        ? Set(
+          await SmartPlaybackService.shared.libraryIndex(allowSync: false).songs[seedId]?.genres
+            ?? [])
         : sessionGenres
       debugLog(
         "keep playing: seed=\(seedId) accepted=\(accepted != nil) artist=\(seed.artist) "

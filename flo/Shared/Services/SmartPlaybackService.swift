@@ -106,7 +106,7 @@ final class SmartPlaybackService {
 
     async let affinity = ListeningHistoryStore.shared.snapshot()
     async let journal = PlaybackJournal.shared.snapshot()
-    let index = await libraryIndex()
+    let index = await libraryIndex(allowSync: canStream)
     let ratings = await MainActor.run { RatingStore.shared.ratings }
     var rng = SplitMix64(seed: Self.debugSeed ?? .random(in: .min ... .max))
 
@@ -185,7 +185,7 @@ final class SmartPlaybackService {
   /// Built from the cached song library on every call. A library that is
   /// missing or cached without the metadata is synced first, so plays are
   /// never folded without their genres and decades.
-  func libraryIndex() async -> LibraryIndex {
+  func libraryIndex(allowSync: Bool = true) async -> LibraryIndex {
     // Decoding the whole cache is the expensive part; the stamp's date says
     // whether the cache changed since the last index was built.
     let stampDate = LibraryCacheManager.shared.modificationDate(forKey: "songs.stamp")
@@ -206,6 +206,8 @@ final class SmartPlaybackService {
     var builtFrom = stampDate
     var songs = cached
     if cached.isEmpty || format != LibraryStamp.currentFormat {
+      // Offline, a sync would only wait out its timeouts.
+      guard allowSync else { return LibraryIndex(songs: [:]) }
       builtFrom = nil
       songs = await syncSongLibrary()
       // A failed sync hands back the old cache; plays folded from it would

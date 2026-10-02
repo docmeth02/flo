@@ -28,8 +28,18 @@ class FloooViewModel: ObservableObject {
   private var reportInFlight = false
   private var waitingReports: [PlaybackReport] = []
   private var lastPlayingReport: (songId: String, at: Date)?
-  // A server without reportPlayback is asked once per launch.
+  // A server without reportPlayback is asked once per launch, or per login.
   private var reportPlaybackUnsupported = false
+
+  init() {
+    NotificationCenter.default.addObserver(
+      forName: .didLogout, object: nil, queue: .main
+    ) { [weak self] _ in
+      self?.waitingReports = []
+      self?.lastPlayingReport = nil
+      self?.reportPlaybackUnsupported = false
+    }
+  }
 
   func getLocalStorageInformation() {
     self.downloadedAlbums = ScanStatusService.shared.getDownloadedAlbumsCount()
@@ -76,7 +86,9 @@ class FloooViewModel: ObservableObject {
   /// A server without reportPlayback gets a now playing scrobble for
   /// starting instead. Main thread.
   func reportPlayback(state: PlaybackReportState, nowPlaying: QueueEntity, positionSeconds: Double) {
-    guard let payload = ScrobblePayload(nowPlaying: nowPlaying) else { return }
+    guard AuthService.shared.accountKey != nil,
+      let payload = ScrobblePayload(nowPlaying: nowPlaying)
+    else { return }
     guard !reportPlaybackUnsupported else {
       if state == .starting { processScrobble(submission: false, payload: payload) }
       return
@@ -111,10 +123,10 @@ class FloooViewModel: ObservableObject {
       guard let self else { return }
       self.reportInFlight = false
 
-      // 0 and 70 are what servers without the endpoint answer, if not a 404.
+      // Only a server without the route answers 404; Subsonic errors come
+      // from one that has it (70: this song is unknown to it).
       if case .failure(let error) = result, !self.reportPlaybackUnsupported,
-        (error as? SubsonicError).map({ $0.code == 0 || $0.code == 70 })
-          ?? ((error as? AFError)?.responseCode == 404)
+        (error as? AFError)?.responseCode == 404
       {
         debugLog("reportPlayback unsupported, now playing falls back to scrobble")
         self.reportPlaybackUnsupported = true
@@ -123,6 +135,9 @@ class FloooViewModel: ObservableObject {
           self.processScrobble(submission: false, payload: report.payload)
         }
         return
+      }
+      if case .failure(let error) = result, (error as? SubsonicError)?.code == 70 {
+        self.waitingReports.removeAll { $0.payload.songId == report.payload.songId }
       }
       self.sendNextReport()
     }

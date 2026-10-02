@@ -65,6 +65,7 @@ enum UserDefaultsKeys {
   static let queueActiveIdx = "queueActiveIdx"
   static let nowPlayingProgress = "nowPlayingProgress"
   static let nowPlayingQualified = "nowPlayingQualified"
+  static let nowPlayingListened = "nowPlayingListened"
   static let playbackMode = "playbackMode"
   static let enableMaxBitRate = "enableMaxBitRate"
   static let saveLoginInfo = "saveLoginInfo"

@@ -21,6 +21,9 @@ struct WatchNowPlayingView: View {
   // takes it back while the app is in the background.
   @State private var focusRequest = 0
   @State private var showRating = false
+  @State private var ratingTarget = ""
+
+  private var ratingTargetRating: Int { ratings.rating(for: ratingTarget) }
 
   var body: some View {
     ViewThatFits(in: .vertical) {
@@ -41,13 +44,16 @@ struct WatchNowPlayingView: View {
       if phase == .active { focusRequest += 1 }
     }
     .confirmationDialog(
-      rating == 0 ? "Not rated" : "Rated \(rating)", isPresented: $showRating,
-      titleVisibility: .visible
+      ratingTargetRating == 0 ? "Not rated" : "Rated \(ratingTargetRating)",
+      isPresented: $showRating, titleVisibility: .visible
     ) {
-      Button("Boost") { playerViewModel.rateNowPlaying(5) }
-      Button("Avoid in Smart Shuffle", role: .destructive) { playerViewModel.rateNowPlaying(1) }
-      if rating > 0 {
-        Button("Clear rating") { playerViewModel.rateNowPlaying(0) }
+      // The song the dialog was opened for, even if playback moved on.
+      Button("Boost") { playerViewModel.rate(5, playbackID: ratingTarget) }
+      Button("Avoid in Smart Shuffle", role: .destructive) {
+        playerViewModel.rate(1, playbackID: ratingTarget)
+      }
+      if ratingTargetRating > 0 {
+        Button("Clear rating") { playerViewModel.rate(0, playbackID: ratingTarget) }
       }
       Button("Cancel", role: .cancel) {}
     }
@@ -196,6 +202,7 @@ struct WatchNowPlayingView: View {
           .id("star-\(playerViewModel.isStarred)")
           // Holding the heart rates the song for smart shuffle.
           .onLongPressGesture {
+            ratingTarget = playerViewModel.nowPlaying.id ?? ""
             showRating = true
             WKInterfaceDevice.current().play(.click)
           }
