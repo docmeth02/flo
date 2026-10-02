@@ -225,14 +225,17 @@ final class NDSessionInterceptor: RequestInterceptor {
     }
     let current = AuthService.shared.sessionSnapshot()
     // Not keyed off retryCount: a connection retry must not use up the renewal.
-    let first = lock.withLock { !renewed.contains(request) }
-    guard first, !current.ndToken.isEmpty else {
+    let first = lock.withLock {
+      guard !current.ndToken.isEmpty, !renewed.contains(request) else { return false }
+      renewed.add(request)
+      if sent == current.ndToken { rejectedToken = sent }
+      return true
+    }
+    guard first else {
       fallback.retry(request, for: session, dueTo: error, completion: completion)
       return
     }
-    lock.withLock { renewed.add(request) }
     if sent == current.ndToken {
-      lock.withLock { rejectedToken = sent }
       // AuthViewModel ignores the notice while a re-login is under way.
       DispatchQueue.main.async {
         NotificationCenter.default.post(name: .sessionExpired, object: current)

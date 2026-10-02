@@ -48,6 +48,21 @@ class DownloadViewModel: ObservableObject {
 
   private var activeDownloads: [String: DownloadRequest] = [:]
 
+  init() {
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(handleLogout), name: .didLogout, object: nil)
+  }
+
+  /// Nothing of this account keeps downloading, and nothing waiting may start
+  /// once the running requests are cancelled and free their slots.
+  @objc private func handleLogout() {
+    downloadItems = []
+    downloadedTrackCount = []
+    currentDownloads = []
+    activeDownloads.values.forEach { $0.cancel() }
+    activeDownloads = [:]
+  }
+
   // Collections are identified by id throughout: two albums may share a name.
   func isDownloading(collectionId: String) -> Bool {
     downloadItems.contains { item in

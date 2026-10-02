@@ -149,11 +149,17 @@ final class ScrobbleQueueManager {
       return
     }
 
+    let generation = accountGeneration
     FloooService.shared.scrobbleToBuiltinEndpoint(
       submission: true, songId: songId, time: entry.listenTime ?? Date()
     ) { [weak self] result in
       DispatchQueue.main.async {
         guard let self = self else { return }
+        // A logout meanwhile deleted the entry; it must not be touched again.
+        guard generation == self.accountGeneration else {
+          self.isFlushing = false
+          return
+        }
 
         switch result {
         case .success:

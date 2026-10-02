@@ -155,12 +155,17 @@ final class SmartPlaybackService {
 
     // Stars leave updatedAt alone, so the starred list is refreshed on every
     // run that reaches the server; the cached library's own flags go stale.
+    let starredRequestedAt = Date()
     if let starred = try? await withCheckedThrowingContinuation({ continuation in
       AlbumService.shared.getStarredSongs { continuation.resume(with: $0) }
     }) {
       await withCheckedContinuation { continuation in
         DispatchQueue.global(qos: .utility).async {
-          LibraryCacheManager.shared.save(starred, forKey: "starredSongs", generation: generation)
+          // The Liked Songs screen may have saved a newer list meanwhile.
+          let saved = LibraryCacheManager.shared.modificationDate(forKey: "starredSongs")
+          if saved.map({ $0 < starredRequestedAt }) ?? true {
+            LibraryCacheManager.shared.save(starred, forKey: "starredSongs", generation: generation)
+          }
           continuation.resume()
         }
       }
@@ -198,6 +203,8 @@ final class SmartPlaybackService {
       guard let page = await fetchSongPages(total: stamp.total, since: nil) else { return cached }
       pages += page.pages
       fetched += page.songs.count
+      // A scan moving songs between pages leaves a gap; the next run gets them.
+      guard stamp.total.map({ $0 == page.songs.count }) ?? true else { return cached }
       songs = page.songs
     }
 
@@ -208,12 +215,16 @@ final class SmartPlaybackService {
 
     // Saving an unchanged stamp again touches its date, which restarts the
     // staleness timer.
+    // Written before returning, so a run chained after this one reads them.
     let library = unchanged ? nil : songs
-    DispatchQueue.global(qos: .utility).async {
-      if let library {
-        LibraryCacheManager.shared.save(library, forKey: "songs", generation: generation)
+    await withCheckedContinuation { continuation in
+      DispatchQueue.global(qos: .utility).async {
+        if let library {
+          LibraryCacheManager.shared.save(library, forKey: "songs", generation: generation)
+        }
+        LibraryCacheManager.shared.save(stamp, forKey: "songs.stamp", generation: generation)
+        continuation.resume()
       }
-      LibraryCacheManager.shared.save(stamp, forKey: "songs.stamp", generation: generation)
     }
     return songs
   }

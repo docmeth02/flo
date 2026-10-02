@@ -215,6 +215,7 @@ class AuthViewModel: ObservableObject {
       // inherit this account's songs, albums or starred list. Queued scrobbles
       // would be submitted with the next account's credentials.
       LibraryCacheManager.shared.clearCache()
+      StreamCacheManager.shared.clearCache()
       ScrobbleQueueManager.shared.clearAll()
 
       user = nil
