@@ -38,14 +38,6 @@ final class SmartPlaybackService {
     await mix(count: count, mode: mode).songs
   }
 
-  /// The callers from before the modes: a seed means a continuation.
-  func generateMix(count: Int, seed: Seed? = nil, queueIds: Set<String> = []) async -> [Song] {
-    let context = seed.map {
-      KeepPlayingContext(seed: $0, anchorGenres: [], sessionMinutes: 0, queueIds: queueIds)
-    }
-    return await generateMix(count: count, mode: context.map(MixMode.keepPlaying) ?? .playSomething)
-  }
-
   /// The cached library keyed by playback id, with the keys listening history
   /// is aggregated under: plays mirrored from the server join songs through it.
   struct LibraryIndex: Sendable {
