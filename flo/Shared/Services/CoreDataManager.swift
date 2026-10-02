@@ -126,6 +126,16 @@ class CoreDataManager: ObservableObject {
     return self.persistentContainer.viewContext
   }
 
+  /// Runs `work` on a fresh background context and returns its value types.
+  /// Saves made there reach the view context through its automatic merging.
+  func performBackground<T>(_ work: @escaping (NSManagedObjectContext) -> T) async -> T {
+    await withCheckedContinuation { continuation in
+      persistentContainer.performBackgroundTask { context in
+        continuation.resume(returning: work(context))
+      }
+    }
+  }
+
   func getRecordsByEntity<T: NSManagedObject>(
     entity: T.Type, sortDescriptors: [NSSortDescriptor]? = nil
   ) -> [T] {

@@ -107,6 +107,7 @@
 		1B4EC1A2350C8A0C34B7AE02 /* WatchLoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLoginView.swift; sourceTree = "<group>"; };
 		1BDA0AFDF99572D783F7433F /* WatchQueueView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchQueueView.swift; sourceTree = "<group>"; };
 		1C00FCB7A37E884BAAC284C9 /* WatchDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDownloadsView.swift; sourceTree = "<group>"; };
+		2D16BEDC0E729D620EA52DD1 /* flo 4.xcdatamodel */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcdatamodel; path = "flo 4.xcdatamodel"; sourceTree = "<group>"; };
 		42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RequestLog.swift; sourceTree = "<group>"; };
 		4A0A3A849C5FEAFB7E57BE5C /* flo watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flo watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4EBE53668B154717D97E0654 /* WatchPlaylistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlaylistDetailView.swift; sourceTree = "<group>"; };
@@ -857,8 +858,9 @@
 				C4D7F84C2C7F2AE900165EFD /* flo.xcdatamodel */,
 				E376D21B3DA37CD2A6C1E8A0 /* flo 2.xcdatamodel */,
 				664CAB98EC12ABB56EB036FA /* flo 3.xcdatamodel */,
+				2D16BEDC0E729D620EA52DD1 /* flo 4.xcdatamodel */,
 			);
-			currentVersion = 664CAB98EC12ABB56EB036FA /* flo 3.xcdatamodel */;
+			currentVersion = 2D16BEDC0E729D620EA52DD1 /* flo 4.xcdatamodel */;
 			path = flo.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;
