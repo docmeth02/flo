@@ -82,8 +82,10 @@ class AuthService {
     )
   }
 
+  /// Whether `snapshot` belongs to the login in use. The token itself moves
+  /// with every renewal, so only the generation counts.
   func isCurrentSession(_ snapshot: AuthSessionSnapshot) -> Bool {
-    sessionSnapshot() == snapshot
+    sessionSnapshot().generation == snapshot.generation
   }
 
   func setCreds(_ data: UserAuth) {
@@ -106,7 +108,13 @@ class AuthService {
     completion: @escaping (Bool) -> Void
   ) {
     credentialsLock.lock()
-    if credentialGeneration != snapshot.generation || (NDToken ?? "") != snapshot.ndToken {
+    let token = NDToken ?? ""
+    if token.isEmpty {
+      credentialsLock.unlock()
+      completion(false)
+      return
+    }
+    if credentialGeneration != snapshot.generation || token != snapshot.ndToken {
       credentialsLock.unlock()
       completion(true)
       return
@@ -145,6 +153,15 @@ class AuthService {
     credentialsLock.unlock()
     debugLog("navidrome token refreshed")
     Self.resume(waiters, renewed: true)
+  }
+
+  /// A re-login failed: the requests waiting for its token give up now rather
+  /// than at their timeout.
+  func abandonRenewal() {
+    credentialsLock.lock()
+    let waiters = drainWaiters()
+    credentialsLock.unlock()
+    Self.resume(waiters, renewed: false)
   }
 
   /// credentialsLock must be held.

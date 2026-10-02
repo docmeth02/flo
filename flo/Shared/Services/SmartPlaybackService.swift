@@ -40,11 +40,14 @@ final class SmartPlaybackService {
   private static let skipWindowDays = 30
   private static let coldStartThreshold = 20
   private static let songCacheMaxAge: TimeInterval = 24 * 60 * 60
-  private static let songPageSize = 200
+  // A full fetch takes big pages to keep the round trips down; the
+  // incremental walk usually ends within its first small one.
+  private static let fullPageSize = 1000
+  private static let incrementalPageSize = 200
   private static let songPageCap = 500
 
   private let syncLock = NSLock()
-  private var syncTask: Task<[Song], Never>?
+  private var syncRun: (id: UUID, task: Task<[Song], Never>, forced: Bool)?
 
   private init() {}
 
@@ -62,6 +65,7 @@ final class SmartPlaybackService {
     if canStream {
       if songs.isEmpty {
         songs = await syncSongLibrary()
+        starredIds = await loadCachedLibrary().starredIds
       } else if Self.isSongCacheStale() {
         // Use the cached library now and refresh it for the next mix, so new
         // songs show up and deleted ones drop out.
@@ -92,15 +96,19 @@ final class SmartPlaybackService {
   /// `force` refetches everything (the server may have rebuilt its ids).
   func syncSongLibrary(force: Bool = false) async -> [Song] {
     let task: Task<[Song], Never> = syncLock.withLock {
-      if let running = syncTask { return running }
+      if let running = syncRun, running.forced || !force { return running.task }
+      // A forced refetch follows the unforced run it found instead of joining it.
+      let previous = syncRun?.task
+      let id = UUID()
       let task = Task {
-        defer { self.syncLock.withLock { self.syncTask = nil } }
+        defer { self.syncLock.withLock { if self.syncRun?.id == id { self.syncRun = nil } } }
+        _ = await previous?.value
         let generation = LibraryCacheManager.shared.generation
         let songs = await self.performSongSync(force: force, generation: generation)
         // After a logout mid-sync, no mix may be built from the previous account.
         return LibraryCacheManager.shared.generation == generation ? songs : []
       }
-      syncTask = task
+      syncRun = (id, task, force)
       return task
     }
     return await task.value
@@ -144,6 +152,19 @@ final class SmartPlaybackService {
         AlbumService.shared.getLibraryStamp(entity: "song") { continuation.resume(with: $0) }
       })
     else { return cached }
+
+    // Stars leave updatedAt alone, so the starred list is refreshed on every
+    // run that reaches the server; the cached library's own flags go stale.
+    if let starred = try? await withCheckedThrowingContinuation({ continuation in
+      AlbumService.shared.getStarredSongs { continuation.resume(with: $0) }
+    }) {
+      await withCheckedContinuation { continuation in
+        DispatchQueue.global(qos: .utility).async {
+          LibraryCacheManager.shared.save(starred, forKey: "starredSongs", generation: generation)
+          continuation.resume()
+        }
+      }
+    }
 
     let unchanged =
       !force && stamp.total != nil && stamp == cachedStamp && cached.count == stamp.total
@@ -202,12 +223,15 @@ final class SmartPlaybackService {
   /// or after that second and stops at the first page reaching older ones.
   /// Nil when a page fails.
   private func fetchSongPages(total: Int?, since: Date?) async -> (songs: [Song], pages: Int)? {
+    let pageSize = since == nil ? Self.fullPageSize : Self.incrementalPageSize
     var songs: [Song] = []
+    // A scan shifting the pages under the walk can repeat a song.
+    var seen = Set<String>()
     var pages = 0
     var start = 0
 
     while pages < Self.songPageCap, total.map({ start < $0 }) ?? true {
-      let end = start + Self.songPageSize
+      let end = start + pageSize
       guard
         let page = try? await withCheckedThrowingContinuation({ continuation in
           AlbumService.shared.getSongsPage(start: start, end: end) { continuation.resume(with: $0) }
@@ -219,11 +243,11 @@ final class SmartPlaybackService {
       for item in page {
         if let since, let changed = item.updatedAt.flatMap(Self.second), changed < since {
           reachedOlder = true
-        } else {
-          songs.append(item.song)
+          break
         }
+        if seen.insert(item.song.id).inserted { songs.append(item.song) }
       }
-      if reachedOlder || page.count < Self.songPageSize { break }
+      if reachedOlder || page.count < pageSize { break }
       start = end
     }
     return (songs, pages)
@@ -357,8 +381,10 @@ final class SmartPlaybackService {
       albumGenres[album.id] = album.genre
     }
 
+    // The starred list is the only current source; a cached song's own flag
+    // outlives an unstar, since stars leave updatedAt alone.
     func isStarred(_ song: Song) -> Bool {
-      song.starred || starredIds.contains(song.playbackID)
+      starredIds.contains(song.playbackID)
     }
     func isEligible(_ song: Song) -> Bool {
       if queueIds.contains(song.id) || queueIds.contains(song.playbackID) { return false }

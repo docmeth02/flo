@@ -172,6 +172,12 @@ final class NDSessionInterceptor: RequestInterceptor {
   private let lock = NSLock()
   // The token a server rejected; requests carrying it wait for its successor.
   private var rejectedToken: String?
+  // Requests already sent again with a renewed token: a second 401 is final.
+  private let renewed = NSHashTable<Request>.weakObjects()
+
+  struct RenewalFailed: LocalizedError {
+    var errorDescription: String? { "The session could not be renewed" }
+  }
 
   func adapt(
     _ urlRequest: URLRequest, for session: Session,
@@ -191,9 +197,17 @@ final class NDSessionInterceptor: RequestInterceptor {
       completion(.success(Self.applying(snapshot.ndToken, to: urlRequest)))
       return
     }
-    AuthService.shared.waitForRenewedSession(after: snapshot, timeout: renewalTimeout) { _ in
-      let token = AuthService.shared.sessionSnapshot().ndToken
-      completion(.success(token.isEmpty ? urlRequest : Self.applying(token, to: urlRequest)))
+    AuthService.shared.waitForRenewedSession(after: snapshot, timeout: renewalTimeout) {
+      [weak self] renewed in
+      // Whatever came of it, later requests take the normal path again.
+      self?.lock.withLock {
+        if self?.rejectedToken == snapshot.ndToken { self?.rejectedToken = nil }
+      }
+      guard renewed else {
+        completion(.failure(RenewalFailed()))
+        return
+      }
+      completion(.success(Self.applying(AuthService.shared.sessionSnapshot().ndToken, to: urlRequest)))
     }
   }
 
@@ -210,17 +224,21 @@ final class NDSessionInterceptor: RequestInterceptor {
       return
     }
     let current = AuthService.shared.sessionSnapshot()
-    guard request.retryCount == 0, !current.ndToken.isEmpty else {
+    // Not keyed off retryCount: a connection retry must not use up the renewal.
+    let first = lock.withLock { !renewed.contains(request) }
+    guard first, !current.ndToken.isEmpty else {
       fallback.retry(request, for: session, dueTo: error, completion: completion)
       return
     }
+    lock.withLock { renewed.add(request) }
     if sent == current.ndToken {
       lock.withLock { rejectedToken = sent }
+      // AuthViewModel ignores the notice while a re-login is under way.
+      DispatchQueue.main.async {
+        NotificationCenter.default.post(name: .sessionExpired, object: current)
+      }
     }
-    // AuthViewModel ignores the notice while a re-login is under way.
-    DispatchQueue.main.async {
-      NotificationCenter.default.post(name: .sessionExpired, object: current)
-    }
+    // Otherwise the token was already replaced while this request was out.
     debugLog("session rejected, retrying \(request.request?.url?.path ?? "") after re-login")
     completion(.retry)
   }

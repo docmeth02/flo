@@ -112,6 +112,7 @@ class AuthViewModel: ObservableObject {
           self.logout()
         case .failure:
           self.needsReauthentication = true
+          AuthService.shared.abandonRenewal()
         }
       }
     }
@@ -203,6 +204,8 @@ class AuthViewModel: ObservableObject {
     do {
       try KeychainManager.removeAuthCreds()
       AuthService.shared.clearCreds()
+      // Nothing of this account may be answered or retried under the next.
+      APIManager.shared.session.cancelAllRequests()
 
       destroySavedPassword()
 
