@@ -80,6 +80,7 @@ actor ListeningHistoryStore {
   static let aggregateVersion: Int16 = 1
 
   private static let pageSize = 1000
+  private static let firstPageSize = 100
   // Rows re-read when a bootstrap continues, in case the offsets moved.
   private static let pageOverlap = 50
   private static let staleAfter: TimeInterval = 5 * 60
@@ -87,6 +88,8 @@ actor ListeningHistoryStore {
 
   private var run: (id: UUID, task: Task<Void, Never>)?
   private var scrobbleRefreshPending = false
+  // A failed run holds the triggers off as long as a successful one would.
+  private var lastFailedAt: Date?
 
   private init() {
     let center = NotificationCenter.default
@@ -96,7 +99,7 @@ actor ListeningHistoryStore {
       Task { await ListeningHistoryStore.shared.refreshIfStale(reason: .activation) }
     }
     center.addObserver(forName: .scrobbleOutboxFlushed, object: nil, queue: nil) { _ in
-      Task { await ListeningHistoryStore.shared.refresh(reason: .outbox) }
+      Task { await ListeningHistoryStore.shared.refreshIfStale(reason: .outbox) }
     }
     center.addObserver(forName: .didLogout, object: nil, queue: nil) { _ in
       Task { await ListeningHistoryStore.shared.forgetLoggedOutAccounts() }
@@ -105,9 +108,11 @@ actor ListeningHistoryStore {
 
   // MARK: - Triggers
 
-  /// Imports unless the last successful import is under five minutes old.
+  /// Imports unless the last successful import, or the last failed attempt,
+  /// is under five minutes old.
   func refreshIfStale(reason: Reason) async {
     guard let key = AuthService.shared.accountKey, run == nil else { return }
+    if let failed = lastFailedAt, Date().timeIntervalSince(failed) < Self.staleAfter { return }
     let last = await CoreDataManager.shared.performBackground { context in
       Self.stateEntity(for: key, in: context)?.lastImportAt
     }
@@ -142,7 +147,7 @@ actor ListeningHistoryStore {
     scrobbleRefreshPending = true
     try? await Task.sleep(nanoseconds: Self.scrobbleDelay * 1_000_000_000)
     scrobbleRefreshPending = false
-    await refresh(reason: .scrobble)
+    await refreshIfStale(reason: .scrobble)
   }
 
   private func start(reason: Reason, reset: Bool) async {
@@ -230,10 +235,13 @@ actor ListeningHistoryStore {
       await Task.yield()
 
       let start = progress.bootstrapComplete ? offset : max(0, offset - Self.pageOverlap)
+      // An incremental run usually finds a handful of new plays on its first
+      // page; a full page would be fetched for nothing.
+      let size = progress.bootstrapComplete && pages == 0 ? Self.firstPageSize : Self.pageSize
       let page: (rows: [ScrobbleRow], total: Int?)
       do {
         page = try await withCheckedThrowingContinuation { continuation in
-          AlbumService.shared.getScrobblePage(start: start, end: start + Self.pageSize) {
+          AlbumService.shared.getScrobblePage(start: start, end: start + size) {
             continuation.resume(with: $0)
           }
         }
@@ -259,7 +267,7 @@ actor ListeningHistoryStore {
       }
 
       newestSeen = max(newestSeen, page.rows.first?.id ?? 0)
-      let isShort = page.rows.count < Self.pageSize
+      let isShort = page.rows.count < size
       let reachedWatermark = page.rows.last.map { $0.id <= progress.watermarkId } ?? true
       let done = progress.bootstrapComplete ? isShort || reachedWatermark : isShort
       let now = Date()
@@ -399,16 +407,17 @@ actor ListeningHistoryStore {
       let play = PlayEntity(context: context)
       play.accountKey = key
       play.serverScrobbleId = row.id
-      play.mediaFileId = row.mediaFileId
+      let mediaFileId = row.mediaFileId ?? ""
+      play.mediaFileId = mediaFileId
       play.submissionTime = time
       inserted += 1
       earliest = min(earliest ?? time, time)
 
-      guard let song = index.songs[row.mediaFileId] else { continue }
+      guard let song = index.songs[mediaFileId] else { continue }
       matched += 1
       // A play stamped in the future counts as played now.
       let at = min(time, now)
-      folds.append(Fold(kind: .song, key: row.mediaFileId, time: at, weight: 1))
+      folds.append(Fold(kind: .song, key: mediaFileId, time: at, weight: 1))
       if !song.artistKey.isEmpty {
         folds.append(Fold(kind: .artist, key: song.artistKey, time: at, weight: 1))
       }
@@ -587,6 +596,7 @@ actor ListeningHistoryStore {
 
   /// Publishes the stored state of `key` with `phase`.
   private func publishState(_ key: String, phase: ImportState.Phase, pages: Int = 0) async {
+    if case .failed = phase { lastFailedAt = Date() }
     var state = await CoreDataManager.shared.performBackground { context in
       Self.stateEntity(for: key, in: context).map(Self.importState(of:)) ?? ImportState()
     }
@@ -600,11 +610,15 @@ actor ListeningHistoryStore {
   }
 
   /// Loads the stored state for the diagnostics screen, unless a run is
-  /// already publishing its own.
+  /// already publishing its own or the last run's failure is still showing.
   func publishStoredState() async {
     guard run == nil, let key = AuthService.shared.accountKey,
       !CoreDataManager.shared.isUsingVolatileStore
     else { return }
+    switch await MainActor.run(body: { HistoryStatus.shared.state.phase }) {
+    case .failed, .skipped: return
+    default: break
+    }
     let state = await CoreDataManager.shared.performBackground { context in
       Self.stateEntity(for: key, in: context).map(Self.importState(of:))
     }

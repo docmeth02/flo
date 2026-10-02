@@ -61,6 +61,8 @@ final class SmartPlaybackService {
   private static let songPageCap = 500
 
   private let syncLock = NSLock()
+  private let indexLock = NSLock()
+  private var indexCache: (stampDate: Date?, index: LibraryIndex)?
   private var syncRun: (id: UUID, task: Task<[Song], Never>, forced: Bool)?
 
   private init() {}
@@ -157,6 +159,14 @@ final class SmartPlaybackService {
   /// missing or cached without the metadata is synced first, so plays are
   /// never folded without their genres and decades.
   func libraryIndex() async -> LibraryIndex {
+    // Decoding the whole cache is the expensive part; the stamp's date says
+    // whether the cache changed since the last index was built.
+    let stampDate = LibraryCacheManager.shared.modificationDate(forKey: "songs.stamp")
+    if let cached = indexLock.withLock({ indexCache }), cached.stampDate == stampDate,
+      stampDate != nil
+    {
+      return cached.index
+    }
     let (cached, format) = await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .utility).async {
         let songs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
@@ -164,8 +174,19 @@ final class SmartPlaybackService {
         continuation.resume(returning: (songs, stamp?.format))
       }
     }
-    let songs =
-      cached.isEmpty || format != LibraryStamp.currentFormat ? await syncSongLibrary() : cached
+    var songs = cached
+    if cached.isEmpty || format != LibraryStamp.currentFormat {
+      songs = await syncSongLibrary()
+      // A failed sync hands back the old cache; plays folded from it would
+      // keep missing genres and artist ids for good, so the import waits.
+      let synced = await withCheckedContinuation { continuation in
+        DispatchQueue.global(qos: .utility).async {
+          let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: "songs.stamp")
+          continuation.resume(returning: stamp?.format == LibraryStamp.currentFormat)
+        }
+      }
+      guard synced else { return LibraryIndex(songs: [:]) }
+    }
 
     var entries: [String: LibraryIndex.Entry] = [:]
     entries.reserveCapacity(songs.count)
@@ -179,7 +200,10 @@ final class SmartPlaybackService {
         genres: genres.filter { !$0.isEmpty },
         era: song.year.flatMap { $0 > 0 ? "\($0 / 10 * 10)s" : nil })
     }
-    return LibraryIndex(songs: entries)
+    let index = LibraryIndex(songs: entries)
+    let builtFrom = LibraryCacheManager.shared.modificationDate(forKey: "songs.stamp")
+    indexLock.withLock { indexCache = (builtFrom, index) }
+    return index
   }
 
   private func performSongSync(force: Bool, generation: Int) async -> [Song] {

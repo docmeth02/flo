@@ -40,7 +40,8 @@ struct SongPageItem: Decodable {
 /// One counted play in the server's log (Navidrome's /api/scrobble).
 struct ScrobbleRow: Decodable, Sendable {
   let id: Int64
-  let mediaFileId: String
+  /// Nil or empty once the server lost the file; such a play stays unmatched.
+  let mediaFileId: String?
   /// Unix seconds.
   let submissionTime: Int64
 }
