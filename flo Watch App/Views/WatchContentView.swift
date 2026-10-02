@@ -66,9 +66,11 @@ struct WatchContentView: View {
       } else if let leftAt {
         self.leftAt = nil
         if playerViewModel.isPlaying, Date().timeIntervalSince(leftAt) > 8 {
-          stackID = UUID()
           // The rebuilt page view starts on its first page; select the player
-          // once it is in place.
+          // once it is in place. Resetting first makes that a real change when
+          // the player was already selected.
+          selectedTab = .home
+          stackID = UUID()
           DispatchQueue.main.async { selectedTab = .nowPlaying }
         }
       }

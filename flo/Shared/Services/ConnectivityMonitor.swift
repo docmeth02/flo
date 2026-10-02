@@ -105,11 +105,17 @@ final class ConnectivityMonitor: ObservableObject {
   }
 
   private func apply(response: URLResponse?, error: Error?) {
-    if response == nil, (error as? URLError)?.code == .cancelled { return }
+    if response == nil, (error as? URLError)?.code == .cancelled {
+      // Callers waiting for this probe get the state as it stands.
+      deliverProbeResult()
+      return
+    }
 
     let reachable = response is HTTPURLResponse
     let online = reachable || !Self.isOfflineError(error)
-    let cameOnline = online && !isOnline
+    // A server coming back counts too: a re-login that failed against an
+    // unreachable server waits for this to try again.
+    let cameOnline = (online && !isOnline) || (reachable && !isServerReachable)
 
     debugLog("connectivity online=\(online) reachable=\(reachable)")
     if isOnline != online { isOnline = online }
@@ -123,6 +129,8 @@ final class ConnectivityMonitor: ObservableObject {
       NotificationCenter.default.post(name: .networkBecameOnline, object: nil)
     }
 
+    retryWork?.cancel()
+    retryWork = nil
     if reachable {
       retryDelay = 15
     } else {
