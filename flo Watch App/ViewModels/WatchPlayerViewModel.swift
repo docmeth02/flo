@@ -61,6 +61,21 @@ class WatchPlayerViewModel: ObservableObject {
   // The item whose failure was already counted; KVO, the failure notification
   // and Play can all report the same one.
   private weak var countedFailedItem: AVPlayerItem?
+  // Track seconds at the current item's time 0; above 0 only for a transcode
+  // the server started mid-track.
+  private var streamOffset: Double = 0
+  // Where Play starts the song while no item is attached (restored queue,
+  // stop, a load still waiting for its stream source).
+  private var pendingStartPosition: Double = 0
+  private var currentSourceIsRemote = false
+  private var currentSourceIsTranscoded = false
+  // Where the last mid-song resume started; a stream that breaks again soon
+  // after it is skipped rather than resumed over and over.
+  private var resumedAtPosition: Double?
+  // Bumped whenever the item is detached; a stream source resolved for an
+  // older load is dropped. playGeneration moves with play/pause and cannot
+  // tell.
+  private var loadGeneration = 0
 
   var nowPlaying: QueueEntity {
     return self.queue[self.activeQueueIdx]
@@ -145,9 +160,10 @@ class WatchPlayerViewModel: ObservableObject {
 
   /// Tracks the current item's loading state for both songs and radio.
   private func observeItemStatus(trackId: String?) {
+    let item = playerItem
     playerItemObservation = playerItem?.publisher(for: \.status)
       .receive(on: DispatchQueue.main)
-      .sink { [weak self] status in
+      .sink { [weak self, weak item] status in
         guard let self = self else { return }
         switch status {
         case .readyToPlay:
@@ -163,8 +179,7 @@ class WatchPlayerViewModel: ObservableObject {
           }
         case .failed:
           self.isMediaLoading = false
-          self.isMediaFailed = true
-          self.skipFailedTrack(trackId: trackId)
+          self.handleStreamFailure(trackId: trackId, item: item)
         case .unknown:
           self.isMediaLoading = false
         @unknown default:
@@ -205,6 +220,135 @@ class WatchPlayerViewModel: ObservableObject {
     playbackEndObservation = nil
     playbackFailureObservation = nil
     loadWatchdog?.cancel()
+  }
+
+  /// Removes the current item and its observers; a stream source still being
+  /// resolved for it is dropped when it arrives.
+  private func detachItem() {
+    loadGeneration += 1
+    tearDownItemObservers()
+    player?.replaceCurrentItem(with: nil)
+    playerItem = nil
+    streamOffset = 0
+  }
+
+  /// Attaches the now playing song's item, starting at `position` seconds of
+  /// the track: a transcode is started there by the server, anything else is
+  /// seeked there. Remote songs wait for the server's transcode decision.
+  private func loadItem(at position: Double) {
+    guard queue.indices.contains(activeQueueIdx), !isLiveRadio else { return }
+    detachItem()
+    replacePlayerIfFailed()
+    pendingStartPosition = position
+    isMediaLoading = true
+    isMediaFailed = false
+
+    let generation = loadGeneration
+    let trackId = nowPlaying.id
+    let songId = trackId ?? ""
+
+    if let fileURL = AlbumService.shared.localFileURL(mediaFileId: songId) {
+      attachItem(
+        url: fileURL, trackId: trackId, isRemote: false, isTranscoded: false, offset: 0,
+        seekTo: position, endpointName: nil)
+      return
+    }
+
+    let suffix = nowPlaying.suffix
+    Task { @MainActor [weak self] in
+      let source = await AlbumService.shared.resolveStreamSource(
+        songId: songId, originalSuffix: suffix, offset: Int(position))
+      guard let self, self.loadGeneration == generation,
+        self.queue.indices.contains(self.activeQueueIdx), self.nowPlaying.id == trackId,
+        let url = URL(string: source.url)
+      else { return }
+
+      let startsAtOffset = source.isTranscoded && position > 0
+      self.attachItem(
+        url: url, trackId: trackId, isRemote: true, isTranscoded: source.isTranscoded,
+        offset: startsAtOffset ? floor(position) : 0, seekTo: startsAtOffset ? nil : position,
+        endpointName: (source.endpoint as NSString).lastPathComponent)
+    }
+  }
+
+  private func attachItem(
+    url: URL, trackId: String?, isRemote: Bool, isTranscoded: Bool, offset: Double,
+    seekTo position: Double?, endpointName: String?
+  ) {
+    let item = AVPlayerItem(url: url)
+    playerItem = item
+    player?.replaceCurrentItem(with: item)
+    streamOffset = offset
+    currentSourceIsRemote = isRemote
+    currentSourceIsTranscoded = isTranscoded
+
+    observeItemStatus(trackId: trackId)
+
+    // A server that never answers leaves the item loading forever without
+    // reporting .failed, and a stream can also break mid-song; the first is
+    // caught by the load watchdog, the second resumes or skips.
+    loadWatchdog?.cancel()
+    playbackFailureObservation = NotificationCenter.default
+      .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self, weak item] _ in self?.handleStreamFailure(trackId: trackId, item: item) }
+
+    // Fallback advance for items whose reported duration is off (VBR, missing
+    // metadata): if the periodic check misses the end, the player item itself
+    // tells us. The observation is per-item, so a track advanced by the
+    // periodic check never double-fires here.
+    playbackEndObservation = NotificationCenter.default
+      .publisher(for: .AVPlayerItemDidPlayToEndTime, object: item)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in
+        self?.nextSong()
+        UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
+      }
+
+    if let position, position > 0 {
+      player?.seek(to: CMTime(seconds: position, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
+    }
+    addPeriodicTimeObserver()
+
+    if isPlaying {
+      player?.play()
+      armLoadWatchdog()
+    }
+    // Re-anchors the system's elapsed time clock.
+    updateNowPlayingInfo(progress: progress, rate: isPlaying ? 1.0 : 0.0)
+
+    // AVPlayer loads bypass the request log's Alamofire monitor.
+    if let endpointName {
+      RequestLog.shared.note(
+        "player \(endpointName) offset=\(Int(offset))\(isTranscoded ? " transcode" : "")")
+    }
+  }
+
+  /// A stream that breaks mid-song resumes where it was instead of skipping
+  /// ahead: a transcode restarts there, direct play seeks there. Failing to
+  /// load, or breaking again within 30 s of the last resume, counts as failed.
+  private func handleStreamFailure(trackId: String?, item: AVPlayerItem?) {
+    // KVO and the failure notification can both report the same item, and a
+    // late report can arrive for an item already replaced.
+    guard let item, item === playerItem else { return }
+    let isNowPlaying = queue.indices.contains(activeQueueIdx) && nowPlaying.id == trackId
+    // The server may no longer accept the decision's token.
+    if isNowPlaying, !isLiveRadio, currentSourceIsRemote, let trackId {
+      AlbumService.shared.forgetTranscodeDecision(songId: trackId)
+    }
+
+    guard isNowPlaying, !isLiveRadio, currentSourceIsRemote, lastObservedTime > 5,
+      resumedAtPosition.map({ lastObservedTime - $0 >= 30 }) ?? true
+    else {
+      isMediaFailed = true
+      skipFailedTrack(trackId: trackId)
+      return
+    }
+
+    let position = floor(lastObservedTime)
+    resumedAtPosition = position
+    debugLog("stream broke at \(position) s, resuming: \(trackId ?? "")")
+    loadItem(at: position)
   }
 
   /// Treats an item that is still not ready after `loadTimeout` of playing as
@@ -273,9 +417,7 @@ class WatchPlayerViewModel: ObservableObject {
   private func clearForLogout() {
     playGeneration += 1
     player?.pause()
-    player?.replaceCurrentItem(with: nil)
-    tearDownItemObservers()
-    playerItem = nil
+    detachItem()
 
     queue = []
     activeQueueIdx = 0
@@ -324,29 +466,14 @@ class WatchPlayerViewModel: ObservableObject {
     self.hasTriggeredCache = false
     self.secondsListened = 0
     self.lastObservedTime = 0
+    self.resumedAtPosition = nil
 
     StreamCacheManager.shared.cancelAllInFlight()
     StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: self.nowPlaying.id ?? "")
 
-    if let timeObserverToken = timeObserverToken {
-      player?.removeTimeObserver(timeObserverToken)
-      self.timeObserverToken = nil
-    }
-
-    self.replacePlayerIfFailed()
-
-    let streamUrl = AlbumService.shared.getStreamUrl(id: self.nowPlaying.id ?? "")
-
-    guard let audioURL = URL(string: streamUrl), !streamUrl.isEmpty else {
-      player?.pause()
-      player?.replaceCurrentItem(with: nil)
-      isMediaLoading = false
-      isMediaFailed = true
-      return
-    }
-
-    self.playerItem = AVPlayerItem(url: audioURL)
-    self.player?.replaceCurrentItem(with: self.playerItem)
+    // The item itself is attached by play(), so a queue restored at launch
+    // streams nothing until the user presses Play.
+    self.detachItem()
 
     // Songs from Subsonic endpoints can carry sampleRate 0, which would make
     // an invalid CMTime and a NaN duration — the end-of-track check would
@@ -359,43 +486,16 @@ class WatchPlayerViewModel: ObservableObject {
     self.totalDuration = playbackDuration
     self.totalTimeString = timeString(for: playbackDuration)
 
-    let newTimeString = self.progress * playbackDuration
-    self.currentTimeString = timeString(for: newTimeString)
-
-    let trackId = self.nowPlaying.id
-    self.observeItemStatus(trackId: trackId)
-
-    // A server that never answers leaves the item loading forever without
-    // reporting .failed, and a stream can also break mid-song; both count as
-    // failures so playback moves on instead of sitting silent.
-    // The load watchdog is armed by play(), whenever playback starts on an
-    // item that is not ready yet.
-    self.loadWatchdog?.cancel()
-    self.playbackFailureObservation = NotificationCenter.default
-      .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: self.playerItem)
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] _ in self?.skipFailedTrack(trackId: trackId) }
-
-    // Fallback advance for items whose reported duration is off (VBR, missing
-    // metadata): if the periodic check misses the end, the player item itself
-    // tells us. The observation is per-item, so a track advanced by the
-    // periodic check never double-fires here.
-    self.playbackEndObservation = NotificationCenter.default
-      .publisher(for: .AVPlayerItemDidPlayToEndTime, object: self.playerItem)
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] _ in
-        self?.nextSong()
-        UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
-      }
+    if playAudio {
+      self.progress = 0
+    }
+    self.pendingStartPosition = self.progress * playbackDuration
+    self.currentTimeString = timeString(for: self.pendingStartPosition)
 
     if playAudio {
-      self.seek(to: 0.0)
       self.play()
-    } else {
-      self.seek(to: self.progress)
     }
 
-    self.addPeriodicTimeObserver()
     self.initNowPlayingInfo(
       title: self.nowPlaying.songName ?? "",
       artist: self.nowPlaying.artistName ?? "",
@@ -444,7 +544,7 @@ class WatchPlayerViewModel: ObservableObject {
       guard let self = self, let observedItem = observedItem,
         self.playerItem === observedItem
       else { return }
-      let currentTime = CMTimeGetSeconds(time)
+      let currentTime = self.streamOffset + CMTimeGetSeconds(time)
       let roundedTotalDuration = floor(self.totalDuration)
 
       if self.totalDuration.isFinite, self.totalDuration > 0 {
@@ -469,6 +569,7 @@ class WatchPlayerViewModel: ObservableObject {
         if let nextIdx = self.nextQueueIdxForPreCache(),
           let nextId = self.queue[nextIdx].id, !nextId.isEmpty
         {
+          AlbumService.shared.prefetchTranscodeDecision(songId: nextId)
           StreamCacheManager.shared.cacheSong(
             mediaFileId: nextId, originalSuffix: self.queue[nextIdx].suffix,
             from: self.queue[nextIdx])
@@ -609,6 +710,15 @@ class WatchPlayerViewModel: ObservableObject {
           self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
         }
 
+        if self.playerItem == nil, self.hasNowPlaying(), !self.isLiveRadio {
+          self.isFinished = false
+          self.isPlaying = true
+          self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
+          self.announceNowPlaying()
+          self.loadItem(at: self.pendingStartPosition)
+          return
+        }
+
         // A failed item cannot play; a fresh one gets one more chance.
         if self.playerItem?.status == .failed, self.hasNowPlaying() {
           let trackId = self.nowPlaying.id
@@ -617,7 +727,12 @@ class WatchPlayerViewModel: ObservableObject {
             if self.isLiveRadio {
               self.reloadRadioItem()
             } else {
-              self.setNowPlaying()
+              // A stream that was well under way picks up where it broke.
+              self.isPlaying = true
+              self.loadItem(
+                at: self.currentSourceIsRemote && self.lastObservedTime > 5
+                  ? floor(self.lastObservedTime) : 0)
+              self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
               return
             }
           } else {
@@ -649,7 +764,15 @@ class WatchPlayerViewModel: ObservableObject {
   func stop() {
     playGeneration += 1
     player?.pause()
-    player?.seek(to: CMTime.zero)
+    // A transcode started mid-song has no start to seek back to.
+    if streamOffset > 0 || playerItem == nil {
+      pendingStartPosition = 0
+      detachItem()
+      progress = 0
+      currentTimeString = timeString(for: 0)
+    } else {
+      player?.seek(to: CMTime.zero)
+    }
 
     self.isFinished = true
     self.isPlaying = false
@@ -658,11 +781,21 @@ class WatchPlayerViewModel: ObservableObject {
   func seek(to progress: Double) {
     if isLiveRadio { return }
 
-    let newTime = CMTime(
-      seconds: progress * totalDuration, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+    let target = progress * totalDuration
+    self.progress = progress
+    currentTimeString = timeString(for: target)
 
-    player?.seek(to: newTime)
-    self.updateNowPlayingInfo(progress: progress, rate: 1.0)
+    if playerItem == nil, !isPlaying {
+      pendingStartPosition = target
+    } else if playerItem == nil || (currentSourceIsTranscoded && abs(target - lastObservedTime) > 3) {
+      // A load under way restarts at the target; a transcode cannot seek far,
+      // so the server starts a new one there.
+      loadItem(at: target)
+    } else {
+      player?.seek(
+        to: CMTime(seconds: target - streamOffset, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
+    }
+    self.updateNowPlayingInfo(progress: progress, rate: isPlaying ? 1.0 : 0.0)
   }
 
   func setPlaybackMode() {
@@ -723,7 +856,7 @@ class WatchPlayerViewModel: ObservableObject {
 
     // A queued end notification from the previous track must not advance the
     // radio queue; live streams have no track end.
-    tearDownItemObservers()
+    detachItem()
     replacePlayerIfFailed()
 
     self.radioURL = radioUrl

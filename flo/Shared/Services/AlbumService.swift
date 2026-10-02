@@ -91,17 +91,6 @@ class AlbumService {
     "Media/covers/\(id).png"
   }
 
-  func buildRemoteStreamUrl(id: String) -> String {
-    let maxBitrate = UserDefaultsManager.maxBitRate
-
-    let format =
-      maxBitrate == TranscodingSettings.sourceBitRate
-      ? TranscodingSettings.sourceFormat : TranscodingSettings.targetFormat
-
-    return
-      "\(UserDefaultsManager.serverBaseURL)\(API.SubsonicEndpoint.stream)\(AuthService.shared.getCreds(key: "subsonicToken"))&id=\(id)&maxBitRate=\(maxBitrate)&format=\(format)"
-  }
-
   /// The downloaded file for a media id, if one exists on disk. Main thread.
   func downloadedFileURL(mediaFileId id: String) -> URL? {
     guard
@@ -114,18 +103,6 @@ class AlbumService {
     else { return nil }
 
     return LocalFileManager.shared.fileURL(for: localPath)
-  }
-
-  func getStreamUrl(id: String) -> String {
-    if let fileUrl = downloadedFileURL(mediaFileId: id) {
-      return fileUrl.absoluteString
-    }
-
-    if let cachedUrl = StreamCacheManager.shared.cachedFileURL(mediaFileId: id) {
-      return cachedUrl.absoluteString
-    }
-
-    return buildRemoteStreamUrl(id: id)
   }
 
   /// A downloaded or stream-cached copy of the song, if one exists. Main thread.
