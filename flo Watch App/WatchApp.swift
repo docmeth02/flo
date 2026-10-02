@@ -25,6 +25,8 @@ struct FloWatchApp: App {
     _ = ScrobbleQueueManager.shared
     // Request times count from here.
     _ = RequestLog.shared
+    // Imports the server's play log when the app becomes active.
+    _ = ListeningHistoryStore.shared
   }
 
   var body: some Scene {

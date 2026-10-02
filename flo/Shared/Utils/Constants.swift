@@ -27,6 +27,7 @@ enum API {
     static let getArtists = "/api/artist"
     static let getPlaylists = "/api/playlist"
     static let getSong = "/api/song"
+    static let getScrobbles = "/api/scrobble"
   }
 
   enum SubsonicEndpoint {

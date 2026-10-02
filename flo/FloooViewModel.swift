@@ -83,6 +83,7 @@ class FloooViewModel: ObservableObject {
       switch result {
       case .success:
         debugLog("scrobble delivered: \(payload.songId) submission=\(submission)")
+        if submission { ListeningHistoryStore.shared.scrobbleDelivered() }
 
       case .failure(let error):
         if submission && !FloooService.shared.isPermanentScrobbleFailure(error) {

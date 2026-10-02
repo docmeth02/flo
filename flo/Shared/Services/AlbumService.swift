@@ -37,6 +37,14 @@ struct SongPageItem: Decodable {
   }
 }
 
+/// One counted play in the server's log (Navidrome's /api/scrobble).
+struct ScrobbleRow: Decodable, Sendable {
+  let id: Int64
+  let mediaFileId: String
+  /// Unix seconds.
+  let submissionTime: Int64
+}
+
 /// Where a remote song streams from: a server-decided direct play or
 /// transcode (getTranscodeStream), or the classic stream endpoint.
 struct StreamSource {
@@ -417,6 +425,26 @@ class AlbumService {
       switch response.result {
       case .success(let items):
         completion(.success(items))
+      case .failure(let error):
+        completion(.failure(error))
+      }
+    }
+  }
+
+  /// One page of the server's play log, highest id first, with the log's size.
+  func getScrobblePage(
+    start: Int, end: Int,
+    completion: @escaping (Result<(rows: [ScrobbleRow], total: Int?), Error>) -> Void
+  ) {
+    let params: [String: Any] = ["_start": start, "_end": end, "_sort": "id", "_order": "DESC"]
+
+    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getScrobbles, parameters: params) {
+      (response: DataResponse<[ScrobbleRow], AFError>) in
+      switch response.result {
+      case .success(let rows):
+        let total = response.response?.value(forHTTPHeaderField: "X-Total-Count")
+          .flatMap(Int.init)
+        completion(.success((rows, total)))
       case .failure(let error):
         completion(.failure(error))
       }

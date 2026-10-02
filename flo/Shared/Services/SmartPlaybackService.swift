@@ -69,6 +69,7 @@ final class SmartPlaybackService {
   /// candidates; `seed` biases scoring toward the current playback context.
   func generateMix(count: Int, seed: Seed? = nil, queueIds: Set<String> = []) async -> [Song] {
     guard count > 0 else { return [] }
+    Task(priority: .utility) { await ListeningHistoryStore.shared.refreshIfStale(reason: .mix) }
 
     var (songs, albums, starredIds) = await loadCachedLibrary()
 

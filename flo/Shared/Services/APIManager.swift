@@ -295,4 +295,6 @@ extension APIManager {
 extension Notification.Name {
   static let sessionExpired = Notification.Name("flo.sessionExpired")
   static let didLogout = Notification.Name("flo.didLogout")
+  /// The scrobble outbox delivered everything it held.
+  static let scrobbleOutboxFlushed = Notification.Name("flo.scrobbleOutboxFlushed")
 }

@@ -67,6 +67,9 @@ final class ScrobbleQueueManager {
       .sink { [weak self] _ in self?.flush() }
   }
 
+  /// Submissions waiting for the server. Main thread only.
+  var pendingCount: Int { scrobbles.count }
+
   func enqueue(_ payload: ScrobblePayload) {
     guard payload.accountGeneration == accountGeneration else { return }
 
@@ -138,6 +141,7 @@ final class ScrobbleQueueManager {
       retryDelay = Self.initialRetryDelay
       reload()
       cancelRetry()
+      NotificationCenter.default.post(name: .scrobbleOutboxFlushed, object: nil)
       return
     }
 
