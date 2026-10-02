@@ -558,7 +558,8 @@ class WatchPlayerViewModel: ObservableObject {
     guard needsNowPlayingAnnouncement, queue.indices.contains(activeQueueIdx) else { return }
     needsNowPlayingAnnouncement = false
 
-    FloooViewModel.shared.setNowPlayingToScrobbleServer(nowPlaying: self.nowPlaying)
+    FloooViewModel.shared.reportPlayback(
+      state: .starting, nowPlaying: self.nowPlaying, positionSeconds: self.pendingStartPosition)
 
     if let songId = self.nowPlaying.id, !songId.isEmpty {
       AlbumService.shared.isStarred(songId: songId) { [weak self] starred in

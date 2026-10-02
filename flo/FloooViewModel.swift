@@ -5,6 +5,7 @@
 //  Created by rizaldy on 11/01/25.
 //
 
+import Alamofire
 import SwiftUI
 
 class FloooViewModel: ObservableObject {
@@ -15,6 +16,20 @@ class FloooViewModel: ObservableObject {
   @Published var streamCacheSize: String = "0 MB"
 
   static let shared = FloooViewModel()
+
+  private struct PlaybackReport {
+    let state: PlaybackReportState
+    let positionMs: Int
+    let payload: ScrobblePayload
+  }
+
+  // Reports go out one at a time, so an older state never lands after a
+  // newer one. Main thread.
+  private var reportInFlight = false
+  private var waitingReports: [PlaybackReport] = []
+  private var lastPlayingReport: (songId: String, at: Date)?
+  // A server without reportPlayback is asked once per launch.
+  private var reportPlaybackUnsupported = false
 
   func getLocalStorageInformation() {
     self.downloadedAlbums = ScanStatusService.shared.getDownloadedAlbumsCount()
@@ -50,17 +65,70 @@ class FloooViewModel: ObservableObject {
     }
   }
 
-  func setNowPlayingToScrobbleServer(nowPlaying: QueueEntity) {
-    processScrobble(submission: false, nowPlaying: nowPlaying)
-  }
-
   func scrobble(submission: Bool, nowPlaying: QueueEntity) {
-    processScrobble(submission: submission, nowPlaying: nowPlaying)
+    guard let payload = ScrobblePayload(nowPlaying: nowPlaying) else { return }
+    processScrobble(submission: submission, payload: payload)
   }
 
-  private func processScrobble(submission: Bool, nowPlaying: QueueEntity) {
+  /// Reports the song's playback state to the server's now playing list.
+  /// Reports are never queued offline, a waiting one is replaced by a newer
+  /// state of the same song, and playing is sent at most every 30 seconds.
+  /// A server without reportPlayback gets a now playing scrobble for
+  /// starting instead. Main thread.
+  func reportPlayback(state: PlaybackReportState, nowPlaying: QueueEntity, positionSeconds: Double) {
     guard let payload = ScrobblePayload(nowPlaying: nowPlaying) else { return }
+    guard !reportPlaybackUnsupported else {
+      if state == .starting { processScrobble(submission: false, payload: payload) }
+      return
+    }
 
+    let connectivity = ConnectivityMonitor.shared
+    guard connectivity.isOnline, connectivity.isServerReachable else { return }
+
+    let now = Date()
+    if state == .playing, let last = lastPlayingReport, last.songId == payload.songId,
+      now.timeIntervalSince(last.at) < 30
+    {
+      return
+    }
+    lastPlayingReport = state == .starting || state == .playing ? (payload.songId, now) : nil
+
+    let positionMs = positionSeconds.isFinite ? Int(max(0, positionSeconds) * 1000) : 0
+    waitingReports.removeAll { $0.payload.songId == payload.songId }
+    waitingReports.append(
+      PlaybackReport(state: state, positionMs: positionMs, payload: payload))
+    sendNextReport()
+  }
+
+  private func sendNextReport() {
+    guard !reportInFlight, !waitingReports.isEmpty else { return }
+    let report = waitingReports.removeFirst()
+    reportInFlight = true
+
+    FloooService.shared.reportPlayback(
+      mediaId: report.payload.songId, positionMs: report.positionMs, state: report.state
+    ) { [weak self] result in
+      guard let self else { return }
+      self.reportInFlight = false
+
+      // 0 and 70 are what servers without the endpoint answer, if not a 404.
+      if case .failure(let error) = result, !self.reportPlaybackUnsupported,
+        (error as? SubsonicError).map({ $0.code == 0 || $0.code == 70 })
+          ?? ((error as? AFError)?.responseCode == 404)
+      {
+        debugLog("reportPlayback unsupported, now playing falls back to scrobble")
+        self.reportPlaybackUnsupported = true
+        self.waitingReports = []
+        if report.state == .starting {
+          self.processScrobble(submission: false, payload: report.payload)
+        }
+        return
+      }
+      self.sendNextReport()
+    }
+  }
+
+  private func processScrobble(submission: Bool, payload: ScrobblePayload) {
     // Navidrome records every scrobble for its own play counts and forwards it
     // to Last.fm or ListenBrainz when the user linked them there, so the watch
     // always scrobbles to the server and queues submissions while it is away.

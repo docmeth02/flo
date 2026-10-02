@@ -35,6 +35,7 @@ enum API {
     static let coverArt = "/rest/getCoverArt"
     static let download = "/rest/download"
     static let scrobble = "/rest/scrobble"
+    static let reportPlayback = "/rest/reportPlayback"
     static let radios = "/rest/getInternetRadioStations"
     static let similarSongs = "/rest/getSimilarSongs2"
     static let topSongs = "/rest/getTopSongs"
