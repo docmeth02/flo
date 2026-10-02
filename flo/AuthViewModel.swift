@@ -57,8 +57,10 @@ class AuthViewModel: ObservableObject {
       isLoggedIn = true
       needsReauthentication = true
 
+      // A request rejected before the verdict has already triggered it.
       ConnectivityMonitor.shared.onFirstVerdict { [weak self] online in
-        if online { self?.reauthenticate() }
+        guard let self, online, self.needsReauthentication else { return }
+        self.reauthenticate()
       }
     }
 

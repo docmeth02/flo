@@ -9,6 +9,14 @@ struct NowPlayingIndicator: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
 
   var body: some View {
+    // The home list drops this row when the queue empties, but this view can
+    // refresh first (a logout clears the queue under it).
+    if playerViewModel.hasNowPlaying() {
+      content
+    }
+  }
+
+  private var content: some View {
     HStack(spacing: 8) {
       // Small album art
       WatchAlbumArtView(
