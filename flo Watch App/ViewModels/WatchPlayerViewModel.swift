@@ -156,6 +156,7 @@ class WatchPlayerViewModel: ObservableObject {
     switch type {
     case .began:
       self.isPlaying = false
+      self.reportPlayback(.paused)
       self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
     case .ended:
       if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? Int {
@@ -453,6 +454,7 @@ class WatchPlayerViewModel: ObservableObject {
   /// Stops playback and forgets the queue; its songs belong to the account
   /// that just logged out.
   private func clearForLogout() {
+    reportStopped()
     resetSession()
     playGeneration += 1
     player?.pause()
@@ -578,6 +580,23 @@ class WatchPlayerViewModel: ObservableObject {
         }
       }
     }
+  }
+
+  /// Tells the server where the announced song stands; the ViewModel drops a
+  /// playing report within 30 s of the last one.
+  private func reportPlayback(_ state: PlaybackReportState, at position: Double? = nil) {
+    guard !needsNowPlayingAnnouncement, queue.indices.contains(activeQueueIdx), !isLiveRadio
+    else { return }
+    FloooViewModel.shared.reportPlayback(
+      state: state, nowPlaying: nowPlaying,
+      positionSeconds: position ?? (playerItem == nil ? pendingStartPosition : lastObservedTime))
+  }
+
+  /// Reports the song as stopped before playback moves on, while its entity
+  /// is still in the queue; playing it again announces it anew.
+  private func reportStopped() {
+    reportPlayback(.stopped)
+    needsNowPlayingAnnouncement = true
   }
 
   private func addPeriodicTimeObserver() {
@@ -790,6 +809,7 @@ class WatchPlayerViewModel: ObservableObject {
           self.isPlaying = true
           self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
           self.announceNowPlaying()
+          self.reportPlayback(.playing)
           self.loadItem(at: self.pendingStartPosition)
           return
         }
@@ -823,6 +843,7 @@ class WatchPlayerViewModel: ObservableObject {
 
         self.player?.play()
         self.announceNowPlaying()
+        self.reportPlayback(.playing)
         self.armLoadWatchdog()
 
         self.isFinished = false
@@ -835,12 +856,14 @@ class WatchPlayerViewModel: ObservableObject {
   func pause() {
     playGeneration += 1
     player?.pause()
+    reportPlayback(.paused)
 
     self.isPlaying = false
     self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
   }
 
   func stop() {
+    reportStopped()
     playGeneration += 1
     player?.pause()
     // No observer tick follows while paused, so the reset is applied here.
@@ -885,6 +908,7 @@ class WatchPlayerViewModel: ObservableObject {
         to: CMTime(seconds: target - streamOffset, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
     }
     self.updateNowPlayingInfo(progress: progress, rate: isPlaying ? 1.0 : 0.0)
+    if isPlaying { reportPlayback(.playing, at: target) }
   }
 
   func setPlaybackMode() {
@@ -906,6 +930,7 @@ class WatchPlayerViewModel: ObservableObject {
   @discardableResult
   func playBySong<T: Playable>(idx: Int, item: T, isFromLocal: Bool) -> Bool {
     guard item.songs.indices.contains(idx) else { return false }
+    reportStopped()
     resetSession()
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
     self.addToQueue(idx: idx, item: queue)
@@ -915,6 +940,7 @@ class WatchPlayerViewModel: ObservableObject {
   @discardableResult
   func playItem<T: Playable>(item: T, isFromLocal: Bool) -> Bool {
     guard !item.songs.isEmpty else { return false }
+    reportStopped()
     resetSession()
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
     self.addToQueue(idx: 0, item: queue)
@@ -924,6 +950,7 @@ class WatchPlayerViewModel: ObservableObject {
   @discardableResult
   func shuffleItem<T: Playable>(item: T, isFromLocal: Bool) -> Bool {
     guard !item.songs.isEmpty else { return false }
+    reportStopped()
     resetSession()
     var shuffledItem = item
     shuffledItem.songs.shuffle()
@@ -938,6 +965,7 @@ class WatchPlayerViewModel: ObservableObject {
     guard let radioUrl = Self.normalizedRadioURL(from: radio.streamUrl) else {
       return false
     }
+    reportStopped()
     resetSession()
 
     let item = radio.toPlayable()
@@ -1050,6 +1078,7 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   func playFromQueue(idx: Int) {
+    reportStopped()
     self.activeQueueIdx = idx
     self.setNowPlaying()
   }
@@ -1057,6 +1086,7 @@ class WatchPlayerViewModel: ObservableObject {
   func prevSong() {
     // Live radio has no tracks; rebuilding it as a song would stop the stream.
     guard !isLiveRadio else { return }
+    reportStopped()
     if self.activeQueueIdx != 0 {
       if self.playbackMode != PlaybackMode.repeatOnce {
         self.activeQueueIdx = self.activeQueueIdx - 1
@@ -1074,6 +1104,7 @@ class WatchPlayerViewModel: ObservableObject {
     if userInitiated {
       logSkipIfAbandoned()
     }
+    reportStopped()
 
     if self.queue.count == 1 {
       if self.playbackMode == PlaybackMode.defaultPlayback {
