@@ -8,6 +8,31 @@
 import Alamofire
 import Foundation
 
+/// What the server's list of an entity looks like right now: how many items
+/// and when the newest one changed. Equal stamps mean an unchanged list.
+struct LibraryStamp: Codable, Equatable {
+  let total: Int?  // nil when the server sent no X-Total-Count
+  let newestUpdatedAt: String?
+}
+
+private struct UpdatedAtOnly: Decodable {
+  let updatedAt: String?
+}
+
+/// A song plus the server's updatedAt, which Song itself neither keeps nor caches.
+struct SongPageItem: Decodable {
+  let song: Song
+  let updatedAt: String?
+
+  private enum Keys: String, CodingKey { case updatedAt }
+
+  init(from decoder: any Decoder) throws {
+    song = try Song(from: decoder)
+    updatedAt = try decoder.container(keyedBy: Keys.self)
+      .decodeIfPresent(String.self, forKey: .updatedAt)
+  }
+}
+
 class AlbumService {
   static let shared = AlbumService()
 
@@ -217,17 +242,39 @@ class AlbumService {
     }
   }
 
-  func getAllSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
-    // FIXME: load it all!!!
-    let params: [String: Any] = ["_start": "0", "_end": "0", "_order": "ASC", "_sort": "title"]
+  /// The stamp of the server's `entity` list ("song", "album", ...), from a
+  /// one item request.
+  func getLibraryStamp(
+    entity: String, completion: @escaping (Result<LibraryStamp, Error>) -> Void
+  ) {
+    let params: [String: Any] = ["_start": 0, "_end": 1, "_sort": "updated_at", "_order": "DESC"]
 
-    APIManager.shared.NDEndpointRequest(
-      endpoint: API.NDEndpoint.getSong, parameters: params
-    ) {
-      (response: DataResponse<[Song], AFError>) in
+    APIManager.shared.NDEndpointRequest(endpoint: "/api/\(entity)", parameters: params) {
+      (response: DataResponse<[UpdatedAtOnly], AFError>) in
       switch response.result {
-      case .success(let status):
-        completion(.success(status))
+      case .success(let items):
+        let total = response.response?.value(forHTTPHeaderField: "X-Total-Count")
+          .flatMap(Int.init)
+        completion(.success(LibraryStamp(total: total, newestUpdatedAt: items.first?.updatedAt)))
+      case .failure(let error):
+        completion(.failure(error))
+      }
+    }
+  }
+
+  /// One page of the song library, most recently changed first.
+  func getSongsPage(
+    start: Int, end: Int, completion: @escaping (Result<[SongPageItem], Error>) -> Void
+  ) {
+    let params: [String: Any] = [
+      "_start": start, "_end": end, "_sort": "updated_at", "_order": "DESC",
+    ]
+
+    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
+      (response: DataResponse<[SongPageItem], AFError>) in
+      switch response.result {
+      case .success(let items):
+        completion(.success(items))
       case .failure(let error):
         completion(.failure(error))
       }

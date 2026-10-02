@@ -85,6 +85,7 @@ struct WatchContentView: View {
     .environmentObject(downloadViewModel)
     #if DEBUG
       .task { await runDebugDownloadActions() }
+      .task { await runDebugSyncActions() }
     #endif
   }
 }
@@ -155,6 +156,17 @@ struct WatchContentView: View {
       }
       try? await Task.sleep(nanoseconds: 2_000_000_000)
       logMediaFiles("after removal")
+    }
+
+    // FLO_DEBUG_SYNC=1|force syncs the song library and logs what it cached.
+    fileprivate func runDebugSyncActions() async {
+      guard let value = ProcessInfo.processInfo.environment["FLO_DEBUG_SYNC"] else { return }
+      try? await Task.sleep(nanoseconds: 6_000_000_000)
+      let songs = await SmartPlaybackService.shared.syncSongLibrary(force: value == "force")
+      // The cache is written in the background.
+      try? await Task.sleep(nanoseconds: 1_000_000_000)
+      let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: "songs.stamp")
+      debugLog("sync hook: \(songs.count) songs, stamp=\(String(describing: stamp))")
     }
 
     private func logMediaFiles(_ label: String) {

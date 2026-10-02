@@ -40,6 +40,11 @@ final class SmartPlaybackService {
   private static let skipWindowDays = 30
   private static let coldStartThreshold = 20
   private static let songCacheMaxAge: TimeInterval = 24 * 60 * 60
+  private static let songPageSize = 200
+  private static let songPageCap = 500
+
+  private let syncLock = NSLock()
+  private var syncTask: Task<[Song], Never>?
 
   private init() {}
 
@@ -56,11 +61,11 @@ final class SmartPlaybackService {
 
     if canStream {
       if songs.isEmpty {
-        songs = await fetchAllSongs()
+        songs = await syncSongLibrary()
       } else if Self.isSongCacheStale() {
         // Use the cached library now and refresh it for the next mix, so new
         // songs show up and deleted ones drop out.
-        Task(priority: .utility) { _ = await self.fetchAllSongs() }
+        Task(priority: .utility) { _ = await self.syncSongLibrary() }
       }
     }
     if !canStream || songs.isEmpty {
@@ -79,13 +84,32 @@ final class SmartPlaybackService {
   /// Refetches the cached song library in the background, e.g. when its
   /// songs keep failing to stream because the server rebuilt its ids.
   func refreshSongLibrary() {
-    Task(priority: .utility) { _ = await fetchAllSongs() }
+    Task(priority: .utility) { _ = await syncSongLibrary(force: true) }
+  }
+
+  /// Brings the cached song library up to date with as little traffic as the
+  /// server's answers allow and returns it. Concurrent callers share one run;
+  /// `force` refetches everything (the server may have rebuilt its ids).
+  func syncSongLibrary(force: Bool = false) async -> [Song] {
+    let task: Task<[Song], Never> = syncLock.withLock {
+      if let running = syncTask { return running }
+      let task = Task {
+        defer { self.syncLock.withLock { self.syncTask = nil } }
+        let generation = LibraryCacheManager.shared.generation
+        let songs = await self.performSongSync(force: force, generation: generation)
+        // After a logout mid-sync, no mix may be built from the previous account.
+        return LibraryCacheManager.shared.generation == generation ? songs : []
+      }
+      syncTask = task
+      return task
+    }
+    return await task.value
   }
 
   // MARK: - Data loading
 
   private static func isSongCacheStale() -> Bool {
-    guard let written = LibraryCacheManager.shared.modificationDate(forKey: "songs") else {
+    guard let written = LibraryCacheManager.shared.modificationDate(forKey: "songs.stamp") else {
       return true
     }
     return Date().timeIntervalSince(written) > songCacheMaxAge
@@ -106,25 +130,121 @@ final class SmartPlaybackService {
     }
   }
 
-  private func fetchAllSongs() async -> [Song] {
-    let cacheGeneration = LibraryCacheManager.shared.generation
-    let fetched: [Song] = await withCheckedContinuation { continuation in
-      AlbumService.shared.getAllSongs { result in
-        if case .success(let songs) = result {
-          continuation.resume(returning: songs)
+  private func performSongSync(force: Bool, generation: Int) async -> [Song] {
+    let (cached, cachedStamp) = await withCheckedContinuation { continuation in
+      DispatchQueue.global(qos: .userInitiated).async {
+        let songs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
+        let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: "songs.stamp")
+        continuation.resume(returning: (songs, stamp))
+      }
+    }
+
+    guard
+      let stamp = try? await withCheckedThrowingContinuation({ continuation in
+        AlbumService.shared.getLibraryStamp(entity: "song") { continuation.resume(with: $0) }
+      })
+    else { return cached }
+
+    let unchanged =
+      !force && stamp.total != nil && stamp == cachedStamp && cached.count == stamp.total
+    var mode = unchanged ? "unchanged" : "full"
+    var pages = 0
+    var fetched = 0
+    var songs = cached
+
+    let newest = stamp.newestUpdatedAt.flatMap(Self.second)
+    let cachedNewest = cachedStamp?.newestUpdatedAt.flatMap(Self.second)
+    // Pages come newest first, so only songs changed since the cached newest
+    // second need fetching. Deletions show up as a count that does not add
+    // up, and only a full fetch can tell which songs went away.
+    if !unchanged, !force, !cached.isEmpty, let total = stamp.total, total >= cached.count,
+      let newest, let cachedNewest, newest >= cachedNewest
+    {
+      guard let page = await fetchSongPages(total: total, since: cachedNewest) else {
+        return cached
+      }
+      pages = page.pages
+      fetched = page.songs.count
+      let fetchedIds = Set(page.songs.map(\.id))
+      let merged = page.songs + cached.filter { !fetchedIds.contains($0.id) }
+      if merged.count == total {
+        mode = "incremental"
+        songs = merged
+      }
+    }
+
+    if mode == "full" {
+      guard let page = await fetchSongPages(total: stamp.total, since: nil) else { return cached }
+      pages += page.pages
+      fetched += page.songs.count
+      songs = page.songs
+    }
+
+    debugLog(
+      "song sync: mode=\(mode) total=\(String(describing: stamp.total)) "
+        + "newest=\(stamp.newestUpdatedAt ?? "-") cached=\(cached.count) pages=\(pages) "
+        + "fetched=\(fetched) merged=\(songs.count)")
+
+    // Saving an unchanged stamp again touches its date, which restarts the
+    // staleness timer.
+    let library = unchanged ? nil : songs
+    DispatchQueue.global(qos: .utility).async {
+      if let library {
+        LibraryCacheManager.shared.save(library, forKey: "songs", generation: generation)
+      }
+      LibraryCacheManager.shared.save(stamp, forKey: "songs.stamp", generation: generation)
+    }
+    return songs
+  }
+
+  /// Pages through the songs most recently changed first, holding only the
+  /// current page besides the result. With `since`, keeps the songs changed in
+  /// or after that second and stops at the first page reaching older ones.
+  /// Nil when a page fails.
+  private func fetchSongPages(total: Int?, since: Date?) async -> (songs: [Song], pages: Int)? {
+    var songs: [Song] = []
+    var pages = 0
+    var start = 0
+
+    while pages < Self.songPageCap, total.map({ start < $0 }) ?? true {
+      let end = start + Self.songPageSize
+      guard
+        let page = try? await withCheckedThrowingContinuation({ continuation in
+          AlbumService.shared.getSongsPage(start: start, end: end) { continuation.resume(with: $0) }
+        })
+      else { return nil }
+      pages += 1
+
+      var reachedOlder = false
+      for item in page {
+        if let since, let changed = item.updatedAt.flatMap(Self.second), changed < since {
+          reachedOlder = true
         } else {
-          continuation.resume(returning: [])
+          songs.append(item.song)
         }
       }
+      if reachedOlder || page.count < Self.songPageSize { break }
+      start = end
     }
+    return (songs, pages)
+  }
 
-    if !fetched.isEmpty {
-      DispatchQueue.global(qos: .utility).async {
-        LibraryCacheManager.shared.save(fetched, forKey: "songs", generation: cacheGeneration)
-      }
+  private static let secondFormatter: ISO8601DateFormatter = {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    return formatter
+  }()
+
+  /// The whole second of an ISO-8601 timestamp. Navidrome sends fractional
+  /// seconds only sometimes, and songs sharing a second must compare equal.
+  private static func second(of iso: String) -> Date? {
+    var text = iso
+    if let dot = text.firstIndex(of: "."),
+      let zone = text[dot...].firstIndex(where: { "Z+-".contains($0) })
+    {
+      text.removeSubrange(dot..<zone)
     }
-
-    return fetched
+    return secondFormatter.date(from: text)
   }
 
   /// Candidate pool when offline: only songs playable without a connection
