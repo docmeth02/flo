@@ -24,7 +24,7 @@ struct WatchDownloadsView: View {
             NavigationLink(destination: WatchCachedSongsView(songs: cachedSongs)) {
               CoverRow(
                 tile: .glyph("music.note.list"), title: "Cached",
-                subtitle: "\(cachedSongs.count) song\(cachedSongs.count == 1 ? "" : "s")")
+                subtitle: counted(cachedSongs.count, "song"))
             }
             .floRow()
           }
