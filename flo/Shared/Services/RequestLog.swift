@@ -44,6 +44,10 @@ final class RequestLog: ObservableObject {
         duration: nil, bytes: 0, retries: 0))
   }
 
+  func clear() {
+    DispatchQueue.main.async { self.entries.removeAll() }
+  }
+
   private func add(_ entry: Entry) {
     DispatchQueue.main.async {
       self.entries.insert(entry, at: 0)

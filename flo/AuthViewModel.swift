@@ -201,34 +201,44 @@ class AuthViewModel: ObservableObject {
   func logout() {
     sessionGeneration += 1
 
+    // A keychain error must not skip the rest: a half logout leaves this
+    // account's data and requests behind for the next.
     do {
       try KeychainManager.removeAuthCreds()
-      AuthService.shared.clearCreds()
-      // Nothing of this account may be answered or retried under the next.
-      APIManager.shared.session.cancelAllRequests()
-
-      destroySavedPassword()
-
-      UserDefaultsManager.removeObject(key: UserDefaultsKeys.serverURL)
-
-      // The library caches feed smart shuffle; the next account must not
-      // inherit this account's songs, albums or starred list. Queued scrobbles
-      // would be submitted with the next account's credentials.
-      LibraryCacheManager.shared.clearCache()
-      StreamCacheManager.shared.clearCache()
-      ScrobbleQueueManager.shared.clearAll()
-      // Cover URLs loaded by AsyncImage carry the Subsonic credentials.
-      URLCache.shared.removeAllCachedResponses()
-      CoverArtCacheManager.shared.clearCache()
-
-      user = nil
-      isLoggedIn = false
-      needsReauthentication = false
-
-      NotificationCenter.default.post(name: .didLogout, object: nil)
     } catch {
       print("error>>>>> \(error)")
     }
+    AuthService.shared.clearCreds()
+    // Nothing of this account may be answered or retried under the next.
+    APIManager.shared.session.cancelAllRequests()
+
+    destroySavedPassword()
+
+    // Navidrome's nd-player cookie names this account's user.
+    if let host = URL(string: UserDefaultsManager.serverBaseURL)?.host {
+      let storage = HTTPCookieStorage.shared
+      for cookie in storage.cookies ?? []
+      where cookie.domain == host || cookie.domain == "." + host {
+        storage.deleteCookie(cookie)
+      }
+    }
+    UserDefaultsManager.removeObject(key: UserDefaultsKeys.serverURL)
+
+    // The library caches feed smart shuffle; the next account must not
+    // inherit this account's songs, albums or starred list. Queued scrobbles
+    // would be submitted with the next account's credentials.
+    LibraryCacheManager.shared.clearCache()
+    StreamCacheManager.shared.clearCache()
+    ScrobbleQueueManager.shared.clearAll()
+    URLCache.shared.removeAllCachedResponses()
+    CoverArtCacheManager.shared.clearCache()
+    RequestLog.shared.clear()
+
+    user = nil
+    isLoggedIn = false
+    needsReauthentication = false
+
+    NotificationCenter.default.post(name: .didLogout, object: nil)
   }
 
   func destroySavedPassword() {
