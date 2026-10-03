@@ -163,6 +163,20 @@ class WatchPlayerViewModel: ObservableObject {
         self?.handleInterruptionNotification(notification)
       }
       .store(in: &interruptionObservation)
+
+    // The system pauses the player when the headphones go away; the controls
+    // and the server have to follow, or the next tap pauses again.
+    NotificationCenter.default
+      .publisher(for: AVAudioSession.routeChangeNotification)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] notification in
+        guard let self, self.isPlaying,
+          let value = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+          AVAudioSession.RouteChangeReason(rawValue: value) == .oldDeviceUnavailable
+        else { return }
+        self.pause()
+      }
+      .store(in: &interruptionObservation)
   }
 
   func handleInterruptionNotification(_ notification: Notification) {
@@ -175,9 +189,9 @@ class WatchPlayerViewModel: ObservableObject {
 
     switch type {
     case .began:
-      self.isPlaying = false
-      self.reportPlayback(.paused)
-      self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
+      // Through pause() so a pending skip or Keep Playing mix does not start
+      // playback during the call.
+      self.pause()
     case .ended:
       if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? Int {
         let options = AVAudioSession.InterruptionOptions(rawValue: UInt(optionsValue))
