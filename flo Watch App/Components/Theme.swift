@@ -32,11 +32,13 @@ extension Font {
   static let floTitle = jakarta(17, .bold, .headline)
   static let floSong = jakarta(15, .bold, .headline)
   static let floHero = jakarta(18, .bold, .headline)
-  static let floRow = Font.system(size: 15, weight: .medium)
-  static let floRowTitle = Font.system(size: 14, weight: .semibold)
-  static let floMeta = Font.system(size: 12)
-  static let floSection = Font.system(size: 13, weight: .semibold)
-  static let floTime = Font.system(size: 11, weight: .semibold).monospacedDigit()
+  // Text styles rather than point sizes, so the watch's text size applies.
+  static let floRow = Font.system(.subheadline, weight: .medium)
+  static let floRowTitle = Font.system(.subheadline, weight: .semibold)
+  static let floMeta = Font.system(.caption)
+  static let floSection = Font.system(.footnote, weight: .semibold)
+  static let floTime = Font.system(.caption2, weight: .semibold).monospacedDigit()
+  static let floButton = Font.system(.subheadline, weight: .semibold)
 }
 
 /// Filled indigo capsule: Play, Play Something, Login.
@@ -45,7 +47,7 @@ struct FloPrimaryButtonStyle: ButtonStyle {
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.system(size: 15, weight: .semibold))
+      .font(.floButton)
       .foregroundStyle(.white)
       .frame(maxWidth: .infinity, minHeight: height)
       .background(Capsule().fill(Color.floIndigo))
@@ -60,7 +62,7 @@ struct FloTintedButtonStyle: ButtonStyle {
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.system(size: 15, weight: .semibold))
+      .font(.floButton)
       .foregroundStyle(tint)
       .frame(maxWidth: .infinity, minHeight: height)
       .background(Capsule().fill(Color.floSurface))

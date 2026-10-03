@@ -124,13 +124,16 @@ struct WatchAlbumDetailView: View {
       .padding(.bottom, 16)
     }
     .background(alignment: .top) {
-      CoverBackdrop(albumId: album.id, height: 220)
+      CoverBackdrop(
+        albumId: album.id, url: albumViewModel.getAlbumCoverArt(id: album.id), height: 220)
     }
     .navigationDestination(isPresented: $showNowPlaying) {
       WatchNowPlayingView()
     }
     .task(id: album.id) {
-      tint = await CoverTint.color(albumId: album.id) ?? .floLavender
+      tint =
+        await CoverTint.color(
+          albumId: album.id, url: albumViewModel.getAlbumCoverArt(id: album.id)) ?? .floLavender
     }
     .onAppear {
       loadAlbumDetail()

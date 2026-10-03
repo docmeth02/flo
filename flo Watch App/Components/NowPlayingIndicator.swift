@@ -43,7 +43,10 @@ struct NowPlayingIndicator: View {
     .padding(.top, 10)
     .padding(.bottom, 12)
     .task(id: playerViewModel.nowPlaying.albumId) {
-      tint = await CoverTint.color(albumId: playerViewModel.nowPlaying.albumId ?? "") ?? .floLavender
+      tint =
+        await CoverTint.color(
+          albumId: playerViewModel.nowPlaying.albumId ?? "",
+          url: playerViewModel.getAlbumCoverArt()) ?? .floLavender
     }
   }
 

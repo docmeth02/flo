@@ -214,10 +214,10 @@ struct DownloadControl: View {
       case .downloading(let percent):
         VStack(spacing: 6) {
           HStack(alignment: .firstTextBaseline) {
-            Text("Downloading").font(.system(size: 14, weight: .medium))
+            Text("Downloading").font(.floRow)
             Spacer()
             Text("\(percent)%")
-              .font(.system(size: 13, weight: .semibold).monospacedDigit())
+              .font(.system(.footnote, weight: .semibold).monospacedDigit())
               .foregroundStyle(Color.floLavender)
           }
           ProgressView(value: Double(percent), total: 100)
@@ -253,7 +253,7 @@ struct DownloadControl: View {
   private func status(_ title: String, systemImage: String, tint: Color, text: Color) -> some View {
     HStack(spacing: 6) {
       Image(systemName: systemImage).font(.system(size: 14)).foregroundStyle(tint)
-      Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(text)
+      Text(title).font(.floSection).foregroundStyle(text)
       Spacer(minLength: 0)
     }
     .padding(.horizontal, 6)

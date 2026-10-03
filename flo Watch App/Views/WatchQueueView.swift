@@ -10,7 +10,13 @@ struct WatchQueueView: View {
   @State private var tint: Color?
 
   private var accent: Color { tint ?? .floLavender }
-  private var albumId: String { playerViewModel.nowPlaying.albumId ?? "" }
+  // nowPlaying indexes the queue, which can be empty here.
+  private var albumId: String {
+    playerViewModel.hasNowPlaying() ? playerViewModel.nowPlaying.albumId ?? "" : ""
+  }
+  private var coverURL: String {
+    playerViewModel.hasNowPlaying() ? playerViewModel.getAlbumCoverArt() : ""
+  }
 
   var body: some View {
     List {
@@ -53,8 +59,8 @@ struct WatchQueueView: View {
         .listRowInsets(EdgeInsets(top: 0, leading: 10, bottom: 0, trailing: 10))
       }
     }
-    .containerBackground(for: .navigation) { CoverBackdrop(albumId: albumId) }
-    .task(id: albumId) { tint = await CoverTint.color(albumId: albumId) }
+    .containerBackground(for: .navigation) { CoverBackdrop(albumId: albumId, url: coverURL) }
+    .task(id: albumId) { tint = await CoverTint.color(albumId: albumId, url: coverURL) }
     .navigationTitle("Queue")
   }
 }

@@ -28,7 +28,13 @@ struct WatchNowPlayingView: View {
   @State private var tint: Color?
 
   private var accent: Color { tint ?? .floLavender }
-  private var albumId: String { playerViewModel.nowPlaying.albumId ?? "" }
+  // nowPlaying indexes the queue, which can be empty here.
+  private var albumId: String {
+    playerViewModel.hasNowPlaying() ? playerViewModel.nowPlaying.albumId ?? "" : ""
+  }
+  private var coverURL: String {
+    playerViewModel.hasNowPlaying() ? playerViewModel.getAlbumCoverArt() : ""
+  }
 
   var body: some View {
     ViewThatFits(in: .vertical) {
@@ -40,8 +46,8 @@ struct WatchNowPlayingView: View {
           .foregroundStyle(Color.floSecondary)
       }
     }
-    .background { CoverBackdrop(albumId: albumId) }
-    .task(id: albumId) { tint = await CoverTint.color(albumId: albumId) }
+    .background { CoverBackdrop(albumId: albumId, url: coverURL) }
+    .task(id: albumId) { tint = await CoverTint.color(albumId: albumId, url: coverURL) }
     .onAppear {
       isShown = true
       focusRequest += 1

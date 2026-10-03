@@ -12,13 +12,19 @@ import UIKit
 enum CoverTint {
   @MainActor private static var memo: [String: Color?] = [:]
 
+  /// A downloaded cover first (`url` is a local path then), the cover cache
+  /// otherwise, so offline playback keeps its artwork.
+  static func coverFile(albumId: String, url: String) async -> String? {
+    if url.hasPrefix("/"), FileManager.default.fileExists(atPath: url) { return url }
+    guard !albumId.isEmpty else { return nil }
+    return await CoverArtCacheManager.shared.coverPath(albumId: albumId)
+  }
+
   @MainActor
-  static func color(albumId: String) async -> Color? {
+  static func color(albumId: String, url: String = "") async -> Color? {
     guard !albumId.isEmpty else { return nil }
     if let known = memo[albumId] { return known }
-    guard let path = await CoverArtCacheManager.shared.coverPath(albumId: albumId) else {
-      return nil
-    }
+    guard let path = await coverFile(albumId: albumId, url: url) else { return nil }
     let tint = await Task.detached(priority: .utility) { () -> Color? in
       guard let image = UIImage(contentsOfFile: path), let rgb = averageColor(of: image)
       else { return nil }
@@ -89,6 +95,8 @@ enum CoverTint {
 /// The cover filling the top of a screen, fading to black below.
 struct CoverBackdrop: View {
   let albumId: String
+  /// The resolved cover, a local path for downloaded albums.
+  var url: String = ""
   /// Nil fills the whole screen.
   var height: CGFloat?
 
@@ -119,7 +127,7 @@ struct CoverBackdrop: View {
     .ignoresSafeArea()
     .task(id: albumId) {
       guard image?.albumId != albumId else { return }
-      let path = await CoverArtCacheManager.shared.coverPath(albumId: albumId)
+      let path = await CoverTint.coverFile(albumId: albumId, url: url)
       guard !Task.isCancelled else { return }
       image = (albumId, path.flatMap(UIImage.init(contentsOfFile:)))
     }

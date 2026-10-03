@@ -25,7 +25,7 @@ struct TrackRowView: View {
               .foregroundStyle(tint)
           } else {
             Text("\(trackNumber)")
-              .font(.system(size: 12, weight: .semibold).monospacedDigit())
+              .font(.system(.caption, weight: .semibold).monospacedDigit())
               .foregroundStyle(Color.floSecondary)
           }
         }
@@ -33,7 +33,7 @@ struct TrackRowView: View {
 
         VStack(alignment: .leading, spacing: 1) {
           Text(title)
-            .font(.system(size: 14, weight: isPlaying ? .semibold : .medium))
+            .font(.system(.subheadline, weight: isPlaying ? .semibold : .medium))
             .foregroundStyle(isPlaying ? tint : .white)
             .lineLimit(1)
           Text(artist)
