@@ -20,44 +20,56 @@ struct WatchDiagnosticsView: View {
       Section {
         ShareLink(item: Self.exportText(), subject: Text("flo watch log")) {
           Label("Share log", systemImage: "square.and.arrow.up")
+            .font(.floRow)
+            .foregroundStyle(Color.floLavender)
         }
+        .floRow()
       }
 
       Section {
         ForEach(Self.connectionLines(), id: \.0) { row($0.0, $0.1) }
       }
 
-      Section("History") {
+      Section {
         ForEach(Self.historyLines(history.state), id: \.0) { row($0.0, $0.1) }
+      } header: {
+        header("History")
       }
 
-      Section("Last mix") {
+      Section {
         if let mix = recommendations.mixes.first {
           Text(Self.summary(of: mix))
             .customFont(.caption1)
+            .floRow()
           ForEach(Array(mix.picks.enumerated()), id: \.offset) { _, pick in
             row("\(pick.slot) · \(pick.reason)", "\(pick.title) — \(pick.artist)")
           }
         } else {
           Text("No mix yet")
             .customFont(.caption1)
-            .foregroundColor(.secondary)
+            .foregroundStyle(Color.floSecondary)
+            .floRow()
         }
+      } header: {
+        header("Last mix")
       }
 
-      Section("Requests") {
+      Section {
         ForEach(log.entries) { entry in
           VStack(alignment: .leading, spacing: 2) {
             Text(entry.text)
               .customFont(.caption2)
-              .foregroundColor(.secondary)
+              .foregroundStyle(Color.floSecondary)
               .lineLimit(2)
             Text(details(of: entry))
               .customFont(.caption1)
-              .foregroundColor(entry.isFailure ? .red : nil)
+              .foregroundStyle(entry.isFailure ? Color.floDestructive : .white)
               .lineLimit(2)
           }
+          .floRow()
         }
+      } header: {
+        header("Requests")
       }
     }
     .navigationTitle("Diagnostics")
@@ -151,10 +163,18 @@ struct WatchDiagnosticsView: View {
     VStack(alignment: .leading, spacing: 2) {
       Text(title)
         .customFont(.caption2)
-        .foregroundColor(.secondary)
+        .foregroundStyle(Color.floSecondary)
       Text(value)
         .customFont(.caption1)
     }
+    .floRow()
+  }
+
+  private func header(_ title: String) -> some View {
+    Text(title)
+      .font(.floSection)
+      .foregroundStyle(Color.floSecondary)
+      .textCase(nil)
   }
 
   private func details(of entry: RequestLog.Entry) -> String {

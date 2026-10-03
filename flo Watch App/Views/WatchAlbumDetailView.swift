@@ -16,6 +16,7 @@ struct WatchAlbumDetailView: View {
   @State private var showNowPlaying = false
   @State private var downloaded = false
   @State private var downloadedIds: Set<String> = []
+  @State private var tint: Color = .floLavender
 
   private var displayAlbum: Album {
     localAlbum ?? album
@@ -40,57 +41,68 @@ struct WatchAlbumDetailView: View {
     downloadViewModel.getDownloadedTrackProgress(collectionId: album.id)
   }
 
+  private var downloadState: DownloadControl.State {
+    if isDownloading { return .downloading(percent: Int(downloadProgress)) }
+    // An interrupted download leaves some tracks behind; offer the rest.
+    if isDownloaded && missingTrackCount > 0 { return .partial(missing: missingTrackCount) }
+    return isDownloaded ? .done : .none
+  }
+
+  private var meta: String {
+    var parts = [album.albumArtist]
+    if album.minYear > 0 { parts.append(String(album.minYear)) }
+    let count = displayAlbum.songs.count
+    if count > 0 { parts.append("\(count) song\(count == 1 ? "" : "s")") }
+    return parts.filter { !$0.isEmpty }.joined(separator: " · ")
+  }
+
   var body: some View {
     ScrollView {
-      VStack(spacing: 8) {
-        // Album cover
-        WatchAlbumArtView(
-          url: albumViewModel.getAlbumCoverArt(id: album.id),
-          size: 100,
-          albumId: album.id
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-
-        // Album info
-        Text(album.name)
-          .customFont(.caption1)
-          .fontWeight(.bold)
-          .lineLimit(2)
-          .multilineTextAlignment(.center)
-
-        Text(album.albumArtist)
-          .customFont(.caption2)
-          .foregroundColor(.secondary)
-          .lineLimit(1)
-
-        if album.minYear > 0 {
-          Text("\(String(album.minYear))")
-            .customFont(.caption2)
-            .foregroundColor(.secondary)
+      VStack(spacing: 6) {
+        VStack(spacing: 3) {
+          Spacer().frame(height: 58)
+          Text(album.name)
+            .font(.floHero)
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
+          Text(meta)
+            .font(.floMeta)
+            .foregroundStyle(Color.floOnCover)
+            .lineLimit(1)
         }
+        .padding(.bottom, 4)
 
-        // Play/Shuffle buttons
-        HStack(spacing: 12) {
+        HStack(spacing: 6) {
           Button(action: {
             showNowPlaying = playerViewModel.playItem(item: displayAlbum, isFromLocal: isDownloaded)
           }) {
             Label("Play", systemImage: "play.fill")
-              .customFont(.caption2)
           }
+          .buttonStyle(FloPrimaryButtonStyle())
 
           Button(action: {
             showNowPlaying = playerViewModel.shuffleItem(
               item: displayAlbum, isFromLocal: isDownloaded)
           }) {
             Label("Shuffle", systemImage: "shuffle")
-              .customFont(.caption2)
           }
+          .buttonStyle(FloTintedButtonStyle())
         }
-        .padding(.vertical, 4)
 
-        Divider()
+        DownloadControl(
+          state: downloadState,
+          onDownload: { downloadCollection() },
+          onCancel: { downloadViewModel.cancelCurrentAlbumDownload(collectionId: album.id) },
+          onRemove: {
+            albumViewModel.removeDownloadedAlbum(album: album)
+            downloaded = false
+          })
 
-        // Track list
+        Rectangle()
+          .fill(Color.white.opacity(0.1))
+          .frame(height: 1)
+          .padding(4)
+
         ForEach(Array(displayAlbum.songs.enumerated()), id: \.element.id) { index, song in
           let isCurrentlyPlaying =
             playerViewModel.hasNowPlaying()
@@ -100,74 +112,26 @@ struct WatchAlbumDetailView: View {
             trackNumber: song.trackNumber,
             title: song.title,
             artist: song.artist,
-            isPlaying: isCurrentlyPlaying
+            isPlaying: isCurrentlyPlaying,
+            tint: tint
           ) {
             showNowPlaying = playerViewModel.playBySong(
               idx: index, item: displayAlbum, isFromLocal: isDownloaded)
           }
-          .padding(.vertical, 2)
-        }
-
-        Divider()
-
-        // Download button
-        if isDownloading {
-          VStack(spacing: 4) {
-            ProgressView(value: downloadProgress, total: 100)
-              .tint(.accentColor)
-            HStack {
-              Text("\(Int(downloadProgress))%")
-                .customFont(.caption2)
-                .foregroundColor(.secondary)
-              Spacer()
-              Button(action: {
-                downloadViewModel.cancelCurrentAlbumDownload(collectionId: album.id)
-              }) {
-                Label("Cancel", systemImage: "xmark.circle")
-                  .customFont(.caption2)
-              }
-              .buttonStyle(.plain)
-              .foregroundColor(.red)
-            }
-          }
-          .padding(.vertical, 4)
-        } else if isDownloaded {
-          // An interrupted download leaves some tracks behind; offer the rest.
-          if missingTrackCount > 0 {
-            Button(action: {
-              downloadCollection()
-            }) {
-              Label("Download \(missingTrackCount) missing", systemImage: "arrow.down.circle")
-                .customFont(.caption2)
-            }
-            .padding(.vertical, 4)
-          }
-
-          Button(action: {
-            albumViewModel.removeDownloadedAlbum(album: album)
-            downloaded = false
-          }) {
-            Label("Remove Download", systemImage: "trash")
-              .customFont(.caption2)
-          }
-          .foregroundColor(.red)
-          .padding(.vertical, 4)
-        } else {
-          Button(action: {
-            downloadCollection()
-          }) {
-            Label("Download", systemImage: "arrow.down.circle")
-              .customFont(.caption2)
-          }
-          .padding(.vertical, 4)
         }
       }
-      .padding(.horizontal)
+      .padding(.horizontal, 8)
+      .padding(.bottom, 16)
+    }
+    .background(alignment: .top) {
+      CoverBackdrop(albumId: album.id, height: 220)
     }
     .navigationDestination(isPresented: $showNowPlaying) {
       WatchNowPlayingView()
     }
-    .navigationTitle(album.name)
+    .task(id: album.id) {
+      tint = await CoverTint.color(albumId: album.id) ?? .floLavender
+    }
     .onAppear {
       loadAlbumDetail()
       refreshDownloadState()

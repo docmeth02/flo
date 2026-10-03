@@ -28,6 +28,7 @@ struct WatchCachedSongsView: View {
           let cached = SongCollection(id: "cached-songs", name: "Cached", songs: songs)
           showNowPlaying = playerViewModel.playBySong(idx: idx, item: cached, isFromLocal: true)
         }
+        .listRowBackground(Color.clear)
       }
     }
     .navigationTitle("Cached")

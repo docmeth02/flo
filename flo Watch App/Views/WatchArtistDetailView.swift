@@ -21,59 +21,43 @@ struct WatchArtistDetailView: View {
         Button(action: {
           artistDetailViewModel.fetchArtistRadio(artist: artist)
         }) {
-          HStack {
-            if artistDetailViewModel.isLoadingRadio {
-              ProgressView()
-            } else {
-              Image(systemName: "dot.radiowaves.up.forward")
-              Text("Artist Radio")
-                .customFont(.caption1)
-            }
+          if artistDetailViewModel.isLoadingRadio {
+            ProgressView()
+          } else {
+            Label("Artist Radio", systemImage: "dot.radiowaves.up.forward")
           }
         }
-        .disabled(artistDetailViewModel.isLoadingRadio || artistDetailViewModel.isLoadingTopSongs)
+        .capsuleRow()
 
         Button(action: {
           artistDetailViewModel.fetchTopSongs(artist: artist)
         }) {
-          HStack {
-            if artistDetailViewModel.isLoadingTopSongs {
-              ProgressView()
-            } else {
-              Image(systemName: "music.note.list")
-              Text("Top Songs")
-                .customFont(.caption1)
-            }
+          if artistDetailViewModel.isLoadingTopSongs {
+            ProgressView()
+          } else {
+            Label("Top Songs", systemImage: "music.note.list")
           }
         }
-        .disabled(artistDetailViewModel.isLoadingRadio || artistDetailViewModel.isLoadingTopSongs)
+        .capsuleRow()
       }
+      .disabled(artistDetailViewModel.isLoadingRadio || artistDetailViewModel.isLoadingTopSongs)
 
-      Section("Albums") {
+      Section {
         ForEach(albumViewModel.artistAlbums) { album in
           NavigationLink(destination: WatchAlbumDetailView(album: album)) {
-            HStack(spacing: 8) {
-              WatchAlbumArtView(
-                url: albumViewModel.getAlbumCoverArt(id: album.id),
-                size: 36,
-                albumId: album.id
-              )
-              .clipShape(RoundedRectangle(cornerRadius: 4))
-
-              VStack(alignment: .leading, spacing: 2) {
-                Text(album.name)
-                  .customFont(.caption1)
-                  .lineLimit(1)
-
-                if album.minYear > 0 {
-                  Text("\(String(album.minYear))")
-                    .customFont(.caption2)
-                    .foregroundColor(.secondary)
-                }
-              }
-            }
+            CoverRow(
+              coverURL: albumViewModel.getAlbumCoverArt(id: album.id),
+              albumId: album.id,
+              title: album.name,
+              subtitle: album.minYear > 0 ? String(album.minYear) : "")
           }
+          .floRow()
         }
+      } header: {
+        Text("Albums")
+          .font(.floSection)
+          .foregroundStyle(Color.floSecondary)
+          .textCase(nil)
       }
     }
     .navigationTitle(artist.name)
@@ -100,5 +84,14 @@ struct WatchArtistDetailView: View {
     } message: {
       Text(artistDetailViewModel.errorMessage ?? "")
     }
+  }
+}
+
+extension View {
+  /// A capsule button as a whole list row, without the row platter.
+  fileprivate func capsuleRow() -> some View {
+    buttonStyle(FloTintedButtonStyle())
+      .listRowBackground(Color.clear)
+      .listRowInsets(EdgeInsets())
   }
 }

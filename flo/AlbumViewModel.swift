@@ -132,6 +132,8 @@ class AlbumViewModel: ObservableObject {
     done: @escaping () -> Void
   ) {
     let cacheGeneration = LibraryCacheManager.shared.generation
+    // A new attempt takes the list screens out of their error state.
+    error = nil
     request { result in
       DispatchQueue.main.async {
         // Logout clears the cache and bumps its generation; an answer for the

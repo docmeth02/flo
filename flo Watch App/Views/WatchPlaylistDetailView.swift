@@ -39,40 +39,60 @@ struct WatchPlaylistDetailView: View {
     albumViewModel.playlist.id == playlist.id ? albumViewModel.playlist : playlist
   }
 
+  private var downloadState: DownloadControl.State {
+    if isDownloading { return .downloading(percent: Int(downloadProgress)) }
+    // An interrupted download leaves some tracks behind; offer the rest.
+    if isDownloaded && missingTrackCount > 0 { return .partial(missing: missingTrackCount) }
+    return isDownloaded ? .done : .none
+  }
+
+  private var meta: String {
+    if !playlist.comment.isEmpty { return playlist.comment }
+    let count = displayPlaylist.songs.count
+    return count > 0 ? "\(count) song\(count == 1 ? "" : "s")" : ""
+  }
+
+  private func downloadPlaylist() {
+    let playablePlaylist = Album(from: displayPlaylist)
+    albumViewModel.downloadPlaylist(displayPlaylist)
+    downloadViewModel.addItem(playablePlaylist, isFromPlaylist: true)
+  }
+
   var body: some View {
     ScrollView {
-      VStack(spacing: 8) {
-        // Playlist icon
-        Image(systemName: "music.note.list")
-          .font(.system(size: 40))
-          .foregroundColor(.accentColor)
-          .frame(width: 80, height: 80)
-          .background(Color.secondary.opacity(0.15))
-          .clipShape(RoundedRectangle(cornerRadius: 10))
-
-        Text(playlist.name)
-          .customFont(.caption1)
-          .fontWeight(.bold)
-          .lineLimit(2)
-          .multilineTextAlignment(.center)
-
-        if !playlist.comment.isEmpty {
-          Text(playlist.comment)
-            .customFont(.caption2)
-            .foregroundColor(.secondary)
-            .lineLimit(1)
+      VStack(spacing: 6) {
+        VStack(spacing: 3) {
+          Image(systemName: "music.note.list")
+            .font(.system(size: 34))
+            .foregroundStyle(Color.floLavender)
+            .frame(width: 80, height: 80)
+            .background(
+              RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.floLavender.opacity(0.18))
+            )
+            .padding(.bottom, 6)
+          Text(playlist.name)
+            .font(.floHero)
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
+          if !meta.isEmpty {
+            Text(meta)
+              .font(.floMeta)
+              .foregroundStyle(Color.floOnCover)
+              .lineLimit(1)
+          }
         }
+        .padding(.bottom, 4)
 
-        // Play/Shuffle buttons
-        HStack(spacing: 12) {
+        HStack(spacing: 6) {
           Button(action: {
             let playablePlaylist = Album(from: displayPlaylist)
             showNowPlaying = playerViewModel.playItem(
               item: playablePlaylist, isFromLocal: isDownloaded)
           }) {
             Label("Play", systemImage: "play.fill")
-              .customFont(.caption2)
           }
+          .buttonStyle(FloPrimaryButtonStyle())
 
           Button(action: {
             let playablePlaylist = Album(from: displayPlaylist)
@@ -80,14 +100,24 @@ struct WatchPlaylistDetailView: View {
               item: playablePlaylist, isFromLocal: isDownloaded)
           }) {
             Label("Shuffle", systemImage: "shuffle")
-              .customFont(.caption2)
           }
+          .buttonStyle(FloTintedButtonStyle())
         }
-        .padding(.vertical, 4)
 
-        Divider()
+        DownloadControl(
+          state: downloadState,
+          onDownload: { downloadPlaylist() },
+          onCancel: { downloadViewModel.cancelCurrentAlbumDownload(collectionId: playlist.id) },
+          onRemove: {
+            albumViewModel.removeDownloadedPlaylist(playlist: playlist)
+            downloaded = false
+          })
 
-        // Track list
+        Rectangle()
+          .fill(Color.white.opacity(0.1))
+          .frame(height: 1)
+          .padding(4)
+
         ForEach(Array(displayPlaylist.songs.enumerated()), id: \.element.id) { index, song in
           let songId = song.mediaFileId.isEmpty ? song.id : song.mediaFileId
           let isCurrentlyPlaying =
@@ -103,73 +133,14 @@ struct WatchPlaylistDetailView: View {
             showNowPlaying = playerViewModel.playBySong(
               idx: index, item: playablePlaylist, isFromLocal: isDownloaded)
           }
-          .padding(.vertical, 2)
-        }
-
-        Divider()
-
-        // Download button
-        if isDownloading {
-          VStack(spacing: 4) {
-            ProgressView(value: downloadProgress, total: 100)
-              .tint(.accentColor)
-            HStack {
-              Text("\(Int(downloadProgress))%")
-                .customFont(.caption2)
-                .foregroundColor(.secondary)
-              Spacer()
-              Button(action: {
-                downloadViewModel.cancelCurrentAlbumDownload(collectionId: playlist.id)
-              }) {
-                Label("Cancel", systemImage: "xmark.circle")
-                  .customFont(.caption2)
-              }
-              .buttonStyle(.plain)
-              .foregroundColor(.red)
-            }
-          }
-          .padding(.vertical, 4)
-        } else if isDownloaded {
-          // An interrupted download leaves some tracks behind; offer the rest.
-          if missingTrackCount > 0 {
-            Button(action: {
-              let playablePlaylist = Album(from: displayPlaylist)
-              albumViewModel.downloadPlaylist(displayPlaylist)
-              downloadViewModel.addItem(playablePlaylist, isFromPlaylist: true)
-            }) {
-              Label("Download \(missingTrackCount) missing", systemImage: "arrow.down.circle")
-                .customFont(.caption2)
-            }
-            .padding(.vertical, 4)
-          }
-
-          Button(action: {
-            albumViewModel.removeDownloadedPlaylist(playlist: playlist)
-            downloaded = false
-          }) {
-            Label("Remove Download", systemImage: "trash")
-              .customFont(.caption2)
-          }
-          .foregroundColor(.red)
-          .padding(.vertical, 4)
-        } else {
-          Button(action: {
-            let playablePlaylist = Album(from: displayPlaylist)
-            albumViewModel.downloadPlaylist(displayPlaylist)
-            downloadViewModel.addItem(playablePlaylist, isFromPlaylist: true)
-          }) {
-            Label("Download", systemImage: "arrow.down.circle")
-              .customFont(.caption2)
-          }
-          .padding(.vertical, 4)
         }
       }
-      .padding(.horizontal)
+      .padding(.horizontal, 8)
+      .padding(.bottom, 16)
     }
     .navigationDestination(isPresented: $showNowPlaying) {
       WatchNowPlayingView()
     }
-    .navigationTitle(playlist.name)
     .onAppear {
       albumViewModel.setActivePlaylist(playlist: playlist)
       refreshDownloadState()

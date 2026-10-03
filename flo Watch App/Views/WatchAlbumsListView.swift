@@ -8,28 +8,31 @@ import SwiftUI
 struct WatchAlbumsListView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
 
+  private var placeholder: StateView.Kind {
+    if albumViewModel.isLoading { return .loading }
+    if albumViewModel.error != nil {
+      return .error(retry: { Task { await albumViewModel.refreshAlbums() } })
+    }
+    return .empty(
+      systemImage: "square.stack", tint: .floLavender, title: "No albums",
+      message: "Albums on your Navidrome server show up here.")
+  }
+
   var body: some View {
-    List {
-      ForEach(albumViewModel.albums) { album in
-        NavigationLink(destination: WatchAlbumDetailView(album: album)) {
-          HStack(spacing: 8) {
-            WatchAlbumArtView(
-              url: albumViewModel.getAlbumCoverArt(id: album.id),
-              size: 36,
-              albumId: album.id
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 4))
-
-            VStack(alignment: .leading, spacing: 2) {
-              Text(album.name)
-                .customFont(.caption1)
-                .lineLimit(1)
-
-              Text(album.albumArtist)
-                .customFont(.caption2)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
+    Group {
+      if albumViewModel.albums.isEmpty {
+        LibraryPlaceholder(kind: placeholder)
+      } else {
+        List {
+          ForEach(albumViewModel.albums) { album in
+            NavigationLink(destination: WatchAlbumDetailView(album: album)) {
+              CoverRow(
+                coverURL: albumViewModel.getAlbumCoverArt(id: album.id),
+                albumId: album.id,
+                title: album.name,
+                subtitle: album.albumArtist)
             }
+            .floRow()
           }
         }
       }
@@ -53,6 +56,29 @@ struct WatchAlbumsListView: View {
     }
     .onAppear {
       albumViewModel.fetchAlbums()
+    }
+  }
+}
+
+/// What a library list shows instead of its rows while it has none: the
+/// skeleton rows at the top, a message centered on the screen.
+struct LibraryPlaceholder: View {
+  let kind: StateView.Kind
+
+  private var isLoading: Bool {
+    if case .loading = kind { return true }
+    return false
+  }
+
+  var body: some View {
+    GeometryReader { proxy in
+      ScrollView {
+        StateView(kind: kind)
+          .padding(.horizontal, 8)
+          .frame(
+            maxWidth: .infinity, minHeight: proxy.size.height,
+            alignment: isLoading ? .top : .center)
+      }
     }
   }
 }

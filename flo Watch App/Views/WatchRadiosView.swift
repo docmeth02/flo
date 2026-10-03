@@ -12,37 +12,39 @@ struct WatchRadiosView: View {
 
   @State private var showNowPlaying = false
 
-  var body: some View {
-    List {
-      if viewModel.radios.isEmpty {
-        VStack(spacing: 8) {
-          Image(systemName: "dot.radiowaves.up.forward")
-            .font(.system(size: 28))
-            .foregroundColor(.secondary)
-          Text("No radios available")
-            .customFont(.caption1)
-            .foregroundColor(.secondary)
-            .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .listRowBackground(Color.clear)
-      } else {
-        ForEach(viewModel.radios, id: \.id) { radio in
-          Button(action: {
-            showNowPlaying = playerViewModel.playRadioItem(radio: radio)
-          }) {
-            HStack(spacing: 10) {
-              Image(systemName: "dot.radiowaves.up.forward")
-                .font(.system(size: 14))
-                .foregroundColor(.accentColor)
-                .frame(width: 30, height: 30)
-                .background(Color.accentColor.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+  private var placeholder: StateView.Kind {
+    if viewModel.error != nil {
+      return .error(retry: { viewModel.fetchAllRadios() })
+    }
+    return .empty(
+      systemImage: "dot.radiowaves.up.forward", tint: .floLavender, title: "No radios",
+      message: "Add internet radio stations on your Navidrome server.")
+  }
 
-              Text(radio.name)
-                .customFont(.caption1)
-                .lineLimit(2)
+  var body: some View {
+    Group {
+      if viewModel.radios.isEmpty {
+        LibraryPlaceholder(kind: placeholder)
+      } else {
+        List {
+          ForEach(viewModel.radios, id: \.id) { radio in
+            Button(action: {
+              showNowPlaying = playerViewModel.playRadioItem(radio: radio)
+            }) {
+              HStack(spacing: 10) {
+                Image(systemName: "dot.radiowaves.up.forward")
+                  .font(.system(size: 14))
+                  .foregroundStyle(Color.floLavender)
+                  .frame(width: 30, height: 30)
+                  .background(Circle().fill(Color.floLavender.opacity(0.18)))
+
+                Text(radio.name)
+                  .font(.floRow)
+                  .lineLimit(2)
+              }
+              .frame(minHeight: 44)
             }
+            .floRow()
           }
         }
       }
