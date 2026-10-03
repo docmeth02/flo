@@ -229,24 +229,22 @@ class WatchPlayerViewModel: ObservableObject {
     playerItemObservation = playerItem?.publisher(for: \.status)
       .receive(on: DispatchQueue.main)
       .sink { [weak self, weak item] status in
-        guard let self = self else { return }
+        // A late report for a replaced item must not touch the new one's flags.
+        guard let self = self, let item, item === self.playerItem else { return }
         switch status {
         case .readyToPlay:
           self.consecutiveFailures = 0
           self.reloadedFailedTrackId = nil
           self.loadWatchdog?.cancel()
-          DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            guard self.queue.indices.contains(self.activeQueueIdx),
-              self.nowPlaying.id == trackId
-            else { return }
-            self.isMediaLoading = false
-            self.isMediaFailed = false
-          }
+          // Waiting for the first data shows as buffering from here on.
+          self.isMediaLoading = false
+          self.isMediaFailed = false
         case .failed:
           self.isMediaLoading = false
           self.handleStreamFailure(trackId: trackId, item: item)
         case .unknown:
-          self.isMediaLoading = false
+          // Every new item starts here; it is still loading.
+          break
         @unknown default:
           self.isMediaLoading = true
         }
@@ -495,6 +493,7 @@ class WatchPlayerViewModel: ObservableObject {
     guard consecutiveFailures <= Self.maxConsecutiveFailures else {
       // Give up: nothing is playing any more, and the UI must say so.
       isPlaying = false
+      isMediaLoading = false
       player?.pause()
       updateNowPlayingInfo(progress: progress, rate: 0.0)
       // Several songs in a row failing on a reachable server usually means the
@@ -588,6 +587,7 @@ class WatchPlayerViewModel: ObservableObject {
     // The item itself is attached by play(), so a queue restored at launch
     // streams nothing until the user presses Play.
     self.detachItem()
+    self.isMediaLoading = false
 
     // Songs from Subsonic endpoints can carry sampleRate 0, which would make
     // an invalid CMTime and a NaN duration — the end-of-track check would
@@ -1020,6 +1020,8 @@ class WatchPlayerViewModel: ObservableObject {
       // A load still under way would attach at its old target, and without an
       // item no observer tick saves the new position.
       detachItem()
+      // The dropped load will not finish.
+      isMediaLoading = false
       pendingStartPosition = target
       UserDefaultsManager.nowPlayingProgress = progress
       UserDefaultsManager.nowPlayingListened = self.secondsListened
