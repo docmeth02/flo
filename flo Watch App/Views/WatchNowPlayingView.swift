@@ -129,7 +129,7 @@ struct WatchNowPlayingView: View {
 
         TimeLine(clock: playerViewModel.clock, duration: playerViewModel.nowPlaying.duration)
         .font(.floTime)
-        .foregroundStyle(Self.timeColor)
+        .foregroundStyle(Color.floTimeText)
         .padding(.top, Self.compact ? 0 : 2)
 
         HStack(spacing: 0) {
@@ -191,7 +191,6 @@ struct WatchNowPlayingView: View {
     }
   }
 
-  private static let timeColor = Color(red: 0xC4 / 255, green: 0xC3 / 255, blue: 0xCF / 255)
   // The 41 and 42 mm screens need smaller transport controls to keep the
   // shuffle, heart and repeat row above the page dots.
   private static let compact = WKInterfaceDevice.current().screenBounds.height < 240

@@ -39,14 +39,14 @@ struct WatchDiagnosticsView: View {
       Section {
         if let mix = recommendations.mixes.first {
           Text(Self.summary(of: mix))
-            .customFont(.caption1)
+            .font(.floMeta)
             .floRow()
           ForEach(Array(mix.picks.enumerated()), id: \.offset) { _, pick in
             row("\(pick.slot) · \(pick.reason)", "\(pick.title) — \(pick.artist)")
           }
         } else {
           Text("No mix yet")
-            .customFont(.caption1)
+            .font(.floMeta)
             .foregroundStyle(Color.floSecondary)
             .floRow()
         }
@@ -58,11 +58,11 @@ struct WatchDiagnosticsView: View {
         ForEach(log.entries) { entry in
           VStack(alignment: .leading, spacing: 2) {
             Text(entry.text)
-              .customFont(.caption2)
+              .font(.caption2)
               .foregroundStyle(Color.floSecondary)
               .lineLimit(2)
             Text(details(of: entry))
-              .customFont(.caption1)
+              .font(.floMeta)
               .foregroundStyle(entry.isFailure ? Color.floDestructive : .white)
               .lineLimit(2)
           }

@@ -21,7 +21,7 @@ struct FloNavRow: View {
         .font(.floRow)
         .lineLimit(1)
     }
-    .frame(minHeight: 44)
+    .frame(minHeight: FloLayout.rowHeight)
   }
 }
 
@@ -57,23 +57,25 @@ struct CoverRow<Trailing: View>: View {
       Spacer(minLength: 0)
       trailing
     }
-    .frame(minHeight: 52)
+    .frame(minHeight: FloLayout.coverRowHeight)
   }
 
   @ViewBuilder
   private var tileView: some View {
     switch tile {
     case .cover(let url, let albumId):
-      WatchAlbumArtView(url: url, size: 36, albumId: albumId)
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+      WatchAlbumArtView(url: url, size: FloLayout.thumbnail, albumId: albumId)
+        .clipShape(RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous))
     case .glyph(let systemImage, let round):
       Image(systemName: systemImage)
         .font(.system(size: 16))
         .foregroundStyle(Color.floLavender)
-        .frame(width: 36, height: 36)
+        .frame(width: FloLayout.thumbnail, height: FloLayout.thumbnail)
         .background(
-          (round ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: 6, style: .continuous)))
-            .fill(Color.floLavender.opacity(0.18)))
+          (round
+            ? AnyShape(Circle())
+            : AnyShape(RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous)))
+            .fill(Color.floTile))
     }
   }
 }
@@ -118,7 +120,7 @@ struct FloInfoRow: View {
         .font(.floMeta)
         .foregroundStyle(Color.floSecondary)
       Text(value)
-        .font(.system(size: 14, weight: .medium))
+        .font(.floMeta.weight(.medium))
     }
     .padding(.vertical, 2)
   }
@@ -138,7 +140,7 @@ struct Badge: View {
       switch kind {
       case .live:
         Circle().fill(Color.floLiked).frame(width: 6, height: 6)
-        Text("LIVE").font(.system(size: 11, weight: .bold)).tracking(0.4)
+        Text("LIVE").fontWeight(.bold).tracking(0.4)
       case .offline:
         Image(systemName: "wifi.slash").font(.system(size: 10, weight: .semibold))
         Text("Offline")
@@ -156,7 +158,7 @@ struct Badge: View {
         Text("\(percent)%").monospacedDigit()
       }
     }
-    .font(.system(size: 11, weight: .semibold))
+    .font(.floCaption)
     .foregroundStyle(foreground)
     .padding(.horizontal, 8)
     .padding(.vertical, 3)
@@ -240,7 +242,8 @@ struct StateView: View {
 
   private var skeletonRow: some View {
     HStack(spacing: 10) {
-      RoundedRectangle(cornerRadius: 6).fill(Color.floSkeleton).frame(width: 36, height: 36)
+      RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius).fill(Color.floSkeleton)
+        .frame(width: FloLayout.thumbnail, height: FloLayout.thumbnail)
       VStack(alignment: .leading, spacing: 6) {
         Capsule().fill(Color.floSkeleton).frame(height: 9).frame(maxWidth: 110)
         Capsule().fill(Color.floSkeleton.opacity(0.8)).frame(height: 8).frame(maxWidth: 70)
@@ -248,8 +251,9 @@ struct StateView: View {
       Spacer(minLength: 0)
     }
     .padding(.horizontal, 10)
-    .frame(minHeight: 52)
-    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.floSurface))
+    .frame(minHeight: FloLayout.coverRowHeight)
+    .background(
+      RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous).fill(Color.floSurface))
   }
 }
 
@@ -289,7 +293,9 @@ struct DownloadControl: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.floSurface))
+        .background(
+          RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
+            .fill(Color.floSurface))
       case .partial(let missing):
         status(
           "\(missing) song\(missing == 1 ? "" : "s") missing", systemImage: "exclamationmark.circle.fill",
@@ -332,8 +338,10 @@ struct DownloadControl: View {
         Spacer(minLength: 0)
       }
       .padding(.horizontal, 12)
-      .frame(minHeight: 44)
-      .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.floSurface))
+      .frame(minHeight: FloLayout.rowHeight)
+      .background(
+        RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
+          .fill(Color.floSurface))
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)

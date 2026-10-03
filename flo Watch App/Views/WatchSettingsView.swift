@@ -44,11 +44,11 @@ struct WatchSettingsView: View {
             Text("Keep Playing")
               .font(.floRow)
             Text("Smart Shuffle continues when the queue ends")
-              .font(.system(size: 11))
+              .font(.caption2)
               .foregroundStyle(Color.floSecondary)
           }
         }
-        .tint(Color(red: 0x6C / 255, green: 0x69 / 255, blue: 0xE0 / 255))
+        .tint(.floToggle)
         .floRow()
       } header: {
         FloSectionHeader("Playback")

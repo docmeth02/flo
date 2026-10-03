@@ -38,7 +38,7 @@ struct WatchHomeView: View {
         }
       }) {
         Label(isGeneratingMix ? "Building mix…" : "Play Something", systemImage: "sparkles")
-          .font(.system(size: 16, weight: .semibold))
+          .font(.headline)
       }
       .buttonStyle(FloPrimaryButtonStyle(height: 52))
       .opacity(isGeneratingMix ? 0.6 : 1)

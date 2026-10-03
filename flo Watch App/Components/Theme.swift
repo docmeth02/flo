@@ -19,6 +19,20 @@ extension Color {
   static let floDownloaded = Color(red: 0x32 / 255, green: 0xD7 / 255, blue: 0x4B / 255)
   static let floDownloadedText = Color(red: 0x5E / 255, green: 0xE0 / 255, blue: 0x7A / 255)
   static let floDestructive = Color(red: 0xFF / 255, green: 0x69 / 255, blue: 0x61 / 255)
+  static let floToggle = Color(red: 0x6C / 255, green: 0x69 / 255, blue: 0xE0 / 255)
+  /// Elapsed and remaining time on Now Playing.
+  static let floTimeText = Color(red: 0xC4 / 255, green: 0xC3 / 255, blue: 0xCF / 255)
+  /// Behind a lavender glyph tile.
+  static let floTile = floLavender.opacity(0.18)
+}
+
+/// Sizes shared by rows and their tiles.
+enum FloLayout {
+  static let rowRadius: CGFloat = 14
+  static let rowHeight: CGFloat = 44
+  static let coverRowHeight: CGFloat = 52
+  static let thumbnail: CGFloat = 36
+  static let thumbnailRadius: CGFloat = 6
 }
 
 extension Font {
@@ -29,7 +43,8 @@ extension Font {
   }
 
   static let floWordmark = jakarta(20, .heavy, .title3)
-  static let floTitle = jakarta(17, .bold, .headline)
+  /// The playing song on the home screen.
+  static let floTitle = jakarta(16, .bold, .headline)
   static let floSong = jakarta(15, .bold, .headline)
   static let floHero = jakarta(18, .bold, .headline)
   // Text styles rather than point sizes, so the watch's text size applies.
@@ -37,7 +52,9 @@ extension Font {
   static let floRowTitle = Font.system(.subheadline, weight: .semibold)
   static let floMeta = Font.system(.caption)
   static let floSection = Font.system(.footnote, weight: .semibold)
-  static let floTime = Font.system(.caption2, weight: .semibold).monospacedDigit()
+  /// Badges and small labels.
+  static let floCaption = Font.system(.caption2, weight: .semibold)
+  static let floTime = floCaption.monospacedDigit()
   static let floButton = Font.system(.subheadline, weight: .semibold)
 }
 
@@ -74,7 +91,7 @@ extension View {
   /// A list row on the rounded surface platter.
   func floRow(_ background: Color = .floSurface) -> some View {
     listRowBackground(
-      RoundedRectangle(cornerRadius: 14, style: .continuous).fill(background)
+      RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous).fill(background)
     )
   }
 }

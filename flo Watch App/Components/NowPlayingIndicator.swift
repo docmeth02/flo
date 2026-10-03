@@ -23,11 +23,11 @@ struct NowPlayingIndicator: View {
     VStack(spacing: 2) {
       Label("Now Playing", systemImage: playerViewModel.isPlaying ? "waveform" : "pause.fill")
         .labelStyle(NowPlayingLabelStyle())
-        .font(.system(size: 11, weight: .semibold))
+        .font(.floCaption)
         .foregroundStyle(tint)
 
       Text(playerViewModel.nowPlaying.songName ?? "Unknown")
-        .font(.custom("Plus Jakarta Sans", size: 16, relativeTo: .headline).weight(.bold))
+        .font(.floTitle)
         .lineLimit(1)
 
       Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
