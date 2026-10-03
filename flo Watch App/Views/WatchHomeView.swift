@@ -25,12 +25,14 @@ struct WatchHomeView: View {
       Button(action: {
         guard !isGeneratingMix else { return }
         isGeneratingMix = true
+        let generation = playerViewModel.startGeneration
 
         Task { @MainActor in
           let songs = await SmartPlaybackService.shared.generateMix(count: 15, mode: .playSomething)
           isGeneratingMix = false
 
-          guard !songs.isEmpty else { return }
+          // The user started something else while the mix was built.
+          guard !songs.isEmpty, playerViewModel.startGeneration == generation else { return }
           let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs)
           if playerViewModel.playItem(item: mix, isFromLocal: false) { showPlayer() }
         }

@@ -96,6 +96,9 @@ class WatchPlayerViewModel: ObservableObject {
   private var anchorGenres: Set<String> = []
   private static let sessionTimeout: TimeInterval = 30 * 60
   private var ratingObservation: AnyCancellable?
+  /// Bumped whenever the user starts something new; a mix built in the
+  /// meantime is stale.
+  private(set) var startGeneration = 0
 
   var nowPlaying: QueueEntity {
     return self.queue[self.activeQueueIdx]
@@ -504,6 +507,7 @@ class WatchPlayerViewModel: ObservableObject {
     // No report: the credentials are gone before this runs.
     resetSession()
     playGeneration += 1
+    startGeneration += 1
     player?.pause()
     detachItem()
 
@@ -1033,6 +1037,7 @@ class WatchPlayerViewModel: ObservableObject {
   @discardableResult
   func playBySong<T: Playable>(idx: Int, item: T, isFromLocal: Bool) -> Bool {
     guard item.songs.indices.contains(idx) else { return false }
+    startGeneration += 1
     reportStopped()
     resetSession()
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
@@ -1043,6 +1048,7 @@ class WatchPlayerViewModel: ObservableObject {
   @discardableResult
   func playItem<T: Playable>(item: T, isFromLocal: Bool) -> Bool {
     guard !item.songs.isEmpty else { return false }
+    startGeneration += 1
     reportStopped()
     resetSession()
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
@@ -1053,6 +1059,7 @@ class WatchPlayerViewModel: ObservableObject {
   @discardableResult
   func shuffleItem<T: Playable>(item: T, isFromLocal: Bool) -> Bool {
     guard !item.songs.isEmpty else { return false }
+    startGeneration += 1
     reportStopped()
     resetSession()
     var shuffledItem = item
@@ -1068,6 +1075,7 @@ class WatchPlayerViewModel: ObservableObject {
     guard let radioUrl = Self.normalizedRadioURL(from: radio.streamUrl) else {
       return false
     }
+    startGeneration += 1
     reportStopped()
     resetSession()
 
@@ -1181,6 +1189,7 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   func playFromQueue(idx: Int) {
+    startGeneration += 1
     reportStopped()
     self.activeQueueIdx = idx
     self.setNowPlaying()
