@@ -57,6 +57,9 @@ class WatchPlayerViewModel: ObservableObject {
   private var starGeneration = 0
   // starGeneration at the last song change; a tap since then moves past it.
   private var starSongGeneration = 0
+  // The song change's lookup failed with the server unreachable; announcing
+  // the song asks again.
+  private var starLookupFailed = false
   private var resumeAfterInterruption = false
 
   private var isLocallySaved: Bool = false
@@ -209,10 +212,14 @@ class WatchPlayerViewModel: ObservableObject {
       .publisher(for: AVAudioSession.routeChangeNotification)
       .receive(on: DispatchQueue.main)
       .sink { [weak self] notification in
-        guard let self, self.isPlaying,
+        guard let self,
           let value = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
           AVAudioSession.RouteChangeReason(rawValue: value) == .oldDeviceUnavailable
         else { return }
+        // Headphones lost during a call: its end must not restart music
+        // nobody hears.
+        self.resumeAfterInterruption = false
+        guard self.isPlaying else { return }
         self.pause()
       }
       .store(in: &interruptionObservation)
@@ -362,6 +369,7 @@ class WatchPlayerViewModel: ObservableObject {
       guard let url = URL(string: source.url) else {
         self.isMediaLoading = false
         self.isMediaFailed = true
+        self.skipFailedTrack(trackId: trackId)
         return
       }
 
@@ -675,9 +683,10 @@ class WatchPlayerViewModel: ObservableObject {
       starGeneration += 1
       starSongGeneration = starGeneration
       isStarred = false
-    } else if starGeneration != starSongGeneration {
-      // The user tapped the heart since the song changed; the server may not
-      // know that yet.
+      starLookupFailed = false
+    } else if !starLookupFailed || starGeneration != starSongGeneration {
+      // A tap on the heart since the song changed wins; the server may not
+      // know about it yet.
       return
     }
     let generation = starGeneration
@@ -686,6 +695,8 @@ class WatchPlayerViewModel: ObservableObject {
       DispatchQueue.main.async {
         guard let self, self.starGeneration == generation else { return }
         self.isStarred = starred
+        // The request has already updated the monitor; a failure reads false.
+        self.starLookupFailed = !starred && !ConnectivityMonitor.shared.isServerReachable
       }
     }
   }
@@ -1234,10 +1245,10 @@ class WatchPlayerViewModel: ObservableObject {
     } else {
       // Restore original order and find the current song in it; an index
       // from the shuffled order must never survive into the restored queue.
-      let currentId = self.queue[self.activeQueueIdx].id
+      let current = self.queue[self.activeQueueIdx]
       self.queue = self.unshuffledQueue
       self.unshuffledQueue = []
-      self.activeQueueIdx = self.queue.firstIndex(where: { $0.id == currentId }) ?? 0
+      self.activeQueueIdx = self.queue.firstIndex(where: { $0 === current }) ?? 0
     }
 
     persistActiveIndex()
@@ -1263,8 +1274,8 @@ class WatchPlayerViewModel: ObservableObject {
     guard queue.indices.contains(activeQueueIdx) else { return }
 
     var index = activeQueueIdx
-    if isShuffling, let currentId = nowPlaying.id,
-      let unshuffledIndex = unshuffledQueue.firstIndex(where: { $0.id == currentId })
+    if isShuffling,
+      let unshuffledIndex = unshuffledQueue.firstIndex(where: { $0 === nowPlaying })
     {
       index = unshuffledIndex
     }
