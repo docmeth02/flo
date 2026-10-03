@@ -21,15 +21,11 @@ struct WatchStarredSongsView: View {
       refresh: albumViewModel.refreshStarredSongs
     ) {
       ForEach(Array(albumViewModel.starredSongs.enumerated()), id: \.element.id) { idx, song in
-        let isCurrentlyPlaying =
-          playerViewModel.hasNowPlaying()
-          && playerViewModel.nowPlaying.id == (song.mediaFileId.isEmpty ? song.id : song.mediaFileId)
-
         TrackRowView(
           trackNumber: idx + 1,
           title: song.title,
           artist: song.artist,
-          isPlaying: isCurrentlyPlaying
+          isPlaying: playerViewModel.isCurrent(song)
         ) {
           let liked = SongCollection(id: "starred-songs", name: "Liked Songs", songs: albumViewModel.starredSongs)
           if playerViewModel.playBySong(idx: idx, item: liked, isFromLocal: false) { showPlayer() }
