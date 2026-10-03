@@ -130,8 +130,20 @@ class WatchPlayerViewModel: ObservableObject {
     if !lastPlayData.isEmpty && queueActiveIdx < lastPlayData.count && !isRadioQueue {
       self.progress = UserDefaultsManager.nowPlayingProgress
       self.playbackMode = UserDefaultsManager.playbackMode
+      // A queue shuffled in the player goes on in the order it was heard in;
+      // the stored queue keeps the original order. Read before addToQueue
+      // forgets it.
+      let order = (UserDefaults.standard.array(forKey: Self.shuffleOrderKey) as? [Int])
+        .flatMap { $0.sorted() == Array(lastPlayData.indices) ? $0 : nil }
       self.addToQueue(
-        idx: UserDefaultsManager.queueActiveIdx, item: lastPlayData, playAudio: false)
+        idx: order?.firstIndex(of: queueActiveIdx) ?? queueActiveIdx,
+        item: order?.map { lastPlayData[$0] } ?? lastPlayData, playAudio: false)
+      if order != nil {
+        self.unshuffledQueue = lastPlayData
+        self.isShuffling = true
+        self.persistActiveIndex()
+        self.persistShuffleOrder()
+      }
       // A song that already counted must not count again after a relaunch,
       // and one that did not yet keeps the listening time it had.
       self.isLocallySaved = UserDefaultsManager.nowPlayingQualified
@@ -142,6 +154,7 @@ class WatchPlayerViewModel: ObservableObject {
     } else {
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.queueActiveIdx)
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
+      UserDefaults.standard.removeObject(forKey: Self.shuffleOrderKey)
       PlaybackService.shared.clearQueue()
     }
 
@@ -515,6 +528,7 @@ class WatchPlayerViewModel: ObservableObject {
     activeQueueIdx = 0
     unshuffledQueue = []
     isShuffling = false
+    persistShuffleOrder()
     isPlaying = false
     progress = 0
     reloadedFailedTrackId = nil
@@ -530,6 +544,7 @@ class WatchPlayerViewModel: ObservableObject {
     // A new queue starts unshuffled; the saved order belongs to the old one.
     self.isShuffling = false
     self.unshuffledQueue = []
+    self.persistShuffleOrder()
     self.consecutiveFailures = 0
     self.activeQueueIdx = idx
     self.queue = item
@@ -1172,6 +1187,20 @@ class WatchPlayerViewModel: ObservableObject {
     }
 
     persistActiveIndex()
+    persistShuffleOrder()
+  }
+
+  private static let shuffleOrderKey = "queueShuffleOrder"
+
+  /// Saves the shuffled order as positions in the persisted queue, which
+  /// stays in the original order.
+  private func persistShuffleOrder() {
+    guard isShuffling else {
+      UserDefaults.standard.removeObject(forKey: Self.shuffleOrderKey)
+      return
+    }
+    let order = queue.compactMap { item in unshuffledQueue.firstIndex { $0 === item } }
+    UserDefaults.standard.set(order, forKey: Self.shuffleOrderKey)
   }
 
   /// Saves the current song's position in the persisted queue order, which is
