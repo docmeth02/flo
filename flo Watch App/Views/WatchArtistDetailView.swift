@@ -47,8 +47,7 @@ struct WatchArtistDetailView: View {
         ForEach(albumViewModel.albums(byArtist: artist.id)) { album in
           NavigationLink(destination: WatchAlbumDetailView(album: album)) {
             CoverRow(
-              coverURL: albumViewModel.getAlbumCoverArt(id: album.id),
-              albumId: album.id,
+              tile: .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id),
               title: album.name,
               subtitle: album.minYear > 0 ? String(album.minYear) : "")
           }

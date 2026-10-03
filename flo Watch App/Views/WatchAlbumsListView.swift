@@ -20,8 +20,7 @@ struct WatchAlbumsListView: View {
       ForEach(albumViewModel.albums) { album in
         NavigationLink(destination: WatchAlbumDetailView(album: album)) {
           CoverRow(
-            coverURL: albumViewModel.getAlbumCoverArt(id: album.id),
-            albumId: album.id,
+            tile: .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id),
             title: album.name,
             subtitle: album.albumArtist)
         }

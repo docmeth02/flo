@@ -31,18 +31,9 @@ struct WatchRadiosView: View {
             Button(action: {
               if playerViewModel.playRadioItem(radio: radio) { showPlayer() }
             }) {
-              HStack(spacing: 10) {
-                Image(systemName: "dot.radiowaves.up.forward")
-                  .font(.system(size: 14))
-                  .foregroundStyle(Color.floLavender)
-                  .frame(width: 30, height: 30)
-                  .background(Circle().fill(Color.floLavender.opacity(0.18)))
-
-                Text(radio.name)
-                  .font(.floRow)
-                  .lineLimit(2)
-              }
-              .frame(minHeight: 44)
+              CoverRow(
+                tile: .glyph("dot.radiowaves.up.forward", round: true), title: radio.name,
+                subtitle: "")
             }
             .floRow()
           }

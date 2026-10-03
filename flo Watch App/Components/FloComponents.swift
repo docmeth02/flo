@@ -25,22 +25,28 @@ struct FloNavRow: View {
   }
 }
 
-/// A row with a small cover, two lines and an optional trailing mark.
+/// A row with a small cover or glyph tile, two lines and an optional
+/// trailing mark.
 struct CoverRow<Trailing: View>: View {
-  let coverURL: String
-  let albumId: String
+  enum Tile {
+    case cover(url: String, albumId: String)
+    /// A lavender glyph, round for an artist or a station.
+    case glyph(String, round: Bool = false)
+  }
+
+  let tile: Tile
   let title: String
   let subtitle: String
   @ViewBuilder var trailing: Trailing
 
   var body: some View {
     HStack(spacing: 10) {
-      WatchAlbumArtView(url: coverURL, size: 36, albumId: albumId)
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+      tileView
       VStack(alignment: .leading, spacing: 1) {
         Text(title)
           .font(.floRowTitle)
-          .lineLimit(1)
+          // Without a subtitle there is room for a long name.
+          .lineLimit(subtitle.isEmpty ? 2 : 1)
         if !subtitle.isEmpty {
           Text(subtitle)
             .font(.floMeta)
@@ -53,11 +59,28 @@ struct CoverRow<Trailing: View>: View {
     }
     .frame(minHeight: 52)
   }
+
+  @ViewBuilder
+  private var tileView: some View {
+    switch tile {
+    case .cover(let url, let albumId):
+      WatchAlbumArtView(url: url, size: 36, albumId: albumId)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    case .glyph(let systemImage, let round):
+      Image(systemName: systemImage)
+        .font(.system(size: 16))
+        .foregroundStyle(Color.floLavender)
+        .frame(width: 36, height: 36)
+        .background(
+          (round ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: 6, style: .continuous)))
+            .fill(Color.floLavender.opacity(0.18)))
+    }
+  }
 }
 
 extension CoverRow where Trailing == EmptyView {
-  init(coverURL: String, albumId: String, title: String, subtitle: String) {
-    self.init(coverURL: coverURL, albumId: albumId, title: title, subtitle: subtitle) {
+  init(tile: Tile, title: String, subtitle: String) {
+    self.init(tile: tile, title: title, subtitle: subtitle) {
       EmptyView()
     }
   }
