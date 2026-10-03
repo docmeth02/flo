@@ -28,6 +28,7 @@ struct WatchContentView: View {
   // Recreating the stack pops whatever was browsed on top of the tabs.
   @State private var stackID = UUID()
   @State private var leftAt: Date?
+  @State private var leftTheApp = false
   #if DEBUG
     @State private var showsDebugDiagnostics = false
     @State private var debugScreen: DebugScreen?
@@ -81,14 +82,18 @@ struct WatchContentView: View {
     .onChange(of: scenePhase) { _, phase in
       // Like the system Now Playing app: coming back to the watch while music
       // plays shows the player. A short glance away keeps the browsing place.
-      // Lowering the wrist only makes the scene inactive and does not count.
-      if phase == .background {
+      if phase != .active {
         if leftAt == nil { leftAt = Date() }
-      } else if phase == .active, let leftAt {
+        if phase == .background { leftTheApp = true }
+      } else if let leftAt {
         self.leftAt = nil
-        // Rebuilt even when the player page is selected: a queue pushed on
-        // top of it has to give way too.
-        if playerViewModel.isPlaying, Date().timeIntervalSince(leftAt) > 8 {
+        let leftTheApp = self.leftTheApp
+        self.leftTheApp = false
+        // A raised wrist on the player page keeps it as it is; back from
+        // another app, a queue pushed on top of it gives way too.
+        if playerViewModel.isPlaying, Date().timeIntervalSince(leftAt) > 8,
+          leftTheApp || selectedTab != .nowPlaying
+        {
           showPlayer()
         }
       }
