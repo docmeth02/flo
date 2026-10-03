@@ -581,6 +581,11 @@ class WatchPlayerViewModel: ObservableObject {
     return !self.queue.isEmpty
   }
 
+  /// Whether the song is the one in the player, by the id the queue uses.
+  func isCurrent(_ song: Song) -> Bool {
+    hasNowPlaying() && nowPlaying.id == song.playbackID
+  }
+
   func setNowPlaying(playAudio: Bool = true) {
     guard queue.indices.contains(activeQueueIdx) else {
       player?.pause()
