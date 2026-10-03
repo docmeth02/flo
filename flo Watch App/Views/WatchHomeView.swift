@@ -17,6 +17,7 @@ struct WatchHomeView: View {
         NavigationLink(destination: WatchNowPlayingView()) {
           NowPlayingIndicator()
         }
+        .listRowBackground(Color.clear)
       }
 
       Button(action: {
@@ -32,44 +33,81 @@ struct WatchHomeView: View {
           playerViewModel.playItem(item: mix, isFromLocal: false)
         }
       }) {
-        Label("Play Something", systemImage: "sparkles")
+        Label(isGeneratingMix ? "Building mix…" : "Play Something", systemImage: "sparkles")
+          .font(.system(size: 16, weight: .semibold))
       }
+      .buttonStyle(FloPrimaryButtonStyle(height: 52))
+      .opacity(isGeneratingMix ? 0.6 : 1)
       .disabled(isGeneratingMix)
+      .listRowBackground(Color.clear)
+      .listRowInsets(EdgeInsets())
 
-      Section("Library") {
+      Section {
         NavigationLink(destination: WatchStarredSongsView()) {
-          Label("Liked Songs", systemImage: "heart.fill")
+          FloNavRow(title: "Liked Songs", systemImage: "heart.fill", tint: .floLiked)
         }
+        .floRow()
         NavigationLink(destination: WatchArtistsListView()) {
-          Label("Artists", systemImage: "music.mic")
+          FloNavRow(title: "Artists", systemImage: "music.mic")
         }
+        .floRow()
         NavigationLink(destination: WatchAlbumsListView()) {
-          Label("Albums", systemImage: "square.stack")
+          FloNavRow(title: "Albums", systemImage: "square.stack")
         }
+        .floRow()
         NavigationLink(destination: WatchPlaylistsListView()) {
-          Label("Playlists", systemImage: "music.note.list")
+          FloNavRow(title: "Playlists", systemImage: "music.note.list")
         }
+        .floRow()
         NavigationLink(destination: WatchRadiosView()) {
-          Label("Radios", systemImage: "dot.radiowaves.up.forward")
+          FloNavRow(title: "Radios", systemImage: "dot.radiowaves.up.forward")
         }
+        .floRow()
+      } header: {
+        sectionHeader("Library")
       }
 
-      Section("Offline") {
+      Section {
         NavigationLink(destination: WatchDownloadsView()) {
-          Label("Downloads", systemImage: "arrow.down.circle")
+          FloNavRow(title: "Downloads", systemImage: "arrow.down.circle")
         }
+        .floRow()
+      } header: {
+        sectionHeader("Offline")
       }
 
       Section {
         NavigationLink(destination: WatchSettingsView()) {
-          Label("Settings", systemImage: "gear")
+          FloNavRow(title: "Settings", systemImage: "gear", tint: .floSecondary)
         }
+        .floRow()
       }
     }
-    .navigationTitle("flo")
+    .scrollContentBackground(.hidden)
+    .background(alignment: .top) {
+      // Fixed behind the list like the mockup: rows scroll over the cover.
+      if playerViewModel.hasNowPlaying() {
+        CoverBackdrop(albumId: playerViewModel.nowPlaying.albumId ?? "", height: 190)
+      }
+    }
+    .navigationTitle("")
+    .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        Text("flo")
+          .font(.floWordmark)
+          .foregroundStyle(Color.floLavender)
+      }
+    }
     #if DEBUG
       .task { await runDebugFetchAlbums() }
     #endif
+  }
+
+  private func sectionHeader(_ title: String) -> some View {
+    Text(title)
+      .font(.floSection)
+      .foregroundStyle(Color.floSecondary)
+      .textCase(nil)
   }
 }
 

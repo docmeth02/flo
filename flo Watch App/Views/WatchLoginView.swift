@@ -16,26 +16,31 @@ struct WatchLoginView: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 12) {
-          Image(systemName: "music.note")
-            .font(.system(size: 36))
-            .foregroundColor(.accentColor)
-            .padding(.top, 8)
+        VStack(spacing: 6) {
+          HStack(spacing: 10) {
+            Image("FloLogo")
+              .resizable()
+              .frame(width: 40, height: 40)
+              .clipShape(Circle())
 
-          Text("flo")
-            .customFont(.title2)
-            .fontWeight(.bold)
-
-          Text("Sign in to your Navidrome server")
-            .customFont(.caption1)
-            .foregroundColor(.secondary)
-            .multilineTextAlignment(.center)
+            VStack(alignment: .leading, spacing: 3) {
+              Text("flo")
+                .font(.floWordmark)
+                .foregroundStyle(Color.floLavender)
+              Text("Sign in to your Navidrome server")
+                .font(.floMeta)
+                .foregroundStyle(Color.floSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+          }
+          .padding(.horizontal, 6)
+          .padding(.bottom, 6)
 
           loginForm
         }
-        .padding(.horizontal)
+        .padding(.horizontal, 8)
       }
-      .navigationTitle("Sign In")
       .alert(isPresented: $viewModel.showAlert) {
         Alert(
           title: Text("Login Failed"),
@@ -47,31 +52,50 @@ struct WatchLoginView: View {
   }
 
   private var loginForm: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: 6) {
       TextField("Server URL", text: $viewModel.serverUrl)
         .textContentType(.URL)
         .autocorrectionDisabled()
         .textInputAutocapitalization(.never)
+        .modifier(FieldCapsule())
 
       TextField("Username", text: $viewModel.username)
         .autocorrectionDisabled()
         .textInputAutocapitalization(.never)
+        .modifier(FieldCapsule())
 
       SecureField("Password", text: $viewModel.password)
+        .modifier(FieldCapsule())
 
       Button(action: {
         viewModel.experimentalSaveLoginInfo = true
         viewModel.login()
       }) {
-        if viewModel.isSubmitting {
-          ProgressView()
-        } else {
-          Text("Login")
+        HStack(spacing: 6) {
+          if viewModel.isSubmitting {
+            ProgressView()
+              .frame(width: 18, height: 18)
+          }
+          Text(viewModel.isSubmitting ? "Signing in…" : "Login")
             .fontWeight(.bold)
         }
       }
+      .buttonStyle(FloPrimaryButtonStyle())
+      .opacity(isSubmitDisabled ? 0.6 : 1)
       .disabled(isSubmitDisabled)
       .padding(.top, 4)
     }
+  }
+}
+
+/// A login field on a Surface capsule.
+private struct FieldCapsule: ViewModifier {
+  func body(content: Content) -> some View {
+    content
+      .textFieldStyle(.plain)
+      .font(.system(size: 15))
+      .padding(.horizontal, 16)
+      .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+      .background(Capsule().fill(Color.floSurface))
   }
 }

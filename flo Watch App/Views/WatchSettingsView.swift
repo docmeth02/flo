@@ -27,45 +27,58 @@ struct WatchSettingsView: View {
 
   var body: some View {
     List {
-      Section("Server") {
-        VStack(alignment: .leading, spacing: 2) {
-          Text("URL")
-            .customFont(.caption2)
-            .foregroundColor(.secondary)
-          Text(UserDefaultsManager.serverBaseURL)
-            .customFont(.caption1)
-            .lineLimit(2)
-        }
+      Section {
+        infoRow("URL", UserDefaultsManager.serverBaseURL)
+      } header: {
+        sectionHeader("Server")
       }
 
-      Section("Playback") {
+      Section {
         Toggle(
-          "Keep Playing",
           isOn: Binding(
             get: { UserDefaultsManager.keepPlaying },
             set: { UserDefaultsManager.keepPlaying = $0 }
-          ))
+          )
+        ) {
+          VStack(alignment: .leading, spacing: 1) {
+            Text("Keep Playing")
+              .font(.floRow)
+            Text("Smart Shuffle continues when the queue ends")
+              .font(.system(size: 11))
+              .foregroundStyle(Color.floSecondary)
+          }
+        }
+        .tint(Color(red: 0x6C / 255, green: 0x69 / 255, blue: 0xE0 / 255))
+        .floRow()
+      } header: {
+        sectionHeader("Playback")
       }
 
-      Section("Streaming") {
+      Section {
         Picker("Bitrate", selection: $selectedBitRate) {
           ForEach(watchBitRates, id: \.self) { rate in
             Text(bitRateLabels[rate] ?? rate)
               .tag(rate)
           }
         }
+        .tint(.floLavender)
+        .floRow()
         .onChange(of: selectedBitRate) { newValue in
           UserDefaultsManager.maxBitRate = newValue
         }
+      } header: {
+        sectionHeader("Streaming")
       }
 
-      Section("Streaming Cache") {
+      Section {
         Picker("Limit", selection: $selectedCacheSize) {
           Text("Off").tag(Int64(0))
           Text("250 MB").tag(Int64(262_144_000))
           Text("500 MB").tag(Int64(524_288_000))
           Text("1 GB").tag(Int64(1_073_741_824))
         }
+        .tint(.floLavender)
+        .floRow()
         .onChange(of: selectedCacheSize) { newValue in
           UserDefaultsManager.streamCacheMaxSize = newValue
           // Eviction only trims an enabled cache; turning it off frees it all.
@@ -75,45 +88,27 @@ struct WatchSettingsView: View {
           }
         }
 
-        VStack(alignment: .leading, spacing: 2) {
-          Text("Cache Used")
-            .customFont(.caption2)
-            .foregroundColor(.secondary)
-          Text(floooViewModel.streamCacheSize)
-            .customFont(.caption1)
-        }
+        infoRow("Cache Used", floooViewModel.streamCacheSize)
 
-        Button(role: .destructive, action: {
+        actionRow("Clear Cache", systemImage: "trash") {
           showClearCacheAlert = true
-        }) {
-          Label("Clear Cache", systemImage: "trash")
         }
+      } header: {
+        sectionHeader("Streaming Cache")
       }
 
-      Section("Storage") {
-        VStack(alignment: .leading, spacing: 2) {
-          Text("Downloaded")
-            .customFont(.caption2)
-            .foregroundColor(.secondary)
-          Text(
-            "\(floooViewModel.downloadedAlbums) albums, \(floooViewModel.downloadedSongs) songs"
-          )
-          .customFont(.caption1)
-        }
+      Section {
+        infoRow(
+          "Downloaded",
+          "\(floooViewModel.downloadedAlbums) albums, \(floooViewModel.downloadedSongs) songs")
 
-        VStack(alignment: .leading, spacing: 2) {
-          Text("Storage Used")
-            .customFont(.caption2)
-            .foregroundColor(.secondary)
-          Text(floooViewModel.localDirectorySize)
-            .customFont(.caption1)
-        }
+        infoRow("Storage Used", floooViewModel.localDirectorySize)
 
-        Button(role: .destructive, action: {
+        actionRow("Clear Downloads", systemImage: "trash") {
           showClearAlert = true
-        }) {
-          Label("Clear Downloads", systemImage: "trash")
         }
+      } header: {
+        sectionHeader("Storage")
       }
 
       if CoreDataManager.shared.isUsingVolatileStore {
@@ -122,28 +117,30 @@ struct WatchSettingsView: View {
             "Storage unavailable: history, downloads and queued scrobbles are not saved until the app restarts.",
             systemImage: "exclamationmark.triangle"
           )
-          .customFont(.caption2)
-          .foregroundColor(.orange)
+          .font(.floMeta)
+          .foregroundStyle(Color.floWarningText)
+          .floRow()
         }
       }
 
       Section {
         NavigationLink(destination: WatchDiagnosticsView()) {
-          Label("Diagnostics", systemImage: "waveform.path.ecg")
+          Label {
+            Text("Diagnostics").font(.floRow)
+          } icon: {
+            Image(systemName: "waveform.path.ecg").foregroundStyle(Color.floSecondary)
+          }
         }
+        .floRow()
 
-        Button(role: .destructive, action: {
+        actionRow("Rebuild History", systemImage: "arrow.clockwise") {
           showRebuildHistoryAlert = true
-        }) {
-          Label("Rebuild History", systemImage: "arrow.clockwise")
         }
       }
 
       Section {
-        Button(role: .destructive, action: {
+        actionRow("Logout", systemImage: "rectangle.portrait.and.arrow.right") {
           showLogoutAlert = true
-        }) {
-          Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
         }
       }
     }
@@ -184,5 +181,36 @@ struct WatchSettingsView: View {
     } message: {
       Text("All downloaded music will be removed.")
     }
+  }
+
+  private func sectionHeader(_ title: String) -> some View {
+    Text(title)
+      .font(.floSection)
+      .foregroundStyle(Color.floSecondary)
+      .textCase(nil)
+  }
+
+  private func infoRow(_ label: String, _ value: String) -> some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(label)
+        .font(.floMeta)
+        .foregroundStyle(Color.floSecondary)
+      Text(value)
+        .font(.system(size: 14, weight: .medium))
+        .lineLimit(2)
+    }
+    .padding(.vertical, 2)
+    .floRow()
+  }
+
+  private func actionRow(
+    _ title: String, systemImage: String, action: @escaping () -> Void
+  ) -> some View {
+    Button(role: .destructive, action: action) {
+      Label(title, systemImage: systemImage)
+        .font(.floRow)
+        .foregroundStyle(Color.floDestructive)
+    }
+    .floRow()
   }
 }
