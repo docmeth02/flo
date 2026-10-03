@@ -10,41 +10,47 @@ struct WatchAlbumArtView: View {
   var size: CGFloat = 36
   var albumId: String = ""
 
-  // The cover cache's answer, remembered together with the album it is for,
-  // so a view reused for another album never shows the previous cover.
-  @State private var cached: (albumId: String, path: String?)?
+  // The decoded cover, remembered together with the cover it is for, so a
+  // view reused for another album never shows the previous cover.
+  @State private var loaded: (key: String, image: UIImage?)?
 
-  private var cachedPath: String? {
-    cached?.albumId == albumId ? cached?.path : nil
+  private var isLocal: Bool { url.hasPrefix("/") }
+  private var key: String { isLocal ? url : albumId }
+
+  private var image: UIImage? {
+    loaded?.key == key ? loaded?.image : nil
   }
 
-  private var cacheFailed: Bool {
-    cached?.albumId == albumId && cached?.path == nil
+  private var loadFailed: Bool {
+    loaded?.key == key && loaded?.image == nil
   }
 
   var body: some View {
     content
-      .task(id: albumId) {
-        guard !url.hasPrefix("/"), !albumId.isEmpty, cached?.albumId != albumId else { return }
+      .task(id: key) {
+        guard isLocal || !albumId.isEmpty, loaded?.key != key else { return }
         // One download through the cover cache serves this view, every other
         // view of the album and the Now Playing artwork.
-        let path = await CoverArtCacheManager.shared.coverPath(albumId: albumId)
+        let path: String? =
+          isLocal ? url : await CoverArtCacheManager.shared.coverPath(albumId: albumId)
+        // Decoding in body would stall the main thread on every redraw.
+        let decoded = await Task.detached(priority: .userInitiated) {
+          path.flatMap(UIImage.init(contentsOfFile:)).flatMap(CoverTint.decoded)
+        }.value
         // The view may have moved on to another album while this loaded.
         guard !Task.isCancelled else { return }
-        cached = (albumId, path)
+        loaded = (key, decoded)
       }
   }
 
   @ViewBuilder
   private var content: some View {
-    if let path = url.hasPrefix("/") ? url : cachedPath,
-      let uiImage = UIImage(contentsOfFile: path)
-    {
-      Image(uiImage: uiImage)
+    if let image {
+      Image(uiImage: image)
         .resizable()
         .aspectRatio(contentMode: .fill)
         .frame(width: size, height: size)
-    } else if !albumId.isEmpty, !cacheFailed {
+    } else if isLocal || !albumId.isEmpty, !loadFailed {
       ProgressView()
         .frame(width: size, height: size)
     } else {
