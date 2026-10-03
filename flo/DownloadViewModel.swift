@@ -138,6 +138,8 @@ class DownloadViewModel: ObservableObject {
 
   private func startDownload(index: Int) {
     var hasPassedThreshold = false
+    // Every write republishes the view model; whole percents are enough.
+    var lastPercent = -1
 
     let item = downloadItems[index]
 
@@ -146,6 +148,8 @@ class DownloadViewModel: ObservableObject {
     currentDownloads.insert(item.id)
 
     let progressUpdate: (Double) -> Void = { progress in
+      guard Int(progress) != lastPercent else { return }
+      lastPercent = Int(progress)
       self.updateItemProgress(itemId: item.id, progress: progress)
 
       if let index = self.downloadedTrackCount.firstIndex(where: {
