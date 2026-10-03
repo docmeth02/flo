@@ -658,10 +658,13 @@ class WatchPlayerViewModel: ObservableObject {
     self.loadStarred()
   }
 
-  private func loadStarred() {
-    starGeneration += 1
+  /// A refresh keeps the shown state and yields to a tap made meanwhile.
+  private func loadStarred(refresh: Bool = false) {
+    if !refresh {
+      starGeneration += 1
+      isStarred = false
+    }
     let generation = starGeneration
-    isStarred = false
     guard let songId = nowPlaying.id, !songId.isEmpty else { return }
     AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
       DispatchQueue.main.async {
@@ -677,6 +680,9 @@ class WatchPlayerViewModel: ObservableObject {
     needsNowPlayingAnnouncement = false
     // A station is no song the server knows.
     guard !isLiveRadio else { return }
+    // The lookup at song change may have failed offline, as for a queue
+    // restored at launch.
+    loadStarred(refresh: true)
 
     FloooViewModel.shared.reportPlayback(
       state: .starting, nowPlaying: self.nowPlaying, positionSeconds: self.pendingStartPosition)

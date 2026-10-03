@@ -86,9 +86,9 @@ struct WatchContentView: View {
         if leftAt == nil { leftAt = Date() }
       } else if phase == .active, let leftAt {
         self.leftAt = nil
-        if playerViewModel.isPlaying, selectedTab != .nowPlaying,
-          Date().timeIntervalSince(leftAt) > 8
-        {
+        // Rebuilt even when the player page is selected: a queue pushed on
+        // top of it has to give way too.
+        if playerViewModel.isPlaying, Date().timeIntervalSince(leftAt) > 8 {
           showPlayer()
         }
       }
