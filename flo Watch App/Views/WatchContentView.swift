@@ -359,16 +359,20 @@ struct WatchContentView: View {
       debugScreen = DebugScreen(view: view)
 
       // FLO_DEBUG_SCREEN_PLAY=1 then plays the first album the way its Play
-      // button does, to check that the pushed screen gives way to the player.
-      guard ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN_PLAY"] == "1",
+      // button does, to check that the pushed screen gives way to the player;
+      // =<albumId>:<songId> plays that song of that album instead.
+      guard let play = ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN_PLAY"],
         var album = await load(AlbumService.shared.getAlbum).first
       else { return }
+      let target = play.split(separator: ":").map(String.init)
+      if target.count == 2 { album.id = target[0] }
       album.songs = await load { AlbumService.shared.getSongFromAlbum(id: album.id, completion: $0) }
+      let index = target.count == 2 ? album.songs.firstIndex { $0.playbackID == target[1] } ?? 0 : 0
       try? await Task.sleep(nanoseconds: 3_000_000_000)
       // Library screens are links the reset drops; this one is hook state.
       debugScreen = nil
-      if playerViewModel.playItem(item: album, isFromLocal: false) { showPlayer() }
-      debugLog("screen hook: played \(album.name), page=\(selectedTab)")
+      if playerViewModel.playBySong(idx: index, item: album, isFromLocal: false) { showPlayer() }
+      debugLog("screen hook: played \(album.songs.indices.contains(index) ? album.songs[index].title : "-"), page=\(selectedTab)")
     }
 
     private func logMediaFiles(_ label: String) {

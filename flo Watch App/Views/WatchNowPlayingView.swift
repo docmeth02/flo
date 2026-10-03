@@ -42,7 +42,7 @@ struct WatchNowPlayingView: View {
         nowPlayingContent
           .dynamicTypeSize(...DynamicTypeSize.large)
           // Clears the round toolbar buttons on the narrow screens.
-          .padding(.top, Self.compact ? 10 : 4)
+          .padding(.top, Self.compact ? 14 : 12)
       } else {
         Text("Nothing playing")
           .foregroundStyle(Color.floSecondary)
@@ -102,7 +102,8 @@ struct WatchNowPlayingView: View {
           .foregroundStyle(Color.floOnCover)
       }
       .lineLimit(1)
-      .padding(.horizontal, 8)
+      // A long title stops short of the round toolbar buttons above it.
+      .padding(.horizontal, 18)
 
       if playerViewModel.isLiveRadio {
         Badge(kind: .live)
