@@ -7,7 +7,6 @@ import SwiftUI
 
 struct WatchDownloadsView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
-  @EnvironmentObject var playerViewModel: WatchPlayerViewModel
 
   @State private var cachedSongs: [Song] = []
 
@@ -25,7 +24,7 @@ struct WatchDownloadsView: View {
             NavigationLink(destination: WatchCachedSongsView(songs: cachedSongs)) {
               CoverRow(
                 tile: .glyph("music.note.list"), title: "Cached",
-                subtitle: "\(cachedSongs.count) songs")
+                subtitle: "\(cachedSongs.count) song\(cachedSongs.count == 1 ? "" : "s")")
             }
             .floRow()
           }
