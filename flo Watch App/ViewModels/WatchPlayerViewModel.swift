@@ -560,7 +560,7 @@ class WatchPlayerViewModel: ObservableObject {
     self.restartedTrackId = nil
     self.reloadedFailedTrackId = nil
 
-    StreamCacheManager.shared.cancelAllInFlight()
+    StreamCacheManager.shared.cancelAllInFlight(except: self.nowPlaying.id)
     StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: self.nowPlaying.id ?? "")
 
     // The item itself is attached by play(), so a queue restored at launch
