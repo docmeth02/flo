@@ -23,6 +23,7 @@ struct WatchContentView: View {
   #if DEBUG
     @State private var showsDebugDiagnostics = false
     @State private var debugScreen: DebugScreen?
+    @State private var debugLoginScreen: DebugScreen?
   #endif
 
   private enum Tab { case home, nowPlaying }
@@ -41,6 +42,9 @@ struct WatchContentView: View {
             }
           }
           .tabViewStyle(.page)
+          #if DEBUG
+            .navigationDestination(item: $debugScreen) { $0.view }
+          #endif
         }
         .id(stackID)
       } else {
@@ -89,15 +93,18 @@ struct WatchContentView: View {
       .task { await runDebugDiagnostics() }
       .sheet(isPresented: $showsDebugDiagnostics) { NavigationStack { WatchDiagnosticsView() } }
       .task { await runDebugScreen() }
-      .sheet(item: $debugScreen) { screen in NavigationStack { screen.view } }
+      .sheet(item: $debugLoginScreen) { $0.view }
     #endif
   }
 }
 
 #if DEBUG
-  private struct DebugScreen: Identifiable {
+  private struct DebugScreen: Identifiable, Hashable {
     let id = UUID()
     let view: AnyView
+
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
   }
 
   // Simulator verification only. FLO_DEBUG_DOWNLOAD=album|playlist downloads
@@ -286,7 +293,7 @@ struct WatchContentView: View {
       for line in lines.drop(while: { $0 != "Last mixes" }) { debugLog("  | \(line)") }
     }
 
-    // FLO_DEBUG_SCREEN=<name> opens one screen in a sheet four seconds after
+    // FLO_DEBUG_SCREEN=<name> pushes one screen four seconds after
     // launch, for screenshots: albums, album, playlist, artist, liked, radios,
     // downloads, settings, queue, login-error.
     fileprivate func runDebugScreen() async {
@@ -326,7 +333,8 @@ struct WatchContentView: View {
         let auth = AuthViewModel()
         auth.alertMessage = "Wrong username or password."
         auth.showAlert = true
-        view = AnyView(WatchLoginView(viewModel: auth))
+        debugLoginScreen = DebugScreen(view: AnyView(WatchLoginView(viewModel: auth)))
+        return debugLog("screen hook: showing \(name)")
       default: return debugLog("screen hook: unknown screen \(name)")
       }
       debugLog("screen hook: showing \(name)")

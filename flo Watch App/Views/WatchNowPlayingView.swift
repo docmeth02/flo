@@ -116,7 +116,7 @@ struct WatchNowPlayingView: View {
           }
           .buttonStyle(.plain)
         }
-        .padding(.top, 8)
+        .padding(.top, Self.compact ? 2 : 8)
 
         HStack(spacing: 6) {
           Text(elapsed)
@@ -125,7 +125,7 @@ struct WatchNowPlayingView: View {
         }
         .font(.floTime)
         .foregroundStyle(Self.timeColor)
-        .padding(.top, 3)
+        .padding(.top, Self.compact ? 1 : 3)
 
         HStack(spacing: 0) {
           Button(action: {
@@ -185,12 +185,15 @@ struct WatchNowPlayingView: View {
   }
 
   private static let timeColor = Color(red: 0xC4 / 255, green: 0xC3 / 255, blue: 0xCF / 255)
+  // The 41 and 42 mm screens need smaller transport controls to keep the
+  // shuffle, heart and repeat row above the page dots.
+  private static let compact = WKInterfaceDevice.current().screenBounds.height < 240
 
   private func transportGlyph(_ name: String) -> some View {
     Image(systemName: name)
-      .font(.system(size: 32))
+      .font(.system(size: Self.compact ? 28 : 32))
       .foregroundStyle(.white)
-      .frame(width: 48, height: 48)
+      .frame(width: Self.compact ? 44 : 48, height: Self.compact ? 44 : 48)
       .contentShape(Rectangle())
   }
 
@@ -217,13 +220,13 @@ struct WatchNowPlayingView: View {
         }
         Circle()
           .fill(.white)
-          .frame(width: 66, height: 66)
+          .frame(width: Self.compact ? 56 : 66, height: Self.compact ? 56 : 66)
         Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
-          .font(.system(size: 36))
+          .font(.system(size: Self.compact ? 30 : 36))
           .foregroundStyle(.black)
       }
       .padding(2)
-      .frame(width: 84, height: 84)
+      .frame(width: Self.compact ? 72 : 84, height: Self.compact ? 72 : 84)
       .contentShape(Circle())
     }
     .buttonStyle(.plain)

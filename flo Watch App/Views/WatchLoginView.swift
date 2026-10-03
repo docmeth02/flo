@@ -57,15 +57,12 @@ struct WatchLoginView: View {
         .textContentType(.URL)
         .autocorrectionDisabled()
         .textInputAutocapitalization(.never)
-        .modifier(FieldCapsule())
 
       TextField("Username", text: $viewModel.username)
         .autocorrectionDisabled()
         .textInputAutocapitalization(.never)
-        .modifier(FieldCapsule())
 
       SecureField("Password", text: $viewModel.password)
-        .modifier(FieldCapsule())
 
       Button(action: {
         viewModel.experimentalSaveLoginInfo = true
@@ -85,17 +82,5 @@ struct WatchLoginView: View {
       .disabled(isSubmitDisabled)
       .padding(.top, 4)
     }
-  }
-}
-
-/// A login field on a Surface capsule.
-private struct FieldCapsule: ViewModifier {
-  func body(content: Content) -> some View {
-    content
-      .textFieldStyle(.plain)
-      .font(.system(size: 15))
-      .padding(.horizontal, 16)
-      .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-      .background(Capsule().fill(Color.floSurface))
   }
 }
