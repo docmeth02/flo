@@ -8,6 +8,7 @@ import SwiftUI
 struct WatchArtistDetailView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @Environment(\.showPlayer) private var showPlayer
 
   @StateObject var artistDetailViewModel = ArtistDetailViewModel()
 
@@ -74,7 +75,7 @@ struct WatchArtistDetailView: View {
           songs: songs,
           artist: artist.name
         )
-        playerViewModel.playItem(item: playable, isFromLocal: false)
+        if playerViewModel.playItem(item: playable, isFromLocal: false) { showPlayer() }
       }
     }
     .alert("Artist Radio", isPresented: $displayAlert) {

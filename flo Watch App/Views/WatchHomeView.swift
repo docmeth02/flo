@@ -9,12 +9,14 @@ struct WatchHomeView: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
   @EnvironmentObject var albumViewModel: AlbumViewModel
 
+  @Environment(\.showPlayer) private var showPlayer
+  @Environment(\.selectPlayerPage) private var selectPlayerPage
   @State private var isGeneratingMix = false
 
   var body: some View {
     List {
       if playerViewModel.hasNowPlaying() {
-        NavigationLink(destination: WatchNowPlayingView()) {
+        Button(action: selectPlayerPage) {
           NowPlayingIndicator()
         }
         .listRowBackground(Color.clear)
@@ -30,7 +32,7 @@ struct WatchHomeView: View {
 
           guard !songs.isEmpty else { return }
           let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs)
-          playerViewModel.playItem(item: mix, isFromLocal: false)
+          if playerViewModel.playItem(item: mix, isFromLocal: false) { showPlayer() }
         }
       }) {
         Label(isGeneratingMix ? "Building mix…" : "Play Something", systemImage: "sparkles")

@@ -13,7 +13,7 @@ struct WatchAlbumDetailView: View {
   let album: Album
 
   @State private var localAlbum: Album?
-  @State private var showNowPlaying = false
+  @Environment(\.showPlayer) private var showPlayer
   @State private var downloaded = false
   @State private var downloadedIds: Set<String> = []
   @State private var tint: Color = .floLavender
@@ -75,15 +75,15 @@ struct WatchAlbumDetailView: View {
 
         HStack(spacing: 6) {
           Button(action: {
-            showNowPlaying = playerViewModel.playItem(item: displayAlbum, isFromLocal: isDownloaded)
+            if playerViewModel.playItem(item: displayAlbum, isFromLocal: isDownloaded) { showPlayer() }
           }) {
             Label("Play", systemImage: "play.fill")
           }
           .buttonStyle(FloPrimaryButtonStyle())
 
           Button(action: {
-            showNowPlaying = playerViewModel.shuffleItem(
-              item: displayAlbum, isFromLocal: isDownloaded)
+            if playerViewModel.shuffleItem(
+              item: displayAlbum, isFromLocal: isDownloaded) { showPlayer() }
           }) {
             Label("Shuffle", systemImage: "shuffle")
           }
@@ -116,8 +116,8 @@ struct WatchAlbumDetailView: View {
             isPlaying: isCurrentlyPlaying,
             tint: tint
           ) {
-            showNowPlaying = playerViewModel.playBySong(
-              idx: index, item: displayAlbum, isFromLocal: isDownloaded)
+            if playerViewModel.playBySong(
+              idx: index, item: displayAlbum, isFromLocal: isDownloaded) { showPlayer() }
           }
         }
       }
@@ -127,9 +127,6 @@ struct WatchAlbumDetailView: View {
     .background(alignment: .top) {
       CoverBackdrop(
         albumId: album.id, url: albumViewModel.getAlbumCoverArt(id: album.id), height: 220)
-    }
-    .navigationDestination(isPresented: $showNowPlaying) {
-      WatchNowPlayingView()
     }
     .task(id: album.id) {
       tint =

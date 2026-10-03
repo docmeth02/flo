@@ -5,6 +5,14 @@
 
 import SwiftUI
 
+extension EnvironmentValues {
+  /// Leaves the library for the player page; set by WatchContentView.
+  @Entry var showPlayer: () -> Void = {}
+  /// Selects the player page without popping, for the root of the stack:
+  /// a reset there would rebuild Home mid-mix and re-enable Play Something.
+  @Entry var selectPlayerPage: () -> Void = {}
+}
+
 struct WatchContentView: View {
   @StateObject private var authViewModel = AuthViewModel()
   @StateObject private var playerViewModel = WatchPlayerViewModel()
@@ -28,6 +36,16 @@ struct WatchContentView: View {
 
   private enum Tab { case home, nowPlaying }
 
+  /// Pops whatever was browsed and selects the player page, so there is only
+  /// one player. The rebuilt page view starts on its first page; the player is
+  /// selected once it is in place. Resetting first makes that a real change
+  /// when the player was already selected.
+  private func showPlayer() {
+    selectedTab = .home
+    stackID = UUID()
+    DispatchQueue.main.async { selectedTab = .nowPlaying }
+  }
+
   var body: some View {
     Group {
       if authViewModel.isLoggedIn {
@@ -37,7 +55,7 @@ struct WatchContentView: View {
               .tag(Tab.home)
 
             if playerViewModel.hasNowPlaying() {
-              WatchNowPlayingView(ownsCrown: selectedTab == .nowPlaying, isPage: true)
+              WatchNowPlayingView(ownsCrown: selectedTab == .nowPlaying)
                 .tag(Tab.nowPlaying)
             }
           }
@@ -47,6 +65,8 @@ struct WatchContentView: View {
           #endif
         }
         .id(stackID)
+        .environment(\.showPlayer, showPlayer)
+        .environment(\.selectPlayerPage) { selectedTab = .nowPlaying }
       } else {
         WatchLoginView(viewModel: authViewModel)
       }
@@ -66,12 +86,7 @@ struct WatchContentView: View {
       } else if let leftAt {
         self.leftAt = nil
         if playerViewModel.isPlaying, Date().timeIntervalSince(leftAt) > 8 {
-          // The rebuilt page view starts on its first page; select the player
-          // once it is in place. Resetting first makes that a real change when
-          // the player was already selected.
-          selectedTab = .home
-          stackID = UUID()
-          DispatchQueue.main.async { selectedTab = .nowPlaying }
+          showPlayer()
         }
       }
     }
@@ -295,7 +310,7 @@ struct WatchContentView: View {
 
     // FLO_DEBUG_SCREEN=<name> pushes one screen four seconds after
     // launch, for screenshots: albums, album, playlist, artist, liked, radios,
-    // downloads, settings, queue, player (pushed, as from an album), login-error.
+    // downloads, settings, queue, login-error.
     fileprivate func runDebugScreen() async {
       guard let name = ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN"] else { return }
       try? await Task.sleep(nanoseconds: 4_000_000_000)
@@ -329,7 +344,6 @@ struct WatchContentView: View {
       case "downloads": view = AnyView(WatchDownloadsView())
       case "settings": view = AnyView(WatchSettingsView())
       case "queue": view = AnyView(WatchQueueView())
-      case "player": view = AnyView(WatchNowPlayingView())
       case "login-error":
         let auth = AuthViewModel()
         auth.alertMessage = "Wrong username or password."
@@ -340,6 +354,18 @@ struct WatchContentView: View {
       }
       debugLog("screen hook: showing \(name)")
       debugScreen = DebugScreen(view: view)
+
+      // FLO_DEBUG_SCREEN_PLAY=1 then plays the first album the way its Play
+      // button does, to check that the pushed screen gives way to the player.
+      guard ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN_PLAY"] == "1",
+        var album = await load(AlbumService.shared.getAlbum).first
+      else { return }
+      album.songs = await load { AlbumService.shared.getSongFromAlbum(id: album.id, completion: $0) }
+      try? await Task.sleep(nanoseconds: 3_000_000_000)
+      // Library screens are links the reset drops; this one is hook state.
+      debugScreen = nil
+      if playerViewModel.playItem(item: album, isFromLocal: false) { showPlayer() }
+      debugLog("screen hook: played \(album.name), page=\(selectedTab)")
     }
 
     private func logMediaFiles(_ label: String) {

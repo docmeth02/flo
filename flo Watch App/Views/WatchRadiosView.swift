@@ -10,7 +10,7 @@ struct WatchRadiosView: View {
 
   @StateObject var viewModel = RadiosViewModel()
 
-  @State private var showNowPlaying = false
+  @Environment(\.showPlayer) private var showPlayer
 
   private var placeholder: StateView.Kind {
     if viewModel.error != nil {
@@ -29,7 +29,7 @@ struct WatchRadiosView: View {
         List {
           ForEach(viewModel.radios, id: \.id) { radio in
             Button(action: {
-              showNowPlaying = playerViewModel.playRadioItem(radio: radio)
+              if playerViewModel.playRadioItem(radio: radio) { showPlayer() }
             }) {
               HStack(spacing: 10) {
                 Image(systemName: "dot.radiowaves.up.forward")
@@ -50,9 +50,6 @@ struct WatchRadiosView: View {
       }
     }
     .navigationTitle("Radios")
-    .navigationDestination(isPresented: $showNowPlaying) {
-      WatchNowPlayingView()
-    }
     .onAppear {
       viewModel.fetchAllRadios()
     }

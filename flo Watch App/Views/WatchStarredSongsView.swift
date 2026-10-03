@@ -9,7 +9,7 @@ struct WatchStarredSongsView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
 
-  @State private var showNowPlaying = false
+  @Environment(\.showPlayer) private var showPlayer
 
   private var placeholder: StateView.Kind {
     if albumViewModel.isLoading { return .loading }
@@ -39,7 +39,7 @@ struct WatchStarredSongsView: View {
               isPlaying: isCurrentlyPlaying
             ) {
               let liked = SongCollection(id: "starred-songs", name: "Liked Songs", songs: albumViewModel.starredSongs)
-              showNowPlaying = playerViewModel.playBySong(idx: idx, item: liked, isFromLocal: false)
+              if playerViewModel.playBySong(idx: idx, item: liked, isFromLocal: false) { showPlayer() }
             }
             .listRowBackground(Color.clear)
           }
@@ -62,9 +62,6 @@ struct WatchStarredSongsView: View {
           }
         }
       }
-    }
-    .navigationDestination(isPresented: $showNowPlaying) {
-      WatchNowPlayingView()
     }
     .onAppear {
       albumViewModel.fetchStarredSongs()

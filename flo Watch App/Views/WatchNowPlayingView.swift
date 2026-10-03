@@ -13,10 +13,6 @@ struct WatchNowPlayingView: View {
   // Next to the library page, the crown belongs to the volume control only
   // while the player is the selected page, so the library still scrolls.
   var ownsCrown = true
-  // The page has a free leading toolbar slot for the volume control. Pushed
-  // from a library screen that slot is the back button's, so the control
-  // sits next to the title instead.
-  var isPage = false
 
   @Environment(\.scenePhase) private var scenePhase
   // False while a view such as the queue is pushed on top of the player.
@@ -77,9 +73,10 @@ struct WatchNowPlayingView: View {
     .navigationBarTitleDisplayMode(.inline)
     .navigationTitle("")
     .toolbar {
-      if isPage {
-        ToolbarItem(placement: .topBarLeading) {
-          if playerViewModel.hasNowPlaying() { volumeControl }
+      ToolbarItem(placement: .topBarLeading) {
+        if playerViewModel.hasNowPlaying() {
+          SystemVolumeControl(isFocused: ownsCrown && isShown, focusRequest: focusRequest)
+            .frame(width: 26, height: 26)
         }
       }
       ToolbarItem(placement: .topBarTrailing) {
@@ -94,21 +91,15 @@ struct WatchNowPlayingView: View {
 
   private var nowPlayingContent: some View {
     VStack(spacing: 0) {
-      HStack(spacing: 4) {
-        // Balances the volume control so the title stays centered.
-        if !isPage { Color.clear.frame(width: 26, height: 26) }
-        VStack(spacing: 1) {
-          Text(playerViewModel.nowPlaying.songName ?? "Unknown")
-            .font(.floSong)
-            .foregroundStyle(.white)
-          Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
-            .font(.floMeta)
-            .foregroundStyle(Color.floOnCover)
-        }
-        .lineLimit(1)
-        .frame(maxWidth: .infinity)
-        if !isPage { volumeControl }
+      VStack(spacing: 1) {
+        Text(playerViewModel.nowPlaying.songName ?? "Unknown")
+          .font(.floSong)
+          .foregroundStyle(.white)
+        Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
+          .font(.floMeta)
+          .foregroundStyle(Color.floOnCover)
       }
+      .lineLimit(1)
       .padding(.horizontal, 8)
 
       if playerViewModel.isLiveRadio {
@@ -131,7 +122,7 @@ struct WatchNowPlayingView: View {
           }
           .buttonStyle(.plain)
         }
-        .padding(.top, Self.compact ? 2 : 8)
+        .padding(.top, Self.compact ? 0 : 3)
 
         HStack(spacing: 6) {
           Text(elapsed)
@@ -140,7 +131,7 @@ struct WatchNowPlayingView: View {
         }
         .font(.floTime)
         .foregroundStyle(Self.timeColor)
-        .padding(.top, Self.compact ? 1 : 3)
+        .padding(.top, Self.compact ? 0 : 2)
 
         HStack(spacing: 0) {
           Button(action: {
@@ -195,13 +186,10 @@ struct WatchNowPlayingView: View {
           .contentShape(Circle())
         }
         .padding(.horizontal, 14)
+        // Keeps the heart clear of the page dots.
+        .padding(.bottom, Self.compact ? 8 : 10)
       }
     }
-  }
-
-  private var volumeControl: some View {
-    SystemVolumeControl(isFocused: ownsCrown && isShown, focusRequest: focusRequest)
-      .frame(width: 26, height: 26)
   }
 
   private static let timeColor = Color(red: 0xC4 / 255, green: 0xC3 / 255, blue: 0xCF / 255)
@@ -240,13 +228,13 @@ struct WatchNowPlayingView: View {
         }
         Circle()
           .fill(.white)
-          .frame(width: Self.compact ? 56 : 66, height: Self.compact ? 56 : 66)
+          .frame(width: Self.compact ? 54 : 62, height: Self.compact ? 54 : 62)
         Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
-          .font(.system(size: Self.compact ? 30 : 36))
+          .font(.system(size: Self.compact ? 28 : 34))
           .foregroundStyle(.black)
       }
       .padding(2)
-      .frame(width: Self.compact ? 72 : 84, height: Self.compact ? 72 : 84)
+      .frame(width: Self.compact ? 68 : 78, height: Self.compact ? 68 : 78)
       .contentShape(Circle())
     }
     .buttonStyle(.plain)

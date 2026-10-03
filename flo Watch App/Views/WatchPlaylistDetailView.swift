@@ -12,7 +12,7 @@ struct WatchPlaylistDetailView: View {
 
   let playlist: Playlist
 
-  @State private var showNowPlaying = false
+  @Environment(\.showPlayer) private var showPlayer
   @State private var downloaded = false
   @State private var downloadedIds: Set<String> = []
 
@@ -87,8 +87,8 @@ struct WatchPlaylistDetailView: View {
         HStack(spacing: 6) {
           Button(action: {
             let playablePlaylist = Album(from: displayPlaylist)
-            showNowPlaying = playerViewModel.playItem(
-              item: playablePlaylist, isFromLocal: isDownloaded)
+            if playerViewModel.playItem(
+              item: playablePlaylist, isFromLocal: isDownloaded) { showPlayer() }
           }) {
             Label("Play", systemImage: "play.fill")
           }
@@ -96,8 +96,8 @@ struct WatchPlaylistDetailView: View {
 
           Button(action: {
             let playablePlaylist = Album(from: displayPlaylist)
-            showNowPlaying = playerViewModel.shuffleItem(
-              item: playablePlaylist, isFromLocal: isDownloaded)
+            if playerViewModel.shuffleItem(
+              item: playablePlaylist, isFromLocal: isDownloaded) { showPlayer() }
           }) {
             Label("Shuffle", systemImage: "shuffle")
           }
@@ -130,16 +130,13 @@ struct WatchPlaylistDetailView: View {
             isPlaying: isCurrentlyPlaying
           ) {
             let playablePlaylist = Album(from: displayPlaylist)
-            showNowPlaying = playerViewModel.playBySong(
-              idx: index, item: playablePlaylist, isFromLocal: isDownloaded)
+            if playerViewModel.playBySong(
+              idx: index, item: playablePlaylist, isFromLocal: isDownloaded) { showPlayer() }
           }
         }
       }
       .padding(.horizontal, 8)
       .padding(.bottom, 16)
-    }
-    .navigationDestination(isPresented: $showNowPlaying) {
-      WatchNowPlayingView()
     }
     .onAppear {
       albumViewModel.setActivePlaylist(playlist: playlist)

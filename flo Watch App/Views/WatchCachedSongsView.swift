@@ -10,7 +10,7 @@ struct WatchCachedSongsView: View {
 
   let songs: [Song]
 
-  @State private var showNowPlaying = false
+  @Environment(\.showPlayer) private var showPlayer
 
   var body: some View {
     List {
@@ -26,14 +26,11 @@ struct WatchCachedSongsView: View {
           isPlaying: isCurrentlyPlaying
         ) {
           let cached = SongCollection(id: "cached-songs", name: "Cached", songs: songs)
-          showNowPlaying = playerViewModel.playBySong(idx: idx, item: cached, isFromLocal: true)
+          if playerViewModel.playBySong(idx: idx, item: cached, isFromLocal: true) { showPlayer() }
         }
         .listRowBackground(Color.clear)
       }
     }
     .navigationTitle("Cached")
-    .navigationDestination(isPresented: $showNowPlaying) {
-      WatchNowPlayingView()
-    }
   }
 }
