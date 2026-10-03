@@ -25,6 +25,11 @@ struct WatchNowPlayingView: View {
 
   private var ratingTargetRating: Int { ratings.rating(for: ratingTarget) }
 
+  @State private var tint: Color?
+
+  private var accent: Color { tint ?? .floLavender }
+  private var albumId: String { playerViewModel.nowPlaying.albumId ?? "" }
+
   var body: some View {
     ViewThatFits(in: .vertical) {
       if playerViewModel.hasNowPlaying() {
@@ -32,9 +37,11 @@ struct WatchNowPlayingView: View {
         ScrollView { nowPlayingContent }
       } else {
         Text("Nothing playing")
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Color.floSecondary)
       }
     }
+    .background { CoverBackdrop(albumId: albumId) }
+    .task(id: albumId) { tint = await CoverTint.color(albumId: albumId) }
     .onAppear {
       isShown = true
       focusRequest += 1
@@ -60,6 +67,12 @@ struct WatchNowPlayingView: View {
     .navigationBarTitleDisplayMode(.inline)
     .navigationTitle("")
     .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        if playerViewModel.hasNowPlaying() {
+          SystemVolumeControl(isFocused: ownsCrown && isShown, focusRequest: focusRequest)
+            .frame(width: 26, height: 26)
+        }
+      }
       ToolbarItem(placement: .topBarTrailing) {
         if !playerViewModel.isLiveRadio {
           NavigationLink(destination: WatchQueueView()) {
@@ -71,127 +84,69 @@ struct WatchNowPlayingView: View {
   }
 
   private var nowPlayingContent: some View {
-    VStack(spacing: 7) {
-      // Header: art + metadata side by side
-      HStack(spacing: 8) {
-        WatchAlbumArtView(
-          url: playerViewModel.getAlbumCoverArt(),
-          size: 48,
-          albumId: playerViewModel.nowPlaying.albumId ?? ""
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-
-        VStack(alignment: .leading, spacing: 2) {
-          Text(playerViewModel.nowPlaying.songName ?? "Unknown")
-            .font(.system(size: 13, weight: .semibold))
-            .lineLimit(1)
-
-          Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
-            .font(.system(size: 11))
-            .foregroundColor(.secondary)
-            .lineLimit(1)
-        }
-
-        Spacer(minLength: 0)
-
-        SystemVolumeControl(isFocused: ownsCrown && isShown, focusRequest: focusRequest)
-          .frame(width: 32, height: 32)
+    VStack(spacing: 0) {
+      VStack(spacing: 1) {
+        Text(playerViewModel.nowPlaying.songName ?? "Unknown")
+          .font(.floSong)
+          .foregroundStyle(.white)
+        Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
+          .font(.system(size: 12))
+          .foregroundStyle(Color.floOnCover)
       }
+      .lineLimit(1)
+      .padding(.horizontal, 8)
 
       if playerViewModel.isLiveRadio {
-        // Live radio indicator
-        Text("LIVE")
-          .font(.system(size: 11, weight: .bold))
-          .foregroundColor(.red)
-          .padding(.horizontal, 8)
-          .padding(.vertical, 2)
-          .background(Capsule().fill(Color.red.opacity(0.2)))
+        Badge(kind: .live)
+          .padding(.top, 6)
 
-        // Play/Pause only
-        Button(action: {
-          if playerViewModel.isPlaying {
-            playerViewModel.pause()
-          } else {
-            playerViewModel.play()
-          }
-          WKInterfaceDevice.current().play(.success)
-        }) {
-          Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
-            .font(.system(size: 22, weight: .semibold))
-            .frame(width: 48, height: 48)
-        }
-        .buttonStyle(.plain)
-        .background(Circle().strokeBorder(Color.accentColor, lineWidth: 2))
+        playPauseButton
+          .padding(.top, 8)
       } else {
-        // Progress bar
-        VStack(spacing: 2) {
-          ProgressView(value: playerViewModel.progress.isFinite ? playerViewModel.progress : 0)
-            .tint(.accentColor)
-
-          HStack {
-            Text(playerViewModel.currentTimeString)
-              .font(.system(size: 9))
-              .foregroundColor(.secondary)
-            Spacer()
-            Text(playerViewModel.totalTimeString)
-              .font(.system(size: 9))
-              .foregroundColor(.secondary)
-          }
-        }
-
-        // Transport controls
-        HStack(spacing: 14) {
+        HStack(spacing: 4) {
           Button(action: { playerViewModel.prevSong() }) {
-            Image(systemName: "backward.fill")
-              .font(.system(size: 18, weight: .semibold))
-              .frame(width: 40, height: 40)
+            transportGlyph("backward.fill")
           }
           .buttonStyle(.plain)
-          .background(Circle().strokeBorder(Color.accentColor.opacity(0.4), lineWidth: 1.5))
 
-          Button(action: {
-            if playerViewModel.isPlaying {
-              playerViewModel.pause()
-            } else {
-              playerViewModel.play()
-            }
-            WKInterfaceDevice.current().play(.success)
-          }) {
-            Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
-              .font(.system(size: 22, weight: .semibold))
-              .frame(width: 48, height: 48)
-          }
-          .buttonStyle(.plain)
-          .background(Circle().strokeBorder(Color.accentColor, lineWidth: 2))
+          playPauseButton
 
           Button(action: { playerViewModel.nextSong(userInitiated: true) }) {
-            Image(systemName: "forward.fill")
-              .font(.system(size: 18, weight: .semibold))
-              .frame(width: 40, height: 40)
+            transportGlyph("forward.fill")
           }
           .buttonStyle(.plain)
-          .background(Circle().strokeBorder(Color.accentColor.opacity(0.4), lineWidth: 1.5))
         }
+        .padding(.top, 8)
 
-        // Secondary controls
-        HStack(spacing: 18) {
+        HStack(spacing: 6) {
+          Text(elapsed)
+          Text("/").opacity(0.5)
+          Text(remaining)
+        }
+        .font(.floTime)
+        .foregroundStyle(Self.timeColor)
+        .padding(.top, 3)
+
+        HStack(spacing: 0) {
           Button(action: {
             playerViewModel.shuffleCurrentQueue()
             WKInterfaceDevice.current().play(.click)
           }) {
             Image(systemName: "shuffle")
-              .font(.system(size: 21, weight: .semibold))
+              .font(.system(size: 22, weight: .semibold))
+              .foregroundStyle(playerViewModel.isShuffling ? accent : .floSecondary)
               .frame(width: 44, height: 44)
-              .foregroundColor(playerViewModel.isShuffling ? .accentColor : .secondary)
           }
           .buttonStyle(.plain)
           .contentShape(Circle())
 
+          Spacer(minLength: 0)
+
           // Not a Button: on the watch a button takes the whole touch, so a
           // long press on it never arrives. A tap stars, a hold rates.
           Image(systemName: playerViewModel.isStarred ? "heart.fill" : "heart")
-            .font(.system(size: 21, weight: .semibold))
-            .foregroundColor(playerViewModel.isStarred ? .red : .secondary)
+            .font(.system(size: 22, weight: .semibold))
+            .foregroundStyle(playerViewModel.isStarred ? Color.floLiked : .floSecondary)
             .overlay(alignment: .topTrailing) { ratingGlyph.offset(x: 7, y: -5) }
             .frame(width: 44, height: 44)
             .contentShape(Circle())
@@ -205,6 +160,8 @@ struct WatchNowPlayingView: View {
               WKInterfaceDevice.current().play(.click)
             }
 
+          Spacer(minLength: 0)
+
           Button(action: {
             playerViewModel.setPlaybackMode()
             WKInterfaceDevice.current().play(.click)
@@ -213,18 +170,81 @@ struct WatchNowPlayingView: View {
               systemName: playerViewModel.playbackMode == PlaybackMode.repeatOnce
                 ? "repeat.1" : "repeat"
             )
-            .font(.system(size: 21, weight: .semibold))
-            .frame(width: 44, height: 44)
-            .foregroundColor(
+            .font(.system(size: 22, weight: .semibold))
+            .foregroundStyle(
               playerViewModel.playbackMode != PlaybackMode.defaultPlayback
-                ? .accentColor : .secondary)
+                ? accent : .floSecondary)
+            .frame(width: 44, height: 44)
           }
           .buttonStyle(.plain)
           .contentShape(Circle())
         }
+        .padding(.horizontal, 14)
       }
     }
-    .padding(.horizontal, 8)
+  }
+
+  private static let timeColor = Color(red: 0xC4 / 255, green: 0xC3 / 255, blue: 0xCF / 255)
+
+  private func transportGlyph(_ name: String) -> some View {
+    Image(systemName: name)
+      .font(.system(size: 32))
+      .foregroundStyle(.white)
+      .frame(width: 48, height: 48)
+      .contentShape(Rectangle())
+  }
+
+  /// A white disc inside a ring: song progress in the cover tint, or red for
+  /// live radio, which has no progress.
+  private var playPauseButton: some View {
+    Button(action: {
+      if playerViewModel.isPlaying {
+        playerViewModel.pause()
+      } else {
+        playerViewModel.play()
+      }
+      WKInterfaceDevice.current().play(.success)
+    }) {
+      ZStack {
+        if playerViewModel.isLiveRadio {
+          Circle().stroke(Color.floLiked, lineWidth: 4)
+        } else {
+          Circle().stroke(.white.opacity(0.22), lineWidth: 4)
+          Circle()
+            .trim(from: 0, to: progress)
+            .stroke(accent, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+            .rotationEffect(.degrees(-90))
+        }
+        Circle()
+          .fill(.white)
+          .frame(width: 66, height: 66)
+        Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
+          .font(.system(size: 36))
+          .foregroundStyle(.black)
+      }
+      .padding(2)
+      .frame(width: 84, height: 84)
+      .contentShape(Circle())
+    }
+    .buttonStyle(.plain)
+  }
+
+  private var progress: Double {
+    let value = playerViewModel.progress
+    return value.isFinite ? min(max(value, 0), 1) : 0
+  }
+
+  /// "00:18" as "0:18".
+  private var elapsed: String {
+    let time = playerViewModel.currentTimeString
+    return time.count > 4 && time.hasPrefix("0") ? String(time.dropFirst()) : time
+  }
+
+  private var remaining: String {
+    let duration = playerViewModel.nowPlaying.duration
+    let left = duration.isFinite && duration > 0 ? max(duration * (1 - progress), 0) : 0
+    let seconds = Int(left.rounded())
+    return String(format: "-%d:%02d", seconds / 60, seconds % 60)
   }
 
   private var rating: Int {
@@ -235,12 +255,12 @@ struct WatchNowPlayingView: View {
   @ViewBuilder private var ratingGlyph: some View {
     if rating >= 4 {
       Image(systemName: "sparkle")
-        .font(.system(size: 9, weight: .bold))
-        .foregroundColor(.accentColor)
+        .font(.system(size: 10, weight: .bold))
+        .foregroundStyle(Color.floLavender)
     } else if (1...2).contains(rating) {
       Image(systemName: "hand.thumbsdown.fill")
-        .font(.system(size: 9, weight: .bold))
-        .foregroundColor(.secondary)
+        .font(.system(size: 10, weight: .bold))
+        .foregroundStyle(Color.floSecondary)
     }
   }
 }

@@ -49,16 +49,8 @@ struct WatchContentView: View {
     }
     .overlay(alignment: .top) {
       if !connectivity.isOnline {
-        HStack(spacing: 4) {
-          Image(systemName: "wifi.slash")
-          Text("Offline")
-        }
-        .font(.system(size: 10, weight: .semibold))
-        .foregroundColor(.white)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 2)
-        .background(Capsule().fill(Color.secondary))
-        .padding(.top, 2)
+        Badge(kind: .offline)
+          .padding(.top, 2)
         .transition(.opacity)
       }
     }
