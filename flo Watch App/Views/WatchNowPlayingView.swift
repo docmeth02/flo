@@ -41,8 +41,8 @@ struct WatchNowPlayingView: View {
       if playerViewModel.hasNowPlaying() {
         nowPlayingContent
           .dynamicTypeSize(...DynamicTypeSize.large)
-          // Clears the round toolbar buttons on the narrow screens.
-          .padding(.top, Self.compact ? 14 : 12)
+          // Clears the round toolbar buttons, which reach below the clock row.
+          .padding(.top, 18)
       } else {
         Text("Nothing playing")
           .foregroundStyle(Color.floSecondary)
@@ -186,7 +186,7 @@ struct WatchNowPlayingView: View {
         }
         .padding(.horizontal, 14)
         // Keeps the heart clear of the page dots.
-        .padding(.bottom, Self.compact ? 8 : 10)
+        .padding(.bottom, Self.compact ? 6 : 8)
       }
     }
   }
@@ -247,13 +247,13 @@ struct WatchNowPlayingView: View {
         }
         Circle()
           .fill(.white)
-          .frame(width: Self.compact ? 54 : 62, height: Self.compact ? 54 : 62)
+          .frame(width: Self.compact ? 52 : 58, height: Self.compact ? 52 : 58)
         Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
-          .font(.system(size: Self.compact ? 28 : 34))
+          .font(.system(size: Self.compact ? 28 : 32))
           .foregroundStyle(.black)
       }
       .padding(2)
-      .frame(width: Self.compact ? 68 : 78, height: Self.compact ? 68 : 78)
+      .frame(width: Self.compact ? 66 : 74, height: Self.compact ? 66 : 74)
       .contentShape(Circle())
     }
     .buttonStyle(.plain)
