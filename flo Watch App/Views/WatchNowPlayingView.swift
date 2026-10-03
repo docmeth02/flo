@@ -32,9 +32,7 @@ struct WatchNowPlayingView: View {
   private var albumId: String {
     playerViewModel.hasNowPlaying() ? playerViewModel.nowPlaying.albumId ?? "" : ""
   }
-  private var coverURL: String {
-    playerViewModel.hasNowPlaying() ? playerViewModel.getAlbumCoverArt() : ""
-  }
+  private var coverURL: String { playerViewModel.coverArt }
 
   var body: some View {
     // Never a scroll view: a drag would scroll it and take the crown from the
@@ -128,11 +126,7 @@ struct WatchNowPlayingView: View {
         }
         .padding(.top, Self.compact ? 0 : 3)
 
-        HStack(spacing: 6) {
-          Text(elapsed)
-          Text("/").opacity(0.5)
-          Text(remaining)
-        }
+        TimeLine(clock: playerViewModel.clock, duration: playerViewModel.nowPlaying.duration)
         .font(.floTime)
         .foregroundStyle(Self.timeColor)
         .padding(.top, Self.compact ? 0 : 2)
@@ -249,10 +243,7 @@ struct WatchNowPlayingView: View {
           Circle().stroke(Color.floLiked, lineWidth: 4)
         } else {
           Circle().stroke(.white.opacity(0.22), lineWidth: 4)
-          Circle()
-            .trim(from: 0, to: progress)
-            .stroke(accent, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-            .rotationEffect(.degrees(-90))
+          ProgressRing(clock: playerViewModel.clock, color: accent)
         }
         Circle()
           .fill(.white)
@@ -266,24 +257,6 @@ struct WatchNowPlayingView: View {
       .contentShape(Circle())
     }
     .buttonStyle(.plain)
-  }
-
-  private var progress: Double {
-    let value = playerViewModel.progress
-    return value.isFinite ? min(max(value, 0), 1) : 0
-  }
-
-  /// "00:18" as "0:18".
-  private var elapsed: String {
-    let time = playerViewModel.currentTimeString
-    return time.count > 4 && time.hasPrefix("0") ? String(time.dropFirst()) : time
-  }
-
-  private var remaining: String {
-    let duration = playerViewModel.nowPlaying.duration
-    let left = duration.isFinite && duration > 0 ? max(duration * (1 - progress), 0) : 0
-    let seconds = Int(left.rounded())
-    return String(format: "-%d:%02d", seconds / 60, seconds % 60)
   }
 
   private var rating: Int {
@@ -301,6 +274,47 @@ struct WatchNowPlayingView: View {
         .font(.system(size: 10, weight: .bold))
         .foregroundStyle(Color.floSecondary)
     }
+  }
+}
+
+/// The song progress around the play button; observes the clock itself so the
+/// player does not redraw every second.
+private struct ProgressRing: View {
+  @ObservedObject var clock: PlayerClock
+  let color: Color
+
+  var body: some View {
+    Circle()
+      .trim(from: 0, to: clock.clampedProgress)
+      .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+      .rotationEffect(.degrees(-90))
+  }
+}
+
+/// Elapsed and remaining time, e.g. "0:18 / -3:02".
+private struct TimeLine: View {
+  @ObservedObject var clock: PlayerClock
+  let duration: Double
+
+  var body: some View {
+    HStack(spacing: 6) {
+      Text(elapsed)
+      Text("/").opacity(0.5)
+      Text(remaining)
+    }
+  }
+
+  /// "00:18" as "0:18".
+  private var elapsed: String {
+    let time = clock.currentTimeString
+    return time.count > 4 && time.hasPrefix("0") ? String(time.dropFirst()) : time
+  }
+
+  private var remaining: String {
+    let left =
+      duration.isFinite && duration > 0 ? max(duration * (1 - clock.clampedProgress), 0) : 0
+    let seconds = Int(left.rounded())
+    return String(format: "-%d:%02d", seconds / 60, seconds % 60)
   }
 }
 

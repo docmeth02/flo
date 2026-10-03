@@ -8,6 +8,15 @@ import Combine
 import MediaPlayer
 import WatchKit
 
+/// The values that change every second while playing, apart from the view
+/// model so that only the views showing them redraw that often.
+final class PlayerClock: ObservableObject {
+  @Published var progress: Double = 0.0
+  @Published var currentTimeString: String = "00:00"
+
+  var clampedProgress: Double { progress.isFinite ? min(max(progress, 0), 1) : 0 }
+}
+
 class WatchPlayerViewModel: ObservableObject {
   private(set) var player: AVPlayer? {
     didSet { observeBuffering() }
@@ -29,10 +38,18 @@ class WatchPlayerViewModel: ObservableObject {
   @Published var isShuffling: Bool = false
   @Published var isPlaying: Bool = false
 
-  @Published var progress: Double = 0.0
-
-  @Published var currentTimeString: String = "00:00"
+  let clock = PlayerClock()
+  var progress: Double {
+    get { clock.progress }
+    set { clock.progress = newValue }
+  }
+  var currentTimeString: String {
+    get { clock.currentTimeString }
+    set { clock.currentTimeString = newValue }
+  }
   @Published var totalTimeString: String = "00:00"
+  /// The now playing cover, resolved once per song rather than on every redraw.
+  @Published private(set) var coverArt: String = ""
 
   @Published var isStarred: Bool = false
   // Bumped by a song change and by every tap on the heart; a starred lookup
@@ -533,6 +550,7 @@ class WatchPlayerViewModel: ObservableObject {
     persistShuffleOrder()
     isPlaying = false
     progress = 0
+    coverArt = ""
     reloadedFailedTrackId = nil
 
     PlaybackService.shared.clearQueue()
@@ -767,7 +785,8 @@ class WatchPlayerViewModel: ObservableObject {
     Task { @MainActor [weak self] in self?.updateRatingCommands() }
 
     // Load artwork asynchronously and merge it in
-    let albumCoverArt = self.getAlbumCoverArt()
+    self.coverArt = self.getAlbumCoverArt()
+    let albumCoverArt = self.coverArt
     let currentTrackId = self.queue.indices.contains(self.activeQueueIdx) ? self.nowPlaying.id : nil
 
     if albumCoverArt.hasPrefix("/") {

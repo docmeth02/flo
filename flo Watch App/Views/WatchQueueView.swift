@@ -14,9 +14,7 @@ struct WatchQueueView: View {
   private var albumId: String {
     playerViewModel.hasNowPlaying() ? playerViewModel.nowPlaying.albumId ?? "" : ""
   }
-  private var coverURL: String {
-    playerViewModel.hasNowPlaying() ? playerViewModel.getAlbumCoverArt() : ""
-  }
+  private var coverURL: String { playerViewModel.coverArt }
 
   var body: some View {
     List {

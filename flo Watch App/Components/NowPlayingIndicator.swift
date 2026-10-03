@@ -35,7 +35,7 @@ struct NowPlayingIndicator: View {
         .foregroundStyle(Color.floOnCover)
         .lineLimit(1)
 
-      progressBar
+      ProgressBar(clock: playerViewModel.clock, tint: tint)
         .padding(.top, 6)
     }
     .frame(maxWidth: .infinity)
@@ -46,11 +46,18 @@ struct NowPlayingIndicator: View {
       tint =
         await CoverTint.color(
           albumId: playerViewModel.nowPlaying.albumId ?? "",
-          url: playerViewModel.getAlbumCoverArt()) ?? .floLavender
+          url: playerViewModel.coverArt) ?? .floLavender
     }
   }
 
-  private var progressBar: some View {
+}
+
+/// Observes the clock itself so the home screen does not redraw every second.
+private struct ProgressBar: View {
+  @ObservedObject var clock: PlayerClock
+  let tint: Color
+
+  var body: some View {
     GeometryReader { geometry in
       let width = geometry.size.width * 0.6
       Capsule()
@@ -58,7 +65,7 @@ struct NowPlayingIndicator: View {
         .overlay(alignment: .leading) {
           Capsule()
             .fill(tint)
-            .frame(width: width * min(max(playerViewModel.progress, 0), 1))
+            .frame(width: width * clock.clampedProgress)
         }
         .frame(width: width)
         .frame(maxWidth: .infinity)

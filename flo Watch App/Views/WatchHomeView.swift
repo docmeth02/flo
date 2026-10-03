@@ -93,7 +93,7 @@ struct WatchHomeView: View {
       if playerViewModel.hasNowPlaying() {
         CoverBackdrop(
           albumId: playerViewModel.nowPlaying.albumId ?? "",
-          url: playerViewModel.getAlbumCoverArt(), height: 190)
+          url: playerViewModel.coverArt, height: 190)
       }
     }
     .navigationTitle("")
