@@ -66,6 +66,7 @@
 		BE5C5E81B4634769556BAB00 /* WatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A31EF1F3148DA550C9A9567 /* WatchHomeView.swift */; };
 		D25AF44BCEB4F1ECC4EAA971 /* WatchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE281A2946A2E18C84927D8 /* WatchSettingsView.swift */; };
 		D349080D92950A1C67EDADB6 /* TrackRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA601DF6D60F70D262CE557B /* TrackRowView.swift */; };
+		F10C00000000000000000002 /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10C00000000000000000001 /* CollectionDetailView.swift */; };
 		D493E3043CDDF727DCE79E63 /* flo Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 9A72287ACF3C11B43C138CED /* flo Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D56D8D67004B7A3F15CA1FB8 /* WatchArtistsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0727D9D472758F5B95F301F6 /* WatchArtistsListView.swift */; };
 		D957F801D3A1DA274CAA0864 /* Song.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FDC2C15E1C300E712BE /* Song.swift */; };
@@ -181,6 +182,7 @@
 		E376D21B3DA37CD2A6C1E8A0 /* flo 2.xcdatamodel */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcdatamodel; path = "flo 2.xcdatamodel"; sourceTree = "<group>"; };
 		E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaybackJournal.swift; sourceTree = "<group>"; };
 		EA601DF6D60F70D262CE557B /* TrackRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrackRowView.swift; sourceTree = "<group>"; };
+		F10C00000000000000000001 /* CollectionDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CollectionDetailView.swift; sourceTree = "<group>"; };
 		F94DAD74D58A8EBD6F580A81 /* WatchRadiosView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
 		FABF85F19B541FE12696A0E5 /* WatchNowPlayingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNowPlayingView.swift; sourceTree = "<group>"; };
 		FBE281A2946A2E18C84927D8 /* WatchSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSettingsView.swift; sourceTree = "<group>"; };
@@ -245,6 +247,7 @@
 			children = (
 				CCECEB2E491539A0CCEFF67F /* NowPlayingIndicator.swift */,
 				EA601DF6D60F70D262CE557B /* TrackRowView.swift */,
+				F10C00000000000000000001 /* CollectionDetailView.swift */,
 				BCC2E67CCE3ED944C69F8973 /* WatchAlbumArtView.swift */,
 				F10A00000000000000000003 /* FloComponents.swift */,
 				F10A00000000000000000002 /* CoverTint.swift */,
@@ -521,6 +524,7 @@
 				7CB0AF2CAF287CB275F8E58B /* WatchPlayerViewModel.swift in Sources */,
 				BD0EE3C15900C43F8F8F05A2 /* NowPlayingIndicator.swift in Sources */,
 				D349080D92950A1C67EDADB6 /* TrackRowView.swift in Sources */,
+				F10C00000000000000000002 /* CollectionDetailView.swift in Sources */,
 				A41E9729ECD9216622752F1D /* WatchAlbumArtView.swift in Sources */,
 				F10A00000000000000000013 /* FloComponents.swift in Sources */,
 				F10A00000000000000000012 /* CoverTint.swift in Sources */,
