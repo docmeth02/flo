@@ -47,23 +47,6 @@ struct WatchAlbumArtView: View {
     } else if !albumId.isEmpty, !cacheFailed {
       ProgressView()
         .frame(width: size, height: size)
-    } else if let imageURL = URL(string: url) {
-      AsyncImage(url: imageURL) { phase in
-        switch phase {
-        case .success(let image):
-          image
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .frame(width: size, height: size)
-        case .failure:
-          placeholderView
-        case .empty:
-          ProgressView()
-            .frame(width: size, height: size)
-        @unknown default:
-          placeholderView
-        }
-      }
     } else {
       placeholderView
     }
