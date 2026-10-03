@@ -9,7 +9,9 @@ import MediaPlayer
 import WatchKit
 
 class WatchPlayerViewModel: ObservableObject {
-  private(set) var player: AVPlayer?
+  private(set) var player: AVPlayer? {
+    didSet { observeBuffering() }
+  }
   private var playerItem: AVPlayerItem?
   private var timeObserverToken: Any?
 
@@ -20,6 +22,10 @@ class WatchPlayerViewModel: ObservableObject {
 
   @Published var isMediaFailed: Bool = false
   @Published var isMediaLoading: Bool = false
+  /// AVPlayer is waiting for data before it can play, as at the start of a
+  /// song after a skip; isMediaLoading only covers the time until the item
+  /// exists.
+  @Published private(set) var isBuffering = false
   @Published var isShuffling: Bool = false
   @Published var isPlaying: Bool = false
 
@@ -35,6 +41,7 @@ class WatchPlayerViewModel: ObservableObject {
   private var isAutoContinuing: Bool = false
   private var totalDuration: Double = 0.0
   private var playerItemObservation: AnyCancellable?
+  private var bufferingObservation: AnyCancellable?
   private var playbackEndObservation: AnyCancellable?
   private var interruptionObservation = Set<AnyCancellable>()
   private var logoutObservation: AnyCancellable?
@@ -101,6 +108,8 @@ class WatchPlayerViewModel: ObservableObject {
 
   init() {
     self.player = AVPlayer()
+    // Property observers do not run for assignments in init.
+    observeBuffering()
     self.observeInterruptionNotifications()
 
     logoutObservation = NotificationCenter.default.publisher(for: .didLogout)
@@ -208,6 +217,17 @@ class WatchPlayerViewModel: ObservableObject {
         @unknown default:
           self.isMediaLoading = true
         }
+      }
+  }
+
+  private func observeBuffering() {
+    bufferingObservation = player?.publisher(for: \.timeControlStatus)
+      .map { $0 == .waitingToPlayAtSpecifiedRate }
+      .removeDuplicates()
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] in
+        debugLog("buffering \($0)")
+        self?.isBuffering = $0
       }
   }
 

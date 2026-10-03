@@ -37,10 +37,14 @@ struct WatchNowPlayingView: View {
   }
 
   var body: some View {
-    ViewThatFits(in: .vertical) {
+    // Never a scroll view: a drag would scroll it and take the crown from the
+    // volume control. The text is capped so the fixed layout always fits.
+    Group {
       if playerViewModel.hasNowPlaying() {
         nowPlayingContent
-        ScrollView { nowPlayingContent }
+          .dynamicTypeSize(...DynamicTypeSize.large)
+          // Clears the round toolbar buttons on the narrow screens.
+          .padding(.top, Self.compact ? 10 : 4)
       } else {
         Text("Nothing playing")
           .foregroundStyle(Color.floSecondary)
@@ -207,6 +211,27 @@ struct WatchNowPlayingView: View {
 
   /// A white disc inside a ring: song progress in the cover tint, or red for
   /// live radio, which has no progress.
+  /// Fetching the stream or waiting for its first data, as after a skip.
+  private var isLoading: Bool {
+    !playerViewModel.isMediaFailed
+      && (playerViewModel.isMediaLoading || playerViewModel.isBuffering)
+  }
+
+  /// A quarter arc going round once a second while the song loads. The
+  /// timeline only runs while it is shown.
+  private var spinner: some View {
+    TimelineView(.animation) { context in
+      let turn = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1)
+      Circle()
+        .trim(from: 0, to: 0.25)
+        .stroke(
+          playerViewModel.isLiveRadio ? Color.floLiked : accent,
+          style: StrokeStyle(lineWidth: 4, lineCap: .round)
+        )
+        .rotationEffect(.degrees(turn * 360 - 90))
+    }
+  }
+
   private var playPauseButton: some View {
     Button(action: {
       if playerViewModel.isPlaying {
@@ -217,7 +242,10 @@ struct WatchNowPlayingView: View {
       WKInterfaceDevice.current().play(.success)
     }) {
       ZStack {
-        if playerViewModel.isLiveRadio {
+        if isLoading {
+          Circle().stroke(.white.opacity(0.22), lineWidth: 4)
+          spinner
+        } else if playerViewModel.isLiveRadio {
           Circle().stroke(Color.floLiked, lineWidth: 4)
         } else {
           Circle().stroke(.white.opacity(0.22), lineWidth: 4)
