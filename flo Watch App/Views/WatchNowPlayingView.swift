@@ -203,8 +203,6 @@ struct WatchNowPlayingView: View {
       .contentShape(Rectangle())
   }
 
-  /// A white disc inside a ring: song progress in the cover tint, or red for
-  /// live radio, which has no progress.
   /// Fetching the stream or waiting for its first data, as after a skip.
   private var isLoading: Bool {
     !playerViewModel.isMediaFailed
@@ -226,6 +224,8 @@ struct WatchNowPlayingView: View {
     }
   }
 
+  /// A white disc inside a ring: song progress in the cover tint, or red for
+  /// live radio, which has no progress.
   private var playPauseButton: some View {
     Button(action: {
       if playerViewModel.isPlaying {
