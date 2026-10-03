@@ -21,13 +21,21 @@ class AlbumViewModel: ObservableObject {
   /// A library list loaded from the server and cached on the watch.
   enum Library: String {
     case albums, artists, playlists, starredSongs
+
+    /// How long a loaded list is shown again without asking the server, so
+    /// popping back from a detail screen does not reload the whole list.
+    /// Liked songs change from Now Playing and always reload.
+    var maxAge: TimeInterval { self == .starredSongs ? 0 : AlbumViewModel.reloadAfter }
   }
+
+  private static let reloadAfter: TimeInterval = 5 * 60
 
   /// Loading and failure of one list, so a failed album fetch does not show
   /// on the playlists.
   struct ListState {
     var isLoading = false
     var failed = false
+    var loadedAt: Date?
   }
 
   @Published private(set) var listStates: [Library: ListState] = [:]
@@ -35,6 +43,7 @@ class AlbumViewModel: ObservableObject {
   /// The artist whose albums `artistAlbums` holds, so a late answer for the
   /// previous artist does not show on this one.
   private var artistAlbumsId = ""
+  private var artistAlbumsLoadedAt: Date?
 
   init(album: Album = Album(), albums: [Album] = []) {
     self.album = album
@@ -163,7 +172,7 @@ class AlbumViewModel: ObservableObject {
         case .success(let items):
           debugLog("\(library.rawValue) loaded: \(items.count)")
           assign(items)
-          self.listStates[library] = ListState()
+          self.listStates[library] = ListState(loadedAt: Date())
           DispatchQueue.global(qos: .utility).async {
             LibraryCacheManager.shared.save(
               items, forKey: library.rawValue, generation: cacheGeneration)
@@ -177,13 +186,18 @@ class AlbumViewModel: ObservableObject {
   }
 
   /// Shows the cached list right away when nothing is loaded yet, then
-  /// replaces it with the server's.
+  /// replaces it with the server's unless that is under way or recent.
   private func fetchCached<T: Codable>(
     _ library: Library,
     current: [T],
     assign: @escaping ([T]) -> Void,
     request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void
   ) {
+    let state = state(library)
+    if state.isLoading { return }
+    if let loadedAt = state.loadedAt, Date().timeIntervalSince(loadedAt) < library.maxAge {
+      return
+    }
     if current.isEmpty,
       let cached = LibraryCacheManager.shared.load([T].self, forKey: library.rawValue)
     {
@@ -307,6 +321,11 @@ class AlbumViewModel: ObservableObject {
     if id != artistAlbumsId {
       artistAlbumsId = id
       artistAlbums = []
+      artistAlbumsLoadedAt = nil
+    } else if let loadedAt = artistAlbumsLoadedAt,
+      Date().timeIntervalSince(loadedAt) < Self.reloadAfter
+    {
+      return
     }
     AlbumService.shared.getAlbumsByArtist(id: id) { result in
       DispatchQueue.main.async {
@@ -314,6 +333,7 @@ class AlbumViewModel: ObservableObject {
         switch result {
         case .success(let albums):
           self.artistAlbums = albums
+          self.artistAlbumsLoadedAt = Date()
         case .failure(let error):
           debugLog("artist albums failed: \(error)")
         }
@@ -416,11 +436,11 @@ class AlbumViewModel: ObservableObject {
       DispatchQueue.main.async {
         switch result {
         case .success(let albums):
-          // TODO: is this expensive?
+          // One row per album is enough to tell it still has songs.
           self.downloadedAlbums = albums.filter { album in
-            let songs = AlbumService.shared.getSongsByAlbumId(albumId: album.id)
-
-            return !songs.isEmpty
+            !CoreDataManager.shared.getRecordByKey(
+              entity: SongEntity.self, key: \SongEntity.albumId, value: album.id, limit: 1
+            ).isEmpty
           }
 
         case .failure(let error):
