@@ -187,25 +187,23 @@ struct WatchNowPlayingView: View {
           .buttonStyle(.plain)
           .contentShape(Circle())
 
-          Button(action: {
-            playerViewModel.toggleStar()
-            WKInterfaceDevice.current().play(.click)
-          }) {
-            Image(systemName: playerViewModel.isStarred ? "heart.fill" : "heart")
-              .font(.system(size: 21, weight: .semibold))
-              .foregroundColor(playerViewModel.isStarred ? .red : .secondary)
-              .overlay(alignment: .topTrailing) { ratingGlyph.offset(x: 7, y: -5) }
-              .frame(width: 44, height: 44)
-          }
-          .buttonStyle(.plain)
-          .contentShape(Circle())
-          .id("star-\(playerViewModel.isStarred)")
-          // Holding the heart rates the song for smart shuffle.
-          .onLongPressGesture {
-            ratingTarget = playerViewModel.nowPlaying.id ?? ""
-            showRating = true
-            WKInterfaceDevice.current().play(.click)
-          }
+          // Not a Button: on the watch a button takes the whole touch, so a
+          // long press on it never arrives. A tap stars, a hold rates.
+          Image(systemName: playerViewModel.isStarred ? "heart.fill" : "heart")
+            .font(.system(size: 21, weight: .semibold))
+            .foregroundColor(playerViewModel.isStarred ? .red : .secondary)
+            .overlay(alignment: .topTrailing) { ratingGlyph.offset(x: 7, y: -5) }
+            .frame(width: 44, height: 44)
+            .contentShape(Circle())
+            .onTapGesture {
+              playerViewModel.toggleStar()
+              WKInterfaceDevice.current().play(.click)
+            }
+            .onLongPressGesture(minimumDuration: 0.5) {
+              ratingTarget = playerViewModel.nowPlaying.id ?? ""
+              showRating = true
+              WKInterfaceDevice.current().play(.click)
+            }
 
           Button(action: {
             playerViewModel.setPlaybackMode()
