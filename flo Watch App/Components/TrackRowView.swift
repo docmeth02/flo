@@ -48,9 +48,9 @@ struct TrackRowView: View {
       }
       .padding(.horizontal, 10)
       .padding(.vertical, 4)
-      .frame(minHeight: 44)
+      .frame(minHeight: FloLayout.rowHeight)
       .background(
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
           .fill(isPlaying ? tint.opacity(0.22) : idleBackground)
       )
       .contentShape(Rectangle())

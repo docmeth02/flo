@@ -338,7 +338,9 @@ struct WatchContentView: View {
         }
         view = AnyView(WatchPlaylistDetailView(playlist: playlist))
       case "artist":
-        guard let artist = await load(AlbumService.shared.getArtists).first else {
+        // The artist with the most albums, so the album list has rows.
+        guard let artist = await load(AlbumService.shared.getArtists).max(by: { $0.albumCount < $1.albumCount })
+        else {
           return debugLog("screen hook: no artists")
         }
         view = AnyView(WatchArtistDetailView(artist: artist))

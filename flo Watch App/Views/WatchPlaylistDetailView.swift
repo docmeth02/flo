@@ -44,7 +44,7 @@ struct WatchPlaylistDetailView: View {
         .frame(width: 80, height: 80)
         .background(
           RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(Color.floLavender.opacity(0.18))
+            .fill(Color.floTile)
         )
         .padding(.bottom, 6)
     }
