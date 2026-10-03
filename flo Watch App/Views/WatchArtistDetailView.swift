@@ -54,10 +54,7 @@ struct WatchArtistDetailView: View {
           .floRow()
         }
       } header: {
-        Text("Albums")
-          .font(.floSection)
-          .foregroundStyle(Color.floSecondary)
-          .textCase(nil)
+        FloSectionHeader("Albums")
       }
     }
     .navigationTitle(artist.name)

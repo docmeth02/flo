@@ -68,7 +68,7 @@ struct WatchHomeView: View {
         }
         .floRow()
       } header: {
-        sectionHeader("Library")
+        FloSectionHeader("Library")
       }
 
       Section {
@@ -77,7 +77,7 @@ struct WatchHomeView: View {
         }
         .floRow()
       } header: {
-        sectionHeader("Offline")
+        FloSectionHeader("Offline")
       }
 
       Section {
@@ -107,13 +107,6 @@ struct WatchHomeView: View {
     #if DEBUG
       .task { await runDebugFetchAlbums() }
     #endif
-  }
-
-  private func sectionHeader(_ title: String) -> some View {
-    Text(title)
-      .font(.floSection)
-      .foregroundStyle(Color.floSecondary)
-      .textCase(nil)
   }
 }
 

@@ -86,6 +86,44 @@ extension CoverRow where Trailing == EmptyView {
   }
 }
 
+/// The title above a list section.
+struct FloSectionHeader: View {
+  let title: String
+
+  init(_ title: String) {
+    self.title = title
+  }
+
+  var body: some View {
+    Text(title)
+      .font(.floSection)
+      .foregroundStyle(Color.floSecondary)
+      .textCase(nil)
+  }
+}
+
+/// A label over its value: settings and diagnostics.
+struct FloInfoRow: View {
+  let label: String
+  let value: String
+
+  init(_ label: String, _ value: String) {
+    self.label = label
+    self.value = value
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(label)
+        .font(.floMeta)
+        .foregroundStyle(Color.floSecondary)
+      Text(value)
+        .font(.system(size: 14, weight: .medium))
+    }
+    .padding(.vertical, 2)
+  }
+}
+
 /// One state vocabulary for rows and headers.
 struct Badge: View {
   enum Kind {

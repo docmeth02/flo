@@ -33,7 +33,7 @@ struct WatchDiagnosticsView: View {
       Section {
         ForEach(Self.historyLines(history.state), id: \.0) { row($0.0, $0.1) }
       } header: {
-        header("History")
+        FloSectionHeader("History")
       }
 
       Section {
@@ -51,7 +51,7 @@ struct WatchDiagnosticsView: View {
             .floRow()
         }
       } header: {
-        header("Last mix")
+        FloSectionHeader("Last mix")
       }
 
       Section {
@@ -69,7 +69,7 @@ struct WatchDiagnosticsView: View {
           .floRow()
         }
       } header: {
-        header("Requests")
+        FloSectionHeader("Requests")
       }
     }
     .navigationTitle("Diagnostics")
@@ -160,21 +160,7 @@ struct WatchDiagnosticsView: View {
   }
 
   private func row(_ title: String, _ value: String) -> some View {
-    VStack(alignment: .leading, spacing: 2) {
-      Text(title)
-        .customFont(.caption2)
-        .foregroundStyle(Color.floSecondary)
-      Text(value)
-        .customFont(.caption1)
-    }
-    .floRow()
-  }
-
-  private func header(_ title: String) -> some View {
-    Text(title)
-      .font(.floSection)
-      .foregroundStyle(Color.floSecondary)
-      .textCase(nil)
+    FloInfoRow(title, value).floRow()
   }
 
   private func details(of entry: RequestLog.Entry) -> String {

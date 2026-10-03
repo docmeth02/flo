@@ -30,7 +30,7 @@ struct WatchSettingsView: View {
       Section {
         infoRow("URL", UserDefaultsManager.serverBaseURL)
       } header: {
-        sectionHeader("Server")
+        FloSectionHeader("Server")
       }
 
       Section {
@@ -51,7 +51,7 @@ struct WatchSettingsView: View {
         .tint(Color(red: 0x6C / 255, green: 0x69 / 255, blue: 0xE0 / 255))
         .floRow()
       } header: {
-        sectionHeader("Playback")
+        FloSectionHeader("Playback")
       }
 
       Section {
@@ -67,7 +67,7 @@ struct WatchSettingsView: View {
           UserDefaultsManager.maxBitRate = newValue
         }
       } header: {
-        sectionHeader("Streaming")
+        FloSectionHeader("Streaming")
       }
 
       Section {
@@ -94,7 +94,7 @@ struct WatchSettingsView: View {
           showClearCacheAlert = true
         }
       } header: {
-        sectionHeader("Streaming Cache")
+        FloSectionHeader("Streaming Cache")
       }
 
       Section {
@@ -108,7 +108,7 @@ struct WatchSettingsView: View {
           showClearAlert = true
         }
       } header: {
-        sectionHeader("Storage")
+        FloSectionHeader("Storage")
       }
 
       if CoreDataManager.shared.isUsingVolatileStore {
@@ -183,24 +183,8 @@ struct WatchSettingsView: View {
     }
   }
 
-  private func sectionHeader(_ title: String) -> some View {
-    Text(title)
-      .font(.floSection)
-      .foregroundStyle(Color.floSecondary)
-      .textCase(nil)
-  }
-
   private func infoRow(_ label: String, _ value: String) -> some View {
-    VStack(alignment: .leading, spacing: 2) {
-      Text(label)
-        .font(.floMeta)
-        .foregroundStyle(Color.floSecondary)
-      Text(value)
-        .font(.system(size: 14, weight: .medium))
-        .lineLimit(2)
-    }
-    .padding(.vertical, 2)
-    .floRow()
+    FloInfoRow(label, value).floRow()
   }
 
   private func actionRow(
