@@ -217,6 +217,9 @@ class AuthViewModel: ObservableObject {
       LibraryCacheManager.shared.clearCache()
       StreamCacheManager.shared.clearCache()
       ScrobbleQueueManager.shared.clearAll()
+      // Cover URLs loaded by AsyncImage carry the Subsonic credentials.
+      URLCache.shared.removeAllCachedResponses()
+      CoverArtCacheManager.shared.clearCache()
 
       user = nil
       isLoggedIn = false

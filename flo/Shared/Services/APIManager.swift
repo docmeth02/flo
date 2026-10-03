@@ -20,6 +20,10 @@ class APIManager {
   private static func createSession() -> Session {
     let configuration = URLSessionConfiguration.default
     configuration.timeoutIntervalForRequest = 30
+    // Requests carry the password, tokens and Subsonic t=/s= credentials,
+    // which an on-disk HTTP cache would keep in plain text.
+    configuration.urlCache = nil
+    configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
 
     return Alamofire.Session(
       configuration: configuration, interceptor: NDSessionInterceptor(),

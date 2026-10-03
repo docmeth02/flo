@@ -19,6 +19,8 @@ struct FloWatchApp: App {
     }
 
     StreamCacheManager.shared.reconcile()
+    // Earlier builds cached API requests with credentials in Cache.db.
+    URLCache.shared.removeAllCachedResponses()
 
     // Deliver scrobbles queued in an earlier session; the outbox otherwise only
     // wakes up when the next listen fails.
