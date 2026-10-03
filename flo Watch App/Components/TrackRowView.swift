@@ -13,6 +13,8 @@ struct TrackRowView: View {
   let artist: String
   var isPlaying: Bool = false
   var tint: Color = .floLavender
+  /// Over a cover backdrop the opaque surface would hide the cover.
+  var idleBackground: Color = .floSurface
   var action: () -> Void
 
   var body: some View {
@@ -49,7 +51,7 @@ struct TrackRowView: View {
       .frame(minHeight: 44)
       .background(
         RoundedRectangle(cornerRadius: 14, style: .continuous)
-          .fill(isPlaying ? tint.opacity(0.22) : Color.floSurface)
+          .fill(isPlaying ? tint.opacity(0.22) : idleBackground)
       )
       .contentShape(Rectangle())
     }
