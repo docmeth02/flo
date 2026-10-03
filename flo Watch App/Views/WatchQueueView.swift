@@ -7,6 +7,7 @@ import SwiftUI
 
 struct WatchQueueView: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @Environment(\.setQueueShown) private var setQueueShown
   @State private var tint: Color?
 
   private var accent: Color { tint ?? .floLavender }
@@ -36,5 +37,7 @@ struct WatchQueueView: View {
     .containerBackground(for: .navigation) { CoverBackdrop(albumId: albumId, url: coverURL) }
     .task(id: albumId) { tint = await CoverTint.color(albumId: albumId, url: coverURL) }
     .navigationTitle("Queue")
+    .onAppear { setQueueShown(true) }
+    .onDisappear { setQueueShown(false) }
   }
 }

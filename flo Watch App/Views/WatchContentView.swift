@@ -11,6 +11,8 @@ extension EnvironmentValues {
   /// Selects the player page without popping, for the root of the stack:
   /// a reset there would rebuild Home mid-mix and re-enable Play Something.
   @Entry var selectPlayerPage: () -> Void = {}
+  /// Tells WatchContentView whether the queue is pushed over the player.
+  @Entry var setQueueShown: (Bool) -> Void = { _ in }
 }
 
 struct WatchContentView: View {
@@ -29,6 +31,7 @@ struct WatchContentView: View {
   @State private var stackID = UUID()
   @State private var leftAt: Date?
   @State private var leftTheApp = false
+  @State private var queueShown = false
   #if DEBUG
     @State private var showsDebugDiagnostics = false
     @State private var debugScreen: DebugScreen?
@@ -68,6 +71,7 @@ struct WatchContentView: View {
         .id(stackID)
         .environment(\.showPlayer, showPlayer)
         .environment(\.selectPlayerPage) { selectedTab = .nowPlaying }
+        .environment(\.setQueueShown) { queueShown = $0 }
       } else {
         WatchLoginView(viewModel: authViewModel)
       }
@@ -89,10 +93,10 @@ struct WatchContentView: View {
         self.leftAt = nil
         let leftTheApp = self.leftTheApp
         self.leftTheApp = false
-        // A raised wrist on the player page keeps it as it is; back from
-        // another app, a queue pushed on top of it gives way too.
+        // The player page shown as it is stays, or its backdrops re-decode;
+        // back from another app, a queue pushed on top of it gives way.
         if playerViewModel.isPlaying, Date().timeIntervalSince(leftAt) > 8,
-          leftTheApp || selectedTab != .nowPlaying
+          selectedTab != .nowPlaying || (leftTheApp && queueShown)
         {
           showPlayer()
         }
