@@ -81,11 +81,14 @@ struct WatchContentView: View {
     .onChange(of: scenePhase) { _, phase in
       // Like the system Now Playing app: coming back to the watch while music
       // plays shows the player. A short glance away keeps the browsing place.
-      if phase != .active {
+      // Lowering the wrist only makes the scene inactive and does not count.
+      if phase == .background {
         if leftAt == nil { leftAt = Date() }
-      } else if let leftAt {
+      } else if phase == .active, let leftAt {
         self.leftAt = nil
-        if playerViewModel.isPlaying, Date().timeIntervalSince(leftAt) > 8 {
+        if playerViewModel.isPlaying, selectedTab != .nowPlaying,
+          Date().timeIntervalSince(leftAt) > 8
+        {
           showPlayer()
         }
       }
