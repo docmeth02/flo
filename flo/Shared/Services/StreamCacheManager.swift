@@ -230,19 +230,15 @@ class StreamCacheManager {
     syncQueue.async { self.currentlyPlayingSongId = mediaFileId }
   }
 
-  /// Cancels every download but the one for `keptMediaFileId`, the song about
-  /// to play, whose pre-cache would otherwise be thrown away.
-  func cancelAllInFlight(except keptMediaFileId: String? = nil) {
-    let kept = keptMediaFileId.map {
-      cacheKey(mediaFileId: $0, bitrate: UserDefaultsManager.maxBitRate)
-    }
+  func cancelAllInFlight() {
     let keysToClean: [String] = syncQueue.sync {
-      let keys = inFlightDownloads.keys.filter { $0 != kept }
-      for key in keys {
-        inFlightDownloads.removeValue(forKey: key)?.cancel()
-        inFlightProgress.removeValue(forKey: key)
+      let keys = Array(inFlightDownloads.keys)
+      for (_, request) in inFlightDownloads {
+        request.cancel()
       }
-      inFlightKeys = inFlightKeys.filter { $0 == kept }
+      inFlightDownloads.removeAll()
+      inFlightProgress.removeAll()
+      inFlightKeys.removeAll()
       return keys
     }
 

@@ -55,6 +55,9 @@ class WatchPlayerViewModel: ObservableObject {
   // Bumped by a song change and by every tap on the heart; a starred lookup
   // or a failed toggle from before must not overwrite the newer state.
   private var starGeneration = 0
+  // starGeneration at the last song change; a tap since then moves past it.
+  private var starSongGeneration = 0
+  private var resumeAfterInterruption = false
 
   private var isLocallySaved: Bool = false
   private var isFinished: Bool = false
@@ -227,9 +230,13 @@ class WatchPlayerViewModel: ObservableObject {
     case .began:
       // Through pause() so a pending skip or Keep Playing mix does not start
       // playback during the call.
+      self.resumeAfterInterruption = self.isPlaying
       self.pause()
     case .ended:
-      if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? Int {
+      // Music the user had paused before the call stays paused.
+      let wasPlaying = self.resumeAfterInterruption
+      self.resumeAfterInterruption = false
+      if wasPlaying, let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? Int {
         let options = AVAudioSession.InterruptionOptions(rawValue: UInt(optionsValue))
         if options.contains(.shouldResume) {
           self.play()
@@ -350,9 +357,13 @@ class WatchPlayerViewModel: ObservableObject {
       let source = await AlbumService.shared.resolveStreamSource(
         songId: songId, originalSuffix: suffix, offset: Int(position))
       guard let self, self.loadGeneration == generation,
-        self.queue.indices.contains(self.activeQueueIdx), self.nowPlaying.id == trackId,
-        let url = URL(string: source.url)
+        self.queue.indices.contains(self.activeQueueIdx), self.nowPlaying.id == trackId
       else { return }
+      guard let url = URL(string: source.url) else {
+        self.isMediaLoading = false
+        self.isMediaFailed = true
+        return
+      }
 
       let startsAtOffset = source.isTranscoded && position > 0
       self.attachItem(
@@ -604,7 +615,7 @@ class WatchPlayerViewModel: ObservableObject {
     self.restartedTrackId = nil
     self.reloadedFailedTrackId = nil
 
-    StreamCacheManager.shared.cancelAllInFlight(except: self.nowPlaying.id)
+    StreamCacheManager.shared.cancelAllInFlight()
     StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: self.nowPlaying.id ?? "")
 
     // The item itself is attached by play(), so a queue restored at launch
@@ -662,7 +673,12 @@ class WatchPlayerViewModel: ObservableObject {
   private func loadStarred(refresh: Bool = false) {
     if !refresh {
       starGeneration += 1
+      starSongGeneration = starGeneration
       isStarred = false
+    } else if starGeneration != starSongGeneration {
+      // The user tapped the heart since the song changed; the server may not
+      // know that yet.
+      return
     }
     let generation = starGeneration
     guard let songId = nowPlaying.id, !songId.isEmpty else { return }

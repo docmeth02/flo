@@ -41,7 +41,9 @@ final class ConnectivityMonitor: ObservableObject {
     ) { [weak self] _ in
       // Every wrist raise activates the app. A recent good verdict stands;
       // a bad one is rechecked right away instead of waiting for the backoff.
-      guard let self else { return }
+      // A probe still running is not restarted, or repeated raises on a slow
+      // link would cancel every probe before it answers.
+      guard let self, self.serverProbe == nil else { return }
       if self.isServerReachable, let lastVerdictAt = self.lastVerdictAt,
         Date().timeIntervalSince(lastVerdictAt) < 60
       {
