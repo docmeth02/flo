@@ -22,6 +22,7 @@ struct WatchContentView: View {
   @State private var leftAt: Date?
   #if DEBUG
     @State private var showsDebugDiagnostics = false
+    @State private var debugScreen: DebugScreen?
   #endif
 
   private enum Tab { case home, nowPlaying }
@@ -95,11 +96,18 @@ struct WatchContentView: View {
       .task { await runDebugMixDump() }
       .task { await runDebugDiagnostics() }
       .sheet(isPresented: $showsDebugDiagnostics) { NavigationStack { WatchDiagnosticsView() } }
+      .task { await runDebugScreen() }
+      .sheet(item: $debugScreen) { screen in NavigationStack { screen.view } }
     #endif
   }
 }
 
 #if DEBUG
+  private struct DebugScreen: Identifiable {
+    let id = UUID()
+    let view: AnyView
+  }
+
   // Simulator verification only. FLO_DEBUG_DOWNLOAD=album|playlist downloads
   // the smallest album or the first playlist of the library and logs the files
   // it produced; FLO_DEBUG_REMOVE=1 then removes it and logs what is left.
@@ -284,6 +292,53 @@ struct WatchContentView: View {
       let lines = export.split(separator: "\n", omittingEmptySubsequences: false)
       for line in lines where line.hasPrefix("Rated songs") { debugLog("  | \(line)") }
       for line in lines.drop(while: { $0 != "Last mixes" }) { debugLog("  | \(line)") }
+    }
+
+    // FLO_DEBUG_SCREEN=<name> opens one screen in a sheet four seconds after
+    // launch, for screenshots: albums, album, playlist, artist, liked, radios,
+    // downloads, settings, queue, login-error.
+    fileprivate func runDebugScreen() async {
+      guard let name = ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN"] else { return }
+      try? await Task.sleep(nanoseconds: 4_000_000_000)
+
+      func load<T>(_ call: (@escaping (Result<[T], Error>) -> Void) -> Void) async -> [T] {
+        await withCheckedContinuation { continuation in
+          call { continuation.resume(returning: (try? $0.get()) ?? []) }
+        }
+      }
+
+      let view: AnyView
+      switch name {
+      case "albums": view = AnyView(WatchAlbumsListView())
+      case "album":
+        guard let album = await load(AlbumService.shared.getAlbum).first else {
+          return debugLog("screen hook: no albums")
+        }
+        view = AnyView(WatchAlbumDetailView(album: album))
+      case "playlist":
+        guard let playlist = await load(AlbumService.shared.getPlaylists).first else {
+          return debugLog("screen hook: no playlists")
+        }
+        view = AnyView(WatchPlaylistDetailView(playlist: playlist))
+      case "artist":
+        guard let artist = await load(AlbumService.shared.getArtists).first else {
+          return debugLog("screen hook: no artists")
+        }
+        view = AnyView(WatchArtistDetailView(artist: artist))
+      case "liked": view = AnyView(WatchStarredSongsView())
+      case "radios": view = AnyView(WatchRadiosView())
+      case "downloads": view = AnyView(WatchDownloadsView())
+      case "settings": view = AnyView(WatchSettingsView())
+      case "queue": view = AnyView(WatchQueueView())
+      case "login-error":
+        let auth = AuthViewModel()
+        auth.alertMessage = "Wrong username or password."
+        auth.showAlert = true
+        view = AnyView(WatchLoginView(viewModel: auth))
+      default: return debugLog("screen hook: unknown screen \(name)")
+      }
+      debugLog("screen hook: showing \(name)")
+      debugScreen = DebugScreen(view: view)
     }
 
     private func logMediaFiles(_ label: String) {

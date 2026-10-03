@@ -5,42 +5,53 @@
 
 import SwiftUI
 
+/// A song on its own surface platter, for scroll views. Inside a List, give
+/// the row a clear background so the platter is not drawn twice.
 struct TrackRowView: View {
   let trackNumber: Int
   let title: String
   let artist: String
   var isPlaying: Bool = false
+  var tint: Color = .floLavender
   var action: () -> Void
 
   var body: some View {
     Button(action: action) {
-      HStack(spacing: 8) {
-        if isPlaying {
-          Image(systemName: "speaker.wave.2.fill")
-            .font(.caption2)
-            .foregroundColor(.accentColor)
-            .frame(width: 20)
-        } else {
-          Text("\(trackNumber)")
-            .customFont(.caption2)
-            .foregroundColor(.secondary)
-            .frame(width: 20)
+      HStack(spacing: 9) {
+        Group {
+          if isPlaying {
+            Image(systemName: "waveform")
+              .font(.system(size: 14, weight: .semibold))
+              .foregroundStyle(tint)
+          } else {
+            Text("\(trackNumber)")
+              .font(.system(size: 12, weight: .semibold).monospacedDigit())
+              .foregroundStyle(Color.floSecondary)
+          }
         }
+        .frame(width: 18)
 
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 1) {
           Text(title)
-            .customFont(.caption1)
+            .font(.system(size: 14, weight: isPlaying ? .semibold : .medium))
+            .foregroundStyle(isPlaying ? tint : .white)
             .lineLimit(1)
-            .foregroundColor(isPlaying ? .accentColor : .primary)
-
           Text(artist)
-            .customFont(.caption2)
-            .foregroundColor(.secondary)
+            .font(.floMeta)
+            .foregroundStyle(Color.floSecondary)
             .lineLimit(1)
         }
 
-        Spacer()
+        Spacer(minLength: 0)
       }
+      .padding(.horizontal, 10)
+      .padding(.vertical, 4)
+      .frame(minHeight: 44)
+      .background(
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+          .fill(isPlaying ? tint.opacity(0.22) : Color.floSurface)
+      )
+      .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }
