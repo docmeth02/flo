@@ -69,6 +69,7 @@ struct WatchAlbumDetailView: View {
             .font(.floMeta)
             .foregroundStyle(Color.floOnCover)
             .lineLimit(1)
+            .minimumScaleFactor(0.8)
         }
         .padding(.bottom, 4)
 

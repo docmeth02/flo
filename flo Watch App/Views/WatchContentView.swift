@@ -37,7 +37,7 @@ struct WatchContentView: View {
               .tag(Tab.home)
 
             if playerViewModel.hasNowPlaying() {
-              WatchNowPlayingView(ownsCrown: selectedTab == .nowPlaying)
+              WatchNowPlayingView(ownsCrown: selectedTab == .nowPlaying, isPage: true)
                 .tag(Tab.nowPlaying)
             }
           }
@@ -295,7 +295,7 @@ struct WatchContentView: View {
 
     // FLO_DEBUG_SCREEN=<name> pushes one screen four seconds after
     // launch, for screenshots: albums, album, playlist, artist, liked, radios,
-    // downloads, settings, queue, login-error.
+    // downloads, settings, queue, player (pushed, as from an album), login-error.
     fileprivate func runDebugScreen() async {
       guard let name = ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN"] else { return }
       try? await Task.sleep(nanoseconds: 4_000_000_000)
@@ -329,6 +329,7 @@ struct WatchContentView: View {
       case "downloads": view = AnyView(WatchDownloadsView())
       case "settings": view = AnyView(WatchSettingsView())
       case "queue": view = AnyView(WatchQueueView())
+      case "player": view = AnyView(WatchNowPlayingView())
       case "login-error":
         let auth = AuthViewModel()
         auth.alertMessage = "Wrong username or password."

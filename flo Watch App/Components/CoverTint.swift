@@ -34,6 +34,18 @@ enum CoverTint {
     return tint
   }
 
+  /// The image drawn once into a bitmap, so it is not decoded while drawing.
+  nonisolated static func decoded(_ image: UIImage) -> UIImage? {
+    guard let cgImage = image.cgImage,
+      let context = CGContext(
+        data: nil, width: cgImage.width, height: cgImage.height, bitsPerComponent: 8,
+        bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue)
+    else { return image }
+    context.draw(cgImage, in: CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height))
+    return context.makeImage().map { UIImage(cgImage: $0) } ?? image
+  }
+
   /// Average sRGB color of the image, drawn down to 8×8.
   private static func averageColor(of image: UIImage) -> (Double, Double, Double)? {
     guard let cgImage = image.cgImage else { return nil }
@@ -128,8 +140,12 @@ struct CoverBackdrop: View {
     .task(id: albumId) {
       guard image?.albumId != albumId else { return }
       let path = await CoverTint.coverFile(albumId: albumId, url: url)
+      // Decoding a full cover would stall the main thread mid-transition.
+      let decoded = await Task.detached(priority: .userInitiated) {
+        path.flatMap(UIImage.init(contentsOfFile:)).flatMap(CoverTint.decoded)
+      }.value
       guard !Task.isCancelled else { return }
-      image = (albumId, path.flatMap(UIImage.init(contentsOfFile:)))
+      image = (albumId, decoded)
     }
   }
 }
