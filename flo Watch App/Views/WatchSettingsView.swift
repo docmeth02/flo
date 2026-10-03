@@ -100,7 +100,8 @@ struct WatchSettingsView: View {
       Section {
         infoRow(
           "Downloaded",
-          "\(floooViewModel.downloadedAlbums) albums, \(floooViewModel.downloadedSongs) songs")
+          counted(floooViewModel.downloadedAlbums, "album") + ", "
+            + counted(floooViewModel.downloadedSongs, "song"))
 
         infoRow("Storage Used", floooViewModel.localDirectorySize)
 

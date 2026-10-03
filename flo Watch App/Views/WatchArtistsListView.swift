@@ -23,7 +23,7 @@ struct WatchArtistsListView: View {
             tile: .glyph("music.mic", round: true),
             title: artist.name,
             subtitle: artist.albumCount > 0
-              ? "\(artist.albumCount) album\(artist.albumCount == 1 ? "" : "s")" : "")
+              ? counted(artist.albumCount, "album") : "")
         }
         .floRow()
       }

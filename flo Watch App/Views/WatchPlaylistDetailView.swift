@@ -18,7 +18,7 @@ struct WatchPlaylistDetailView: View {
   private var meta: String {
     if !playlist.comment.isEmpty { return playlist.comment }
     let count = displayPlaylist.songs.count
-    return count > 0 ? "\(count) song\(count == 1 ? "" : "s")" : ""
+    return count > 0 ? counted(count, "song") : ""
   }
 
   private func downloadPlaylist() {

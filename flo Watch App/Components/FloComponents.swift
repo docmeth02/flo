@@ -5,6 +5,11 @@
 
 import SwiftUI
 
+/// "1 song", "3 songs".
+func counted(_ count: Int, _ noun: String) -> String {
+  "\(count) \(noun)\(count == 1 ? "" : "s")"
+}
+
 /// A navigation row on the home screen: tinted glyph and a label.
 struct FloNavRow: View {
   let title: String
@@ -129,8 +134,7 @@ struct FloInfoRow: View {
 /// One state vocabulary for rows and headers.
 struct Badge: View {
   enum Kind {
-    case live, offline, downloaded, boosted, avoided
-    case progress(Int)
+    case live, offline
   }
 
   let kind: Kind
@@ -144,18 +148,6 @@ struct Badge: View {
       case .offline:
         Image(systemName: "wifi.slash").font(.system(size: 10, weight: .semibold))
         Text("Offline")
-      case .downloaded:
-        Image(systemName: "checkmark.circle.fill").font(.system(size: 11))
-        Text("Downloaded")
-      case .boosted:
-        Image(systemName: "sparkle").font(.system(size: 10, weight: .bold))
-        Text("Boosted")
-      case .avoided:
-        Image(systemName: "hand.thumbsdown.fill").font(.system(size: 10))
-        Text("Avoided")
-      case .progress(let percent):
-        Image(systemName: "arrow.down.circle").font(.system(size: 11))
-        Text("\(percent)%").monospacedDigit()
       }
     }
     .font(.floCaption)
@@ -169,9 +161,6 @@ struct Badge: View {
     switch kind {
     case .live: .floDestructive
     case .offline: .floWarningText
-    case .downloaded: .floDownloadedText
-    case .boosted, .progress: .floLavender
-    case .avoided: .floSecondary
     }
   }
 
@@ -179,9 +168,6 @@ struct Badge: View {
     switch kind {
     case .live: .floLiked.opacity(0.22)
     case .offline: .floWarning.opacity(0.22)
-    case .downloaded: .floDownloaded.opacity(0.18)
-    case .boosted, .progress: .floLavender.opacity(0.2)
-    case .avoided: .white.opacity(0.12)
     }
   }
 }
@@ -298,7 +284,7 @@ struct DownloadControl: View {
             .fill(Color.floSurface))
       case .partial(let missing):
         status(
-          "\(missing) song\(missing == 1 ? "" : "s") missing", systemImage: "exclamationmark.circle.fill",
+          "\(counted(missing, "song")) missing", systemImage: "exclamationmark.circle.fill",
           tint: .floWarning, text: .floWarningText)
         row(
           "Download \(missing) missing", systemImage: "arrow.down.circle", tint: .floLavender,

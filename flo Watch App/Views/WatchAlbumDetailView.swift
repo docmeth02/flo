@@ -22,7 +22,7 @@ struct WatchAlbumDetailView: View {
     var parts = [album.albumArtist]
     if album.minYear > 0 { parts.append(String(album.minYear)) }
     let count = displayAlbum.songs.count
-    if count > 0 { parts.append("\(count) song\(count == 1 ? "" : "s")") }
+    if count > 0 { parts.append(counted(count, "song")) }
     return parts.filter { !$0.isEmpty }.joined(separator: " · ")
   }
 
