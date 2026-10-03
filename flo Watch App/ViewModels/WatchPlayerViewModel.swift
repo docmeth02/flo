@@ -35,6 +35,9 @@ class WatchPlayerViewModel: ObservableObject {
   @Published var totalTimeString: String = "00:00"
 
   @Published var isStarred: Bool = false
+  // Bumped by a song change and by every tap on the heart; a starred lookup
+  // or a failed toggle from before must not overwrite the newer state.
+  private var starGeneration = 0
 
   private var isLocallySaved: Bool = false
   private var isFinished: Bool = false
@@ -611,7 +614,7 @@ class WatchPlayerViewModel: ObservableObject {
     self.lastObservedTime = self.pendingStartPosition
 
     // A queue restored at launch stays paused; telling the server it is
-    // playing, or asking about it, waits until the user actually plays it.
+    // playing waits until the user actually plays it.
     // play() announces once the audio session is active, so a route that
     // fails to activate reports nothing.
     self.needsNowPlayingAnnouncement = true
@@ -628,11 +631,24 @@ class WatchPlayerViewModel: ObservableObject {
       self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
     }
 
-    self.isStarred = false
+    // Also for a restored queue, so the first tap on the heart is the right way.
+    self.loadStarred()
   }
 
-  /// Reports the current song as playing to the server and loads its starred
-  /// state, once per song.
+  private func loadStarred() {
+    starGeneration += 1
+    let generation = starGeneration
+    isStarred = false
+    guard let songId = nowPlaying.id, !songId.isEmpty else { return }
+    AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
+      DispatchQueue.main.async {
+        guard let self, self.starGeneration == generation else { return }
+        self.isStarred = starred
+      }
+    }
+  }
+
+  /// Reports the current song as playing to the server, once per song.
   private func announceNowPlaying() {
     guard needsNowPlayingAnnouncement, queue.indices.contains(activeQueueIdx) else { return }
     needsNowPlayingAnnouncement = false
@@ -641,16 +657,6 @@ class WatchPlayerViewModel: ObservableObject {
 
     FloooViewModel.shared.reportPlayback(
       state: .starting, nowPlaying: self.nowPlaying, positionSeconds: self.pendingStartPosition)
-
-    if let songId = self.nowPlaying.id, !songId.isEmpty {
-      AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
-        DispatchQueue.main.async {
-          guard self?.queue.indices.contains(self?.activeQueueIdx ?? -1) == true,
-                self?.nowPlaying.id == songId else { return }
-          self?.isStarred = starred
-        }
-      }
-    }
   }
 
   /// Tells the server where the announced song stands; the ViewModel drops a
@@ -1421,15 +1427,14 @@ class WatchPlayerViewModel: ObservableObject {
 
     let shouldStar = !self.isStarred
     self.isStarred = shouldStar
+    starGeneration += 1
+    let generation = starGeneration
 
     let action = shouldStar ? AlbumService.shared.starSong : AlbumService.shared.unstarSong
     action(songId) { [weak self] success in
       if !success {
         DispatchQueue.main.async {
-          // The queue may have been cleared (logout) while the request ran.
-          guard let self = self, self.queue.indices.contains(self.activeQueueIdx),
-            self.nowPlaying.id == songId
-          else { return }
+          guard let self, self.starGeneration == generation else { return }
           self.isStarred = !shouldStar
         }
       }
