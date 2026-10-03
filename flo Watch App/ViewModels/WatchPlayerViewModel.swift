@@ -963,6 +963,8 @@ class WatchPlayerViewModel: ObservableObject {
     } else {
       player?.seek(to: CMTime.zero)
     }
+    // A load still in flight was just invalidated; nothing will finish it.
+    isMediaLoading = false
 
     self.isFinished = true
     self.isPlaying = false
