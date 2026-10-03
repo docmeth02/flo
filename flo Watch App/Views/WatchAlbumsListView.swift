@@ -8,54 +8,72 @@ import SwiftUI
 struct WatchAlbumsListView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
 
-  private var placeholder: StateView.Kind {
-    if albumViewModel.state(.albums).isLoading { return .loading }
-    if albumViewModel.state(.albums).failed {
-      return .error(retry: { Task { await albumViewModel.refreshAlbums() } })
+  var body: some View {
+    LibraryList(
+      title: "Albums", state: albumViewModel.state(.albums),
+      isEmpty: albumViewModel.albums.isEmpty,
+      empty: .empty(
+        systemImage: "square.stack", tint: .floLavender, title: "No albums",
+        message: "Albums on your Navidrome server show up here."),
+      refresh: albumViewModel.refreshAlbums
+    ) {
+      ForEach(albumViewModel.albums) { album in
+        NavigationLink(destination: WatchAlbumDetailView(album: album)) {
+          CoverRow(
+            coverURL: albumViewModel.getAlbumCoverArt(id: album.id),
+            albumId: album.id,
+            title: album.name,
+            subtitle: album.albumArtist)
+        }
+        .floRow()
+      }
     }
-    return .empty(
-      systemImage: "square.stack", tint: .floLavender, title: "No albums",
-      message: "Albums on your Navidrome server show up here.")
+    .onAppear {
+      albumViewModel.fetchAlbums()
+    }
+  }
+}
+
+/// A library list: its rows, or the placeholder while it has none, with
+/// pull-to-refresh and a refresh button that shows the request under way.
+struct LibraryList<Rows: View>: View {
+  let title: String
+  let state: AlbumViewModel.ListState
+  let isEmpty: Bool
+  let empty: StateView.Kind
+  let refresh: () async -> Void
+  @ViewBuilder var rows: Rows
+
+  private var placeholder: StateView.Kind {
+    if state.isLoading { return .loading }
+    if state.failed { return .error(retry: { Task { await refresh() } }) }
+    return empty
   }
 
   var body: some View {
     Group {
-      if albumViewModel.albums.isEmpty {
+      if isEmpty {
         LibraryPlaceholder(kind: placeholder)
       } else {
-        List {
-          ForEach(albumViewModel.albums) { album in
-            NavigationLink(destination: WatchAlbumDetailView(album: album)) {
-              CoverRow(
-                coverURL: albumViewModel.getAlbumCoverArt(id: album.id),
-                albumId: album.id,
-                title: album.name,
-                subtitle: album.albumArtist)
-            }
-            .floRow()
-          }
-        }
+        List { rows }
       }
     }
-    .navigationTitle("Albums")
+    .navigationTitle(title)
     .refreshable {
-      await albumViewModel.refreshAlbums()
+      await refresh()
     }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
-        if albumViewModel.state(.albums).isLoading {
+        if state.isLoading {
           ProgressView()
         } else {
           Button {
-            Task { await albumViewModel.refreshAlbums() }
+            Task { await refresh() }
           } label: {
             Image(systemName: "arrow.clockwise")
           }
         }
       }
-    }
-    .onAppear {
-      albumViewModel.fetchAlbums()
     }
   }
 }

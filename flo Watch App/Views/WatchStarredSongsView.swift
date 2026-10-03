@@ -11,56 +11,30 @@ struct WatchStarredSongsView: View {
 
   @Environment(\.showPlayer) private var showPlayer
 
-  private var placeholder: StateView.Kind {
-    if albumViewModel.state(.starredSongs).isLoading { return .loading }
-    if albumViewModel.state(.starredSongs).failed {
-      return .error(retry: { Task { await albumViewModel.refreshStarredSongs() } })
-    }
-    return .empty(
-      systemImage: "heart.fill", tint: .floLiked, title: "No liked songs yet",
-      message: "Tap the heart on Now Playing to add a song here.")
-  }
-
   var body: some View {
-    Group {
-      if albumViewModel.starredSongs.isEmpty {
-        LibraryPlaceholder(kind: placeholder)
-      } else {
-        List {
-          ForEach(Array(albumViewModel.starredSongs.enumerated()), id: \.element.id) { idx, song in
-            let isCurrentlyPlaying =
-              playerViewModel.hasNowPlaying()
-              && playerViewModel.nowPlaying.id == (song.mediaFileId.isEmpty ? song.id : song.mediaFileId)
+    LibraryList(
+      title: "Liked Songs", state: albumViewModel.state(.starredSongs),
+      isEmpty: albumViewModel.starredSongs.isEmpty,
+      empty: .empty(
+        systemImage: "heart.fill", tint: .floLiked, title: "No liked songs yet",
+        message: "Tap the heart on Now Playing to add a song here."),
+      refresh: albumViewModel.refreshStarredSongs
+    ) {
+      ForEach(Array(albumViewModel.starredSongs.enumerated()), id: \.element.id) { idx, song in
+        let isCurrentlyPlaying =
+          playerViewModel.hasNowPlaying()
+          && playerViewModel.nowPlaying.id == (song.mediaFileId.isEmpty ? song.id : song.mediaFileId)
 
-            TrackRowView(
-              trackNumber: idx + 1,
-              title: song.title,
-              artist: song.artist,
-              isPlaying: isCurrentlyPlaying
-            ) {
-              let liked = SongCollection(id: "starred-songs", name: "Liked Songs", songs: albumViewModel.starredSongs)
-              if playerViewModel.playBySong(idx: idx, item: liked, isFromLocal: false) { showPlayer() }
-            }
-            .listRowBackground(Color.clear)
-          }
+        TrackRowView(
+          trackNumber: idx + 1,
+          title: song.title,
+          artist: song.artist,
+          isPlaying: isCurrentlyPlaying
+        ) {
+          let liked = SongCollection(id: "starred-songs", name: "Liked Songs", songs: albumViewModel.starredSongs)
+          if playerViewModel.playBySong(idx: idx, item: liked, isFromLocal: false) { showPlayer() }
         }
-      }
-    }
-    .navigationTitle("Liked Songs")
-    .refreshable {
-      await albumViewModel.refreshStarredSongs()
-    }
-    .toolbar {
-      ToolbarItem(placement: .topBarTrailing) {
-        if albumViewModel.state(.starredSongs).isLoading {
-          ProgressView()
-        } else {
-          Button {
-            Task { await albumViewModel.refreshStarredSongs() }
-          } label: {
-            Image(systemName: "arrow.clockwise")
-          }
-        }
+        .listRowBackground(Color.clear)
       }
     }
     .onAppear {
