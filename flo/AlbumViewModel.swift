@@ -11,15 +11,30 @@ class AlbumViewModel: ObservableObject {
   @Published var artists: [Artist] = []
   @Published var playlists: [Playlist] = []
   @Published var playlist: Playlist = Playlist()
-  @Published var artistAlbums: [Album] = []
+  @Published private var artistAlbums: [Album] = []
   @Published var albums: [Album] = []
   @Published var album: Album = Album()
   @Published var starredSongs: [Song] = []
   @Published var downloadedAlbums: [Album] = []
   @Published var isDownloaded = false
 
-  @Published var isLoading = false
-  @Published var error: Error?
+  /// A library list loaded from the server and cached on the watch.
+  enum Library: String {
+    case albums, artists, playlists, starredSongs
+  }
+
+  /// Loading and failure of one list, so a failed album fetch does not show
+  /// on the playlists.
+  struct ListState {
+    var isLoading = false
+    var failed = false
+  }
+
+  @Published private(set) var listStates: [Library: ListState] = [:]
+
+  /// The artist whose albums `artistAlbums` holds, so a late answer for the
+  /// previous artist does not show on this one.
+  private var artistAlbumsId = ""
 
   init(album: Album = Album(), albums: [Album] = []) {
     self.album = album
@@ -34,8 +49,18 @@ class AlbumViewModel: ObservableObject {
     artists = []
     playlists = []
     artistAlbums = []
+    artistAlbumsId = ""
     albums = []
     starredSongs = []
+    listStates = [:]
+  }
+
+  func state(_ library: Library) -> ListState {
+    listStates[library] ?? ListState()
+  }
+
+  func albums(byArtist id: String) -> [Album] {
+    id == artistAlbumsId ? artistAlbums : []
   }
 
   func setActiveAlbum(album: Album) {
@@ -65,11 +90,7 @@ class AlbumViewModel: ObservableObject {
     self.album.songs = checkLocalSongs
 
     AlbumService.shared.getSongFromAlbum(id: id) { result in
-      self.isLoading = true
-
       DispatchQueue.main.async {
-        self.isLoading = false
-
         switch result {
         case .success(let songs):
           let remoteSongs = songs.filter { song in
@@ -87,7 +108,7 @@ class AlbumViewModel: ObservableObject {
           }
 
         case .failure(let error):
-          self.error = error
+          debugLog("album songs failed: \(error)")
         }
       }
     }
@@ -110,7 +131,7 @@ class AlbumViewModel: ObservableObject {
           self.album.songs = merged
 
         case .failure(let error):
-          self.error = error
+          debugLog("playlist songs failed: \(error)")
         }
       }
     }
@@ -118,22 +139,18 @@ class AlbumViewModel: ObservableObject {
 
   // MARK: - Generic cache helpers
 
-  private enum CacheKey: String {
-    case albums, artists, playlists, starredSongs
-  }
-
   /// Requests the list, assigns it and caches it, then calls `done`, all on
   /// the main thread. An empty answer is a real answer (e.g. every song
   /// unliked) and replaces the cached list too.
   private func requestCached<T: Codable>(
-    cacheKey: CacheKey,
+    _ library: Library,
     assign: @escaping ([T]) -> Void,
     request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void,
     done: @escaping () -> Void
   ) {
     let cacheGeneration = LibraryCacheManager.shared.generation
-    // A new attempt takes the list screens out of their error state.
-    error = nil
+    // A new attempt takes the list out of its error state.
+    listStates[library] = ListState(isLoading: true)
     request { result in
       DispatchQueue.main.async {
         // Logout clears the cache and bumps its generation; an answer for the
@@ -144,14 +161,15 @@ class AlbumViewModel: ObservableObject {
         }
         switch result {
         case .success(let items):
-          debugLog("\(cacheKey.rawValue) loaded: \(items.count)")
+          debugLog("\(library.rawValue) loaded: \(items.count)")
           assign(items)
+          self.listStates[library] = ListState()
           DispatchQueue.global(qos: .utility).async {
             LibraryCacheManager.shared.save(
-              items, forKey: cacheKey.rawValue, generation: cacheGeneration)
+              items, forKey: library.rawValue, generation: cacheGeneration)
           }
-        case .failure(let error):
-          self.error = error
+        case .failure:
+          self.listStates[library] = ListState(failed: true)
         }
         done()
       }
@@ -161,33 +179,27 @@ class AlbumViewModel: ObservableObject {
   /// Shows the cached list right away when nothing is loaded yet, then
   /// replaces it with the server's.
   private func fetchCached<T: Codable>(
+    _ library: Library,
     current: [T],
-    cacheKey: CacheKey,
-    showsLoading: Bool = false,
     assign: @escaping ([T]) -> Void,
     request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void
   ) {
     if current.isEmpty,
-      let cached = LibraryCacheManager.shared.load([T].self, forKey: cacheKey.rawValue)
+      let cached = LibraryCacheManager.shared.load([T].self, forKey: library.rawValue)
     {
       assign(cached)
     }
-    if showsLoading { isLoading = true }
-    requestCached(cacheKey: cacheKey, assign: assign, request: request) {
-      if showsLoading { self.isLoading = false }
-    }
+    requestCached(library, assign: assign, request: request) {}
   }
 
   @MainActor
   private func refreshCached<T: Codable>(
-    cacheKey: CacheKey,
+    _ library: Library,
     assign: @escaping ([T]) -> Void,
     request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void
   ) async {
-    isLoading = true
-    defer { isLoading = false }
     await withCheckedContinuation { continuation in
-      requestCached(cacheKey: cacheKey, assign: assign, request: request) {
+      requestCached(library, assign: assign, request: request) {
         continuation.resume()
       }
     }
@@ -195,7 +207,7 @@ class AlbumViewModel: ObservableObject {
 
   func fetchStarredSongs() {
     fetchCached(
-      current: starredSongs, cacheKey: .starredSongs,
+      .starredSongs, current: starredSongs,
       assign: { self.starredSongs = $0 }, request: AlbumService.shared.getStarredSongs)
   }
 
@@ -287,18 +299,23 @@ class AlbumViewModel: ObservableObject {
 
   func fetchAlbums() {
     fetchCached(
-      current: albums, cacheKey: .albums, showsLoading: true,
+      .albums, current: albums,
       assign: { self.albums = $0 }, request: AlbumService.shared.getAlbum)
   }
 
   func fetchAlbumsByArtist(id: String) {
+    if id != artistAlbumsId {
+      artistAlbumsId = id
+      artistAlbums = []
+    }
     AlbumService.shared.getAlbumsByArtist(id: id) { result in
       DispatchQueue.main.async {
+        guard id == self.artistAlbumsId else { return }
         switch result {
         case .success(let albums):
           self.artistAlbums = albums
         case .failure(let error):
-          self.error = error
+          debugLog("artist albums failed: \(error)")
         }
       }
     }
@@ -319,7 +336,7 @@ class AlbumViewModel: ObservableObject {
           self.playlist.songs = merged
 
         case .failure(let error):
-          self.error = error
+          debugLog("playlist songs failed: \(error)")
         }
       }
     }
@@ -358,13 +375,13 @@ class AlbumViewModel: ObservableObject {
 
   func getPlaylists() {
     fetchCached(
-      current: playlists, cacheKey: .playlists,
+      .playlists, current: playlists,
       assign: { self.playlists = $0 }, request: AlbumService.shared.getPlaylists)
   }
 
   func getArtists() {
     fetchCached(
-      current: artists, cacheKey: .artists,
+      .artists, current: artists,
       assign: { self.artists = $0 }, request: AlbumService.shared.getArtists)
   }
 
@@ -372,25 +389,25 @@ class AlbumViewModel: ObservableObject {
 
   @MainActor func refreshAlbums() async {
     await refreshCached(
-      cacheKey: .albums, assign: { self.albums = $0 },
+      .albums, assign: { self.albums = $0 },
       request: AlbumService.shared.getAlbum)
   }
 
   @MainActor func refreshArtists() async {
     await refreshCached(
-      cacheKey: .artists, assign: { self.artists = $0 },
+      .artists, assign: { self.artists = $0 },
       request: AlbumService.shared.getArtists)
   }
 
   @MainActor func refreshPlaylists() async {
     await refreshCached(
-      cacheKey: .playlists, assign: { self.playlists = $0 },
+      .playlists, assign: { self.playlists = $0 },
       request: AlbumService.shared.getPlaylists)
   }
 
   @MainActor func refreshStarredSongs() async {
     await refreshCached(
-      cacheKey: .starredSongs, assign: { self.starredSongs = $0 },
+      .starredSongs, assign: { self.starredSongs = $0 },
       request: AlbumService.shared.getStarredSongs)
   }
 
@@ -407,7 +424,7 @@ class AlbumViewModel: ObservableObject {
           }
 
         case .failure(let error):
-          self.error = error
+          debugLog("downloaded albums failed: \(error)")
         }
       }
     }

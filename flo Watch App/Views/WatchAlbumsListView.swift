@@ -9,8 +9,8 @@ struct WatchAlbumsListView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
 
   private var placeholder: StateView.Kind {
-    if albumViewModel.isLoading { return .loading }
-    if albumViewModel.error != nil {
+    if albumViewModel.state(.albums).isLoading { return .loading }
+    if albumViewModel.state(.albums).failed {
       return .error(retry: { Task { await albumViewModel.refreshAlbums() } })
     }
     return .empty(
@@ -43,7 +43,7 @@ struct WatchAlbumsListView: View {
     }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
-        if albumViewModel.isLoading {
+        if albumViewModel.state(.albums).isLoading {
           ProgressView()
         } else {
           Button {

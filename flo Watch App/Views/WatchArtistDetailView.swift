@@ -44,7 +44,7 @@ struct WatchArtistDetailView: View {
       .disabled(artistDetailViewModel.isLoadingRadio || artistDetailViewModel.isLoadingTopSongs)
 
       Section {
-        ForEach(albumViewModel.artistAlbums) { album in
+        ForEach(albumViewModel.albums(byArtist: artist.id)) { album in
           NavigationLink(destination: WatchAlbumDetailView(album: album)) {
             CoverRow(
               coverURL: albumViewModel.getAlbumCoverArt(id: album.id),
