@@ -39,7 +39,15 @@ final class ConnectivityMonitor: ObservableObject {
     NotificationCenter.default.addObserver(
       forName: WKApplication.didBecomeActiveNotification, object: nil, queue: .main
     ) { [weak self] _ in
-      self?.probeServerReachability()
+      // Every wrist raise activates the app. A recent good verdict stands;
+      // a bad one is rechecked right away instead of waiting for the backoff.
+      guard let self else { return }
+      if self.isServerReachable, let lastVerdictAt = self.lastVerdictAt,
+        Date().timeIntervalSince(lastVerdictAt) < 60
+      {
+        return
+      }
+      self.probeServerReachability()
     }
     DispatchQueue.main.async { self.probeServerReachability() }
   }
