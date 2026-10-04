@@ -48,8 +48,8 @@ enum MenuTarget: Identifiable {
 
   /// What Play Next and Add to Queue put in the queue, in play order, and
   /// the collection the queue names as their origin. Albums and artists come
-  /// from the cached library; an album missing there from the server, or
-  /// offline from its download.
+  /// from the cached library (synced first for an artist when it is empty);
+  /// an album missing there from the server, or offline from its download.
   fileprivate func queueSongs(
     serverReachable: Bool
   ) async -> (songs: [Song], context: String, isFromPlaylist: Bool) {
@@ -76,7 +76,11 @@ enum MenuTarget: Identifiable {
         album.name, false
       )
     case .artist(let artist):
-      let songs = await SmartPlaybackService.shared.loadCachedLibrary().songs.filter { song in
+      var library = await SmartPlaybackService.shared.loadCachedLibrary().songs
+      if library.isEmpty, serverReachable {
+        library = await SmartPlaybackService.shared.syncSongLibrary()
+      }
+      let songs = library.filter { song in
         guard let id = song.artistId, !id.isEmpty else { return song.artist == artist.name }
         return id == artist.id
       }

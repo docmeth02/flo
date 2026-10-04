@@ -1479,8 +1479,13 @@ class WatchPlayerViewModel: ObservableObject {
         else { return }
         guard self.queue.compactMap({ $0.id }) == queueIdList, UserDefaultsManager.keepPlaying
         else {
-          // Songs queued while the mix was built play instead of it.
-          if self.queue.indices.contains(self.activeQueueIdx + 1) { self.nextSong() }
+          // Songs queued while the mix was built play instead of it; with
+          // none and Keep Playing turned off meanwhile, playback ends.
+          if self.queue.indices.contains(self.activeQueueIdx + 1) {
+            self.nextSong()
+          } else {
+            self.stop()
+          }
           return
         }
 
