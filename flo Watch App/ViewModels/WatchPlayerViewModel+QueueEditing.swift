@@ -30,7 +30,7 @@ extension WatchPlayerViewModel {
     guard !songs.isEmpty else { return false }
     guard isEditable else { return start(songs, context: context, isFromPlaylist: isFromPlaylist) }
     let entries = makeEntries(songs, context: context, isFromPlaylist: isFromPlaylist)
-    return editQueue { insertAfterCurrent(entries, in: &$0) }
+    return editQueue { insertAfterCurrent(entries, in: &$0) } && playOnIfEnded()
   }
 
   /// Puts `songs` at the end of the queue. Starts them instead when nothing
@@ -40,7 +40,7 @@ extension WatchPlayerViewModel {
     guard !songs.isEmpty else { return false }
     guard isEditable else { return start(songs, context: context, isFromPlaylist: isFromPlaylist) }
     let entries = makeEntries(songs, context: context, isFromPlaylist: isFromPlaylist)
-    return editQueue { $0.append(contentsOf: entries) }
+    return editQueue { $0.append(contentsOf: entries) } && playOnIfEnded()
   }
 
   /// Takes the row at `index` (play order) out of the queue. Nil for the
@@ -84,6 +84,13 @@ extension WatchPlayerViewModel {
 
   // A live radio's queue is the station alone.
   private var isEditable: Bool { hasNowPlaying() && !isLiveRadio }
+
+  /// Songs queued after the queue ran out play right away, rather than after
+  /// the ended song plays again. Always true: the queue did change.
+  private func playOnIfEnded() -> Bool {
+    if isFinished { nextSong() }
+    return true
+  }
 
   private func start(_ songs: [Song], context: String, isFromPlaylist: Bool) -> Bool {
     let item = SongCollection(id: context, name: context, songs: songs, isPlaylist: isFromPlaylist)

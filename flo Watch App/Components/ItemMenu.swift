@@ -48,25 +48,28 @@ enum MenuTarget: Identifiable {
 
   /// What Play Next and Add to Queue put in the queue, in play order, and
   /// the collection the queue names as their origin. Albums and artists come
-  /// from the cached library; an album missing there from its download, else
-  /// from the server.
-  fileprivate func queueSongs() async -> (songs: [Song], context: String, isFromPlaylist: Bool) {
+  /// from the cached library; an album missing there from the server, or
+  /// offline from its download.
+  fileprivate func queueSongs(
+    serverReachable: Bool
+  ) async -> (songs: [Song], context: String, isFromPlaylist: Bool) {
     switch self {
     case .song(let song, let context, let isFromPlaylist):
       return ([song], context, isFromPlaylist)
     case .album(let album):
       var songs = await SmartPlaybackService.shared.loadCachedLibrary().songs
         .filter { $0.albumId == album.id }
-      if songs.isEmpty {
-        // The view context, so on main.
-        songs = await MainActor.run { AlbumService.shared.getSongsByAlbumId(albumId: album.id) }
-      }
-      if songs.isEmpty {
+      if songs.isEmpty, serverReachable {
         songs = await withCheckedContinuation { continuation in
           AlbumService.shared.getSongFromAlbum(id: album.id) {
             continuation.resume(returning: (try? $0.get()) ?? [])
           }
         }
+      }
+      if songs.isEmpty {
+        // Offline: the tracks on the watch, which may be only some of them.
+        // The view context, so on main.
+        songs = await MainActor.run { AlbumService.shared.getSongsByAlbumId(albumId: album.id) }
       }
       return (
         songs.sorted { ($0.discNumber, $0.trackNumber) < ($1.discNumber, $1.trackNumber) },
@@ -194,8 +197,8 @@ private struct ItemMenuPresenter: ViewModifier {
     switch target {
     case .song(let song, _, _):
       playerViewModel.isStarred(song)
-    case .album(let album): album.starred
-    case .artist(let artist): artist.starred
+    case .album(let album): albumViewModel.isStarred(album)
+    case .artist(let artist): albumViewModel.isStarred(artist)
     }
   }
 
@@ -207,11 +210,14 @@ private struct ItemMenuPresenter: ViewModifier {
       show(pinStore.isPinned(pin.id, pin.kind) ? "Pinned" : "Unpinned")
     case .playNext, .addToQueue:
       let generation = LibraryCacheManager.shared.generation
+      let reachable = ConnectivityMonitor.shared.isServerReachable
       Task {
-        let (songs, context, isFromPlaylist) = await target.queueSongs()
+        let (songs, context, isFromPlaylist) = await target.queueSongs(serverReachable: reachable)
         // A logout meanwhile: these are the previous account's songs.
         guard LibraryCacheManager.shared.generation == generation else { return }
-        guard !songs.isEmpty else { return show("Not available offline") }
+        guard !songs.isEmpty else {
+          return show(reachable ? "Nothing to queue" : "Not available offline")
+        }
         let next = action == .playNext
         let queued =
           next
@@ -227,8 +233,8 @@ private struct ItemMenuPresenter: ViewModifier {
       switch target {
       case .song(let song, _, _):
         playerViewModel.setStar(starred, song: song, completion: done)
-      case .album(let album): albumViewModel.toggleStar(album: album, completion: done)
-      case .artist(let artist): albumViewModel.toggleStar(artist: artist, completion: done)
+      case .album(let album): albumViewModel.setStar(starred, id: album.id, completion: done)
+      case .artist(let artist): albumViewModel.setStar(starred, id: artist.id, completion: done)
       }
     }
   }

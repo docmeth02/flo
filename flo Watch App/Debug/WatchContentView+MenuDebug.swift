@@ -26,11 +26,13 @@
       if case let (kind, id)? = env["FLO_DEBUG_STAR"].flatMap(Self.debugItem) {
         let done = { (success: Bool) in debugLog("star hook: \(kind) \(id) success=\(success)") }
         if kind == .album, let album = albums.first(where: { $0.id == id }) {
-          debugLog("star hook: album was starred=\(album.starred)")
-          albumViewModel.toggleStar(album: album, completion: done)
+          let starred = albumViewModel.isStarred(album)
+          debugLog("star hook: album was starred=\(starred)")
+          albumViewModel.setStar(!starred, id: id, completion: done)
         } else if kind == .artist, let artist = artists.first(where: { $0.id == id }) {
-          debugLog("star hook: artist was starred=\(artist.starred)")
-          albumViewModel.toggleStar(artist: artist, completion: done)
+          let starred = albumViewModel.isStarred(artist)
+          debugLog("star hook: artist was starred=\(starred)")
+          albumViewModel.setStar(!starred, id: id, completion: done)
         } else {
           debugLog("star hook: \(kind) \(id) not found")
         }

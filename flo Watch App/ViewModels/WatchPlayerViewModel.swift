@@ -65,7 +65,7 @@ class WatchPlayerViewModel: ObservableObject {
   private var resumeAfterInterruption = false
 
   private var isLocallySaved: Bool = false
-  private var isFinished: Bool = false
+  private(set) var isFinished: Bool = false
   private var isAutoContinuing: Bool = false
   private var totalDuration: Double = 0.0
   private var playerItemObservation: AnyCancellable?
@@ -1117,6 +1117,7 @@ class WatchPlayerViewModel: ObservableObject {
     }
 
     UserDefaultsManager.playbackMode = self.playbackMode
+    precacheUpcoming()
   }
 
   // The play functions return whether playback started. An item without
@@ -1265,6 +1266,7 @@ class WatchPlayerViewModel: ObservableObject {
 
     persistActiveIndex()
     persistShuffleOrder()
+    precacheUpcoming()
   }
 
   private static let shuffleOrderKey = "queueShuffleOrder"
@@ -1510,11 +1512,14 @@ class WatchPlayerViewModel: ObservableObject {
     starGeneration += 1
     let generation = starGeneration
 
+    let account = LibraryCacheManager.shared.generation
     let action = shouldStar ? AlbumService.shared.star : AlbumService.shared.unstar
     action(songId) { [weak self] success in
       DispatchQueue.main.async {
         guard let self else { return }
         if success {
+          // After a logout the answer belongs to the previous account.
+          guard LibraryCacheManager.shared.generation == account else { return }
           self.confirmedStars[songId] = shouldStar
         } else if self.starGeneration == generation {
           self.isStarred = !shouldStar
@@ -1534,10 +1539,12 @@ class WatchPlayerViewModel: ObservableObject {
   /// tells whether it did.
   func setStar(_ starred: Bool, song: Song, completion: @escaping (Bool) -> Void) {
     let songId = song.playbackID
+    let account = LibraryCacheManager.shared.generation
     let action = starred ? AlbumService.shared.star : AlbumService.shared.unstar
     action(songId) { [weak self] success in
       DispatchQueue.main.async {
-        if success, let self {
+        // After a logout the answer belongs to the previous account.
+        if success, let self, LibraryCacheManager.shared.generation == account {
           self.confirmedStars[songId] = starred
           if self.isCurrent(song) {
             // A heart tap still in flight must not roll this back.

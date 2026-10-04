@@ -62,6 +62,7 @@ class AlbumViewModel: ObservableObject {
     albums = []
     starredSongs = []
     recentAlbums = []
+    confirmedStars = [:]
     listStates = [:]
   }
 
@@ -453,38 +454,25 @@ class AlbumViewModel: ObservableObject {
 
   // MARK: - Stars
 
-  func toggleStar(album: Album, completion: @escaping (Bool) -> Void) {
-    let starred = !album.starred
-    setStar(starred, id: album.id, completion: completion) {
-      for index in self.albums.indices where self.albums[index].id == album.id {
-        self.albums[index].starred = starred
-      }
-      for index in self.artistAlbums.indices where self.artistAlbums[index].id == album.id {
-        self.artistAlbums[index].starred = starred
-      }
-      for index in self.recentAlbums.indices where self.recentAlbums[index].id == album.id {
-        self.recentAlbums[index].starred = starred
-      }
-    }
-  }
+  // Album and artist stars the server confirmed this session, by id; the
+  // lists, cached or fresh, keep the state they were loaded with.
+  private var confirmedStars: [String: Bool] = [:]
 
-  func toggleStar(artist: Artist, completion: @escaping (Bool) -> Void) {
-    let starred = !artist.starred
-    setStar(starred, id: artist.id, completion: completion) {
-      for index in self.artists.indices where self.artists[index].id == artist.id {
-        self.artists[index].starred = starred
-      }
-    }
-  }
+  func isStarred(_ album: Album) -> Bool { confirmedStars[album.id] ?? album.starred }
 
-  private func setStar(
-    _ starred: Bool, id: String, completion: @escaping (Bool) -> Void,
-    apply: @escaping () -> Void
-  ) {
+  func isStarred(_ artist: Artist) -> Bool { confirmedStars[artist.id] ?? artist.starred }
+
+  /// Likes or unlikes an album or artist once the server takes it;
+  /// `completion` tells whether it did.
+  func setStar(_ starred: Bool, id: String, completion: @escaping (Bool) -> Void) {
+    let generation = LibraryCacheManager.shared.generation
     let request = starred ? AlbumService.shared.star : AlbumService.shared.unstar
     request(id) { success in
       DispatchQueue.main.async {
-        if success { apply() }
+        // After a logout the answer belongs to the previous account.
+        if success, LibraryCacheManager.shared.generation == generation {
+          self.confirmedStars[id] = starred
+        }
         completion(success)
       }
     }
