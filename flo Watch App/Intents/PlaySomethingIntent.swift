@@ -19,14 +19,13 @@ struct PlaySomethingIntent: AppIntent {
   }
 }
 
+/// The phrases are English; AppShortcuts.xcstrings holds their German
+/// versions, since Siri on the watch only runs a phrase spoken exactly.
 struct FloShortcuts: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
     AppShortcut(
       intent: PlaySomethingIntent(),
-      phrases: [
-        "Play something in \(.applicationName)",
-        "Start \(.applicationName)",
-      ],
+      phrases: ["Play something in \(.applicationName)"],
       shortTitle: "Play Something",
       systemImageName: "sparkles")
   }
