@@ -27,10 +27,16 @@ struct ArtistAppEntity: AppEntity {
       return await Self.artists().filter { ids.contains($0.id) }.map(ArtistAppEntity.init)
     }
 
+    /// An artist named exactly as spoken wins, so "Air" does not make Siri
+    /// ask between Air, Air Supply and Airbourne.
     func entities(matching string: String) async throws -> [ArtistAppEntity] {
-      let artists = await Self.artists()
-      return (LibrarySearch.search(string, artists: artists, albums: [], songs: [])?.artists ?? [])
-        .map(ArtistAppEntity.init)
+      let found = LibrarySearch.search(string, artists: await Self.artists(), albums: [], songs: [])?
+        .artists ?? []
+      let spoken = string.trimmingCharacters(in: .whitespacesAndNewlines)
+      let exact = found.filter {
+        $0.name.compare(spoken, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+      }
+      return (exact.isEmpty ? found : exact).map(ArtistAppEntity.init)
     }
 
     func suggestedEntities() async throws -> [ArtistAppEntity] {

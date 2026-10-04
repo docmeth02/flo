@@ -952,10 +952,11 @@ class WatchPlayerViewModel: ObservableObject {
       guard let self = self else { return .commandFailed }
       DispatchQueue.main.async {
         // Headphones often send pause as they connect, before anything plays;
-        // with nothing playing it must not cancel the waiting start.
+        // that one must not cancel the waiting start. Any other pause counts,
+        // also one that keeps an interruption from resuming.
         RequestLog.shared.note(
           "audio remote pause activating=\(self.isActivatingSession) playing=\(self.isPlaying)")
-        guard self.isPlaying, !self.isActivatingSession else { return }
+        guard self.isPlaying || self.resumeAfterInterruption else { return }
         self.pause()
       }
       return .success
@@ -1278,23 +1279,24 @@ class WatchPlayerViewModel: ObservableObject {
       var online = await ConnectivityMonitor.shared.canStream()
       var songs: [Song] = []
       if online {
-        songs = await withCheckedContinuation { continuation in
-          RadioService.shared.getTopSongs(artistName: name) {
-            continuation.resume(returning: (try? $0.get()) ?? [])
-          }
+        let result = await withCheckedContinuation { continuation in
+          RadioService.shared.getTopSongs(artistName: name) { continuation.resume(returning: $0) }
         }
+        songs = (try? result.get()) ?? []
+        // A failed request most likely means the link went; the monitor may
+        // not know yet.
+        if case .failure = result { online = false }
       }
       if songs.isEmpty {
-        // The request may have failed because the link went meanwhile.
-        online = online && ConnectivityMonitor.shared.canReachServer
-        // Offline only what is downloaded or cached can play; online an empty
-        // library cache (a fresh login) is synced first.
-        var library =
-          online
-          ? await SmartPlaybackService.shared.loadCachedLibrary().songs
-          : await SmartPlaybackService.shared.offlinePlayableSongs()
-        if online, library.isEmpty { library = await SmartPlaybackService.shared.syncSongLibrary() }
-        songs = library.filter { $0.isBy(artistId: id, name: name) }.shuffled()
+        let byArtist = { (library: [Song]) in library.filter { $0.isBy(artistId: id, name: name) } }
+        // Offline only what is downloaded or cached can play. Online a cache
+        // without the artist (a fresh login, an artist added since) is synced.
+        let service = SmartPlaybackService.shared
+        songs = byArtist(online ? await service.loadCachedLibrary().songs : await service.offlinePlayableSongs())
+        if online, songs.isEmpty { songs = byArtist(await service.syncSongLibrary()) }
+        // The sync may have failed because the link went.
+        if songs.isEmpty { songs = byArtist(await service.offlinePlayableSongs()) }
+        songs.shuffle()
       }
       return SongCollection(id: "artist-\(id)", name: name, songs: songs)
     }
