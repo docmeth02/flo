@@ -6,7 +6,8 @@
 import SwiftUI
 
 /// A song on its own surface platter, for scroll views. Inside a List, give
-/// the row a clear background so the platter is not drawn twice.
+/// the row a clear background so the platter is not drawn twice. A tap runs
+/// `action`, a hold `onHold` (the song menu).
 struct TrackRowView: View {
   let trackNumber: Int
   let title: String
@@ -15,46 +16,45 @@ struct TrackRowView: View {
   var tint: Color = .floLavender
   /// Over a cover backdrop the opaque surface would hide the cover.
   var idleBackground: Color = .floSurface
+  var onHold: (() -> Void)?
   var action: () -> Void
 
   var body: some View {
-    Button(action: action) {
-      HStack(spacing: 9) {
-        Group {
-          if isPlaying {
-            Image(systemName: "waveform")
-              .font(.system(size: 14, weight: .semibold))
-              .foregroundStyle(tint)
-          } else {
-            Text("\(trackNumber)")
-              .font(.system(.caption, weight: .semibold).monospacedDigit())
-              .foregroundStyle(Color.floSecondary)
-          }
-        }
-        .frame(width: 18)
-
-        VStack(alignment: .leading, spacing: 1) {
-          Text(title)
-            .font(.system(.subheadline, weight: isPlaying ? .semibold : .medium))
-            .foregroundStyle(isPlaying ? tint : .white)
-            .lineLimit(1)
-          Text(artist)
-            .font(.floMeta)
+    HStack(spacing: 9) {
+      Group {
+        if isPlaying {
+          Image(systemName: "waveform")
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(tint)
+        } else {
+          Text("\(trackNumber)")
+            .font(.system(.caption, weight: .semibold).monospacedDigit())
             .foregroundStyle(Color.floSecondary)
-            .lineLimit(1)
         }
-
-        Spacer(minLength: 0)
       }
-      .padding(.horizontal, 10)
-      .padding(.vertical, 4)
-      .frame(minHeight: FloLayout.rowHeight)
-      .background(
-        RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
-          .fill(isPlaying ? tint.opacity(0.22) : idleBackground)
-      )
-      .contentShape(Rectangle())
+      .frame(width: 18)
+
+      VStack(alignment: .leading, spacing: 1) {
+        Text(title)
+          .font(.system(.subheadline, weight: isPlaying ? .semibold : .medium))
+          .foregroundStyle(isPlaying ? tint : .white)
+          .lineLimit(1)
+        Text(artist)
+          .font(.floMeta)
+          .foregroundStyle(Color.floSecondary)
+          .lineLimit(1)
+      }
+
+      Spacer(minLength: 0)
     }
-    .buttonStyle(.plain)
+    .padding(.horizontal, 10)
+    .padding(.vertical, 4)
+    .frame(minHeight: FloLayout.rowHeight)
+    .background(
+      RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
+        .fill(isPlaying ? tint.opacity(0.22) : idleBackground)
+    )
+    .contentShape(Rectangle())
+    .holdable(onTap: action, onHold: onHold)
   }
 }

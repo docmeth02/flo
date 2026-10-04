@@ -11,11 +11,23 @@ import Foundation
 class PlaybackService {
   static let shared = PlaybackService()
 
+  private let injectedContext: NSManagedObjectContext?
+  // Resolved per call: the shared store may only open after this exists.
+  private var context: NSManagedObjectContext {
+    injectedContext ?? CoreDataManager.shared.viewContext
+  }
+
+  /// `context` is for tests; the app uses the shared view context.
+  init(context: NSManagedObjectContext? = nil) {
+    injectedContext = context
+  }
+
   /// The queue in play order. A queue stored before the position attribute
   /// existed has every position at 0, but its batch insert assigned primary
   /// keys in queue order, so they break the tie.
   func getQueue() -> [QueueEntity] {
-    return CoreDataManager.shared.getRecordsByEntity(entity: QueueEntity.self)
+    let request = QueueEntity.fetchRequest()
+    return ((try? context.fetch(request)) ?? [])
       .sorted { ($0.position, Self.primaryKey($0)) < ($1.position, Self.primaryKey($1)) }
   }
 
@@ -28,12 +40,52 @@ class PlaybackService {
     CoreDataManager.shared.deleteRecords(entity: QueueEntity.self)
   }
 
+  /// A new, unsaved queue row for `song`; `context` names the collection it
+  /// came from, which the journal reads as the song's origin.
+  func makeEntry(
+    song: Song, context name: String, isFromPlaylist: Bool, isFromLocal: Bool
+  ) -> QueueEntity {
+    let entity = QueueEntity(context: context)
+    entity.id = song.mediaFileId == "" ? song.id : song.mediaFileId
+    entity.albumId = song.albumId
+    entity.albumName = song.albumName.isEmpty ? name : song.albumName
+    entity.contextName = name
+    entity.artistName = song.artist
+    entity.bitRate = Int16(clamping: song.bitRate)
+    entity.sampleRate = Int32(clamping: song.sampleRate)
+    entity.songName = song.title
+    entity.suffix = song.suffix
+    entity.isFromPlaylist = isFromPlaylist
+    entity.isFromLocal = isFromLocal
+    entity.duration = song.duration
+    entity.explicitStatus = song.explicitStatus.rawValue
+    return entity
+  }
+
+  /// Numbers `order` as the stored queue, deletes the rows that are no longer
+  /// in it and saves once. On failure every unsaved change is rolled back
+  /// and false returned, so the stored queue stays as it was.
+  @discardableResult
+  func store(order: [QueueEntity]) -> Bool {
+    let kept = Set(order.map(\.objectID))
+    getQueue().filter { !kept.contains($0.objectID) }.forEach(context.delete)
+    for (index, entity) in order.enumerated() where entity.position != Int32(index) {
+      entity.position = Int32(index)
+    }
+
+    do {
+      try context.save()
+      return true
+    } catch {
+      context.rollback()
+      debugLog("Failed to store the queue: \(error.localizedDescription)")
+      return false
+    }
+  }
+
   /// Replaces the stored queue in one save, so a failure keeps the old queue.
   /// Returns the new queue, or nothing if it could not be stored.
   func addToQueue<T: Playable>(item: T, isFromLocal: Bool = false) -> [QueueEntity] {
-    let context = CoreDataManager.shared.viewContext
-    let oldQueue = CoreDataManager.shared.getRecordsByEntity(entity: QueueEntity.self)
-
     let isPlaylist = item is Playlist
     let isPlaylistAlbum =
       (item as? Album).map { album in
@@ -41,35 +93,11 @@ class PlaybackService {
           && album.genre.contains(" by ")
       } ?? false
 
-    let isFromPlaylist = isPlaylist || isPlaylistAlbum
-
-    for (index, song) in item.songs.enumerated() {
-      let entity = QueueEntity(context: context)
-      entity.id = song.mediaFileId == "" ? song.id : song.mediaFileId
-      entity.albumId = song.albumId
-      entity.albumName = song.albumName.isEmpty ? item.name : song.albumName
-      entity.contextName = item.name
-      entity.artistName = song.artist
-      entity.bitRate = Int16(clamping: song.bitRate)
-      entity.sampleRate = Int32(clamping: song.sampleRate)
-      entity.songName = song.title
-      entity.suffix = song.suffix
-      entity.isFromPlaylist = isFromPlaylist
-      entity.isFromLocal = isFromLocal
-      entity.duration = song.duration
-      entity.explicitStatus = song.explicitStatus.rawValue
-      entity.position = Int32(index)
+    let entries = item.songs.map {
+      makeEntry(
+        song: $0, context: item.name, isFromPlaylist: isPlaylist || isPlaylistAlbum,
+        isFromLocal: isFromLocal)
     }
-    oldQueue.forEach(context.delete)
-
-    do {
-      try context.save()
-    } catch {
-      context.rollback()
-      debugLog("Failed to store the queue: \(error.localizedDescription)")
-      return []
-    }
-
-    return self.getQueue()
+    return store(order: entries) ? entries : []
   }
 }

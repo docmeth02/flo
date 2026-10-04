@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import WatchKit
 
 /// "1 song", "3 songs".
 func counted(_ count: Int, _ noun: String) -> String {
@@ -344,5 +345,82 @@ struct DownloadControl: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+  }
+}
+
+extension View {
+  /// Tap and hold on one plain view, which a `Button` cannot do on the watch:
+  /// it takes the whole touch and the hold never arrives. The row dims while
+  /// pressed, as a button would. Without `onHold` it is a plain tap target.
+  func holdable(onTap: @escaping () -> Void, onHold: (() -> Void)?) -> some View {
+    modifier(HoldableRow(onTap: onTap, onHold: onHold))
+  }
+}
+
+struct HoldableRow: ViewModifier {
+  let onTap: () -> Void
+  let onHold: (() -> Void)?
+  @State private var isPressed = false
+
+  func body(content: Content) -> some View {
+    content
+      .opacity(isPressed ? 0.6 : 1)
+      .onTapGesture(perform: onTap)
+      .onLongPressGesture(minimumDuration: 0.5) {
+        guard let onHold else { return }
+        WKInterfaceDevice.current().play(.click)
+        onHold()
+      } onPressingChanged: { isPressed = $0 }
+  }
+}
+
+/// A short message over the bottom of a screen, with Undo when the change
+/// can be taken back. The owner clears `message` to hide it; `FloToast.show`
+/// does that after a few seconds.
+struct FloToast: View {
+  struct Message: Equatable {
+    let id = UUID()
+    let text: String
+    var undo: (() -> Void)?
+
+    static func == (lhs: Message, rhs: Message) -> Bool { lhs.id == rhs.id }
+  }
+
+  static let duration: Duration = .seconds(2.6)
+
+  @Binding var message: Message?
+
+  var body: some View {
+    if let current = message {
+      HStack(spacing: 6) {
+        Text(current.text)
+          .font(.floMeta.weight(.medium))
+          .lineLimit(1)
+        if let undo = current.undo {
+          Button("Undo") {
+            undo()
+            message = nil
+          }
+          .font(.floMeta.weight(.semibold))
+          .foregroundStyle(Color.floLavender)
+          .buttonStyle(.plain)
+        }
+      }
+      .padding(.horizontal, 14)
+      .padding(.vertical, 8)
+      .background(Capsule().fill(Color.floSurface))
+      .shadow(color: .black.opacity(0.6), radius: 9, y: 6)
+      .task(id: current.id) {
+        try? await Task.sleep(for: Self.duration)
+        if message?.id == current.id { message = nil }
+      }
+    }
+  }
+}
+
+extension View {
+  /// Shows `message` as a `FloToast` over the bottom of this view.
+  func floToast(_ message: Binding<FloToast.Message?>) -> some View {
+    overlay(alignment: .bottom) { FloToast(message: message).padding(.bottom, 4) }
   }
 }
