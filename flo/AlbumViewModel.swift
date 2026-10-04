@@ -62,6 +62,7 @@ class AlbumViewModel: ObservableObject {
     albums = []
     starredSongs = []
     recentAlbums = []
+    songStars = [:]
     listStates = [:]
   }
 
@@ -448,6 +449,61 @@ class AlbumViewModel: ObservableObject {
         .compactMap { songs[$0.id].flatMap { byId[$0.albumId] } }
         .filter { seen.insert($0.id).inserted }
         .prefix(4))
+  }
+
+  // MARK: - Stars
+
+  /// Song stars the server confirmed since the songs were loaded, by id; the
+  /// lists keep the state they were loaded with.
+  private var songStars: [String: Bool] = [:]
+
+  func isStarred(_ song: Song) -> Bool {
+    songStars[song.playbackID] ?? (song.starred || song.starredAt != nil)
+  }
+
+  /// `completion` tells whether the server took the change; the state here
+  /// changes only once it did. The Liked list picks it up on its next load.
+  func setStar(_ starred: Bool, song: Song, completion: @escaping (Bool) -> Void) {
+    setStar(starred, id: song.playbackID, completion: completion) {
+      self.songStars[song.playbackID] = starred
+    }
+  }
+
+  func toggleStar(album: Album, completion: @escaping (Bool) -> Void) {
+    let starred = !album.starred
+    setStar(starred, id: album.id, completion: completion) {
+      for index in self.albums.indices where self.albums[index].id == album.id {
+        self.albums[index].starred = starred
+      }
+      for index in self.artistAlbums.indices where self.artistAlbums[index].id == album.id {
+        self.artistAlbums[index].starred = starred
+      }
+      for index in self.recentAlbums.indices where self.recentAlbums[index].id == album.id {
+        self.recentAlbums[index].starred = starred
+      }
+    }
+  }
+
+  func toggleStar(artist: Artist, completion: @escaping (Bool) -> Void) {
+    let starred = !artist.starred
+    setStar(starred, id: artist.id, completion: completion) {
+      for index in self.artists.indices where self.artists[index].id == artist.id {
+        self.artists[index].starred = starred
+      }
+    }
+  }
+
+  private func setStar(
+    _ starred: Bool, id: String, completion: @escaping (Bool) -> Void,
+    apply: @escaping () -> Void
+  ) {
+    let request = starred ? AlbumService.shared.star : AlbumService.shared.unstar
+    request(id) { success in
+      DispatchQueue.main.async {
+        if success { apply() }
+        completion(success)
+      }
+    }
   }
 
   func fetchDownloadedAlbums() {

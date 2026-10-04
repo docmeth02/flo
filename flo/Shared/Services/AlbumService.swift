@@ -253,13 +253,14 @@ class AlbumService {
     }
   }
 
-  func starSong(id: String, completion: @escaping (Bool) -> Void) {
+  /// Stars a song, album or artist; Navidrome takes all three as `id`.
+  func star(id: String, completion: @escaping (Bool) -> Void) {
     APIManager.shared.SubsonicActionRequest(
       endpoint: API.SubsonicEndpoint.star, parameters: ["id": id]
     ) { completion((try? $0.get()) != nil) }
   }
 
-  func unstarSong(id: String, completion: @escaping (Bool) -> Void) {
+  func unstar(id: String, completion: @escaping (Bool) -> Void) {
     APIManager.shared.SubsonicActionRequest(
       endpoint: API.SubsonicEndpoint.unstar, parameters: ["id": id]
     ) { completion((try? $0.get()) != nil) }

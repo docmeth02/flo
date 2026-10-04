@@ -29,10 +29,11 @@ struct Artist: Codable, Hashable, Identifiable {
   let externalURL: String?
   let externalInfoUpdatedAt: String?
   let fullText: String?
+  var starred: Bool
 
   enum CodingKeys: String, CodingKey {
     case id, name, orderArtistName, size, albumCount, songCount, missing, createdAt,
-      updatedAt, sortArtistName, playCount, playDate, fullText
+      updatedAt, sortArtistName, playCount, playDate, fullText, starred
     case mbzArtistID = "mbzArtistId"
     case biography
     case smallImageURL = "smallImageUrl"
@@ -67,5 +68,6 @@ extension Artist {
     self.externalURL = try container.decodeIfPresent(String.self, forKey: .externalURL)
     self.externalInfoUpdatedAt = try container.decodeIfPresent(String.self, forKey: .externalInfoUpdatedAt)
     self.fullText = try container.decodeIfPresent(String.self, forKey: .fullText)
+    self.starred = try container.decodeIfPresent(Bool.self, forKey: .starred) ?? false
   }
 }

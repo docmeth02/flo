@@ -19,6 +19,7 @@ struct Album: Codable, Identifiable, Playable {
   var genre: String = ""
   var minYear: Int = 0
   var explicitStatus: ExplicitStatus = .unknown
+  var starred = false
 
   var isExplicit: Bool {
     if explicitStatus.isExplicit {
@@ -40,6 +41,7 @@ struct Album: Codable, Identifiable, Playable {
     case minYear
     case songs
     case explicitStatus
+    case starred
   }
 
   init(from decoder: any Decoder) throws {
@@ -65,6 +67,7 @@ struct Album: Codable, Identifiable, Playable {
     self.songs = try container.decodeIfPresent([Song].self, forKey: .songs) ?? []
     self.explicitStatus = ExplicitStatus(
       from: try container.decodeIfPresent(String.self, forKey: .explicitStatus))
+    self.starred = try container.decodeIfPresent(Bool.self, forKey: .starred) ?? false
   }
 
   init(

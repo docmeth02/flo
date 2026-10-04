@@ -1502,7 +1502,7 @@ class WatchPlayerViewModel: ObservableObject {
     starGeneration += 1
     let generation = starGeneration
 
-    let action = shouldStar ? AlbumService.shared.starSong : AlbumService.shared.unstarSong
+    let action = shouldStar ? AlbumService.shared.star : AlbumService.shared.unstar
     action(songId) { [weak self] success in
       if !success {
         DispatchQueue.main.async {
