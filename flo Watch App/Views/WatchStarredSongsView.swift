@@ -10,6 +10,7 @@ struct WatchStarredSongsView: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
 
   @Environment(\.showPlayer) private var showPlayer
+  @State private var menu: MenuTarget?
 
   var body: some View {
     LibraryList(
@@ -25,7 +26,8 @@ struct WatchStarredSongsView: View {
           trackNumber: idx + 1,
           title: song.title,
           artist: song.artist,
-          isPlaying: playerViewModel.isCurrent(song)
+          isPlaying: playerViewModel.isCurrent(song),
+          onHold: { menu = .song(song, context: "Liked Songs", isFromPlaylist: false) }
         ) {
           let liked = SongCollection(id: "starred-songs", name: "Liked Songs", songs: albumViewModel.starredSongs)
           if playerViewModel.playBySong(idx: idx, item: liked, isFromLocal: false) { showPlayer() }
@@ -33,6 +35,7 @@ struct WatchStarredSongsView: View {
         .listRowBackground(Color.clear)
       }
     }
+    .itemMenu($menu)
     .onAppear {
       albumViewModel.fetchStarredSongs()
     }

@@ -365,6 +365,7 @@ struct HoldableRow: ViewModifier {
   func body(content: Content) -> some View {
     content
       .opacity(isPressed ? 0.6 : 1)
+      .contentShape(Rectangle())
       .onTapGesture(perform: onTap)
       .onLongPressGesture(minimumDuration: 0.5) {
         guard let onHold else { return }

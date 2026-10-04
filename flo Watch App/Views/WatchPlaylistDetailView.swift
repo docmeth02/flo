@@ -33,6 +33,7 @@ struct WatchPlaylistDetailView: View {
       title: playlist.name,
       meta: meta,
       songs: displayPlaylist.songs,
+      isPlaylist: true,
       trackNumber: { index, _ in index + 1 },
       playable: { Album(from: displayPlaylist) },
       onDownload: { downloadPlaylist() },

@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import WatchKit
 
 /// What a hold on a row opens the menu for. Songs carry the collection they
 /// were listed in, which the queue keeps as their origin.
@@ -19,16 +20,123 @@ enum MenuTarget: Identifiable {
     case .artist(let artist): "artist-" + artist.id
     }
   }
+
+  fileprivate var title: String {
+    switch self {
+    case .song(let song, _, _): song.title
+    case .album(let album): album.name
+    case .artist(let artist): artist.name
+    }
+  }
+
+  fileprivate var subtitle: String {
+    switch self {
+    case .song(let song, _, _): song.artist
+    case .album(let album): album.albumArtist
+    case .artist(let artist): artist.albumCount > 0 ? counted(artist.albumCount, "album") : ""
+    }
+  }
+
+  /// Songs cannot be pinned.
+  fileprivate var pin: (id: String, kind: PinStore.Kind)? {
+    switch self {
+    case .song: nil
+    case .album(let album): (album.id, .album)
+    case .artist(let artist): (artist.id, .artist)
+    }
+  }
+
+  /// What Play Next and Add to Queue put in the queue, in play order, and
+  /// the collection the queue names as their origin. Albums and artists come
+  /// from the cached library; an album missing there is asked from the server.
+  fileprivate func queueSongs() async -> (songs: [Song], context: String, isFromPlaylist: Bool) {
+    switch self {
+    case .song(let song, let context, let isFromPlaylist):
+      return ([song], context, isFromPlaylist)
+    case .album(let album):
+      var songs = await SmartPlaybackService.shared.loadCachedLibrary().songs
+        .filter { $0.albumId == album.id }
+      if songs.isEmpty {
+        songs = await withCheckedContinuation { continuation in
+          AlbumService.shared.getSongFromAlbum(id: album.id) {
+            continuation.resume(returning: (try? $0.get()) ?? [])
+          }
+        }
+      }
+      return (
+        songs.sorted { ($0.discNumber, $0.trackNumber) < ($1.discNumber, $1.trackNumber) },
+        album.name, false
+      )
+    case .artist(let artist):
+      let songs = await SmartPlaybackService.shared.loadCachedLibrary().songs.filter { song in
+        guard let id = song.artistId, !id.isEmpty else { return song.artist == artist.name }
+        return id == artist.id
+      }
+      return (
+        songs.sorted {
+          ($0.year ?? 0, $0.albumName, $0.discNumber, $0.trackNumber)
+            < ($1.year ?? 0, $1.albumName, $1.discNumber, $1.trackNumber)
+        },
+        artist.name, false
+      )
+    }
+  }
 }
 
 /// The one hold menu: a header with the item, then its actions (Pin or
 /// Unpin for albums and artists, Play Next, Add to Queue, Like or Unlike)
-/// and Cancel.
+/// and Cancel. It only reports the choice; `.itemMenu` carries it out.
 struct ItemMenu: View {
+  enum Action {
+    case pin, playNext, addToQueue, like
+  }
+
   let target: MenuTarget
+  let tile: CoverRow<EmptyView>.Tile
+  /// Nil for an item that cannot be pinned.
+  let isPinned: Bool?
+  let isLiked: Bool
+  let onSelect: (Action) -> Void
+
+  @Environment(\.dismiss) private var dismiss
 
   var body: some View {
-    EmptyView()
+    ScrollView {
+      VStack(spacing: 6) {
+        CoverRow(tile: tile, title: target.title, subtitle: target.subtitle)
+          .padding(.horizontal, 4)
+        if let isPinned {
+          row(isPinned ? "Unpin" : "Pin to Top", systemImage: isPinned ? "pin.slash" : "pin", .pin)
+        }
+        row("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward", .playNext)
+        row("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward", .addToQueue)
+        row(
+          isLiked ? "Unlike" : "Like", systemImage: isLiked ? "heart.fill" : "heart",
+          tint: isLiked ? .floLiked : .floSecondary, .like)
+        Button("Cancel") { dismiss() }
+          .buttonStyle(FloTintedButtonStyle(tint: .white))
+      }
+      .padding(.horizontal, 8)
+    }
+  }
+
+  private func row(
+    _ title: String, systemImage: String, tint: Color = .floLavender, _ action: Action
+  ) -> some View {
+    Button {
+      onSelect(action)
+    } label: {
+      HStack(spacing: 8) {
+        Image(systemName: systemImage)
+          .font(.system(size: 17))
+          .foregroundStyle(tint)
+          .frame(width: 22)
+        Text(title)
+        Spacer(minLength: 0)
+      }
+      .padding(.horizontal, 16)
+    }
+    .buttonStyle(FloTintedButtonStyle(tint: .white))
   }
 }
 
@@ -36,6 +144,93 @@ extension View {
   /// Presents the hold menu for `target` while it is set and shows the
   /// action's result as a toast on this view.
   func itemMenu(_ target: Binding<MenuTarget?>) -> some View {
-    self
+    modifier(ItemMenuPresenter(target: target))
+  }
+}
+
+/// Runs the menu's actions here rather than in the sheet, so the sheet needs
+/// no environment objects and the toast outlives it.
+private struct ItemMenuPresenter: ViewModifier {
+  @Binding var target: MenuTarget?
+
+  @EnvironmentObject private var albumViewModel: AlbumViewModel
+  @EnvironmentObject private var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject private var pinStore: PinStore
+  @State private var toast: FloToast.Message?
+
+  func body(content: Content) -> some View {
+    content
+      .sheet(item: $target) { target in
+        ItemMenu(
+          target: target, tile: tile(target),
+          isPinned: target.pin.map { pinStore.isPinned($0.id, $0.kind) },
+          isLiked: isLiked(target)
+        ) { action in
+          self.target = nil
+          WKInterfaceDevice.current().play(.click)
+          perform(action, on: target)
+        }
+      }
+      .floToast($toast)
+  }
+
+  private func tile(_ target: MenuTarget) -> CoverRow<EmptyView>.Tile {
+    switch target {
+    case .song(let song, _, _):
+      .cover(url: albumViewModel.getAlbumCoverArt(id: song.albumId), albumId: song.albumId)
+    case .album(let album):
+      .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id)
+    case .artist:
+      .glyph("music.mic", round: true)
+    }
+  }
+
+  /// The player's heart for the song playing, which may have changed since
+  /// the song was listed.
+  private func isLiked(_ target: MenuTarget) -> Bool {
+    switch target {
+    case .song(let song, _, _):
+      playerViewModel.isCurrent(song) ? playerViewModel.isStarred : albumViewModel.isStarred(song)
+    case .album(let album): album.starred
+    case .artist(let artist): artist.starred
+    }
+  }
+
+  private func perform(_ action: ItemMenu.Action, on target: MenuTarget) {
+    switch action {
+    case .pin:
+      guard let pin = target.pin else { return }
+      pinStore.toggle(pin.id, pin.kind)
+      show(pinStore.isPinned(pin.id, pin.kind) ? "Pinned" : "Unpinned")
+    case .playNext, .addToQueue:
+      Task {
+        let (songs, context, isFromPlaylist) = await target.queueSongs()
+        guard !songs.isEmpty else { return show("Not available offline") }
+        let next = action == .playNext
+        let queued =
+          next
+          ? playerViewModel.playNext(songs, context: context, isFromPlaylist: isFromPlaylist)
+          : playerViewModel.appendToQueue(songs, context: context, isFromPlaylist: isFromPlaylist)
+        if queued { show(next ? "Playing next" : "Added to queue") }
+      }
+    case .like:
+      let starred = !isLiked(target)
+      let done = { (success: Bool) in
+        show(success ? (starred ? "Liked" : "Removed from Liked") : "Not available offline")
+      }
+      switch target {
+      case .song(let song, _, _):
+        albumViewModel.setStar(starred, song: song) { success in
+          if success, playerViewModel.isCurrent(song) { playerViewModel.isStarred = starred }
+          done(success)
+        }
+      case .album(let album): albumViewModel.toggleStar(album: album, completion: done)
+      case .artist(let artist): albumViewModel.toggleStar(artist: artist, completion: done)
+      }
+    }
+  }
+
+  private func show(_ text: String) {
+    toast = FloToast.Message(text: text)
   }
 }

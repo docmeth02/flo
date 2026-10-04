@@ -54,7 +54,6 @@ struct TrackRowView: View {
       RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
         .fill(isPlaying ? tint.opacity(0.22) : idleBackground)
     )
-    .contentShape(Rectangle())
     .holdable(onTap: action, onHold: onHold)
   }
 }

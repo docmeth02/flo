@@ -8,6 +8,9 @@ import SwiftUI
 struct WatchAlbumsListView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
 
+  @State private var openedAlbumId: String?
+  @State private var menu: MenuTarget?
+
   var body: some View {
     LibraryList(
       title: "Albums", state: albumViewModel.state(.albums),
@@ -17,16 +20,25 @@ struct WatchAlbumsListView: View {
         message: "Albums on your Navidrome server show up here."),
       refresh: albumViewModel.refreshAlbums
     ) {
-      ForEach(albumViewModel.albums) { album in
-        NavigationLink(destination: WatchAlbumDetailView(album: album)) {
-          CoverRow(
-            tile: .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id),
-            title: album.name,
-            subtitle: album.albumArtist)
+      PinnedList(items: albumViewModel.albums, kind: .album, allLabel: "All Albums") {
+        album, isPinned in
+        CoverRow(
+          tile: .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id),
+          title: album.name,
+          subtitle: album.albumArtist
+        ) {
+          if isPinned { PinGlyph() }
         }
+        .holdable(onTap: { openedAlbumId = album.id }, onHold: { menu = .album(album) })
         .floRow()
       }
     }
+    .navigationDestination(item: $openedAlbumId) { id in
+      if let album = albumViewModel.albums.first(where: { $0.id == id }) {
+        WatchAlbumDetailView(album: album)
+      }
+    }
+    .itemMenu($menu)
     .onAppear {
       albumViewModel.fetchAlbums()
     }

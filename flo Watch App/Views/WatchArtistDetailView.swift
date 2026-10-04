@@ -13,6 +13,8 @@ struct WatchArtistDetailView: View {
   @StateObject var artistDetailViewModel = ArtistDetailViewModel()
 
   @State private var displayAlert: Bool = false
+  @State private var openedAlbumId: String?
+  @State private var menu: MenuTarget?
 
   let artist: Artist
 
@@ -45,12 +47,11 @@ struct WatchArtistDetailView: View {
 
       Section {
         ForEach(albumViewModel.albums(byArtist: artist.id)) { album in
-          NavigationLink(destination: WatchAlbumDetailView(album: album)) {
-            CoverRow(
-              tile: .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id),
-              title: album.name,
-              subtitle: album.minYear > 0 ? String(album.minYear) : "")
-          }
+          CoverRow(
+            tile: .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id),
+            title: album.name,
+            subtitle: album.minYear > 0 ? String(album.minYear) : "")
+          .holdable(onTap: { openedAlbumId = album.id }, onHold: { menu = .album(album) })
           .floRow()
         }
       } header: {
@@ -58,6 +59,12 @@ struct WatchArtistDetailView: View {
       }
     }
     .navigationTitle(artist.name)
+    .navigationDestination(item: $openedAlbumId) { id in
+      if let album = albumViewModel.albums(byArtist: artist.id).first(where: { $0.id == id }) {
+        WatchAlbumDetailView(album: album)
+      }
+    }
+    .itemMenu($menu)
     .onAppear {
       albumViewModel.fetchAlbumsByArtist(id: artist.id)
     }

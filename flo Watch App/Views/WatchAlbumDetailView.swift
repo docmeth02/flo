@@ -32,6 +32,7 @@ struct WatchAlbumDetailView: View {
       title: album.name,
       meta: meta,
       songs: displayAlbum.songs,
+      isPlaylist: AlbumService.shared.isPlaylistDownload(id: album.id),
       tint: tint,
       trackNumber: { _, song in song.trackNumber },
       playable: { displayAlbum },

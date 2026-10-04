@@ -16,6 +16,8 @@ struct CollectionDetailView<Artwork: View>: View {
   let title: String
   let meta: String
   let songs: [Song]
+  /// Queued songs from a playlist keep the playlist as their origin.
+  var isPlaylist = false
   var tint: Color = .floLavender
   let trackNumber: (_ index: Int, _ song: Song) -> Int
   /// Built on demand, so a playlist is only converted when it is played.
@@ -27,6 +29,7 @@ struct CollectionDetailView<Artwork: View>: View {
   @Environment(\.showPlayer) private var showPlayer
   @State private var downloaded = false
   @State private var downloadedIds: Set<String> = []
+  @State private var menu: MenuTarget?
 
   // From the downloaded records, so it is right as soon as a download ends.
   private var missingTrackCount: Int {
@@ -100,7 +103,8 @@ struct CollectionDetailView<Artwork: View>: View {
             title: song.title,
             artist: song.artist,
             isPlaying: playerViewModel.isCurrent(song),
-            tint: tint
+            tint: tint,
+            onHold: { menu = .song(song, context: title, isFromPlaylist: isPlaylist) }
           ) {
             if playerViewModel.playBySong(idx: index, item: playable(), isFromLocal: downloaded) {
               showPlayer()
@@ -111,6 +115,7 @@ struct CollectionDetailView<Artwork: View>: View {
       .padding(.horizontal, 8)
       .padding(.bottom, 16)
     }
+    .itemMenu($menu)
     .onAppear { refreshDownloadState() }
     .onReceive(downloadViewModel.$downloadWatcher) { newValue in
       if newValue {

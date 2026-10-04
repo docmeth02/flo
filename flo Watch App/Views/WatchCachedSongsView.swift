@@ -11,6 +11,7 @@ struct WatchCachedSongsView: View {
   let songs: [Song]
 
   @Environment(\.showPlayer) private var showPlayer
+  @State private var menu: MenuTarget?
 
   var body: some View {
     List {
@@ -19,7 +20,8 @@ struct WatchCachedSongsView: View {
           trackNumber: idx + 1,
           title: song.title,
           artist: song.artist,
-          isPlaying: playerViewModel.isCurrent(song)
+          isPlaying: playerViewModel.isCurrent(song),
+          onHold: { menu = .song(song, context: "Cached", isFromPlaylist: false) }
         ) {
           let cached = SongCollection(id: "cached-songs", name: "Cached", songs: songs)
           if playerViewModel.playBySong(idx: idx, item: cached, isFromLocal: true) { showPlayer() }
@@ -28,5 +30,6 @@ struct WatchCachedSongsView: View {
       }
     }
     .navigationTitle("Cached")
+    .itemMenu($menu)
   }
 }
