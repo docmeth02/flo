@@ -113,11 +113,12 @@ class APIManager {
     }
   }
 
-  // FIXME: refactor later
-  func SubsonicEndpointDownloadNew(
+  /// Downloads to a temporary file; progress, when asked for, is in percent.
+  @discardableResult
+  func SubsonicEndpointDownload(
     endpoint: String, method: HTTPMethod = .get, parameters: Parameters?,
     encoding: ParameterEncoding = URLEncoding.queryString,
-    progressUpdate: ((Double) -> Void)?,
+    progressUpdate: ((Double) -> Void)? = nil,
     completion: @escaping (Result<URL, AFError>) -> Void
   ) -> DownloadRequest {
 
@@ -125,47 +126,23 @@ class APIManager {
     let url =
       "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(AuthService.shared.getCreds(key: "subsonicToken"))"
 
-    return session.download(
+    let request = session.download(
       url, method: method, parameters: parameters, encoding: encoding,
       requestModifier: { $0.timeoutInterval = 60 }
     )
-    .downloadProgress { progressValue in
-      progressUpdate?(progressValue.fractionCompleted * 100)
+    if let progressUpdate {
+      request.downloadProgress { progressUpdate($0.fractionCompleted * 100) }
     }
-    .validate()
-    .responseURL { response in
-      switch response.result {
-      case .success(let fileURL):
-        completion(.success(fileURL))
-      case .failure(let error):
-        completion(.failure(error))
+    return request
+      .validate()
+      .responseURL { response in
+        switch response.result {
+        case .success(let fileURL):
+          completion(.success(fileURL))
+        case .failure(let error):
+          completion(.failure(error))
+        }
       }
-    }
-  }
-
-  func SubsonicEndpointDownload(
-    endpoint: String, method: HTTPMethod = .get, parameters: Parameters?,
-    encoding: ParameterEncoding = URLEncoding.queryString,
-    completion: @escaping (Result<URL, AFError>) -> Void
-  ) {
-
-    // FIXME: refactor getCreds(key: "subsonicToken")
-    let url =
-      "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(AuthService.shared.getCreds(key: "subsonicToken"))"
-
-    session.download(
-      url, method: method, parameters: parameters, encoding: encoding,
-      requestModifier: { $0.timeoutInterval = 60 }
-    )
-    .validate()
-    .responseURL { response in
-      switch response.result {
-      case .success(let fileURL):
-        completion(.success(fileURL))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
   }
 }
 

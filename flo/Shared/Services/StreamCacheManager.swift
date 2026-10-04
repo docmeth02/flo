@@ -149,7 +149,7 @@ class StreamCacheManager {
       self?.syncQueue.async { self?.inFlightProgress[key] = progress / 100.0 }
     }
 
-    let request = APIManager.shared.SubsonicEndpointDownloadNew(
+    let request = APIManager.shared.SubsonicEndpointDownload(
       endpoint: source.endpoint, parameters: source.parameters, progressUpdate: progressUpdate
     ) { [weak self] result in
       guard let self = self else { return }

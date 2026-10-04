@@ -738,7 +738,7 @@ class AlbumService {
     let path = Self.downloadPath(
       collectionId: collectionId, mediaFileId: mediaFileId, suffix: suffix)
 
-    return APIManager.shared.SubsonicEndpointDownloadNew(
+    return APIManager.shared.SubsonicEndpointDownload(
       endpoint: API.SubsonicEndpoint.download, parameters: params, progressUpdate: progressUpdate
     ) { result in
       switch result {
