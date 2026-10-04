@@ -91,6 +91,7 @@
 		F10E00000000000000000014 /* WatchHomeView+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10E00000000000000000004 /* WatchHomeView+Debug.swift */; };
 		F10E00000000000000000015 /* SmartPlaybackService+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10E00000000000000000005 /* SmartPlaybackService+Debug.swift */; };
 		1408D07DF69C513B20DC7368 /* WatchPlayerViewModel+QueueDebug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B5BB60F44BF48FF7A25BE73 /* WatchPlayerViewModel+QueueDebug.swift */; };
+		A6387FAFC31CDE427065AC0B /* WatchContentView+MenuDebug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D3B96B083E2837F57F165F /* WatchContentView+MenuDebug.swift */; };
 		F603ADBA32F245B193DE927F /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E012C149DDD00D9BAEB /* AuthService.swift */; };
 		FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		FB66DABB7F1FED68A499E009 /* PlusJakartaSans-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C415F55E2C11A34C00E3E1D2 /* PlusJakartaSans-VariableFont_wght.ttf */; };
@@ -218,6 +219,7 @@
 		F10E00000000000000000004 /* WatchHomeView+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WatchHomeView+Debug.swift"; sourceTree = "<group>"; };
 		F10E00000000000000000005 /* SmartPlaybackService+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "SmartPlaybackService+Debug.swift"; sourceTree = "<group>"; };
 		4B5BB60F44BF48FF7A25BE73 /* WatchPlayerViewModel+QueueDebug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WatchPlayerViewModel+QueueDebug.swift"; sourceTree = "<group>"; };
+		23D3B96B083E2837F57F165F /* WatchContentView+MenuDebug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WatchContentView+MenuDebug.swift"; sourceTree = "<group>"; };
 		F94DAD74D58A8EBD6F580A81 /* WatchRadiosView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
 		FABF85F19B541FE12696A0E5 /* WatchNowPlayingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNowPlayingView.swift; sourceTree = "<group>"; };
 		FBE281A2946A2E18C84927D8 /* WatchSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSettingsView.swift; sourceTree = "<group>"; };
@@ -473,6 +475,7 @@
 				F10E00000000000000000004 /* WatchHomeView+Debug.swift */,
 				F10E00000000000000000005 /* SmartPlaybackService+Debug.swift */,
 				4B5BB60F44BF48FF7A25BE73 /* WatchPlayerViewModel+QueueDebug.swift */,
+				23D3B96B083E2837F57F165F /* WatchContentView+MenuDebug.swift */,
 			);
 			path = Debug;
 			sourceTree = "<group>";
@@ -628,6 +631,7 @@
 				F10E00000000000000000014 /* WatchHomeView+Debug.swift in Sources */,
 				F10E00000000000000000015 /* SmartPlaybackService+Debug.swift in Sources */,
 				1408D07DF69C513B20DC7368 /* WatchPlayerViewModel+QueueDebug.swift in Sources */,
+				A6387FAFC31CDE427065AC0B /* WatchContentView+MenuDebug.swift in Sources */,
 				BE5C5E81B4634769556BAB00 /* WatchHomeView.swift in Sources */,
 				A696A6F708006E6ABC75D01C /* WatchLoginView.swift in Sources */,
 				2F8DDF24A4E509AD68036392 /* WatchNowPlayingView.swift in Sources */,

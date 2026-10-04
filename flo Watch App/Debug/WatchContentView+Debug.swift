@@ -26,6 +26,7 @@
         group.addTask { await runDebugMixDump() }
         group.addTask { await runDebugDiagnostics() }
         group.addTask { await runDebugScreen() }
+        group.addTask { await runDebugMenuActions() }
       }
     }
 
