@@ -48,13 +48,11 @@ sed -i '' "s/CURRENT_PROJECT_VERSION = $current;/CURRENT_PROJECT_VERSION = $buil
 bumped=true
 echo "release: build $build from $branch at $(git rev-parse --short HEAD)"
 
-if xcodebuild -list -project flo.xcodeproj 2>/dev/null | grep -q "flo Watch AppTests"; then
-  echo "release: testing"
-  xcodebuild test -project flo.xcodeproj -scheme "flo Watch App" \
-    -destination "platform=watchOS Simulator,id=$simulator" >"$log" 2>&1 \
-    || fail "tests failed, see $log"
-  xcrun simctl terminate "$simulator" host.docmeth02.flowatch.watchkitapp 2>/dev/null || true
-fi
+echo "release: testing"
+xcodebuild test -project flo.xcodeproj -scheme "flo Watch App" \
+  -destination "platform=watchOS Simulator,id=$simulator" >"$log" 2>&1 \
+  || fail "tests failed, see $log"
+xcrun simctl terminate "$simulator" host.docmeth02.flowatch.watchkitapp 2>/dev/null || true
 
 echo "release: archiving"
 xcodebuild archive -project flo.xcodeproj -scheme "flo watch" -configuration Release \
@@ -63,7 +61,9 @@ xcodebuild archive -project flo.xcodeproj -scheme "flo watch" -configuration Rel
 
 binary=$(find "$work/flowatch.xcarchive" -type f -path "*flo Watch App.app/flo Watch App" | head -1)
 [[ -n "$binary" ]] || fail "no watch binary in the archive"
-if strings "$binary" | grep -q FLO_DEBUG; then fail "the release binary contains FLO_DEBUG"; fi
+# Through a file: grep -q ending a pipe early could fail the check open.
+strings "$binary" >"$work/strings.txt" || fail "cannot read the release binary"
+if grep -q FLO_DEBUG "$work/strings.txt"; then fail "the release binary contains FLO_DEBUG"; fi
 
 if $dry_run; then
   echo "release: dry run done, build $build archived in $work, nothing uploaded"
@@ -77,5 +77,6 @@ xcodebuild -exportArchive -archivePath "$work/flowatch.xcarchive" \
 
 git commit -q -m "bump build number to $build" -- "$project"
 bumped=false
-git branch -f testflight HEAD
-echo "release: build $build uploaded, testflight moved to $(git rev-parse --short HEAD); push when ready"
+echo "release: build $build uploaded and committed"
+git branch -f testflight HEAD || fail "move testflight to $(git rev-parse --short HEAD) by hand"
+echo "release: testflight moved to $(git rev-parse --short HEAD); push when ready"
