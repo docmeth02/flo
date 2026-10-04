@@ -10,8 +10,8 @@
   // a few seconds after launch; FLO_DEBUG_BROKEN_FIRST=1 puts an unknown song
   // first; FLO_DEBUG_SEEK=<0...1> then seeks the first track to that
   // position; the queue state is logged along the way. FLO_DEBUG_BITRATE=<kbps>
-  // sets the bitrate limit (it stays in the simulator's defaults),
-  // FLO_DEBUG_RESUME_AT=<s> breaks the remote stream once it reaches that
+  // sets the bitrate limit to one Settings offers (it stays in the simulator's
+  // defaults), FLO_DEBUG_RESUME_AT=<s> breaks the remote stream once it reaches that
   // position, and FLO_DEBUG_DUMP_LOG=<s> logs the request log at that time.
   // FLO_DEBUG_RATE=<playbackID>:<0-5> rates a song at launch;
   // FLO_DEBUG_SKIP_AFTER=<s> presses next once the first song was heard that long.

@@ -16,15 +16,6 @@ struct WatchSettingsView: View {
   @State private var showRebuildHistoryAlert = false
   @State private var selectedCacheSize: Int64 = UserDefaultsManager.streamCacheMaxSize
 
-  private let watchBitRates = ["0", "32", "64", "96", "128"]
-  private let bitRateLabels = [
-    "0": "Source",
-    "32": "32 kbps",
-    "64": "64 kbps",
-    "96": "96 kbps",
-    "128": "128 kbps",
-  ]
-
   var body: some View {
     List {
       Section {
@@ -56,8 +47,8 @@ struct WatchSettingsView: View {
 
       Section {
         Picker("Bitrate", selection: $selectedBitRate) {
-          ForEach(watchBitRates, id: \.self) { rate in
-            Text(bitRateLabels[rate] ?? rate)
+          ForEach(TranscodingSettings.bitRates, id: \.self) { rate in
+            Text(rate == TranscodingSettings.sourceBitRate ? "Source" : "\(rate) kbps")
               .tag(rate)
           }
         }

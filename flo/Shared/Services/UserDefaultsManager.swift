@@ -91,8 +91,8 @@ class UserDefaultsManager {
 
   static var maxBitRate: String {
     get {
-      return UserDefaults.standard.string(forKey: UserDefaultsKeys.enableMaxBitRate)
-        ?? TranscodingSettings.sourceBitRate
+      TranscodingSettings.offeredBitRate(
+        UserDefaults.standard.string(forKey: UserDefaultsKeys.enableMaxBitRate))
     }
     set {
       UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.enableMaxBitRate)

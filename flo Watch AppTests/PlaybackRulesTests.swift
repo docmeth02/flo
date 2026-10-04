@@ -45,4 +45,14 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertEqual(origin("Road Trip", playlist: true), .playlist)
     XCTAssertEqual(origin("Some Album"), .album)
   }
+
+  func testBitRatesNoLongerOfferedReadAsTheDefault() {
+    XCTAssertEqual(TranscodingSettings.offeredBitRate(nil), "192")
+    for rate in ["32", "64", "96", "", "abc"] {
+      XCTAssertEqual(TranscodingSettings.offeredBitRate(rate), "192", rate)
+    }
+    for rate in TranscodingSettings.bitRates {
+      XCTAssertEqual(TranscodingSettings.offeredBitRate(rate), rate)
+    }
+  }
 }
