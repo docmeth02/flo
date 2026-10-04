@@ -1,26 +1,32 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "Play ${artist} in ${applicationName}" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spiele ${artist} in ${applicationName}"
+  "sourceLanguage": "en",
+  "strings": {
+    "Play ${artist} in ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Spiele ${artist} in ${applicationName}",
+              "Spiel ${artist} in ${applicationName}"
+            ]
           }
         }
       }
     },
-    "Play something in ${applicationName}" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spiele etwas in ${applicationName}"
+    "Play something in ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Spiele etwas in ${applicationName}",
+              "Spiel etwas in ${applicationName}"
+            ]
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }
