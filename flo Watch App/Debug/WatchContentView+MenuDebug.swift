@@ -29,9 +29,11 @@
       let artists: [Artist] = await Self.debugLoad(AlbumService.shared.getArtists)
 
       if case let (kind, id)? = env["FLO_DEBUG_STAR"].flatMap(Self.debugItem) {
+        // The cached lists when offline, where the requests above fail.
         let listed =
           kind == .album
-          ? albums.first { $0.id == id }?.starred : artists.first { $0.id == id }?.starred
+          ? await albumViewModel.loadedOrCached(albums, .albums).first { $0.id == id }?.starred
+          : await albumViewModel.loadedOrCached(artists, .artists).first { $0.id == id }?.starred
         if let listed {
           let starred = StarStore.shared.isStarred(id, listed: listed)
           debugLog("star hook: \(kind) \(id) was starred=\(starred)")
