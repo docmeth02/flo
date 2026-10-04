@@ -422,7 +422,8 @@ class AlbumViewModel: ObservableObject {
   @MainActor func cacheArtistsIfNeeded() async {
     guard artists.isEmpty else { return }
     let cached: [Artist] = await Self.cached(.artists)
-    if cached.isEmpty { getArtists() }
+    // Not offline: a failed load would be asked again on every return to Home.
+    if cached.isEmpty, ConnectivityMonitor.shared.canReachServer { getArtists() }
   }
 
   // MARK: - Async refresh variants

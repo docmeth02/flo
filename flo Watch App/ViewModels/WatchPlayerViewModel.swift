@@ -280,16 +280,15 @@ class WatchPlayerViewModel: ObservableObject {
       let reason = (userInfo[AVAudioSessionInterruptionReasonKey] as? UInt).map(String.init) ?? "-"
       RequestLog.shared.note(
         "audio interruption began reason=\(reason) activating=\(isActivatingSession)")
-      // While the session is still activating (the device list may be up),
-      // nothing plays yet and the start must survive.
-      if isActivatingSession {
-        resumeAfterInterruption = true
-        return
-      }
+      // A first start still activating (the device list may be up): nothing
+      // plays to pause, and the start must survive. No resume either, or
+      // dismissing the list would open it again.
+      if isActivatingSession, !isPlaying { return }
       // Through pause() so a pending skip or Keep Playing mix does not start
       // playback during the call.
-      self.resumeAfterInterruption = self.isPlaying
-      self.pause()
+      let wasPlaying = isPlaying
+      pause()
+      resumeAfterInterruption = wasPlaying
     case .ended:
       RequestLog.shared.note("audio interruption ended resume=\(resumeAfterInterruption)")
       // Music the user had paused before the call stays paused.
@@ -613,6 +612,7 @@ class WatchPlayerViewModel: ObservableObject {
     startGeneration += 1
     playRequestedAt = nil
     isActivatingSession = false
+    resumeAfterInterruption = false
     player?.pause()
     detachItem()
 
@@ -951,10 +951,11 @@ class WatchPlayerViewModel: ObservableObject {
     commandCenter.pauseCommand.addTarget { [weak self] event in
       guard let self = self else { return .commandFailed }
       DispatchQueue.main.async {
-        // Headphones often send pause as they connect, before anything plays.
+        // Headphones often send pause as they connect, before anything plays;
+        // with nothing playing it must not cancel the waiting start.
         RequestLog.shared.note(
           "audio remote pause activating=\(self.isActivatingSession) playing=\(self.isPlaying)")
-        guard !self.isActivatingSession else { return }
+        guard self.isPlaying, !self.isActivatingSession else { return }
         self.pause()
       }
       return .success
@@ -1067,8 +1068,9 @@ class WatchPlayerViewModel: ObservableObject {
           }
           return
         }
-        // Playing from here; a later end of an interruption must not restart
-        // music the user may pause meanwhile.
+        // Playing from here: the request is fulfilled, and a later end of an
+        // interruption must not restart music the user may pause meanwhile.
+        self.playRequestedAt = nil
         self.resumeAfterInterruption = false
 
         if self.isFinished {
@@ -1129,6 +1131,7 @@ class WatchPlayerViewModel: ObservableObject {
     playGeneration += 1
     playRequestedAt = nil
     isActivatingSession = false
+    resumeAfterInterruption = false
     player?.pause()
     reportPlayback(.paused)
 
@@ -1141,6 +1144,7 @@ class WatchPlayerViewModel: ObservableObject {
     playGeneration += 1
     playRequestedAt = nil
     isActivatingSession = false
+    resumeAfterInterruption = false
     player?.pause()
     // No observer tick follows while paused, so the reset is applied here.
     // Starting the song over is a new listen, which may count again.
@@ -1268,9 +1272,10 @@ class WatchPlayerViewModel: ObservableObject {
   /// artist's songs from the cached library, offline those on the watch,
   /// shuffled. False like `playSomething()`.
   @MainActor func playArtist(id: String, name: String) async -> Bool {
-    // Offline the top songs request could only time out first.
-    let online = ConnectivityMonitor.shared.canReachServer
-    return await playWhenBuilt {
+    await playWhenBuilt {
+      // A fresh verdict: right after launch the monitor still assumes online,
+      // and offline the top songs request could only time out.
+      var online = await ConnectivityMonitor.shared.canStream()
       var songs: [Song] = []
       if online {
         songs = await withCheckedContinuation { continuation in
@@ -1280,11 +1285,15 @@ class WatchPlayerViewModel: ObservableObject {
         }
       }
       if songs.isEmpty {
-        // Offline only what is downloaded or cached can play.
-        let library =
+        // The request may have failed because the link went meanwhile.
+        online = online && ConnectivityMonitor.shared.canReachServer
+        // Offline only what is downloaded or cached can play; online an empty
+        // library cache (a fresh login) is synced first.
+        var library =
           online
           ? await SmartPlaybackService.shared.loadCachedLibrary().songs
           : await SmartPlaybackService.shared.offlinePlayableSongs()
+        if online, library.isEmpty { library = await SmartPlaybackService.shared.syncSongLibrary() }
         songs = library.filter { $0.isBy(artistId: id, name: name) }.shuffled()
       }
       return SongCollection(id: "artist-\(id)", name: name, songs: songs)
