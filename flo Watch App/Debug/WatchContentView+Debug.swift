@@ -217,7 +217,7 @@
     }
 
     // FLO_DEBUG_SCREEN=<name> pushes one screen four seconds after
-    // launch, for screenshots: albums, album, playlist, artist, liked, radios,
+    // launch, for screenshots: albums, artists, album, playlist, artist, liked, radios,
     // downloads, settings, queue, login-error.
     private func runDebugScreen() async {
       guard let name = ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN"] else { return }
@@ -232,6 +232,7 @@
       let view: AnyView
       switch name {
       case "albums": view = AnyView(WatchAlbumsListView())
+      case "artists": view = AnyView(WatchArtistsListView())
       case "album":
         guard let album = await load(AlbumService.shared.getAlbum).first else {
           return debugLog("screen hook: no albums")
