@@ -163,27 +163,21 @@ class FloooViewModel: ObservableObject {
   private func processScrobble(submission: Bool, payload: ScrobblePayload) {
     // Navidrome records every scrobble for its own play counts and forwards it
     // to Last.fm or ListenBrainz when the user linked them there, so the watch
-    // always scrobbles to the server and queues submissions while it is away.
-    let connectivity = ConnectivityMonitor.shared
-    guard connectivity.isOnline, connectivity.isServerReachable else {
-      if submission {
-        ScrobbleQueueManager.shared.enqueue(payload)
-      }
+    // always scrobbles to the server. A submission goes through the outbox, so
+    // it survives the app being killed while the request is in flight.
+    if submission {
+      ScrobbleQueueManager.shared.enqueue(payload)
       return
     }
 
-    FloooService.shared.scrobbleToBuiltinEndpoint(
-      submission: submission, songId: payload.songId, time: payload.listenTime
-    ) { result in
-      switch result {
-      case .success:
-        debugLog("scrobble delivered: \(payload.songId) submission=\(submission)")
-        if submission { ListeningHistoryStore.shared.scrobbleDelivered() }
+    let connectivity = ConnectivityMonitor.shared
+    guard connectivity.isOnline, connectivity.isServerReachable else { return }
 
-      case .failure(let error):
-        if submission && !FloooService.shared.isPermanentScrobbleFailure(error) {
-          DispatchQueue.main.async { ScrobbleQueueManager.shared.enqueue(payload) }
-        }
+    FloooService.shared.scrobbleToBuiltinEndpoint(
+      submission: false, songId: payload.songId, time: payload.listenTime
+    ) { result in
+      if case .success = result {
+        debugLog("scrobble delivered: \(payload.songId) submission=false")
       }
     }
   }

@@ -248,6 +248,15 @@ class CoreDataManager: ObservableObject {
     let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: entityName)
     fetchRequest.predicate = predicate
 
+    // NSBatchDeleteRequest needs an SQLite store; the in-memory fallback
+    // deletes object by object.
+    if isUsingVolatileStore {
+      let objects = (try? viewContext.fetch(fetchRequest)) as? [NSManagedObject] ?? []
+      objects.forEach { viewContext.delete($0) }
+      saveRecord()
+      return
+    }
+
     let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
     deleteRequest.resultType = .resultTypeObjectIDs
 

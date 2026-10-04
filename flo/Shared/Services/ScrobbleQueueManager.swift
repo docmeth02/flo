@@ -46,6 +46,7 @@ final class ScrobbleQueueManager {
 
   private var scrobbles: [ScrobbleEntity] = []
   private var isFlushing = false
+  private var flushRequested = false
   private var retryTimer: Timer?
   private var retryDelay = initialRetryDelay
   private var reachability: AnyCancellable?
@@ -92,7 +93,13 @@ final class ScrobbleQueueManager {
 
     CoreDataManager.shared.saveRecord()
     reload()
-    scheduleRetry()
+
+    let connectivity = ConnectivityMonitor.shared
+    if connectivity.isOnline, connectivity.isServerReachable {
+      flush()
+    } else {
+      scheduleRetry()
+    }
   }
 
   /// Drops every queued entry, e.g. on logout: they belong to the previous
@@ -113,7 +120,8 @@ final class ScrobbleQueueManager {
 
   private func flush() {
     guard !isFlushing else {
-      // A retry landing mid-flush must not be lost.
+      // A retry or a listen landing mid-flush must not be lost.
+      flushRequested = true
       scheduleRetry()
       return
     }
@@ -132,6 +140,7 @@ final class ScrobbleQueueManager {
     }
 
     isFlushing = true
+    flushRequested = false
     submitPending(scrobbles)
   }
 
@@ -140,8 +149,14 @@ final class ScrobbleQueueManager {
       isFlushing = false
       retryDelay = Self.initialRetryDelay
       reload()
-      cancelRetry()
       NotificationCenter.default.post(name: .scrobbleOutboxFlushed, object: nil)
+      // Entries queued during this flush go out now. Only on request, so an
+      // entry whose delete failed to save is not sent over and over.
+      if flushRequested {
+        flush()
+      } else {
+        cancelRetry()
+      }
       return
     }
 
