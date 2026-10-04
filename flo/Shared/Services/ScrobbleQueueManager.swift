@@ -159,17 +159,19 @@ final class ScrobbleQueueManager {
   private func submitPending(_ entries: [ScrobbleEntity]) {
     guard let entry = entries.first else {
       isFlushing = false
-      retryDelay = Self.initialRetryDelay
       reload()
       NotificationCenter.default.post(name: .scrobbleOutboxFlushed, object: nil)
-      // Entries queued during this flush go out now, or with the retry when
-      // the server looked unreachable as they were queued.
+      if scrobbles.isEmpty { retryDelay = Self.initialRetryDelay }
+      // Entries queued during this flush go out now. Rows left over (queued
+      // while the server looked unreachable, or a delete that failed to save)
+      // come back with a growing delay.
       if flushRequested {
         flushRequested = false
         flush()
       } else if scrobbles.isEmpty {
         cancelRetry()
       } else {
+        backOff()
         scheduleRetry()
       }
       return
