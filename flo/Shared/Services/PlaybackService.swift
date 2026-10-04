@@ -11,12 +11,12 @@ import Foundation
 class PlaybackService {
   static let shared = PlaybackService()
 
-  /// The queue in play order. The entity has no position attribute, but the
-  /// batch insert assigns primary keys in queue order; an unsorted fetch
-  /// returns the rows in no particular order.
+  /// The queue in play order. A queue stored before the position attribute
+  /// existed has every position at 0, but its batch insert assigned primary
+  /// keys in queue order, so they break the tie.
   func getQueue() -> [QueueEntity] {
     return CoreDataManager.shared.getRecordsByEntity(entity: QueueEntity.self)
-      .sorted { Self.primaryKey($0) < Self.primaryKey($1) }
+      .sorted { ($0.position, Self.primaryKey($0)) < ($1.position, Self.primaryKey($1)) }
   }
 
   private static func primaryKey(_ entity: QueueEntity) -> Int {
@@ -28,8 +28,11 @@ class PlaybackService {
     CoreDataManager.shared.deleteRecords(entity: QueueEntity.self)
   }
 
+  /// Replaces the stored queue in one save, so a failure keeps the old queue.
+  /// Returns the new queue, or nothing if it could not be stored.
   func addToQueue<T: Playable>(item: T, isFromLocal: Bool = false) -> [QueueEntity] {
-    self.clearQueue()
+    let context = CoreDataManager.shared.viewContext
+    let oldQueue = CoreDataManager.shared.getRecordsByEntity(entity: QueueEntity.self)
 
     let isPlaylist = item is Playlist
     let isPlaylistAlbum =
@@ -40,26 +43,31 @@ class PlaybackService {
 
     let isFromPlaylist = isPlaylist || isPlaylistAlbum
 
-    let objects = item.songs.map { song in
-      return [
-        "id": song.mediaFileId == "" ? song.id : song.mediaFileId,
-        "albumId": song.albumId,
-        "albumName": song.albumName.isEmpty ? item.name : song.albumName,
-        "contextName": item.name,
-        "artistName": song.artist,
-        "bitRate": song.bitRate,
-        "sampleRate": song.sampleRate,
-        "songName": song.title,
-        "suffix": song.suffix,
-        "isFromPlaylist": isFromPlaylist,
-        "isFromLocal": isFromLocal,
-        "duration": song.duration,
-        "explicitStatus": song.explicitStatus.rawValue,
-      ] as [String: Any]
+    for (index, song) in item.songs.enumerated() {
+      let entity = QueueEntity(context: context)
+      entity.id = song.mediaFileId == "" ? song.id : song.mediaFileId
+      entity.albumId = song.albumId
+      entity.albumName = song.albumName.isEmpty ? item.name : song.albumName
+      entity.contextName = item.name
+      entity.artistName = song.artist
+      entity.bitRate = Int16(clamping: song.bitRate)
+      entity.sampleRate = Int32(clamping: song.sampleRate)
+      entity.songName = song.title
+      entity.suffix = song.suffix
+      entity.isFromPlaylist = isFromPlaylist
+      entity.isFromLocal = isFromLocal
+      entity.duration = song.duration
+      entity.position = Int32(index)
     }
+    oldQueue.forEach(context.delete)
 
-    let request = NSBatchInsertRequest(entity: QueueEntity.entity(), objects: objects)
-    _ = try? CoreDataManager.shared.viewContext.execute(request)
+    do {
+      try context.save()
+    } catch {
+      context.rollback()
+      print("Failed to store the queue: \(error.localizedDescription)")
+      return []
+    }
 
     return self.getQueue()
   }

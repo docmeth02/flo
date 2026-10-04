@@ -1121,6 +1121,7 @@ class WatchPlayerViewModel: ObservableObject {
     reportStopped()
     resetSession()
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
+    guard !queue.isEmpty else { return false }
     self.addToQueue(idx: idx, item: queue)
     return true
   }
@@ -1132,6 +1133,7 @@ class WatchPlayerViewModel: ObservableObject {
     reportStopped()
     resetSession()
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
+    guard !queue.isEmpty else { return false }
     self.addToQueue(idx: 0, item: queue)
     return true
   }
@@ -1146,6 +1148,7 @@ class WatchPlayerViewModel: ObservableObject {
     shuffledItem.songs.shuffle()
 
     let queue = PlaybackService.shared.addToQueue(item: shuffledItem, isFromLocal: isFromLocal)
+    guard !queue.isEmpty else { return false }
     self.addToQueue(idx: 0, item: queue)
     return true
   }
@@ -1161,6 +1164,7 @@ class WatchPlayerViewModel: ObservableObject {
 
     let item = radio.toPlayable()
     let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: false)
+    guard !queue.isEmpty else { return false }
 
     self.activeQueueIdx = 0
     self.queue = queue
@@ -1473,10 +1477,15 @@ class WatchPlayerViewModel: ObservableObject {
         debugLog("keep playing: \(songs.count) songs follow")
 
         let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: songs)
+        // A mix that could not be stored ends playback like an empty one.
+        let queue = PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false)
+        guard !queue.isEmpty else {
+          self.stop()
+          return
+        }
         // Through addToQueue, so shuffle state and failure counts reset like
         // for any other new queue.
-        self.addToQueue(
-          idx: 0, item: PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false))
+        self.addToQueue(idx: 0, item: queue)
       }
     }
   }
