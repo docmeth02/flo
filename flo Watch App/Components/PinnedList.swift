@@ -17,7 +17,8 @@ struct PinnedList<Item: Identifiable, Row: View>: View where Item.ID == String {
   @ViewBuilder let row: (Item, _ isPinned: Bool) -> Row
 
   var body: some View {
-    let pinned = pinStore.pinned(kind)
+    // A pinned item gone from the library leaves no empty section.
+    let pinned = pinStore.pinned(kind).intersection(items.map(\.id))
     if pinned.isEmpty {
       rows(items, pinned)
     } else {

@@ -54,6 +54,9 @@ class WatchPlayerViewModel: ObservableObject {
   // Bumped by a song change and by every tap on the heart; a starred lookup
   // or a failed toggle from before must not overwrite the newer state.
   private var starGeneration = 0
+  // Song stars the server confirmed this session, by id; song lists keep the
+  // state they were loaded with.
+  private var confirmedStars: [String: Bool] = [:]
   // starGeneration at the last song change; a tap since then moves past it.
   private var starSongGeneration = 0
   // The song change's lookup failed with the server unreachable; announcing
@@ -568,6 +571,7 @@ class WatchPlayerViewModel: ObservableObject {
   private func clearForLogout() {
     // No report: the credentials are gone before this runs.
     resetSession()
+    confirmedStars = [:]
     playGeneration += 1
     startGeneration += 1
     player?.pause()
@@ -634,9 +638,9 @@ class WatchPlayerViewModel: ObservableObject {
     self.restartedTrackId = nil
     self.reloadedFailedTrackId = nil
 
-    // The song after next may already be on its way.
-    StreamCacheManager.shared.cancelAllInFlight(
-      keeping: Set(upcomingQueueIndices(2).compactMap { queue[$0].id }))
+    // Before its 10 s this only cancels downloads no longer upcoming; the
+    // song after next may already be on its way.
+    precacheUpcoming()
     StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: self.nowPlaying.id ?? "")
 
     // The item itself is attached by play(), so a queue restored at launch
@@ -1508,11 +1512,40 @@ class WatchPlayerViewModel: ObservableObject {
 
     let action = shouldStar ? AlbumService.shared.star : AlbumService.shared.unstar
     action(songId) { [weak self] success in
-      if !success {
-        DispatchQueue.main.async {
-          guard let self, self.starGeneration == generation else { return }
+      DispatchQueue.main.async {
+        guard let self else { return }
+        if success {
+          self.confirmedStars[songId] = shouldStar
+        } else if self.starGeneration == generation {
           self.isStarred = !shouldStar
         }
+      }
+    }
+  }
+
+  /// Whether a listed song is liked: the heart for the song playing, else
+  /// what the server confirmed this session, else the state it was listed with.
+  func isStarred(_ song: Song) -> Bool {
+    if isCurrent(song) { return isStarred }
+    return confirmedStars[song.playbackID] ?? (song.starred || song.starredAt != nil)
+  }
+
+  /// Likes or unlikes a listed song once the server takes it; `completion`
+  /// tells whether it did.
+  func setStar(_ starred: Bool, song: Song, completion: @escaping (Bool) -> Void) {
+    let songId = song.playbackID
+    let action = starred ? AlbumService.shared.star : AlbumService.shared.unstar
+    action(songId) { [weak self] success in
+      DispatchQueue.main.async {
+        if success, let self {
+          self.confirmedStars[songId] = starred
+          if self.isCurrent(song) {
+            // A heart tap still in flight must not roll this back.
+            self.starGeneration += 1
+            self.isStarred = starred
+          }
+        }
+        completion(success)
       }
     }
   }
@@ -1521,8 +1554,11 @@ class WatchPlayerViewModel: ObservableObject {
   /// music. Only once the current song played 10 s: a song skipped right
   /// away should not cost two downloads.
   func precacheUpcoming() {
+    let upcoming = upcomingQueueIndices(2)
+    // A song edited out of the next two stops downloading.
+    StreamCacheManager.shared.cancelAllInFlight(keeping: Set(upcoming.compactMap { queue[$0].id }))
     guard hasTriggeredCache, !isLiveRadio else { return }
-    for idx in upcomingQueueIndices(2) {
+    for idx in upcoming {
       let entry = queue[idx]
       guard let id = entry.id, !id.isEmpty else { continue }
       AlbumService.shared.prefetchTranscodeDecision(songId: id)

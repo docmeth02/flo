@@ -28,7 +28,7 @@ extension WatchPlayerViewModel {
   @discardableResult
   func playNext(_ songs: [Song], context: String, isFromPlaylist: Bool = false) -> Bool {
     guard !songs.isEmpty else { return false }
-    guard isEditable else { return start(songs, context: context) }
+    guard isEditable else { return start(songs, context: context, isFromPlaylist: isFromPlaylist) }
     let entries = makeEntries(songs, context: context, isFromPlaylist: isFromPlaylist)
     return editQueue { insertAfterCurrent(entries, in: &$0) }
   }
@@ -38,7 +38,7 @@ extension WatchPlayerViewModel {
   @discardableResult
   func appendToQueue(_ songs: [Song], context: String, isFromPlaylist: Bool = false) -> Bool {
     guard !songs.isEmpty else { return false }
-    guard isEditable else { return start(songs, context: context) }
+    guard isEditable else { return start(songs, context: context, isFromPlaylist: isFromPlaylist) }
     let entries = makeEntries(songs, context: context, isFromPlaylist: isFromPlaylist)
     return editQueue { $0.append(contentsOf: entries) }
   }
@@ -64,8 +64,10 @@ extension WatchPlayerViewModel {
     let entity = PlaybackService.shared.makeEntry(
       song: entry.song, context: entry.context, isFromPlaylist: entry.isFromPlaylist,
       isFromLocal: entry.isFromLocal)
+    // Never before the current song, where it would not play again.
+    let index = max(entry.index, activeQueueIdx + 1)
     return editQueue(
-      { $0.insert(entity, at: min(entry.index, $0.count)) },
+      { $0.insert(entity, at: min(index, $0.count)) },
       stored: { $0.insert(entity, at: min(entry.storedIndex, $0.count)) })
   }
 
@@ -83,8 +85,9 @@ extension WatchPlayerViewModel {
   // A live radio's queue is the station alone.
   private var isEditable: Bool { hasNowPlaying() && !isLiveRadio }
 
-  private func start(_ songs: [Song], context: String) -> Bool {
-    playItem(item: SongCollection(id: context, name: context, songs: songs), isFromLocal: false)
+  private func start(_ songs: [Song], context: String, isFromPlaylist: Bool) -> Bool {
+    let item = SongCollection(id: context, name: context, songs: songs, isPlaylist: isFromPlaylist)
+    return playItem(item: item, isFromLocal: false)
   }
 
   private func makeEntries(_ songs: [Song], context: String, isFromPlaylist: Bool) -> [QueueEntity] {

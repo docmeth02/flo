@@ -83,11 +83,11 @@ class PlaybackService {
     }
   }
 
-  /// Whether songs played from `item` come from a playlist: a playlist, or
-  /// one played as an album, which carries "Various Artists" and its owner
-  /// in the genre.
+  /// Whether songs played from `item` come from a playlist: a playlist, songs
+  /// taken from one, or one played as an album, which carries "Various
+  /// Artists" and its owner in the genre.
   static func isPlaylist<T: Playable>(_ item: T) -> Bool {
-    if item is Playlist { return true }
+    if item is Playlist || (item as? SongCollection)?.isPlaylist == true { return true }
     guard let album = item as? Album else { return false }
     return album.artist == "Various Artists" && album.albumArtist == "Various Artists"
       && album.genre.contains(" by ")

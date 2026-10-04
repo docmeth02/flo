@@ -62,7 +62,6 @@ class AlbumViewModel: ObservableObject {
     albums = []
     starredSongs = []
     recentAlbums = []
-    songStars = [:]
     listStates = [:]
   }
 
@@ -435,13 +434,14 @@ class AlbumViewModel: ObservableObject {
     async let index = SmartPlaybackService.shared.libraryIndex(allowSync: false)
     let plays = await mirrored + (await journal).lastHeardAt.map { (id: $0.key, at: $0.value) }
     let songs = await index.songs
-    // A logout meanwhile must not show the previous account's albums.
-    guard LibraryCacheManager.shared.generation == cacheGeneration else { return }
-
     let library =
       albums.isEmpty
-      ? LibraryCacheManager.shared.load([Album].self, forKey: Library.albums.rawValue) ?? []
+      ? await Task.detached {
+        LibraryCacheManager.shared.load([Album].self, forKey: Library.albums.rawValue) ?? []
+      }.value
       : albums
+    // A logout meanwhile must not show the previous account's albums.
+    guard LibraryCacheManager.shared.generation == cacheGeneration else { return }
     let byId = Dictionary(library.map { ($0.id, $0) }) { first, _ in first }
     var seen = Set<String>()
     recentAlbums = Array(
@@ -452,22 +452,6 @@ class AlbumViewModel: ObservableObject {
   }
 
   // MARK: - Stars
-
-  /// Song stars the server confirmed since the songs were loaded, by id; the
-  /// lists keep the state they were loaded with.
-  private var songStars: [String: Bool] = [:]
-
-  func isStarred(_ song: Song) -> Bool {
-    songStars[song.playbackID] ?? (song.starred || song.starredAt != nil)
-  }
-
-  /// `completion` tells whether the server took the change; the state here
-  /// changes only once it did. The Liked list picks it up on its next load.
-  func setStar(_ starred: Bool, song: Song, completion: @escaping (Bool) -> Void) {
-    setStar(starred, id: song.playbackID, completion: completion) {
-      self.songStars[song.playbackID] = starred
-    }
-  }
 
   func toggleStar(album: Album, completion: @escaping (Bool) -> Void) {
     let starred = !album.starred

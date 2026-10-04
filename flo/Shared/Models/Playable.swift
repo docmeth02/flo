@@ -17,4 +17,6 @@ struct SongCollection: Playable {
   let name: String
   var songs: [Song]
   let artist: String = ""
+  /// Songs taken from a playlist keep it as their origin.
+  var isPlaylist = false
 }
