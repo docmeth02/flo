@@ -65,4 +65,17 @@ final class StarStoreTests: XCTestCase {
     store.adoptServerState(false, id: "s1")
     XCTAssertTrue(store.isStarred("s1", listed: false))
   }
+
+  func testAFreshStarredListIsAdoptedUnlessAnEditCameInBetween() {
+    let store = makeStore()
+    store.adoptServerState(false, id: "s1")
+    store.adoptServerStars(["s1"], since: store.editCount)
+    XCTAssertTrue(store.isStarred("s1", listed: false))
+
+    let since = store.editCount
+    reachable = false
+    store.set(false, id: "s2")
+    store.adoptServerStars(["s2"], since: since)
+    XCTAssertFalse(store.isStarred("s2", listed: false))
+  }
 }

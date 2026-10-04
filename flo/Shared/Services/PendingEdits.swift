@@ -111,8 +111,10 @@ import Foundation
       accepted = false
     }
     if values[id] == value { values[id] = nil }
-    save()
+    // The owner stores what the server took before the edit leaves the
+    // disk, so a kill in between loses neither.
     onSettle(id, value, accepted)
+    save()
 
     // Changed again while this one was under way.
     if values[id] != nil { flush() }

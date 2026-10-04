@@ -75,6 +75,15 @@ import WatchKit
     publish()
   }
 
+  /// The server's list of starred items, asked for when `editCount` was
+  /// `since`: newer than earlier lookups. Ignored when an edit was made
+  /// meanwhile; edits still waiting stay on top.
+  func adoptServerStars(_ ids: [String], since: Int) {
+    guard since == editCount else { return }
+    for id in ids { confirmed[id] = true }
+    publish()
+  }
+
   /// An edit made here that the server has not taken yet.
   func isPending(_ id: String) -> Bool {
     edits[id] != nil

@@ -220,7 +220,23 @@ class AlbumViewModel: ObservableObject {
   func fetchStarredSongs() {
     fetchCached(
       .starredSongs, current: starredSongs,
-      assign: { self.starredSongs = $0 }, request: AlbumService.shared.getStarredSongs)
+      assign: { self.starredSongs = $0 }, request: Self.starredSongsRequest)
+  }
+
+  /// The server's Liked Songs, which also tell StarStore what is starred now
+  /// (the cached copy shown meanwhile does not).
+  private static func starredSongsRequest(_ completion: @escaping (Result<[Song], Error>) -> Void) {
+    let since = MainActor.assumeIsolated { StarStore.shared.editCount }
+    AlbumService.shared.getStarredSongs { result in
+      if case .success(let songs) = result {
+        DispatchQueue.main.async {
+          MainActor.assumeIsolated {
+            StarStore.shared.adoptServerStars(songs.map(\.playbackID), since: since)
+          }
+        }
+      }
+      completion(result)
+    }
   }
 
   // MARK: - Fetch methods
@@ -421,8 +437,7 @@ class AlbumViewModel: ObservableObject {
 
   @MainActor func refreshStarredSongs() async {
     await refreshCached(
-      .starredSongs, assign: { self.starredSongs = $0 },
-      request: AlbumService.shared.getStarredSongs)
+      .starredSongs, assign: { self.starredSongs = $0 }, request: Self.starredSongsRequest)
   }
 
   /// `list` as loaded, or while it is empty its cached copy, read off the
