@@ -11,7 +11,6 @@ struct WatchHomeView: View {
 
   @Environment(\.showPlayer) private var showPlayer
   @Environment(\.selectPlayerPage) private var selectPlayerPage
-  @State private var isGeneratingMix = false
   @State private var openedAlbumId: String?
   @State private var menu: MenuTarget?
 
@@ -31,26 +30,17 @@ struct WatchHomeView: View {
       }
 
       Button(action: {
-        guard !isGeneratingMix else { return }
-        isGeneratingMix = true
-        let generation = playerViewModel.startGeneration
-
-        Task { @MainActor in
-          let songs = await SmartPlaybackService.shared.generateMix(count: 15, mode: .playSomething)
-          isGeneratingMix = false
-
-          // The user started something else while the mix was built.
-          guard !songs.isEmpty, playerViewModel.startGeneration == generation else { return }
-          let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs)
-          if playerViewModel.playItem(item: mix, isFromLocal: false) { showPlayer() }
-        }
+        Task { if await playerViewModel.playSomething() { showPlayer() } }
       }) {
-        Label(isGeneratingMix ? "Building mix…" : "Play Something", systemImage: "sparkles")
-          .font(.headline)
+        Label(
+          playerViewModel.isGeneratingMix ? "Building mix…" : "Play Something",
+          systemImage: "sparkles"
+        )
+        .font(.headline)
       }
       .buttonStyle(FloPrimaryButtonStyle(height: 52))
-      .opacity(isGeneratingMix ? 0.6 : 1)
-      .disabled(isGeneratingMix)
+      .opacity(playerViewModel.isGeneratingMix ? 0.6 : 1)
+      .disabled(playerViewModel.isGeneratingMix)
       .listRowBackground(Color.clear)
       .listRowInsets(EdgeInsets())
 

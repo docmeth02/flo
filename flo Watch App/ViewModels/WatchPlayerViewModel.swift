@@ -123,7 +123,8 @@ class WatchPlayerViewModel: ObservableObject {
   private var ratingObservation: AnyCancellable?
   /// Bumped whenever the user starts something new; a mix built in the
   /// meantime is stale.
-  private(set) var startGeneration = 0
+  private var startGeneration = 0
+  @Published private(set) var isGeneratingMix = false
 
   var nowPlaying: QueueEntity {
     return self.queue[self.activeQueueIdx]
@@ -1161,6 +1162,21 @@ class WatchPlayerViewModel: ObservableObject {
     guard !queue.isEmpty else { return false }
     self.addToQueue(idx: 0, item: queue)
     return true
+  }
+
+  /// Builds a smart mix and plays it, for Home's button and the intent. False
+  /// while a mix is already being built, when none came together, or when the
+  /// user started something else in the meantime.
+  @MainActor func playSomething() async -> Bool {
+    guard !isGeneratingMix else { return false }
+    isGeneratingMix = true
+    let generation = startGeneration
+    let songs = await SmartPlaybackService.shared.generateMix(count: 15, mode: .playSomething)
+    isGeneratingMix = false
+    guard startGeneration == generation else { return false }
+    return playItem(
+      item: SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs),
+      isFromLocal: false)
   }
 
   @discardableResult

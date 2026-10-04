@@ -27,6 +27,7 @@
         group.addTask { await runDebugDiagnostics() }
         group.addTask { await runDebugScreen() }
         group.addTask { await runDebugMenuActions() }
+        group.addTask { await runDebugIntent() }
       }
     }
 
@@ -214,6 +215,15 @@
       let lines = export.split(separator: "\n", omittingEmptySubsequences: false)
       for line in lines where line.hasPrefix("Rated songs") { debugLog("  | \(line)") }
       for line in lines.drop(while: { $0 != "Last mixes" }) { debugLog("  | \(line)") }
+    }
+
+    // FLO_DEBUG_INTENT=1 asks for Play Something the way the App Intent does,
+    // three seconds after launch.
+    private func runDebugIntent() async {
+      guard ProcessInfo.processInfo.environment["FLO_DEBUG_INTENT"] == "1" else { return }
+      try? await Task.sleep(nanoseconds: 3_000_000_000)
+      debugLog("intent hook: requesting play something")
+      PlaySomethingRequest.post()
     }
 
     // FLO_DEBUG_SCREEN=<name> pushes one screen four seconds after

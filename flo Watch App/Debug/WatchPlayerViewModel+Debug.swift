@@ -73,20 +73,24 @@
 
       DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
         Task { @MainActor in
-          var songs = await SmartPlaybackService.shared.generateMix(
-            count: 15, mode: .playSomething)
-          debugLog("mix generated: \(songs.count) songs")
-          if env["FLO_DEBUG_BROKEN_FIRST"] == "1", let first = songs.first {
-            // A song id the server does not know, to exercise failed streams.
+          if env["FLO_DEBUG_BROKEN_FIRST"] == "1" {
+            // A song id the server does not know ahead of a mix, to exercise
+            // failed streams.
+            let songs = await SmartPlaybackService.shared.generateMix(
+              count: 15, mode: .playSomething)
+            guard let first = songs.first else { return debugLog("mix generated: 0 songs") }
             let broken = Song(
               id: "broken-\(first.id)", title: "Broken", albumId: first.albumId,
               albumName: first.albumName, artist: first.artist, trackNumber: 1, discNumber: 1,
               bitRate: 0, sampleRate: 0, suffix: first.suffix, duration: first.duration,
               mediaFileId: "broken-\(first.id)")
-            songs.insert(broken, at: 0)
+            self.playItem(
+              item: SongCollection(id: "debug", name: "Debug", songs: [broken] + songs),
+              isFromLocal: false)
+          } else {
+            let played = await self.playSomething()
+            debugLog("play something: \(played) queue=\(self.queue.count)")
           }
-          let mix = SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs)
-          self.playItem(item: mix, isFromLocal: false)
 
           if let seek = env["FLO_DEBUG_SEEK"].flatMap(Double.init) {
             try? await Task.sleep(nanoseconds: 6_000_000_000)

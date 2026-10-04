@@ -8,8 +8,8 @@ import SwiftUI
 extension EnvironmentValues {
   /// Leaves the library for the player page; set by WatchContentView.
   @Entry var showPlayer: () -> Void = {}
-  /// Selects the player page without popping, for the root of the stack:
-  /// a reset there would rebuild Home mid-mix and re-enable Play Something.
+  /// Selects the player page without popping, for the root of the stack,
+  /// where a reset would only rebuild Home.
   @Entry var selectPlayerPage: () -> Void = {}
   /// Tells WatchContentView whether the queue is pushed over the player.
   @Entry var setQueueShown: (Bool) -> Void = { _ in }
@@ -51,6 +51,13 @@ struct WatchContentView: View {
     selectedTab = .home
     stackID = UUID()
     DispatchQueue.main.async { selectedTab = .nowPlaying }
+  }
+
+  /// Plays a mix for Siri, Shortcuts or the Action Button. Logged out, the
+  /// request is dropped and the login screen stays.
+  private func takePlaySomethingRequest() {
+    guard PlaySomethingRequest.take(), authViewModel.isLoggedIn else { return }
+    Task { if await playerViewModel.playSomething() { showPlayer() } }
   }
 
   var body: some View {
@@ -108,6 +115,10 @@ struct WatchContentView: View {
     }
     .onChange(of: playerViewModel.hasNowPlaying()) { _, hasNowPlaying in
       if !hasNowPlaying { selectedTab = .home }
+    }
+    .onAppear(perform: takePlaySomethingRequest)
+    .onReceive(NotificationCenter.default.publisher(for: .playSomethingRequested)) { _ in
+      takePlaySomethingRequest()
     }
     .environmentObject(authViewModel)
     .environmentObject(playerViewModel)
