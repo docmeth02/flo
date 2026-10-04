@@ -29,7 +29,7 @@ struct Artist: Codable, Hashable, Identifiable {
   let externalURL: String?
   let externalInfoUpdatedAt: String?
   let fullText: String?
-  var starred: Bool
+  var starred = false
 
   enum CodingKeys: String, CodingKey {
     case id, name, orderArtistName, size, albumCount, songCount, missing, createdAt,

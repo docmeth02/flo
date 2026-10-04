@@ -566,7 +566,7 @@ actor ListeningHistoryStore {
       request.sortDescriptors = [NSSortDescriptor(key: "submissionTime", ascending: false)]
       request.fetchLimit = limit
       return ((try? context.fetch(request)) ?? []).compactMap { play in
-        guard let id = play.mediaFileId, let at = play.submissionTime else { return nil }
+        guard let id = play.mediaFileId, !id.isEmpty, let at = play.submissionTime else { return nil }
         return (id: id, at: at)
       }
     }
