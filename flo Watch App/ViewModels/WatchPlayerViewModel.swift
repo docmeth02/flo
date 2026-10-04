@@ -70,6 +70,7 @@ class WatchPlayerViewModel: ObservableObject {
   private var playbackEndObservation: AnyCancellable?
   private var interruptionObservation = Set<AnyCancellable>()
   private var logoutObservation: AnyCancellable?
+  private var reachabilityObservation: AnyCancellable?
   private var unshuffledQueue: [QueueEntity] = []
 
   private var hasTriggeredCache: Bool = false
@@ -143,6 +144,16 @@ class WatchPlayerViewModel: ObservableObject {
     logoutObservation = NotificationCenter.default.publisher(for: .didLogout)
       .receive(on: DispatchQueue.main)
       .sink { [weak self] _ in self?.clearForLogout() }
+
+    // Every successful probe republishes true; a pre-cache that failed while
+    // the server was gone gets another go.
+    reachabilityObservation = ConnectivityMonitor.shared.$isServerReachable
+      .filter { $0 }
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in
+        guard let self, self.hasTriggeredCache, self.isPlaying, !self.isLiveRadio else { return }
+        self.precacheUpcoming()
+      }
 
     let lastPlayData = PlaybackService.shared.getQueue()
     let queueActiveIdx = UserDefaultsManager.queueActiveIdx
@@ -622,7 +633,9 @@ class WatchPlayerViewModel: ObservableObject {
     self.restartedTrackId = nil
     self.reloadedFailedTrackId = nil
 
-    StreamCacheManager.shared.cancelAllInFlight()
+    // The song after next may already be on its way.
+    StreamCacheManager.shared.cancelAllInFlight(
+      keeping: Set(upcomingQueueIndices(2).compactMap { queue[$0].id }))
     StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: self.nowPlaying.id ?? "")
 
     // The item itself is attached by play(), so a queue restored at launch
@@ -782,14 +795,7 @@ class WatchPlayerViewModel: ObservableObject {
 
       if !self.hasTriggeredCache && currentTime >= 10.0 && !self.isLiveRadio {
         self.hasTriggeredCache = true
-        if let nextIdx = self.nextQueueIdxForPreCache(),
-          let nextId = self.queue[nextIdx].id, !nextId.isEmpty
-        {
-          AlbumService.shared.prefetchTranscodeDecision(songId: nextId)
-          StreamCacheManager.shared.cacheSong(
-            mediaFileId: nextId, originalSuffix: self.queue[nextIdx].suffix,
-            from: self.queue[nextIdx])
-        }
+        self.precacheUpcoming()
       }
 
       self.qualifyIfDue()
@@ -1506,20 +1512,25 @@ class WatchPlayerViewModel: ObservableObject {
     }
   }
 
-  private func nextQueueIdxForPreCache() -> Int? {
-    if queue.count <= 1 { return nil }
-
-    if playbackMode == PlaybackMode.repeatOnce {
-      return nil
+  /// Caches the next two songs, so a dropout or a skip does not stop the music.
+  func precacheUpcoming() {
+    for idx in upcomingQueueIndices(2) {
+      let entry = queue[idx]
+      guard let id = entry.id, !id.isEmpty else { continue }
+      AlbumService.shared.prefetchTranscodeDecision(songId: id)
+      StreamCacheManager.shared.cacheSong(
+        mediaFileId: id, originalSuffix: entry.suffix, from: entry)
     }
+  }
 
-    if playbackMode == PlaybackMode.repeatAlbum {
-      return activeQueueIdx + 1 >= queue.count ? 0 : activeQueueIdx + 1
-    }
-
-    let nextIdx = activeQueueIdx + 1
-    guard nextIdx < queue.count else { return nil }
-    return nextIdx
+  /// The queue indices that play after the current one, at most `count`:
+  /// none on repeat one, wrapping around on repeat album, never the current.
+  private func upcomingQueueIndices(_ count: Int) -> [Int] {
+    guard queue.count > 1, playbackMode != PlaybackMode.repeatOnce else { return [] }
+    let remaining =
+      playbackMode == PlaybackMode.repeatAlbum
+      ? queue.count - 1 : queue.count - 1 - activeQueueIdx
+    return (0..<max(0, min(count, remaining))).map { (activeQueueIdx + 1 + $0) % queue.count }
   }
 
   deinit {

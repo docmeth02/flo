@@ -230,15 +230,17 @@ class StreamCacheManager {
     syncQueue.async { self.currentlyPlayingSongId = mediaFileId }
   }
 
-  func cancelAllInFlight() {
+  /// Cancels the cache downloads in flight, except those of the given songs.
+  func cancelAllInFlight(keeping mediaFileIds: Set<String> = []) {
+    let bitrate = UserDefaultsManager.maxBitRate
+    let kept = Set(mediaFileIds.map { cacheKey(mediaFileId: $0, bitrate: bitrate) })
     let keysToClean: [String] = syncQueue.sync {
-      let keys = Array(inFlightDownloads.keys)
-      for (_, request) in inFlightDownloads {
-        request.cancel()
+      let keys = inFlightDownloads.keys.filter { !kept.contains($0) }
+      for key in keys {
+        inFlightDownloads.removeValue(forKey: key)?.cancel()
+        inFlightProgress.removeValue(forKey: key)
       }
-      inFlightDownloads.removeAll()
-      inFlightProgress.removeAll()
-      inFlightKeys.removeAll()
+      inFlightKeys.formIntersection(kept)
       return keys
     }
 
