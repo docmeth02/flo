@@ -60,6 +60,12 @@ class WatchPlayerViewModel: ObservableObject {
   private var starLookup = 0
   private var starObservation: AnyCancellable?
   private var resumeAfterInterruption = false
+  // A play request not yet heard: set by play(), cleared by a pause or stop
+  // the user asked for. Connecting headphones can swallow the first start
+  // (the activation fails or an interruption arrives while the device list
+  // shows); the new route then starts it.
+  private var playRequestedAt: Date?
+  private var isActivatingSession = false
 
   private var isLocallySaved: Bool = false
   private(set) var isFinished: Bool = false
@@ -230,13 +236,29 @@ class WatchPlayerViewModel: ObservableObject {
       .sink { [weak self] notification in
         guard let self,
           let value = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-          AVAudioSession.RouteChangeReason(rawValue: value) == .oldDeviceUnavailable
+          let reason = AVAudioSession.RouteChangeReason(rawValue: value)
         else { return }
-        // Headphones lost during a call: its end must not restart music
-        // nobody hears.
-        self.resumeAfterInterruption = false
-        guard self.isPlaying else { return }
-        self.pause()
+        let outputs = AVAudioSession.sharedInstance().currentRoute.outputs
+          .map(\.portType.rawValue).joined(separator: ",")
+        RequestLog.shared.note("audio route \(reason.rawValue) outputs=\(outputs)")
+
+        switch reason {
+        case .oldDeviceUnavailable:
+          // Headphones lost during a call: its end must not restart music
+          // nobody hears.
+          self.resumeAfterInterruption = false
+          guard self.isPlaying else { return }
+          self.pause()
+        case .newDeviceAvailable:
+          // Headphones just connected for a start that did not happen.
+          guard !self.isPlaying, !self.isActivatingSession,
+            let requested = self.playRequestedAt, Date().timeIntervalSince(requested) < 60
+          else { return }
+          RequestLog.shared.note("audio resume pending play on new route")
+          self.play()
+        default:
+          break
+        }
       }
       .store(in: &interruptionObservation)
   }
@@ -251,11 +273,19 @@ class WatchPlayerViewModel: ObservableObject {
 
     switch type {
     case .began:
+      RequestLog.shared.note("audio interruption began activating=\(isActivatingSession)")
+      // While the session is still activating (the device list may be up),
+      // nothing plays yet and the start must survive.
+      if isActivatingSession {
+        resumeAfterInterruption = true
+        return
+      }
       // Through pause() so a pending skip or Keep Playing mix does not start
       // playback during the call.
       self.resumeAfterInterruption = self.isPlaying
       self.pause()
     case .ended:
+      RequestLog.shared.note("audio interruption ended resume=\(resumeAfterInterruption)")
       // Music the user had paused before the call stays paused.
       let wasPlaying = self.resumeAfterInterruption
       self.resumeAfterInterruption = false
@@ -909,7 +939,14 @@ class WatchPlayerViewModel: ObservableObject {
 
     commandCenter.pauseCommand.addTarget { [weak self] event in
       guard let self = self else { return .commandFailed }
-      DispatchQueue.main.async { self.pause() }
+      DispatchQueue.main.async {
+        // Headphones often send pause as they connect, before anything plays.
+        guard !self.isActivatingSession else {
+          RequestLog.shared.note("audio remote pause ignored while connecting")
+          return
+        }
+        self.pause()
+      }
       return .success
     }
 
@@ -994,15 +1031,21 @@ class WatchPlayerViewModel: ObservableObject {
     // Activate audio session using watchOS async API
     playGeneration += 1
     let gen = playGeneration
+    playRequestedAt = Date()
+    isActivatingSession = true
+    RequestLog.shared.note("audio activate \(gen)")
     AVAudioSession.sharedInstance().activate(options: []) { [weak self] success, error in
       // The callback arrives off-main; playGeneration is only read or written
       // on the main queue.
       DispatchQueue.main.async {
-        guard let self = self, gen == self.playGeneration else { return }
-        if let error = error {
-          debugLog("Audio session activation failed: \(error)")
-          return
-        }
+        guard let self = self else { return }
+        RequestLog.shared.note(
+          "audio activated \(gen) success=\(success) current=\(self.playGeneration)"
+            + (error.map { " error=\(($0 as NSError).domain) \(($0 as NSError).code)" } ?? ""))
+        guard gen == self.playGeneration else { return }
+        self.isActivatingSession = false
+        // The request stays; a route coming up afterwards starts it.
+        if error != nil || !success { return }
 
         if self.isFinished {
           self.stop()
@@ -1060,6 +1103,8 @@ class WatchPlayerViewModel: ObservableObject {
 
   func pause() {
     playGeneration += 1
+    playRequestedAt = nil
+    isActivatingSession = false
     player?.pause()
     reportPlayback(.paused)
 
@@ -1070,6 +1115,8 @@ class WatchPlayerViewModel: ObservableObject {
   func stop() {
     reportStopped()
     playGeneration += 1
+    playRequestedAt = nil
+    isActivatingSession = false
     player?.pause()
     // No observer tick follows while paused, so the reset is applied here.
     // Starting the song over is a new listen, which may count again.
