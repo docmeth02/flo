@@ -31,6 +31,18 @@ class KeychainManager {
     try keychain.remove(KeychainKeys.serverPassword)
   }
 
+  static func getServerURL() throws -> String? {
+    return try keychain.get(KeychainKeys.serverURL)
+  }
+
+  static func setServerURL(newValue: String) throws {
+    try keychain.set(newValue, key: KeychainKeys.serverURL)
+  }
+
+  static func removeServerURL() throws {
+    try keychain.remove(KeychainKeys.serverURL)
+  }
+
   static func setAuthCreds(newValue: String) throws {
     try keychain.set(newValue, key: KeychainKeys.dataKey)
   }

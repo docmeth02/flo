@@ -87,6 +87,7 @@ struct WatchContentView: View {
       // Like the system Now Playing app: coming back to the watch while music
       // plays shows the player. A short glance away keeps the browsing place.
       if phase != .active {
+        AuthService.shared.persistRenewedToken()
         if leftAt == nil { leftAt = Date() }
         if phase == .background { leftTheApp = true }
       } else if let leftAt {

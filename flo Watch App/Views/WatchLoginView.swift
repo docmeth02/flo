@@ -65,7 +65,6 @@ struct WatchLoginView: View {
       SecureField("Password", text: $viewModel.password)
 
       Button(action: {
-        viewModel.experimentalSaveLoginInfo = true
         viewModel.login()
       }) {
         HStack(spacing: 6) {

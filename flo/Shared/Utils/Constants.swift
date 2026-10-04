@@ -68,7 +68,6 @@ enum UserDefaultsKeys {
   static let nowPlayingListened = "nowPlayingListened"
   static let playbackMode = "playbackMode"
   static let enableMaxBitRate = "enableMaxBitRate"
-  static let saveLoginInfo = "saveLoginInfo"
   static let streamCacheMaxSize = "streamCacheMaxSize"
   static let keepPlaying = "keepPlaying"
   static let pendingRatings = "pendingRatings"
@@ -79,6 +78,7 @@ enum KeychainKeys {
   static let service = AppMeta.identifier
   static let dataKey = "authCreds"
   static let serverPassword = "serverPassword"
+  static let serverURL = "serverURL"
 }
 
 enum TranscodingSettings {

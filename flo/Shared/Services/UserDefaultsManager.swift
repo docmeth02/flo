@@ -100,18 +100,6 @@ class UserDefaultsManager {
   }
 
 
-  static var saveLoginInfo: Bool {
-    get {
-      migrateIfNeeded(UserDefaultsKeys.saveLoginInfo)
-      return sharedDefaults.bool(forKey: UserDefaultsKeys.saveLoginInfo)
-    }
-
-    set {
-      sharedDefaults.set(newValue, forKey: UserDefaultsKeys.saveLoginInfo)
-    }
-  }
-
-
   static var streamCacheMaxSize: Int64 {
     get {
       let stored = UserDefaults.standard.object(forKey: UserDefaultsKeys.streamCacheMaxSize)

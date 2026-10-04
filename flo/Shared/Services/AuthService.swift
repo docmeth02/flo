@@ -22,6 +22,8 @@ class AuthService {
   private var userId: String?
   private var credentialGeneration: UInt64 = 0
   private let credentialsLock = NSLock()
+  // A token renewed by the server since the stored login was last written.
+  private var tokenNeedsPersisting = false
   // Requests held back until a rejected Navidrome token is replaced.
   private var sessionWaiters: [SessionWaiter] = []
 
@@ -111,6 +113,7 @@ class AuthService {
     self.NDToken = data.token
     self.subsonicParams = subsonicParams
     self.userId = data.id
+    tokenNeedsPersisting = false
     let waiters = drainWaiters()
     credentialsLock.unlock()
     Self.resume(waiters, renewed: true)
@@ -151,7 +154,8 @@ class AuthService {
   }
 
   /// Navidrome sends a renewed token with every authenticated /api answer.
-  /// Kept in memory only: the launch re-login stores a fresh one anyway.
+  /// Written to the Keychain by persistRenewedToken when the app leaves the
+  /// foreground.
   func adoptRefreshedToken(_ token: String, from snapshot: AuthSessionSnapshot) {
     var token = token.trimmingCharacters(in: .whitespaces)
     if token.hasPrefix("Bearer ") {
@@ -165,10 +169,36 @@ class AuthService {
       return
     }
     NDToken = token
+    tokenNeedsPersisting = true
     let waiters = drainWaiters()
     credentialsLock.unlock()
     debugLog("navidrome token refreshed")
     Self.resume(waiters, renewed: true)
+  }
+
+  /// Writes a renewed token back to the stored login, so a launch without a
+  /// connection starts with it rather than one that may have expired. Called
+  /// on the main queue, like the logins that write the stored login.
+  func persistRenewedToken() {
+    credentialsLock.lock()
+    defer { credentialsLock.unlock() }
+    guard tokenNeedsPersisting, let token = NDToken, !token.isEmpty,
+      let json = try? KeychainManager.getAuthCreds(), let data = json.data(using: .utf8),
+      let stored = try? JSONDecoder().decode(UserAuth.self, from: data), stored.id == userId
+    else { return }
+
+    let renewed = UserAuth(
+      id: stored.id, username: stored.username, name: stored.name, isAdmin: stored.isAdmin,
+      lastFMApiKey: stored.lastFMApiKey, subsonicSalt: stored.subsonicSalt,
+      subsonicToken: stored.subsonicToken, token: token)
+    do {
+      let jsonData = try JSONEncoder().encode(renewed)
+      try KeychainManager.setAuthCreds(newValue: String(decoding: jsonData, as: UTF8.self))
+      tokenNeedsPersisting = false
+      debugLog("navidrome token persisted")
+    } catch {
+      print("Error saving renewed token to Keychain: \(error)")
+    }
   }
 
   /// A re-login failed: the requests waiting for its token give up now rather
@@ -208,6 +238,7 @@ class AuthService {
     NDToken = nil
     subsonicParams = nil
     userId = nil
+    tokenNeedsPersisting = false
     let waiters = drainWaiters()
     credentialsLock.unlock()
     Self.resume(waiters, renewed: false)

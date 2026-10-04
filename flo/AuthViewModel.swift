@@ -17,7 +17,6 @@ class AuthViewModel: ObservableObject {
 
   @Published var showAlert: Bool = false
   @Published var alertMessage: String = ""
-  @Published var experimentalSaveLoginInfo: Bool = false
 
   @Published var isSubmitting: Bool = false
   @Published var isLoggedIn: Bool = false
@@ -38,11 +37,21 @@ class AuthViewModel: ObservableObject {
       object: nil)
 
     // Keychain items outlive an uninstall while the stored server URL does
-    // not; credentials without a server are unusable and would leave the app
+    // not, so the Keychain keeps a copy of it. Credentials without any server
+    // (stored before that copy existed) are unusable and would leave the app
     // "logged in" with every request going nowhere.
-    if Self.storedAuth() != nil, UserDefaultsManager.serverBaseURL.isEmpty {
-      try? KeychainManager.removeAuthCreds()
-      try? KeychainManager.removeAuthPassword()
+    if Self.storedAuth() != nil {
+      let keychainURL = (try? KeychainManager.getServerURL()) ?? ""
+      if !UserDefaultsManager.serverBaseURL.isEmpty {
+        if keychainURL.isEmpty {
+          try? KeychainManager.setServerURL(newValue: UserDefaultsManager.serverBaseURL)
+        }
+      } else if !keychainURL.isEmpty {
+        UserDefaultsManager.serverBaseURL = keychainURL
+      } else {
+        try? KeychainManager.removeAuthCreds()
+        try? KeychainManager.removeAuthPassword()
+      }
     }
 
     if let data = Self.storedAuth() {
@@ -75,21 +84,46 @@ class AuthViewModel: ObservableObject {
     return try? JSONDecoder().decode(UserAuth.self, from: data)
   }
 
-  private static func storedPassword() -> String? {
-    guard let password = try? KeychainManager.getAuthPassword(), !password.isEmpty else {
-      return nil
+  private enum StoredPassword {
+    case found(String)
+    case missing
+    case unreadable
+  }
+
+  /// A Keychain read error is not a missing password: the item may well be
+  /// there and readable on the next attempt.
+  private static func storedPassword() -> StoredPassword {
+    do {
+      guard let password = try KeychainManager.getAuthPassword(), !password.isEmpty else {
+        return .missing
+      }
+      return .found(password)
+    } catch {
+      print("error reading password from Keychain: \(error)")
+      return .unreadable
     }
-    return password
   }
 
   /// Silent re-login with the stored server, username and saved password. Only
-  /// a rejected password logs out; any other failure keeps the session and
-  /// retries once the network comes back.
+  /// a rejected password logs out; any other failure, an unreadable Keychain
+  /// included, keeps the session and retries once the network comes back.
   private func reauthenticate() {
     let serverUrl = UserDefaultsManager.serverBaseURL
     guard isLoggedIn, !isReauthenticating, !serverUrl.isEmpty,
-      let stored = Self.storedAuth(), let password = Self.storedPassword()
+      let stored = Self.storedAuth()
     else { return }
+
+    let password: String
+    switch Self.storedPassword() {
+    case .found(let found):
+      password = found
+    case .missing:
+      return
+    case .unreadable:
+      needsReauthentication = true
+      AuthService.shared.abandonRenewal()
+      return
+    }
 
     isReauthenticating = true
     let generation = sessionGeneration
@@ -123,10 +157,10 @@ class AuthViewModel: ObservableObject {
       AuthService.shared.isCurrentSession(requestSession)
     else { return }
 
-    if Self.storedPassword() != nil {
-      reauthenticate()
-    } else {
+    if case .missing = Self.storedPassword() {
       logout()
+    } else {
+      reauthenticate()
     }
   }
 
@@ -156,15 +190,11 @@ class AuthViewModel: ObservableObject {
           self.persistAuthData(data, serverUrl: self.serverUrl)
           self.needsReauthentication = false
 
-          if self.experimentalSaveLoginInfo {
-            do {
-              try KeychainManager.setAuthPassword(newValue: self.password)
-              UserDefaultsManager.saveLoginInfo = true
-
-              self.experimentalSaveLoginInfo = false
-            } catch {
-              print("error saving password to Keychain: \(error)")
-            }
+          // Without it the session cannot be renewed and ends with the token.
+          do {
+            try KeychainManager.setAuthPassword(newValue: self.password)
+          } catch {
+            print("error saving password to Keychain: \(error)")
           }
 
           self.isSubmitting = false
@@ -213,6 +243,11 @@ class AuthViewModel: ObservableObject {
     APIManager.shared.session.cancelAllRequests()
 
     destroySavedPassword()
+    do {
+      try KeychainManager.removeServerURL()
+    } catch {
+      print("error>>>>> \(error)")
+    }
 
     // Navidrome's nd-player cookie names this account's user.
     if let host = URL(string: UserDefaultsManager.serverBaseURL)?.host {
@@ -244,9 +279,6 @@ class AuthViewModel: ObservableObject {
   func destroySavedPassword() {
     do {
       try KeychainManager.removeAuthPassword()
-
-      UserDefaultsManager.saveLoginInfo = false
-      UserDefaultsManager.removeObject(key: UserDefaultsKeys.saveLoginInfo)
     } catch {
       print("error>>>>> \(error)")
     }
@@ -265,6 +297,11 @@ class AuthViewModel: ObservableObject {
 
       AuthService.shared.setCreds(data)
       UserDefaultsManager.serverBaseURL = serverUrl
+      do {
+        try KeychainManager.setServerURL(newValue: UserDefaultsManager.serverBaseURL)
+      } catch {
+        print("Error saving server URL to Keychain: \(error)")
+      }
 
       user = UserAuth(
         id: data.id, username: data.username, name: data.name, isAdmin: data.isAdmin,
@@ -293,7 +330,6 @@ class AuthViewModel: ObservableObject {
         serverUrl = parts[0]
         username = parts[1]
         password = parts[2]
-        experimentalSaveLoginInfo = true
         login()
       } else if isLoggedIn, env["FLO_DEBUG_EXPIRE_TOKEN"] == "launch" {
         // Cold start with an expired Navidrome token: the first library
