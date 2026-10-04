@@ -18,10 +18,82 @@ struct RemovedQueueEntry {
   let storedIndex: Int
 }
 
-/// Play Next, Add to Queue, remove and Undo. Every edit changes the play
-/// order (`queue`) and, while shuffling, the stored order (`unshuffledQueue`)
-/// the same way, stores the stored order in one save and publishes both only
-/// when that worked. The current song is never removed or moved.
+/// The play order and the stored order of the queue, and the edits the user
+/// makes to them. Every edit changes the play order and, while shuffling, the
+/// stored order the same way; unshuffled, the stored order is the play order
+/// and `stored` is left alone. Rows are matched by identity, and the current
+/// row is never removed or moved.
+struct QueueOrders<Row: AnyObject> {
+  private(set) var played: [Row]
+  private(set) var stored: [Row]
+  /// Where the current row is in the play order.
+  private(set) var currentIndex: Int
+  let isShuffling: Bool
+  private let current: Row
+
+  /// `currentIndex` must be a valid index of `played`.
+  init(played: [Row], stored: [Row], currentIndex: Int, isShuffling: Bool) {
+    self.played = played
+    self.stored = stored
+    self.currentIndex = currentIndex
+    self.isShuffling = isShuffling
+    current = played[currentIndex]
+  }
+
+  /// The order that is saved: the stored order while shuffling.
+  var toStore: [Row] { isShuffling ? stored : played }
+
+  /// Play Next.
+  mutating func insertAfterCurrent(_ rows: [Row]) {
+    let current = current
+    edit { Self.insert(rows, after: current, in: &$0) }
+  }
+
+  /// Add to Queue.
+  mutating func append(_ rows: [Row]) {
+    edit { $0.append(contentsOf: rows) }
+  }
+
+  mutating func remove(_ row: Row) {
+    edit { $0.removeAll { $0 === row } }
+  }
+
+  mutating func moveNext(_ row: Row) {
+    let current = current
+    edit { order in
+      order.removeAll { $0 === row }
+      Self.insert([row], after: current, in: &order)
+    }
+  }
+
+  /// Undo of a removal: puts `row` back at `index` in the play order, but
+  /// never before the current row, where it would not play again, and at
+  /// `storedIndex` in the stored order; at the end where the order got shorter.
+  mutating func reinsert(_ row: Row, at index: Int, storedIndex: Int) {
+    played.insert(row, at: min(max(index, currentIndex + 1), played.count))
+    if isShuffling { stored.insert(row, at: min(storedIndex, stored.count)) }
+    updateCurrentIndex()
+  }
+
+  private mutating func edit(_ change: (inout [Row]) -> Void) {
+    change(&played)
+    if isShuffling { change(&stored) }
+    updateCurrentIndex()
+  }
+
+  private mutating func updateCurrentIndex() {
+    currentIndex = played.firstIndex { $0 === current } ?? currentIndex
+  }
+
+  private static func insert(_ rows: [Row], after current: Row, in order: inout [Row]) {
+    order.insert(contentsOf: rows, at: (order.firstIndex { $0 === current } ?? order.count - 1) + 1)
+  }
+}
+
+/// Play Next, Add to Queue, remove and Undo. Every edit goes through
+/// `QueueOrders` on the play order (`queue`) and the stored order
+/// (`unshuffledQueue`), saves in one go and publishes both only when that
+/// worked.
 extension WatchPlayerViewModel {
   /// Puts `songs` right after the current song. Starts them instead when
   /// nothing plays or a live radio does. Returns whether the queue changed.
@@ -30,7 +102,7 @@ extension WatchPlayerViewModel {
     guard !songs.isEmpty else { return false }
     guard isEditable else { return start(songs, context: context, isFromPlaylist: isFromPlaylist) }
     let entries = makeEntries(songs, context: context, isFromPlaylist: isFromPlaylist)
-    return editQueue { insertAfterCurrent(entries, in: &$0) } && playOnIfEnded()
+    return editQueue { $0.insertAfterCurrent(entries) } && playOnIfEnded()
   }
 
   /// Puts `songs` at the end of the queue. Starts them instead when nothing
@@ -40,7 +112,7 @@ extension WatchPlayerViewModel {
     guard !songs.isEmpty else { return false }
     guard isEditable else { return start(songs, context: context, isFromPlaylist: isFromPlaylist) }
     let entries = makeEntries(songs, context: context, isFromPlaylist: isFromPlaylist)
-    return editQueue { $0.append(contentsOf: entries) } && playOnIfEnded()
+    return editQueue { $0.append(entries) } && playOnIfEnded()
   }
 
   /// Takes the row at `index` (play order) out of the queue. Nil for the
@@ -53,7 +125,7 @@ extension WatchPlayerViewModel {
       song: Song(from: entity), context: entity.contextName ?? "",
       isFromPlaylist: entity.isFromPlaylist, isFromLocal: entity.isFromLocal, index: index,
       storedIndex: unshuffledQueue.firstIndex { $0 === entity } ?? index)
-    return editQueue { $0.removeAll { $0 === entity } } ? removed : nil
+    return editQueue { $0.remove(entity) } ? removed : nil
   }
 
   /// Puts a removed row back where it was, or at the end when the queue
@@ -64,11 +136,7 @@ extension WatchPlayerViewModel {
     let entity = PlaybackService.shared.makeEntry(
       song: entry.song, context: entry.context, isFromPlaylist: entry.isFromPlaylist,
       isFromLocal: entry.isFromLocal)
-    // Never before the current song, where it would not play again.
-    let index = max(entry.index, activeQueueIdx + 1)
-    return editQueue(
-      { $0.insert(entity, at: min(index, $0.count)) },
-      stored: { $0.insert(entity, at: min(entry.storedIndex, $0.count)) })
+    return editQueue { $0.reinsert(entity, at: entry.index, storedIndex: entry.storedIndex) }
   }
 
   /// Moves the row at `index` (play order) right after the current song.
@@ -76,10 +144,7 @@ extension WatchPlayerViewModel {
   func moveToNext(at index: Int) -> Bool {
     guard isEditable, queue.indices.contains(index), index != activeQueueIdx else { return false }
     let entity = queue[index]
-    return editQueue { order in
-      order.removeAll { $0 === entity }
-      insertAfterCurrent([entity], in: &order)
-    }
+    return editQueue { $0.moveNext(entity) }
   }
 
   // A live radio's queue is the station alone.
@@ -104,33 +169,19 @@ extension WatchPlayerViewModel {
     }
   }
 
-  private func insertAfterCurrent(_ entries: [QueueEntity], in order: inout [QueueEntity]) {
-    let current = nowPlaying
-    order.insert(contentsOf: entries, at: (order.firstIndex { $0 === current } ?? order.count - 1) + 1)
-  }
+  /// Applies `edit` to copies of both orders, stores the order that is saved
+  /// and only then publishes both. A failed save rolls back and leaves
+  /// everything as it was.
+  private func editQueue(_ edit: (inout QueueOrders<QueueEntity>) -> Void) -> Bool {
+    var orders = QueueOrders(
+      played: queue, stored: unshuffledQueue, currentIndex: activeQueueIdx,
+      isShuffling: isShuffling)
+    edit(&orders)
+    guard PlaybackService.shared.store(order: orders.toStore) else { return false }
 
-  /// Applies `change` to a copy of the play order and, while shuffling,
-  /// `changeStored` (`change` unless given) to a copy of the stored order,
-  /// stores the stored order and only then publishes both. A failed save
-  /// rolls back and leaves everything as it was.
-  private func editQueue(
-    _ change: (inout [QueueEntity]) -> Void,
-    stored changeStored: ((inout [QueueEntity]) -> Void)? = nil
-  ) -> Bool {
-    let current = nowPlaying
-    var played = queue
-    var stored = unshuffledQueue
-    change(&played)
-    if let changeStored, isShuffling {
-      changeStored(&stored)
-    } else if isShuffling {
-      change(&stored)
-    }
-    guard PlaybackService.shared.store(order: isShuffling ? stored : played) else { return false }
-
-    unshuffledQueue = stored
-    queue = played
-    activeQueueIdx = played.firstIndex { $0 === current } ?? activeQueueIdx
+    unshuffledQueue = orders.stored
+    queue = orders.played
+    activeQueueIdx = orders.currentIndex
     persistActiveIndex()
     persistShuffleOrder()
     precacheUpcoming()
