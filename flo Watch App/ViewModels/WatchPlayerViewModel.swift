@@ -707,7 +707,10 @@ class WatchPlayerViewModel: ObservableObject {
     guard hasNowPlaying(), let songId = nowPlaying.id, !songId.isEmpty else { return }
     starLookup += 1
     let lookup = starLookup
-    let edit = StarStore.shared.stars[songId]
+    // Adopted only if no edit was waiting or made meanwhile: an edit being
+    // sent can reach the server after it answered this lookup.
+    let canAdopt = !StarStore.shared.isPending(songId)
+    let known = StarStore.shared.stars[songId]
     AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
       Task { @MainActor in
         // A newer lookup, another song or a cleared queue (logout) meanwhile.
@@ -716,9 +719,9 @@ class WatchPlayerViewModel: ObservableObject {
         else { return }
         self.serverStarred = starred ?? false
         self.starLookupFailed = starred == nil
-        // The server's answer is newer than a star it took earlier, unless the
-        // heart changed while the lookup was under way.
-        if let starred, StarStore.shared.stars[songId] == edit {
+        if let starred, canAdopt, !StarStore.shared.isPending(songId),
+          StarStore.shared.stars[songId] == known
+        {
           StarStore.shared.adoptServerState(starred, id: songId)
         }
         self.updateHeart()

@@ -63,12 +63,18 @@ import WatchKit
     stars[id] ?? listed
   }
 
-  /// A fresh answer from the server replaces what it took earlier this
-  /// session; an edit still waiting stays on top.
+  /// A fresh answer from the server: newer than what it took earlier this
+  /// session and than the state lists were loaded with. An edit still
+  /// waiting stays on top.
   func adoptServerState(_ starred: Bool, id: String) {
-    guard confirmed[id] != nil, confirmed[id] != starred else { return }
-    confirmed[id] = nil
+    guard confirmed[id] != starred else { return }
+    confirmed[id] = starred
     publish()
+  }
+
+  /// An edit made here that the server has not taken yet.
+  func isPending(_ id: String) -> Bool {
+    edits[id] != nil
   }
 
   func set(_ starred: Bool, id: String) {

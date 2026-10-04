@@ -54,9 +54,10 @@ final class StarStoreTests: XCTestCase {
     answers[0](.success(()))
     for _ in 0..<5 { await Task.yield() }
 
-    // Unliked elsewhere meanwhile: the server's answer wins.
+    // Unliked elsewhere meanwhile: the server's answer wins, also over a
+    // list loaded before.
     store.adoptServerState(false, id: "s1")
-    XCTAssertFalse(store.isStarred("s1", listed: false))
+    XCTAssertFalse(store.isStarred("s1", listed: true))
 
     // A waiting edit still wins over the server.
     reachable = false
