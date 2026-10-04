@@ -19,6 +19,9 @@ import WatchKit
   // Stars the server took this session; lists loaded before still carry the
   // old state.
   private var confirmed: [String: Bool] = [:]
+  /// Bumped by every edit made here; a server answer asked for before an
+  /// edit is older than it.
+  private(set) var editCount = 0
   private let edits: PendingEdits<Bool>
 
   /// `defaults`, `canSend` and `send` are for tests.
@@ -79,6 +82,7 @@ import WatchKit
 
   func set(_ starred: Bool, id: String) {
     guard !id.isEmpty else { return }
+    editCount += 1
     edits.set(starred, id: id)
     publish()
   }
