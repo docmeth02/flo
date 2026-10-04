@@ -444,7 +444,13 @@ class AlbumViewModel: ObservableObject {
   /// main thread. Never asks the server.
   @MainActor func loadedOrCached<T: Codable>(_ list: [T], _ library: Library) async -> [T] {
     guard list.isEmpty else { return list }
-    return await Task.detached {
+    return await Self.cached(library)
+  }
+
+  /// The cached copy of a library list, read off the main thread, for code
+  /// without a view model (the App Intents).
+  static func cached<T: Codable>(_ library: Library) async -> [T] {
+    await Task.detached {
       LibraryCacheManager.shared.load([T].self, forKey: library.rawValue) ?? []
     }.value
   }

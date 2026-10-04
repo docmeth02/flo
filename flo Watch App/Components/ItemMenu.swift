@@ -80,10 +80,7 @@ enum MenuTarget: Identifiable {
       if library.isEmpty, serverReachable {
         library = await SmartPlaybackService.shared.syncSongLibrary()
       }
-      let songs = library.filter { song in
-        guard let id = song.artistId, !id.isEmpty else { return song.artist == artist.name }
-        return id == artist.id
-      }
+      let songs = library.filter { $0.isBy(artistId: artist.id, name: artist.name) }
       return (
         songs.sorted {
           ($0.year ?? 0, $0.albumName, $0.discNumber, $0.trackNumber)
