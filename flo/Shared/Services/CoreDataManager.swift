@@ -199,13 +199,17 @@ class CoreDataManager: ObservableObject {
     }
   }
 
-  func saveRecord() {
+  /// Saves the view context; a failed save rolls back its unsaved changes.
+  @discardableResult
+  func saveRecord() -> Bool {
     do {
       try self.viewContext.save()
+      return true
     } catch {
       self.viewContext.rollback()
 
       print(error.localizedDescription)
+      return false
     }
   }
 

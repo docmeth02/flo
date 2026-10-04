@@ -57,6 +57,7 @@ class PlaybackService {
       entity.isFromPlaylist = isFromPlaylist
       entity.isFromLocal = isFromLocal
       entity.duration = song.duration
+      entity.explicitStatus = song.explicitStatus.rawValue
       entity.position = Int32(index)
     }
     oldQueue.forEach(context.delete)

@@ -40,8 +40,8 @@ class AuthViewModel: ObservableObject {
     // not, so the Keychain keeps a copy of it. Credentials without any server
     // (stored before that copy existed) are unusable and would leave the app
     // "logged in" with every request going nowhere.
-    if Self.storedAuth() != nil {
-      let keychainURL = (try? KeychainManager.getServerURL()) ?? ""
+    // An unreadable Keychain URL (nil here) leaves everything as it is.
+    if Self.storedAuth() != nil, let keychainURL = try? KeychainManager.getServerURL() ?? "" {
       if !UserDefaultsManager.serverBaseURL.isEmpty {
         if keychainURL.isEmpty {
           try? KeychainManager.setServerURL(newValue: UserDefaultsManager.serverBaseURL)

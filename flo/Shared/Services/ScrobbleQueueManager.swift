@@ -47,6 +47,8 @@ final class ScrobbleQueueManager {
   private var scrobbles: [ScrobbleEntity] = []
   private var isFlushing = false
   private var flushRequested = false
+  // Entries the server accepted whose delete failed to save; never sent again.
+  private var delivered = Set<NSManagedObjectID>()
   private var retryTimer: Timer?
   private var retryDelay = initialRetryDelay
   private var reachability: AnyCancellable?
@@ -91,7 +93,14 @@ final class ScrobbleQueueManager {
     entry.queuedAt = Date()
     entry.status = Status.pending
 
-    CoreDataManager.shared.saveRecord()
+    guard CoreDataManager.shared.saveRecord() else {
+      // The store failed and dropped the entry; one direct attempt beats
+      // losing the play.
+      FloooService.shared.scrobbleToBuiltinEndpoint(
+        submission: true, songId: payload.songId, time: payload.listenTime
+      ) { _ in }
+      return
+    }
     reload()
 
     let connectivity = ConnectivityMonitor.shared
@@ -107,6 +116,7 @@ final class ScrobbleQueueManager {
   func clearAll() {
     accountGeneration += 1
     cancelRetry()
+    delivered = []
     scrobbles.forEach { CoreDataManager.shared.viewContext.delete($0) }
     CoreDataManager.shared.saveRecord()
     reload()
@@ -141,6 +151,8 @@ final class ScrobbleQueueManager {
 
     isFlushing = true
     flushRequested = false
+    // A timer firing mid-flush would request a second pass over the same rows.
+    cancelRetry()
     submitPending(scrobbles)
   }
 
@@ -150,19 +162,22 @@ final class ScrobbleQueueManager {
       retryDelay = Self.initialRetryDelay
       reload()
       NotificationCenter.default.post(name: .scrobbleOutboxFlushed, object: nil)
-      // Entries queued during this flush go out now. Only on request, so an
-      // entry whose delete failed to save is not sent over and over.
+      // Entries queued during this flush go out now, or with the retry when
+      // the server looked unreachable as they were queued.
       if flushRequested {
+        flushRequested = false
         flush()
-      } else {
+      } else if scrobbles.isEmpty {
         cancelRetry()
+      } else {
+        scheduleRetry()
       }
       return
     }
 
     let remaining = Array(entries.dropFirst())
 
-    guard let songId = entry.songId, !songId.isEmpty else {
+    guard let songId = entry.songId, !songId.isEmpty, !delivered.contains(entry.objectID) else {
       delete(entry)
       submitPending(remaining)
       return
@@ -183,6 +198,7 @@ final class ScrobbleQueueManager {
         switch result {
         case .success:
           debugLog("queued scrobble delivered: \(songId)")
+          self.delivered.insert(entry.objectID)
           self.delete(entry)
           self.submitPending(remaining)
 
