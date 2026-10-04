@@ -42,6 +42,7 @@
           }
         }
       }
+      runQueueDebugAction()
       guard env["FLO_DEBUG_PLAY_SOMETHING"] == "1" else { return }
 
       if let resumeAt = env["FLO_DEBUG_RESUME_AT"].flatMap(Double.init) {

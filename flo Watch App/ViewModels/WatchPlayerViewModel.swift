@@ -71,7 +71,8 @@ class WatchPlayerViewModel: ObservableObject {
   private var interruptionObservation = Set<AnyCancellable>()
   private var logoutObservation: AnyCancellable?
   private var reachabilityObservation: AnyCancellable?
-  private var unshuffledQueue: [QueueEntity] = []
+  // The stored order while shuffling (`queue` is the play order), else empty.
+  var unshuffledQueue: [QueueEntity] = []
 
   private var hasTriggeredCache: Bool = false
   // Audible playback of the current item; unlike the playhead position,
@@ -1266,7 +1267,7 @@ class WatchPlayerViewModel: ObservableObject {
 
   /// Saves the shuffled order as positions in the persisted queue, which
   /// stays in the original order.
-  private func persistShuffleOrder() {
+  func persistShuffleOrder() {
     guard isShuffling else {
       UserDefaults.standard.removeObject(forKey: Self.shuffleOrderKey)
       return
@@ -1277,7 +1278,7 @@ class WatchPlayerViewModel: ObservableObject {
 
   /// Saves the current song's position in the persisted queue order, which is
   /// the unshuffled one, so a relaunch restores the song that was playing.
-  private func persistActiveIndex() {
+  func persistActiveIndex() {
     guard queue.indices.contains(activeQueueIdx) else { return }
 
     var index = activeQueueIdx

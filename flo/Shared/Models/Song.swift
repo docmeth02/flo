@@ -204,6 +204,21 @@ struct Song: Codable, Identifiable, Hashable {
     self.explicitStatus = ExplicitStatus(from: cache.explicitStatus)
   }
 
+  init(from queue: QueueEntity) {
+    self.id = queue.id ?? ""
+    self.title = queue.songName ?? "Unknown"
+    self.artist = queue.artistName ?? "Unknown"
+    self.albumId = queue.albumId ?? ""
+    self.albumName = queue.albumName ?? ""
+    self.trackNumber = 0
+    self.discNumber = 0
+    self.bitRate = Int(queue.bitRate)
+    self.sampleRate = Int(queue.sampleRate)
+    self.suffix = queue.suffix ?? ""
+    self.duration = queue.duration
+    self.explicitStatus = ExplicitStatus(from: queue.explicitStatus)
+  }
+
   init(from song: SongEntity) {
     self.id = song.id ?? ""
     self.title = song.title ?? "N/A"
