@@ -702,10 +702,11 @@ class WatchPlayerViewModel: ObservableObject {
     } else if !starLookupFailed {
       return
     }
-    guard let songId = nowPlaying.id, !songId.isEmpty else { return }
+    guard hasNowPlaying(), let songId = nowPlaying.id, !songId.isEmpty else { return }
     AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
       Task { @MainActor in
-        guard let self, self.nowPlaying.id == songId else { return }
+        // The queue may have changed or been cleared (logout) meanwhile.
+        guard let self, self.hasNowPlaying(), self.nowPlaying.id == songId else { return }
         self.serverStarred = starred ?? false
         self.starLookupFailed = starred == nil
         self.updateHeart()
@@ -713,8 +714,10 @@ class WatchPlayerViewModel: ObservableObject {
     }
   }
 
+  /// Runs on every StarStore change, also with an empty queue.
   @MainActor private func updateHeart() {
-    let starred = StarStore.shared.isStarred(nowPlaying.id ?? "", listed: serverStarred)
+    let songId = hasNowPlaying() ? nowPlaying.id ?? "" : ""
+    let starred = !songId.isEmpty && StarStore.shared.isStarred(songId, listed: serverStarred)
     if starred != isStarred { isStarred = starred }
   }
 
@@ -1526,7 +1529,7 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   @MainActor func toggleStar() {
-    guard let songId = nowPlaying.id, !songId.isEmpty else { return }
+    guard hasNowPlaying(), let songId = nowPlaying.id, !songId.isEmpty else { return }
     StarStore.shared.set(!isStarred, id: songId)
   }
 
