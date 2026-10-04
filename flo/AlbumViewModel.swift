@@ -417,6 +417,14 @@ class AlbumViewModel: ObservableObject {
       assign: { self.artists = $0 }, request: AlbumService.shared.getArtists)
   }
 
+  /// Siri and Shortcuts know only the cached artists. After a login nothing
+  /// is cached until the Artists list loads, so Home asks for it once.
+  @MainActor func cacheArtistsIfNeeded() async {
+    guard artists.isEmpty else { return }
+    let cached: [Artist] = await Self.cached(.artists)
+    if cached.isEmpty { getArtists() }
+  }
+
   // MARK: - Async refresh variants
 
   @MainActor func refreshAlbums() async {

@@ -115,8 +115,12 @@ struct WatchHomeView: View {
     }
     .itemMenu($menu)
     .navigationTitle("")
-    // Runs again on every return to Home, so a song just heard shows up.
-    .task { await albumViewModel.loadRecentAlbums() }
+    // Runs again on every return to Home, so a song just heard shows up, and
+    // after a login fills the artist cache Siri and Shortcuts read.
+    .task {
+      await albumViewModel.loadRecentAlbums()
+      await albumViewModel.cacheArtistsIfNeeded()
+    }
     .toolbar {
       ToolbarItem(placement: .topBarLeading) {
         Text("flo")
