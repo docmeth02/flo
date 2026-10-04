@@ -114,6 +114,7 @@ struct WatchContentView: View {
     .environmentObject(albumViewModel)
     .environmentObject(floooViewModel)
     .environmentObject(downloadViewModel)
+    .environmentObject(PinStore.shared)
     #if DEBUG
       .task { await runDebugLaunchActions() }
       .sheet(isPresented: $showsDebugDiagnostics) { NavigationStack { WatchDiagnosticsView() } }

@@ -27,9 +27,25 @@ final class PinStore: ObservableObject {
     self.account = account
   }
 
-  func pinned(_ kind: Kind) -> Set<String> { [] }
+  /// Nothing while logged out.
+  func pinned(_ kind: Kind) -> Set<String> {
+    guard let key = key(kind) else { return [] }
+    return Set(defaults.stringArray(forKey: key) ?? [])
+  }
 
-  func isPinned(_ id: String, _ kind: Kind) -> Bool { false }
+  func isPinned(_ id: String, _ kind: Kind) -> Bool {
+    pinned(kind).contains(id)
+  }
 
-  func toggle(_ id: String, _ kind: Kind) {}
+  func toggle(_ id: String, _ kind: Kind) {
+    guard let key = key(kind) else { return }
+    var ids = pinned(kind)
+    if ids.remove(id) == nil { ids.insert(id) }
+    objectWillChange.send()
+    defaults.set(ids.sorted(), forKey: key)
+  }
+
+  private func key(_ kind: Kind) -> String? {
+    account().map { "pins.\(kind.rawValue).\($0)" }
+  }
 }

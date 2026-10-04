@@ -24,6 +24,8 @@ extension Color {
   static let floTimeText = Color(red: 0xC4 / 255, green: 0xC3 / 255, blue: 0xCF / 255)
   /// Behind a lavender glyph tile.
   static let floTile = floLavender.opacity(0.18)
+  /// The rule between the pinned rows and the full list.
+  static let floHairline = Color.white.opacity(0.14)
 }
 
 /// Sizes shared by rows and their tiles.
