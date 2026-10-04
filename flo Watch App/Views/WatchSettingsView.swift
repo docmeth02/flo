@@ -114,13 +114,7 @@ struct WatchSettingsView: View {
 
       if CoreDataManager.shared.isUsingVolatileStore {
         Section {
-          Label(
-            "Storage unavailable: history, downloads and queued scrobbles are not saved until the app restarts.",
-            systemImage: "exclamationmark.triangle"
-          )
-          .font(.floMeta)
-          .foregroundStyle(Color.floWarningText)
-          .floRow()
+          StorageWarningRow()
         }
       }
 

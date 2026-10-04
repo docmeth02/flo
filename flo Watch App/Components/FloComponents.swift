@@ -109,6 +109,19 @@ struct FloSectionHeader: View {
   }
 }
 
+/// Shown on Home and in Settings while Core Data runs in memory only.
+struct StorageWarningRow: View {
+  var body: some View {
+    Label(
+      "Storage unavailable: history, downloads and queued scrobbles are not saved until the app restarts.",
+      systemImage: "exclamationmark.triangle"
+    )
+    .font(.floMeta)
+    .foregroundStyle(Color.floWarningText)
+    .floRow()
+  }
+}
+
 /// A label over its value: settings and diagnostics.
 struct FloInfoRow: View {
   let label: String

@@ -15,6 +15,12 @@ struct WatchHomeView: View {
 
   var body: some View {
     List {
+      if CoreDataManager.shared.isUsingVolatileStore {
+        Section {
+          StorageWarningRow()
+        }
+      }
+
       if playerViewModel.hasNowPlaying() {
         Button(action: selectPlayerPage) {
           NowPlayingIndicator()
