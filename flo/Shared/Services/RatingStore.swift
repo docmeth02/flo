@@ -65,10 +65,11 @@ import WatchKit
   }
 
   func set(_ rating: Int, playbackID id: String) {
+    // Stored first, so a kill in between cannot lose the edit.
+    edits.set(min(max(rating, 0), 5), id: id)
     // A new edit supersedes what the server took before it.
     confirmed[id] = nil
     UserDefaultsManager.confirmedRatings = confirmed
-    edits.set(min(max(rating, 0), 5), id: id)
     publish()
   }
 

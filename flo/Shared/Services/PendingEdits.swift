@@ -103,6 +103,8 @@ import Foundation
       // else waits for the next flush.
       guard FloooService.shared.isPermanentScrobbleFailure(error) else {
         debugLog("\(name) pending: \(id)=\(value) (\(error.localizedDescription))")
+        // A newer edit made meanwhile goes now; this one waits for the next flush.
+        if let newer = values[id], newer != value { flush() }
         return
       }
       debugLog("\(name) dropped: \(id)=\(value) (\(error.localizedDescription))")

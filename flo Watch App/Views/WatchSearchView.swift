@@ -56,6 +56,8 @@ struct WatchSearchView: View {
     }
     .itemMenu($menu)
     .task {
+      // Once: the view reappears after every pushed album or artist.
+      guard library == nil else { return }
       async let artists = albumViewModel.loadedOrCached(albumViewModel.artists, .artists)
       async let albums = albumViewModel.loadedOrCached(albumViewModel.albums, .albums)
       async let songs = SmartPlaybackService.shared.loadCachedLibrary().songs
@@ -65,6 +67,10 @@ struct WatchSearchView: View {
     // there and again on every edit.
     .task(id: library == nil ? nil : query) {
       guard let library else { return }
+      // Typing restarts this task; only a query left alone for a moment is
+      // searched, so no scan runs for every keystroke.
+      try? await Task.sleep(for: .milliseconds(250))
+      guard !Task.isCancelled else { return }
       let query = query
       let found = await Task.detached {
         LibrarySearch.search(

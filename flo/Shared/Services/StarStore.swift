@@ -38,7 +38,8 @@ import WatchKit
       name: "star", key: UserDefaultsKeys.pendingStars, defaults: defaults, canSend: canSend,
       send: send)
     edits.onSettle = { [unowned self] id, starred, accepted in
-      if accepted { self.confirmed[id] = starred }
+      // Not when a newer edit for the item waits, as for ratings.
+      if accepted, self.edits[id] == nil { self.confirmed[id] = starred }
       self.publish()
     }
 
@@ -60,6 +61,14 @@ import WatchKit
   /// state the item was listed with.
   func isStarred(_ id: String, listed: Bool) -> Bool {
     stars[id] ?? listed
+  }
+
+  /// A fresh answer from the server replaces what it took earlier this
+  /// session; an edit still waiting stays on top.
+  func adoptServerState(_ starred: Bool, id: String) {
+    guard confirmed[id] != nil, confirmed[id] != starred else { return }
+    confirmed[id] = nil
+    publish()
   }
 
   func set(_ starred: Bool, id: String) {

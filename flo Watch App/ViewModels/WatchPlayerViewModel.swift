@@ -56,6 +56,8 @@ class WatchPlayerViewModel: ObservableObject {
   private var serverStarred = false
   // That lookup failed; announcing the song asks again.
   private var starLookupFailed = false
+  // Bumped by every lookup; an older answer, even for the same song, is stale.
+  private var starLookup = 0
   private var starObservation: AnyCancellable?
   private var resumeAfterInterruption = false
 
@@ -703,12 +705,22 @@ class WatchPlayerViewModel: ObservableObject {
       return
     }
     guard hasNowPlaying(), let songId = nowPlaying.id, !songId.isEmpty else { return }
+    starLookup += 1
+    let lookup = starLookup
+    let edit = StarStore.shared.stars[songId]
     AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
       Task { @MainActor in
-        // The queue may have changed or been cleared (logout) meanwhile.
-        guard let self, self.hasNowPlaying(), self.nowPlaying.id == songId else { return }
+        // A newer lookup, another song or a cleared queue (logout) meanwhile.
+        guard let self, self.starLookup == lookup, self.hasNowPlaying(),
+          self.nowPlaying.id == songId
+        else { return }
         self.serverStarred = starred ?? false
         self.starLookupFailed = starred == nil
+        // The server's answer is newer than a star it took earlier, unless the
+        // heart changed while the lookup was under way.
+        if let starred, StarStore.shared.stars[songId] == edit {
+          StarStore.shared.adoptServerState(starred, id: songId)
+        }
         self.updateHeart()
       }
     }

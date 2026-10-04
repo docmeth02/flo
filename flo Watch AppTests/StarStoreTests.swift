@@ -47,4 +47,21 @@ final class StarStoreTests: XCTestCase {
     store.set(false, id: "s1")
     XCTAssertFalse(store.isStarred("s1", listed: true))
   }
+
+  func testFreshServerStateReplacesAnEarlierConfirmation() async {
+    let store = makeStore()
+    store.set(true, id: "s1")
+    answers[0](.success(()))
+    for _ in 0..<5 { await Task.yield() }
+
+    // Unliked elsewhere meanwhile: the server's answer wins.
+    store.adoptServerState(false, id: "s1")
+    XCTAssertFalse(store.isStarred("s1", listed: false))
+
+    // A waiting edit still wins over the server.
+    reachable = false
+    store.set(true, id: "s1")
+    store.adoptServerState(false, id: "s1")
+    XCTAssertTrue(store.isStarred("s1", listed: false))
+  }
 }
