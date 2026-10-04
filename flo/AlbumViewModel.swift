@@ -174,6 +174,8 @@ class AlbumViewModel: ObservableObject {
           DispatchQueue.global(qos: .utility).async {
             LibraryCacheManager.shared.save(
               items, forKey: library.rawValue, generation: cacheGeneration)
+            // Siri reads the artist names for "Play <artist>" from this cache.
+            if library == .artists { FloShortcuts.updateAppShortcutParameters() }
           }
         case .failure:
           self.listStates[library] = ListState(failed: true)

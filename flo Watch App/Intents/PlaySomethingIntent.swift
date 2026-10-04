@@ -14,7 +14,23 @@ struct PlaySomethingIntent: AppIntent {
 
   @MainActor
   func perform() async throws -> some IntentResult {
-    PlaySomethingRequest.post()
+    PlayRequest.post(.something)
+    return .result()
+  }
+}
+
+/// Plays an artist's top songs, or offline their songs on the watch.
+struct PlayArtistIntent: AppIntent {
+  static var title: LocalizedStringResource = "Play Artist"
+  static var description = IntentDescription("Plays an artist's top songs.")
+  static var openAppWhenRun = true
+
+  @Parameter(title: "Artist")
+  var artist: ArtistAppEntity
+
+  @MainActor
+  func perform() async throws -> some IntentResult {
+    PlayRequest.post(.artist(id: artist.id, name: artist.name))
     return .result()
   }
 }
@@ -28,28 +44,35 @@ struct FloShortcuts: AppShortcutsProvider {
       phrases: ["Play something in \(.applicationName)"],
       shortTitle: "Play Something",
       systemImageName: "sparkles")
+    AppShortcut(
+      intent: PlayArtistIntent(),
+      phrases: ["Play \(\.$artist) in \(.applicationName)"],
+      shortTitle: "Play Artist",
+      systemImageName: "music.mic")
   }
 }
 
 extension Notification.Name {
-  static let playSomethingRequested = Notification.Name("flo.playSomethingRequested")
+  static let playRequested = Notification.Name("flo.playRequested")
 }
 
-/// A request WatchContentView has not taken yet. A launch by the intent can
-/// run perform() before the view subscribed to the notification, so the view
-/// also takes a pending request when it appears.
-@MainActor
-enum PlaySomethingRequest {
-  private static var isPending = false
+/// What an intent asked the app to play. WatchContentView takes it; a launch
+/// by the intent can run perform() before the view subscribed to the
+/// notification, so the view also takes a pending request when it appears.
+enum PlayRequest {
+  case something
+  case artist(id: String, name: String)
 
-  static func post() {
-    isPending = true
-    NotificationCenter.default.post(name: .playSomethingRequested, object: nil)
+  @MainActor private static var pending: PlayRequest?
+
+  @MainActor static func post(_ request: PlayRequest) {
+    pending = request
+    NotificationCenter.default.post(name: .playRequested, object: nil)
   }
 
-  /// True once per request.
-  static func take() -> Bool {
-    defer { isPending = false }
-    return isPending
+  /// The pending request, once.
+  @MainActor static func take() -> PlayRequest? {
+    defer { pending = nil }
+    return pending
   }
 }

@@ -1258,15 +1258,41 @@ class WatchPlayerViewModel: ObservableObject {
   /// while a mix is already being built, when none came together, or when the
   /// user started something else in the meantime.
   @MainActor func playSomething() async -> Bool {
+    await playWhenBuilt {
+      let songs = await SmartPlaybackService.shared.generateMix(count: 15, mode: .playSomething)
+      return SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs)
+    }
+  }
+
+  /// Plays an artist's top songs, for the intent; offline or without top
+  /// songs, the artist's songs from the cached library, shuffled. False like
+  /// `playSomething()`.
+  @MainActor func playArtist(id: String, name: String) async -> Bool {
+    await playWhenBuilt {
+      var songs = await withCheckedContinuation { continuation in
+        RadioService.shared.getTopSongs(artistName: name) {
+          continuation.resume(returning: (try? $0.get()) ?? [])
+        }
+      }
+      if songs.isEmpty {
+        songs = await SmartPlaybackService.shared.loadCachedLibrary().songs
+          .filter { $0.isBy(artistId: id, name: name) }
+          .shuffled()
+      }
+      return SongCollection(id: "artist-\(id)", name: name, songs: songs)
+    }
+  }
+
+  /// Builds a collection and plays it, unless one is already being built or
+  /// the user started something else in the meantime.
+  @MainActor private func playWhenBuilt(_ build: () async -> SongCollection) async -> Bool {
     guard !isGeneratingMix else { return false }
     isGeneratingMix = true
     let generation = startGeneration
-    let songs = await SmartPlaybackService.shared.generateMix(count: 15, mode: .playSomething)
+    let item = await build()
     isGeneratingMix = false
     guard startGeneration == generation else { return false }
-    return playItem(
-      item: SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs),
-      isFromLocal: false)
+    return playItem(item: item, isFromLocal: false)
   }
 
   @discardableResult

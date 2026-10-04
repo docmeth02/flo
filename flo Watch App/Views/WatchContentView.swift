@@ -53,11 +53,18 @@ struct WatchContentView: View {
     DispatchQueue.main.async { selectedTab = .nowPlaying }
   }
 
-  /// Plays a mix for Siri, Shortcuts or the Action Button. Logged out, the
-  /// request is dropped and the login screen stays.
-  private func takePlaySomethingRequest() {
-    guard PlaySomethingRequest.take(), authViewModel.isLoggedIn else { return }
-    Task { if await playerViewModel.playSomething() { showPlayer() } }
+  /// Plays what Siri, Shortcuts or the Action Button asked for. Logged out,
+  /// the request is dropped and the login screen stays.
+  private func takePlayRequest() {
+    guard let request = PlayRequest.take(), authViewModel.isLoggedIn else { return }
+    Task {
+      let played =
+        switch request {
+        case .something: await playerViewModel.playSomething()
+        case .artist(let id, let name): await playerViewModel.playArtist(id: id, name: name)
+        }
+      if played { showPlayer() }
+    }
   }
 
   var body: some View {
@@ -116,9 +123,9 @@ struct WatchContentView: View {
     .onChange(of: playerViewModel.hasNowPlaying()) { _, hasNowPlaying in
       if !hasNowPlaying { selectedTab = .home }
     }
-    .onAppear(perform: takePlaySomethingRequest)
-    .onReceive(NotificationCenter.default.publisher(for: .playSomethingRequested)) { _ in
-      takePlaySomethingRequest()
+    .onAppear(perform: takePlayRequest)
+    .onReceive(NotificationCenter.default.publisher(for: .playRequested)) { _ in
+      takePlayRequest()
     }
     .environmentObject(authViewModel)
     .environmentObject(playerViewModel)

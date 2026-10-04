@@ -218,12 +218,24 @@
     }
 
     // FLO_DEBUG_INTENT=1 asks for Play Something the way the App Intent does,
-    // three seconds after launch.
+    // three seconds after launch; FLO_DEBUG_INTENT=artist:<name> asks for the
+    // artist Siri would resolve that name to.
     private func runDebugIntent() async {
-      guard ProcessInfo.processInfo.environment["FLO_DEBUG_INTENT"] == "1" else { return }
+      guard let value = ProcessInfo.processInfo.environment["FLO_DEBUG_INTENT"] else { return }
       try? await Task.sleep(nanoseconds: 3_000_000_000)
-      debugLog("intent hook: requesting play something")
-      PlaySomethingRequest.post()
+      if value == "1" {
+        debugLog("intent hook: requesting play something")
+        PlayRequest.post(.something)
+      } else if value.hasPrefix("artist:") {
+        let name = String(value.dropFirst("artist:".count))
+        guard let artist = try? await ArtistAppEntity.defaultQuery.entities(matching: name).first
+        else {
+          debugLog("intent hook: no cached artist matches \(name)")
+          return
+        }
+        debugLog("intent hook: requesting artist \(artist.name) (\(artist.id))")
+        PlayRequest.post(.artist(id: artist.id, name: artist.name))
+      }
     }
 
     // FLO_DEBUG_SCREEN=<name> pushes one screen four seconds after
