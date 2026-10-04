@@ -39,9 +39,12 @@ build=$((current + 1))
 
 work=$(mktemp -d)
 log="$work/xcodebuild.log"
-# Every exit before the commit, a failure or a dry run, takes the bump back.
+# Every exit before the upload, a failure or a dry run, takes the bump back.
 bumped=false
-finish() { if $bumped; then git checkout -q -- "$project"; fi; }
+finish() {
+  if $bumped; then git checkout -q -- "$project"; fi
+  xcrun simctl terminate "$simulator" host.docmeth02.flowatch.watchkitapp 2>/dev/null || true
+}
 trap finish EXIT
 
 sed -i '' "s/CURRENT_PROJECT_VERSION = $current;/CURRENT_PROJECT_VERSION = $build;/" "$project"
@@ -52,7 +55,6 @@ echo "release: testing"
 xcodebuild test -project flo.xcodeproj -scheme "flo Watch App" \
   -destination "platform=watchOS Simulator,id=$simulator" >"$log" 2>&1 \
   || fail "tests failed, see $log"
-xcrun simctl terminate "$simulator" host.docmeth02.flowatch.watchkitapp 2>/dev/null || true
 
 echo "release: archiving"
 xcodebuild archive -project flo.xcodeproj -scheme "flo watch" -configuration Release \
@@ -74,9 +76,11 @@ echo "release: uploading"
 xcodebuild -exportArchive -archivePath "$work/flowatch.xcarchive" \
   -exportOptionsPlist scripts/export.plist -exportPath "$work/export" "${auth[@]}" \
   >"$log" 2>&1 || fail "upload failed, see $log"
-
-git commit -q -m "bump build number to $build" -- "$project"
+# Build $build is on App Store Connect now; its number must stay taken.
 bumped=false
+
+git commit -q -m "bump build number to $build" -- "$project" \
+  || fail "build $build uploaded, commit the bump by hand"
 echo "release: build $build uploaded and committed"
 git branch -f testflight HEAD || fail "move testflight to $(git rev-parse --short HEAD) by hand"
 echo "release: testflight moved to $(git rev-parse --short HEAD); push when ready"
