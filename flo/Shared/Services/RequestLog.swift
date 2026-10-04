@@ -33,7 +33,9 @@ final class RequestLog: ObservableObject {
   /// Newest first. Main thread only.
   @Published private(set) var entries: [Entry] = []
 
-  private let maxEntries = 80
+  // A workout makes hundreds of requests; the audio notes of its start
+  // must still be there when Diagnostics is opened afterwards.
+  private let maxEntries = 300
 
   private init() {}
 
