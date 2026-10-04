@@ -12,6 +12,8 @@ struct WatchHomeView: View {
   @Environment(\.showPlayer) private var showPlayer
   @Environment(\.selectPlayerPage) private var selectPlayerPage
   @State private var isGeneratingMix = false
+  @State private var openedAlbumId: String?
+  @State private var menu: MenuTarget?
 
   var body: some View {
     List {
@@ -55,12 +57,11 @@ struct WatchHomeView: View {
       if !albumViewModel.recentAlbums.isEmpty {
         Section {
           ForEach(albumViewModel.recentAlbums) { album in
-            NavigationLink(destination: WatchAlbumDetailView(album: album)) {
-              CoverRow(
-                tile: .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id),
-                title: album.name,
-                subtitle: album.albumArtist)
-            }
+            CoverRow(
+              tile: .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id),
+              title: album.name,
+              subtitle: album.albumArtist)
+            .holdable(onTap: { openedAlbumId = album.id }, onHold: { menu = .album(album) })
             .floRow()
           }
         } header: {
@@ -118,6 +119,12 @@ struct WatchHomeView: View {
           url: playerViewModel.coverArt, height: 190)
       }
     }
+    .navigationDestination(item: $openedAlbumId) { id in
+      if let album = albumViewModel.recentAlbums.first(where: { $0.id == id }) {
+        WatchAlbumDetailView(album: album)
+      }
+    }
+    .itemMenu($menu)
     .navigationTitle("")
     // Runs again on every return to Home, so a song just heard shows up.
     .task { await albumViewModel.loadRecentAlbums() }

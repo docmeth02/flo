@@ -152,7 +152,7 @@ class WatchPlayerViewModel: ObservableObject {
       .filter { $0 }
       .receive(on: DispatchQueue.main)
       .sink { [weak self] _ in
-        guard let self, self.hasTriggeredCache, self.isPlaying, !self.isLiveRadio else { return }
+        guard let self, self.isPlaying else { return }
         self.precacheUpcoming()
       }
 
@@ -1469,10 +1469,14 @@ class WatchPlayerViewModel: ObservableObject {
         // being generated — the ordered queue contents are compared too, so a
         // new queue that happens to start on the same song is not overwritten.
         guard self.queue.indices.contains(self.activeQueueIdx),
-          self.nowPlaying.id == lastPlayedId,
-          self.queue.compactMap({ $0.id }) == queueIdList,
-          self.playGeneration == generation, UserDefaultsManager.keepPlaying
+          self.nowPlaying.id == lastPlayedId, self.playGeneration == generation
         else { return }
+        guard self.queue.compactMap({ $0.id }) == queueIdList, UserDefaultsManager.keepPlaying
+        else {
+          // Songs queued while the mix was built play instead of it.
+          if self.queue.indices.contains(self.activeQueueIdx + 1) { self.nextSong() }
+          return
+        }
 
         guard !songs.isEmpty else {
           self.stop()
@@ -1513,8 +1517,11 @@ class WatchPlayerViewModel: ObservableObject {
     }
   }
 
-  /// Caches the next two songs, so a dropout or a skip does not stop the music.
+  /// Caches the next two songs, so a dropout or a skip does not stop the
+  /// music. Only once the current song played 10 s: a song skipped right
+  /// away should not cost two downloads.
   func precacheUpcoming() {
+    guard hasTriggeredCache, !isLiveRadio else { return }
     for idx in upcomingQueueIndices(2) {
       let entry = queue[idx]
       guard let id = entry.id, !id.isEmpty else { continue }

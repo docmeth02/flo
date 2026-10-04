@@ -123,7 +123,7 @@ extension WatchPlayerViewModel {
     activeQueueIdx = played.firstIndex { $0 === current } ?? activeQueueIdx
     persistActiveIndex()
     persistShuffleOrder()
-    if hasTriggeredCache { precacheUpcoming() }
+    precacheUpcoming()
     return true
   }
 }
