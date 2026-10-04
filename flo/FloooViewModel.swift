@@ -55,7 +55,7 @@ class FloooViewModel: ObservableObject {
           self.streamCacheSize = bytesToMBOrGB(cacheSize)
         }
       } catch {
-        print("Error: \(error)")
+        debugLog("storage size failed: \(error)")
       }
     }
   }
@@ -70,7 +70,7 @@ class FloooViewModel: ObservableObject {
         self.getLocalStorageInformation()
 
       case .failure(let error):
-        print("error in optimizeLocalStorage>>>", error)
+        debugLog("optimizeLocalStorage failed: \(error)")
       }
     }
   }

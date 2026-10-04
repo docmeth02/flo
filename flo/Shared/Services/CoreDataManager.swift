@@ -27,7 +27,7 @@ class CoreDataManager {
     container.persistentStoreDescriptions = [description]
     container.loadPersistentStores { _, error in
       if let error {
-        print("Failed to create in-memory store: \(error.localizedDescription)")
+        debugLog("Failed to create in-memory store: \(error.localizedDescription)")
       }
     }
 
@@ -113,7 +113,7 @@ class CoreDataManager {
     }
 
     if let loadError {
-      print("failed to load persistent stores: \(loadError.localizedDescription)")
+      debugLog("failed to load persistent stores: \(loadError.localizedDescription)")
       return nil
     }
 
@@ -178,7 +178,7 @@ class CoreDataManager {
     do {
       return try self.viewContext.fetch(request)
     } catch let error {
-      print(error.localizedDescription)
+      debugLog("fetch failed: \(error.localizedDescription)")
 
       return []
     }
@@ -193,7 +193,7 @@ class CoreDataManager {
       let count = try self.viewContext.count(for: request)
       return count
     } catch {
-      print(error.localizedDescription)
+      debugLog("count failed: \(error.localizedDescription)")
 
       return 0
     }
@@ -208,7 +208,7 @@ class CoreDataManager {
     } catch {
       self.viewContext.rollback()
 
-      print(error.localizedDescription)
+      debugLog("save failed: \(error.localizedDescription)")
       return false
     }
   }
@@ -270,7 +270,7 @@ class CoreDataManager {
       NSManagedObjectContext.mergeChanges(
         fromRemoteContextSave: [NSDeletedObjectsKey: deletedIDs], into: [viewContext])
     } catch {
-      print("Failed to delete \(entityName) records: \(error.localizedDescription)")
+      debugLog("Failed to delete \(entityName) records: \(error.localizedDescription)")
     }
   }
 }

@@ -197,7 +197,7 @@ class AuthService {
       tokenNeedsPersisting = false
       debugLog("navidrome token persisted")
     } catch {
-      print("Error saving renewed token to Keychain: \(error)")
+      debugLog("Error saving renewed token to Keychain: \(error)")
     }
   }
 

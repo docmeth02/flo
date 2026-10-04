@@ -214,7 +214,7 @@ class DownloadViewModel: ObservableObject {
               self.downloadedTrackCount[index].elapsed = 0
             }
           } else {
-            print(error)
+            debugLog("download failed: \(error)")
             self.updateItemStatus(itemId: item.id, status: .failed)
           }
         }

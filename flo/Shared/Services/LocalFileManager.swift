@@ -52,7 +52,7 @@ class LocalFileManager {
             totalSize += Int64(size)
           }
         } catch {
-          print("Error calculating size for \(fileURL.path): \(error)")
+          debugLog("Error calculating size for \(fileURL.path): \(error)")
         }
       }
 
@@ -123,16 +123,16 @@ class LocalFileManager {
     do {
       if fileManager.fileExists(atPath: folderURL.path) {
         try fileManager.removeItem(at: folderURL)
-        print("Folder media deleted successfully")
+        debugLog("Folder media deleted successfully")
 
         completion(.success(true))
       } else {
-        print("Folder media somehow does not exist")
+        debugLog("Folder media somehow does not exist")
 
         completion(.success(false))
       }
     } catch {
-      print("Error deleting folder: \(error.localizedDescription)")
+      debugLog("Error deleting folder: \(error.localizedDescription)")
 
       completion(.failure(error))
     }

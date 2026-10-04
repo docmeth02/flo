@@ -66,7 +66,7 @@ class PlaybackService {
       try context.save()
     } catch {
       context.rollback()
-      print("Failed to store the queue: \(error.localizedDescription)")
+      debugLog("Failed to store the queue: \(error.localizedDescription)")
       return []
     }
 

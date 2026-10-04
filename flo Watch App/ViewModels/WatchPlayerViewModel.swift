@@ -969,7 +969,7 @@ class WatchPlayerViewModel: ObservableObject {
       DispatchQueue.main.async {
         guard let self = self, gen == self.playGeneration else { return }
         if let error = error {
-          print("Audio session activation failed: \(error)")
+          debugLog("Audio session activation failed: \(error)")
           return
         }
 

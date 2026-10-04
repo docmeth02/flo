@@ -94,7 +94,7 @@ class AuthViewModel: ObservableObject {
       }
       return .found(password)
     } catch {
-      print("error reading password from Keychain: \(error)")
+      debugLog("error reading password from Keychain: \(error)")
       return .unreadable
     }
   }
@@ -189,7 +189,7 @@ class AuthViewModel: ObservableObject {
           do {
             try KeychainManager.setAuthPassword(newValue: self.password)
           } catch {
-            print("error saving password to Keychain: \(error)")
+            debugLog("error saving password to Keychain: \(error)")
           }
 
           self.isSubmitting = false
@@ -231,7 +231,7 @@ class AuthViewModel: ObservableObject {
     do {
       try KeychainManager.removeAuthCreds()
     } catch {
-      print("error>>>>> \(error)")
+      debugLog("error removing auth creds from Keychain: \(error)")
     }
     AuthService.shared.clearCreds()
     // Nothing of this account may be answered or retried under the next.
@@ -241,7 +241,7 @@ class AuthViewModel: ObservableObject {
     do {
       try KeychainManager.removeServerURL()
     } catch {
-      print("error>>>>> \(error)")
+      debugLog("error removing server URL from Keychain: \(error)")
     }
 
     // Navidrome's nd-player cookie names this account's user.
@@ -274,7 +274,7 @@ class AuthViewModel: ObservableObject {
     do {
       try KeychainManager.removeAuthPassword()
     } catch {
-      print("error>>>>> \(error)")
+      debugLog("error removing password from Keychain: \(error)")
     }
   }
 
@@ -286,7 +286,7 @@ class AuthViewModel: ObservableObject {
       do {
         try KeychainManager.setAuthCreds(newValue: jsonString)
       } catch {
-        print("Error saving auth creds to Keychain: \(error)")
+        debugLog("Error saving auth creds to Keychain: \(error)")
       }
 
       AuthService.shared.setCreds(data)
@@ -294,10 +294,10 @@ class AuthViewModel: ObservableObject {
       do {
         try KeychainManager.setServerURL(newValue: UserDefaultsManager.serverBaseURL)
       } catch {
-        print("Error saving server URL to Keychain: \(error)")
+        debugLog("Error saving server URL to Keychain: \(error)")
       }
     } catch {
-      print("Error encoding auth data: \(error)")
+      debugLog("Error encoding auth data: \(error)")
     }
   }
 

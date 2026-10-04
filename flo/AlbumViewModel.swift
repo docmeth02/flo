@@ -237,7 +237,7 @@ class AlbumViewModel: ObservableObject {
 
     AlbumService.shared.downloadAlbumCover(albumId: albumToDownload.id) { result in
       if case .failure(let error) = result {
-        print("Failed to save album cover: \(error.localizedDescription)")
+        debugLog("Failed to save album cover: \(error.localizedDescription)")
       }
     }
   }
@@ -258,7 +258,7 @@ class AlbumViewModel: ObservableObject {
       playlistId: playlistToDownload.id, coverArtId: playlistToDownload.coverArtId
     ) { result in
       if case .failure(let error) = result {
-        print("Failed to save playlist cover: \(error.localizedDescription)")
+        debugLog("Failed to save playlist cover: \(error.localizedDescription)")
       }
     }
 
@@ -282,7 +282,7 @@ class AlbumViewModel: ObservableObject {
         case .success:
           self.setActiveAlbum(album: album)
         case .failure(let error):
-          print("error >>>", error)
+          debugLog("removing album failed: \(error)")
         }
       }
     }
@@ -297,7 +297,7 @@ class AlbumViewModel: ObservableObject {
         case .success:
           self.setActivePlaylist(playlist: playlist)
         case .failure(let error):
-          print("error >>>", error)
+          debugLog("removing playlist failed: \(error)")
         }
       }
     }

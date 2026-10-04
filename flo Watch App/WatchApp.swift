@@ -15,7 +15,7 @@ struct FloWatchApp: App {
       try AVAudioSession.sharedInstance().setCategory(
         .playback, mode: .default, policy: .longFormAudio)
     } catch {
-      print("Failed to set audio session category: \(error)")
+      debugLog("Failed to set audio session category: \(error)")
     }
 
     StreamCacheManager.shared.reconcile()
