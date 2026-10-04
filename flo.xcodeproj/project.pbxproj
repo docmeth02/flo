@@ -81,6 +81,11 @@
 		FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		FB66DABB7F1FED68A499E009 /* PlusJakartaSans-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C415F55E2C11A34C00E3E1D2 /* PlusJakartaSans-VariableFont_wght.ttf */; };
 		FE84EAF37C9E7F4D5488B658 /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */; };
+		F10E00000000000000000011 /* WatchContentView+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10E00000000000000000001 /* WatchContentView+Debug.swift */; };
+		F10E00000000000000000012 /* WatchPlayerViewModel+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10E00000000000000000002 /* WatchPlayerViewModel+Debug.swift */; };
+		F10E00000000000000000013 /* AuthViewModel+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10E00000000000000000003 /* AuthViewModel+Debug.swift */; };
+		F10E00000000000000000014 /* WatchHomeView+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10E00000000000000000004 /* WatchHomeView+Debug.swift */; };
+		F10E00000000000000000015 /* SmartPlaybackService+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10E00000000000000000005 /* SmartPlaybackService+Debug.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -185,6 +190,11 @@
 		F94DAD74D58A8EBD6F580A81 /* WatchRadiosView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadiosView.swift; sourceTree = "<group>"; };
 		FABF85F19B541FE12696A0E5 /* WatchNowPlayingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNowPlayingView.swift; sourceTree = "<group>"; };
 		FBE281A2946A2E18C84927D8 /* WatchSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSettingsView.swift; sourceTree = "<group>"; };
+		F10E00000000000000000001 /* WatchContentView+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WatchContentView+Debug.swift"; sourceTree = "<group>"; };
+		F10E00000000000000000002 /* WatchPlayerViewModel+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WatchPlayerViewModel+Debug.swift"; sourceTree = "<group>"; };
+		F10E00000000000000000003 /* AuthViewModel+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "AuthViewModel+Debug.swift"; sourceTree = "<group>"; };
+		F10E00000000000000000004 /* WatchHomeView+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WatchHomeView+Debug.swift"; sourceTree = "<group>"; };
+		F10E00000000000000000005 /* SmartPlaybackService+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "SmartPlaybackService+Debug.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -263,6 +273,7 @@
 				2902A4035F798586E2A6C881 /* Views */,
 				FC042B4DD47E6FF44A016E1C /* ViewModels */,
 				BF0C8310E85E03FC45C8E535 /* Components */,
+				F10E00000000000000000000 /* Debug */,
 				C33E4D7DFB09BB760978CACE /* Assets.xcassets */,
 			);
 			name = "flo Watch App";
@@ -395,6 +406,18 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
+		F10E00000000000000000000 /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				F10E00000000000000000001 /* WatchContentView+Debug.swift */,
+				F10E00000000000000000002 /* WatchPlayerViewModel+Debug.swift */,
+				F10E00000000000000000003 /* AuthViewModel+Debug.swift */,
+				F10E00000000000000000004 /* WatchHomeView+Debug.swift */,
+				F10E00000000000000000005 /* SmartPlaybackService+Debug.swift */,
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -504,6 +527,11 @@
 			files = (
 				93C4EDA5F5007DA82FE113B5 /* WatchApp.swift in Sources */,
 				1DD438B1C8D7D5AEC7562A6A /* WatchContentView.swift in Sources */,
+				F10E00000000000000000011 /* WatchContentView+Debug.swift in Sources */,
+				F10E00000000000000000012 /* WatchPlayerViewModel+Debug.swift in Sources */,
+				F10E00000000000000000013 /* AuthViewModel+Debug.swift in Sources */,
+				F10E00000000000000000014 /* WatchHomeView+Debug.swift in Sources */,
+				F10E00000000000000000015 /* SmartPlaybackService+Debug.swift in Sources */,
 				BE5C5E81B4634769556BAB00 /* WatchHomeView.swift in Sources */,
 				A696A6F708006E6ABC75D01C /* WatchLoginView.swift in Sources */,
 				2F8DDF24A4E509AD68036392 /* WatchNowPlayingView.swift in Sources */,
