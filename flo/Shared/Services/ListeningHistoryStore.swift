@@ -556,6 +556,22 @@ actor ListeningHistoryStore {
 
   // MARK: - Reading
 
+  /// The newest mirrored plays of the account, newest first.
+  func recentSongIds(limit: Int) async -> [(id: String, at: Date)] {
+    guard let key = AuthService.shared.accountKey else { return [] }
+
+    return await CoreDataManager.shared.performBackground { context in
+      let request = NSFetchRequest<PlayEntity>(entityName: "PlayEntity")
+      request.predicate = NSPredicate(format: "accountKey == %@", key)
+      request.sortDescriptors = [NSSortDescriptor(key: "submissionTime", ascending: false)]
+      request.fetchLimit = limit
+      return ((try? context.fetch(request)) ?? []).compactMap { play in
+        guard let id = play.mediaFileId, let at = play.submissionTime else { return nil }
+        return (id: id, at: at)
+      }
+    }
+  }
+
   /// The aggregates of the newest generation that has any, decayed to now.
   func snapshot() async -> AffinitySnapshot {
     guard let key = AuthService.shared.accountKey else { return AffinitySnapshot() }

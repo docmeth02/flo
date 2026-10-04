@@ -16,6 +16,7 @@ class AlbumViewModel: ObservableObject {
   @Published var album: Album = Album()
   @Published var starredSongs: [Song] = []
   @Published var downloadedAlbums: [Album] = []
+  @Published private(set) var recentAlbums: [Album] = []
 
   /// A library list loaded from the server and cached on the watch.
   enum Library: String {
@@ -60,6 +61,7 @@ class AlbumViewModel: ObservableObject {
     artistAlbumsId = ""
     albums = []
     starredSongs = []
+    recentAlbums = []
     listStates = [:]
   }
 
@@ -421,6 +423,31 @@ class AlbumViewModel: ObservableObject {
     await refreshCached(
       .starredSongs, assign: { self.starredSongs = $0 },
       request: AlbumService.shared.getStarredSongs)
+  }
+
+  /// The last four albums played, from the server's mirrored plays and the
+  /// local ones not mirrored yet. Never asks the server.
+  @MainActor func loadRecentAlbums() async {
+    let cacheGeneration = LibraryCacheManager.shared.generation
+    async let mirrored = ListeningHistoryStore.shared.recentSongIds(limit: 100)
+    async let journal = PlaybackJournal.shared.snapshot()
+    async let index = SmartPlaybackService.shared.libraryIndex(allowSync: false)
+    let plays = await mirrored + (await journal).lastHeardAt.map { (id: $0.key, at: $0.value) }
+    let songs = await index.songs
+    // A logout meanwhile must not show the previous account's albums.
+    guard LibraryCacheManager.shared.generation == cacheGeneration else { return }
+
+    let library =
+      albums.isEmpty
+      ? LibraryCacheManager.shared.load([Album].self, forKey: Library.albums.rawValue) ?? []
+      : albums
+    let byId = Dictionary(library.map { ($0.id, $0) }) { first, _ in first }
+    var seen = Set<String>()
+    recentAlbums = Array(
+      plays.sorted { $0.at > $1.at }
+        .compactMap { songs[$0.id].flatMap { byId[$0.albumId] } }
+        .filter { seen.insert($0.id).inserted }
+        .prefix(4))
   }
 
   func fetchDownloadedAlbums() {

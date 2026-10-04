@@ -52,6 +52,22 @@ struct WatchHomeView: View {
       .listRowBackground(Color.clear)
       .listRowInsets(EdgeInsets())
 
+      if !albumViewModel.recentAlbums.isEmpty {
+        Section {
+          ForEach(albumViewModel.recentAlbums) { album in
+            NavigationLink(destination: WatchAlbumDetailView(album: album)) {
+              CoverRow(
+                tile: .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id),
+                title: album.name,
+                subtitle: album.albumArtist)
+            }
+            .floRow()
+          }
+        } header: {
+          FloSectionHeader("Recently Played")
+        }
+      }
+
       Section {
         NavigationLink(destination: WatchStarredSongsView()) {
           FloNavRow(title: "Liked Songs", systemImage: "heart.fill", tint: .floLiked)
@@ -103,6 +119,8 @@ struct WatchHomeView: View {
       }
     }
     .navigationTitle("")
+    // Runs again on every return to Home, so a song just heard shows up.
+    .task { await albumViewModel.loadRecentAlbums() }
     .toolbar {
       ToolbarItem(placement: .topBarLeading) {
         Text("flo")
