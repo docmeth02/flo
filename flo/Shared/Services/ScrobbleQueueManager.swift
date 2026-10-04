@@ -16,14 +16,17 @@ struct ScrobblePayload {
   // belongs to the previous account and must not be queued.
   let accountGeneration: Int
 
-  init?(nowPlaying: QueueEntity) {
+  init?(
+    nowPlaying: QueueEntity,
+    accountGeneration: Int = ScrobbleQueueManager.shared.accountGeneration
+  ) {
     guard let songId = nowPlaying.id, !songId.isEmpty else { return nil }
     self.songId = songId
     self.trackName = nowPlaying.songName
     self.artistName = nowPlaying.artistName
     self.albumName = nowPlaying.albumName
     self.listenTime = Date()
-    self.accountGeneration = ScrobbleQueueManager.shared.accountGeneration
+    self.accountGeneration = accountGeneration
   }
 }
 
@@ -33,6 +36,11 @@ struct ScrobblePayload {
 /// the server says they can never succeed.
 final class ScrobbleQueueManager {
   static let shared = ScrobbleQueueManager()
+
+  /// Submits one listen to the server; the completion may run on any thread.
+  typealias Send = (
+    _ songId: String, _ time: Date, _ completion: @escaping (Result<Void, Error>) -> Void
+  ) -> Void
 
   private enum Status {
     static let pending = "pending"
@@ -50,24 +58,51 @@ final class ScrobbleQueueManager {
   // Entries the server accepted whose delete failed to save; never sent again.
   private var delivered = Set<NSManagedObjectID>()
   private var retryTimer: Timer?
-  private var retryDelay = initialRetryDelay
-  private var reachability: AnyCancellable?
+  private(set) var retryDelay = initialRetryDelay
+  private var triggers: AnyCancellable?
   private(set) var accountGeneration = 0
 
-  private init() {
-    NotificationCenter.default.addObserver(
-      self, selector: #selector(handleAppBecameActive),
-      name: WKApplication.didBecomeActiveNotification, object: nil)
+  private let store: CoreDataManager
+  private let send: Send
+  private let canReachServer: () -> Bool
+  private let probeServer: () -> Void
+
+  /// The parameters are for tests; the app uses the shared store, the server
+  /// and ConnectivityMonitor. Each value `flushTriggers` publishes on the main
+  /// thread is a chance to deliver.
+  init(
+    store: CoreDataManager = .shared,
+    send: @escaping Send = { songId, time, completion in
+      FloooService.shared.scrobbleToBuiltinEndpoint(
+        submission: true, songId: songId, time: time, completion: completion)
+    },
+    canReachServer: @escaping () -> Bool = { ConnectivityMonitor.shared.canReachServer },
+    probeServer: @escaping () -> Void = { ConnectivityMonitor.shared.probeServerReachability() },
+    flushTriggers: AnyPublisher<Void, Never> = ScrobbleQueueManager.appAndServerTriggers()
+  ) {
+    self.store = store
+    self.send = send
+    self.canReachServer = canReachServer
+    self.probeServer = probeServer
 
     purgeLegacySent()
     reload()
 
-    // ConnectivityMonitor probes the server on launch, when the network comes
-    // back and on demand; every successful probe is a chance to deliver.
-    reachability = ConnectivityMonitor.shared.$isServerReachable
-      .filter { $0 }
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] _ in self?.flush() }
+    triggers = flushTriggers.sink { [weak self] in self?.flush() }
+  }
+
+  /// Every return to the app, and every successful probe: ConnectivityMonitor
+  /// probes the server on launch, when the network comes back and on demand.
+  static func appAndServerTriggers() -> AnyPublisher<Void, Never> {
+    NotificationCenter.default.publisher(for: WKApplication.didBecomeActiveNotification)
+      .map { _ in }
+      .merge(
+        with: ConnectivityMonitor.shared.$isServerReachable
+          .filter { $0 }
+          .map { _ in }
+          .receive(on: DispatchQueue.main)
+      )
+      .eraseToAnyPublisher()
   }
 
   /// Submissions waiting for the server. Main thread only.
@@ -83,7 +118,7 @@ final class ScrobbleQueueManager {
 
     guard !isDuplicate else { return }
 
-    let entry = ScrobbleEntity(context: CoreDataManager.shared.viewContext)
+    let entry = ScrobbleEntity(context: store.viewContext)
 
     entry.songId = payload.songId
     entry.trackName = payload.trackName
@@ -93,17 +128,15 @@ final class ScrobbleQueueManager {
     entry.queuedAt = Date()
     entry.status = Status.pending
 
-    guard CoreDataManager.shared.saveRecord() else {
+    guard store.saveRecord() else {
       // The store failed and dropped the entry; one direct attempt beats
       // losing the play.
-      FloooService.shared.scrobbleToBuiltinEndpoint(
-        submission: true, songId: payload.songId, time: payload.listenTime
-      ) { _ in }
+      send(payload.songId, payload.listenTime) { _ in }
       return
     }
     reload()
 
-    if ConnectivityMonitor.shared.canReachServer {
+    if canReachServer() {
       flush()
     } else {
       scheduleRetry()
@@ -116,13 +149,13 @@ final class ScrobbleQueueManager {
     accountGeneration += 1
     cancelRetry()
     delivered = []
-    scrobbles.forEach { CoreDataManager.shared.viewContext.delete($0) }
-    CoreDataManager.shared.saveRecord()
+    scrobbles.forEach { store.viewContext.delete($0) }
+    store.saveRecord()
     reload()
   }
 
   private func reload() {
-    scrobbles = CoreDataManager.shared.getRecordsByEntity(
+    scrobbles = store.getRecordsByEntity(
       entity: ScrobbleEntity.self,
       sortDescriptors: [NSSortDescriptor(key: "queuedAt", ascending: true)])
   }
@@ -140,9 +173,9 @@ final class ScrobbleQueueManager {
       return
     }
 
-    guard ConnectivityMonitor.shared.canReachServer else {
-      // A successful probe comes back through the reachability subscription.
-      ConnectivityMonitor.shared.probeServerReachability()
+    guard canReachServer() else {
+      // A successful probe comes back through the flush triggers.
+      probeServer()
       backOff()
       scheduleRetry()
       return
@@ -185,9 +218,7 @@ final class ScrobbleQueueManager {
     }
 
     let generation = accountGeneration
-    FloooService.shared.scrobbleToBuiltinEndpoint(
-      submission: true, songId: songId, time: entry.listenTime ?? Date()
-    ) { [weak self] result in
+    send(songId, entry.listenTime ?? Date()) { [weak self] result in
       DispatchQueue.main.async {
         guard let self = self else { return }
         // A logout meanwhile deleted the entry; it must not be touched again.
@@ -210,7 +241,7 @@ final class ScrobbleQueueManager {
         case .failure(let error):
           entry.status = Status.failed
           entry.errorReason = error.localizedDescription
-          CoreDataManager.shared.saveRecord()
+          self.store.saveRecord()
 
           self.isFlushing = false
           self.reload()
@@ -222,8 +253,8 @@ final class ScrobbleQueueManager {
   }
 
   private func delete(_ entry: ScrobbleEntity) {
-    CoreDataManager.shared.viewContext.delete(entry)
-    CoreDataManager.shared.saveRecord()
+    store.viewContext.delete(entry)
+    store.saveRecord()
   }
 
   /// Schedules the next delivery attempt unless one is already pending, so
@@ -253,16 +284,12 @@ final class ScrobbleQueueManager {
   }
 
   private func purgeLegacySent() {
-    let sent = CoreDataManager.shared.getRecordsByEntity(entity: ScrobbleEntity.self)
+    let sent = store.getRecordsByEntity(entity: ScrobbleEntity.self)
       .filter { $0.status == Status.legacySent }
 
     guard !sent.isEmpty else { return }
 
-    sent.forEach { CoreDataManager.shared.viewContext.delete($0) }
-    CoreDataManager.shared.saveRecord()
-  }
-
-  @objc private func handleAppBecameActive() {
-    flush()
+    sent.forEach { store.viewContext.delete($0) }
+    store.saveRecord()
   }
 }
