@@ -60,6 +60,10 @@ struct WatchHomeView: View {
       }
 
       Section {
+        NavigationLink(destination: WatchSearchView()) {
+          FloNavRow(title: "Search", systemImage: "magnifyingglass")
+        }
+        .floRow()
         NavigationLink(destination: WatchStarredSongsView()) {
           FloNavRow(title: "Liked Songs", systemImage: "heart.fill", tint: .floLiked)
         }

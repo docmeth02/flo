@@ -22,15 +22,7 @@ struct WatchAlbumsListView: View {
     ) {
       PinnedList(items: albumViewModel.albums, kind: .album, allLabel: "All Albums") {
         album, isPinned in
-        CoverRow(
-          tile: .album(album.id),
-          title: album.name,
-          subtitle: album.albumArtist
-        ) {
-          if isPinned { PinGlyph() }
-        }
-        .holdable(onTap: { openedAlbumId = album.id }, onHold: { menu = .album(album) })
-        .floRow()
+        AlbumRow(album: album, isPinned: isPinned, menu: $menu) { openedAlbumId = album.id }
       }
     }
     .navigationDestination(item: $openedAlbumId) { id in

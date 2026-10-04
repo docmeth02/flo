@@ -228,7 +228,8 @@
 
     // FLO_DEBUG_SCREEN=<name> pushes one screen four seconds after
     // launch, for screenshots: albums, artists, album, playlist, artist, liked, radios,
-    // downloads, settings, queue, login-error.
+    // downloads, settings, queue, search (FLO_DEBUG_SEARCH=<query> fills in
+    // the query), login-error.
     private func runDebugScreen() async {
       guard let name = ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN"] else { return }
       try? await Task.sleep(nanoseconds: 4_000_000_000)
@@ -265,6 +266,9 @@
       case "downloads": view = AnyView(WatchDownloadsView())
       case "settings": view = AnyView(WatchSettingsView())
       case "queue": view = AnyView(WatchQueueView())
+      case "search":
+        view = AnyView(
+          WatchSearchView(query: ProcessInfo.processInfo.environment["FLO_DEBUG_SEARCH"] ?? ""))
       case "login-error":
         let auth = AuthViewModel()
         auth.alertMessage = "Wrong username or password."

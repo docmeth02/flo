@@ -92,6 +92,9 @@ extension CoverRow.Tile {
     .cover(
       url: AlbumService.shared.getAlbumCover(artistName: "", albumName: "", albumId: id), albumId: id)
   }
+
+  /// The round glyph standing in for an artist's picture.
+  static var artist: Self { .glyph("music.mic", round: true) }
 }
 
 extension CoverRow where Trailing == EmptyView {
@@ -99,6 +102,41 @@ extension CoverRow where Trailing == EmptyView {
     self.init(tile: tile, title: title, subtitle: subtitle) {
       EmptyView()
     }
+  }
+}
+
+/// An album in a list: a tap runs `open`, a hold opens its menu.
+struct AlbumRow: View {
+  let album: Album
+  var isPinned = false
+  @Binding var menu: MenuTarget?
+  let open: () -> Void
+
+  var body: some View {
+    CoverRow(tile: .album(album.id), title: album.name, subtitle: album.albumArtist) {
+      if isPinned { PinGlyph() }
+    }
+    .holdable(onTap: open, onHold: { menu = .album(album) })
+    .floRow()
+  }
+}
+
+/// An artist in a list: a tap runs `open`, a hold opens its menu.
+struct ArtistRow: View {
+  let artist: Artist
+  var isPinned = false
+  @Binding var menu: MenuTarget?
+  let open: () -> Void
+
+  var body: some View {
+    CoverRow(
+      tile: .artist, title: artist.name,
+      subtitle: artist.albumCount > 0 ? counted(artist.albumCount, "album") : ""
+    ) {
+      if isPinned { PinGlyph() }
+    }
+    .holdable(onTap: open, onHold: { menu = .artist(artist) })
+    .floRow()
   }
 }
 

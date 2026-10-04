@@ -191,7 +191,7 @@ private struct ItemMenuPresenter: ViewModifier {
     case .album(let album):
       .album(album.id)
     case .artist:
-      .glyph("music.mic", round: true)
+      .artist
     }
   }
 

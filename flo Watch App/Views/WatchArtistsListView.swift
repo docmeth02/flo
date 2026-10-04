@@ -22,16 +22,7 @@ struct WatchArtistsListView: View {
     ) {
       PinnedList(items: albumViewModel.artists, kind: .artist, allLabel: "All Artists") {
         artist, isPinned in
-        CoverRow(
-          tile: .glyph("music.mic", round: true),
-          title: artist.name,
-          subtitle: artist.albumCount > 0
-            ? counted(artist.albumCount, "album") : ""
-        ) {
-          if isPinned { PinGlyph() }
-        }
-        .holdable(onTap: { openedArtist = artist }, onHold: { menu = .artist(artist) })
-        .floRow()
+        ArtistRow(artist: artist, isPinned: isPinned, menu: $menu) { openedArtist = artist }
       }
     }
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }

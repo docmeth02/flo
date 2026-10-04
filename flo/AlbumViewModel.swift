@@ -425,6 +425,15 @@ class AlbumViewModel: ObservableObject {
       request: AlbumService.shared.getStarredSongs)
   }
 
+  /// `list` as loaded, or while it is empty its cached copy, read off the
+  /// main thread. Never asks the server.
+  @MainActor func loadedOrCached<T: Codable>(_ list: [T], _ library: Library) async -> [T] {
+    guard list.isEmpty else { return list }
+    return await Task.detached {
+      LibraryCacheManager.shared.load([T].self, forKey: library.rawValue) ?? []
+    }.value
+  }
+
   /// The last four albums played, from the server's mirrored plays and the
   /// local ones not mirrored yet. Never asks the server.
   @MainActor func loadRecentAlbums() async {
@@ -434,12 +443,7 @@ class AlbumViewModel: ObservableObject {
     async let index = SmartPlaybackService.shared.libraryIndex(allowSync: false)
     let plays = await mirrored + (await journal).lastHeardAt.map { (id: $0.key, at: $0.value) }
     let songs = await index.songs
-    let library =
-      albums.isEmpty
-      ? await Task.detached {
-        LibraryCacheManager.shared.load([Album].self, forKey: Library.albums.rawValue) ?? []
-      }.value
-      : albums
+    let library = await loadedOrCached(albums, .albums)
     // A logout meanwhile must not show the previous account's albums.
     guard LibraryCacheManager.shared.generation == cacheGeneration else { return }
     let byId = Dictionary(library.map { ($0.id, $0) }) { first, _ in first }
