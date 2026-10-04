@@ -385,7 +385,7 @@ final class SmartPlaybackService {
   /// Candidate pool when offline: only songs playable without a connection
   /// (downloaded albums/playlists plus the transparent stream cache).
   /// viewContext-backed reads, so this hops to the main actor.
-  private func offlinePlayableSongs() async -> [Song] {
+  func offlinePlayableSongs() async -> [Song] {
     await MainActor.run {
       let downloaded = CoreDataManager.shared.getRecordsByEntity(entity: SongEntity.self)
         .map(Song.init)

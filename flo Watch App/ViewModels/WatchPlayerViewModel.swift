@@ -1264,20 +1264,28 @@ class WatchPlayerViewModel: ObservableObject {
     }
   }
 
-  /// Plays an artist's top songs, for the intent; offline or without top
-  /// songs, the artist's songs from the cached library, shuffled. False like
-  /// `playSomething()`.
+  /// Plays an artist's top songs, for the intent; without top songs the
+  /// artist's songs from the cached library, offline those on the watch,
+  /// shuffled. False like `playSomething()`.
   @MainActor func playArtist(id: String, name: String) async -> Bool {
-    await playWhenBuilt {
-      var songs = await withCheckedContinuation { continuation in
-        RadioService.shared.getTopSongs(artistName: name) {
-          continuation.resume(returning: (try? $0.get()) ?? [])
+    // Offline the top songs request could only time out first.
+    let online = ConnectivityMonitor.shared.canReachServer
+    return await playWhenBuilt {
+      var songs: [Song] = []
+      if online {
+        songs = await withCheckedContinuation { continuation in
+          RadioService.shared.getTopSongs(artistName: name) {
+            continuation.resume(returning: (try? $0.get()) ?? [])
+          }
         }
       }
       if songs.isEmpty {
-        songs = await SmartPlaybackService.shared.loadCachedLibrary().songs
-          .filter { $0.isBy(artistId: id, name: name) }
-          .shuffled()
+        // Offline only what is downloaded or cached can play.
+        let library =
+          online
+          ? await SmartPlaybackService.shared.loadCachedLibrary().songs
+          : await SmartPlaybackService.shared.offlinePlayableSongs()
+        songs = library.filter { $0.isBy(artistId: id, name: name) }.shuffled()
       }
       return SongCollection(id: "artist-\(id)", name: name, songs: songs)
     }
