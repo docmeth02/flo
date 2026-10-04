@@ -17,8 +17,8 @@ import WatchKit
 
   private var server: [String: Int] = [:]
   private var serverFetched = false
-  private var pending = UserDefaultsManager.pendingRatings
-  private var inFlight = Set<String>()
+  private let edits = PendingEdits<Int>(
+    name: "rating", key: UserDefaultsKeys.pendingRatings, send: AlbumService.shared.setRating)
   // Edits the server took but no refresh has stored in the cache yet; a
   // successful refresh is newer than all of them, whatever it says.
   private var confirmed = UserDefaultsManager.confirmedRatings
@@ -34,7 +34,7 @@ import WatchKit
       center.addObserver(forName: name, object: nil, queue: .main) { _ in
         Task { @MainActor in
           let store = RatingStore.shared
-          store.flush()
+          store.edits.flush()
           // After a login the server set is unknown until the next song sync.
           if !store.serverFetched, AuthService.shared.accountKey != nil {
             await store.refreshFromServer()
@@ -46,9 +46,12 @@ import WatchKit
       Task { @MainActor in RatingStore.shared.forgetAccount() }
     }
 
+    edits.onSettle = { [unowned self] id, rating, accepted in
+      self.settle(rating, playbackID: id, accepted: accepted)
+    }
     publish()
     loadCache()
-    flush()
+    edits.flush()
   }
 
   func rating(for playbackID: String) -> Int {
@@ -62,13 +65,11 @@ import WatchKit
   }
 
   func set(_ rating: Int, playbackID id: String) {
-    pending[id] = min(max(rating, 0), 5)
-    UserDefaultsManager.pendingRatings = pending
     // A new edit supersedes what the server took before it.
     confirmed[id] = nil
     UserDefaultsManager.confirmedRatings = confirmed
+    edits.set(min(max(rating, 0), 5), id: id)
     publish()
-    flush()
   }
 
   /// Replaces the server's ratings with its current list. A failed request
@@ -76,7 +77,7 @@ import WatchKit
   func refreshFromServer() async {
     guard AuthService.shared.accountKey != nil else { return }
     let generation = account
-    let edits = confirmedEdits
+    let confirmations = confirmedEdits
     let cacheGeneration = LibraryCacheManager.shared.generation
 
     guard
@@ -87,7 +88,7 @@ import WatchKit
       debugLog("ratings refresh failed")
       return
     }
-    guard account == generation, confirmedEdits == edits else { return }
+    guard account == generation, confirmedEdits == confirmations else { return }
 
     server = Self.ratings(of: songs)
     serverFetched = true
@@ -95,7 +96,7 @@ import WatchKit
     confirmed = [:]
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.confirmedRatings)
     publish()
-    debugLog("ratings refreshed: \(server.count) rated, \(pending.count) pending")
+    debugLog("ratings refreshed: \(server.count) rated, \(edits.values.count) pending")
     await Task.detached(priority: .utility) {
       LibraryCacheManager.shared.save(songs, forKey: "ratedSongs", generation: cacheGeneration)
     }.value
@@ -108,7 +109,7 @@ import WatchKit
     for (id, rating) in confirmed {
       merged[id] = rating > 0 ? rating : nil
     }
-    for (id, rating) in pending {
+    for (id, rating) in edits.values {
       merged[id] = rating > 0 ? rating : nil
     }
     if merged != ratings { ratings = merged }
@@ -132,77 +133,29 @@ import WatchKit
     publish()
   }
 
-  /// Sends every unconfirmed edit while the server is reachable.
-  private func flush() {
-    let connectivity = ConnectivityMonitor.shared
-    guard AuthService.shared.accountKey != nil, !pending.isEmpty else { return }
-    guard connectivity.isOnline, connectivity.isServerReachable else {
-      debugLog("ratings: \(pending.count) pending while offline")
-      return
-    }
-    for (id, rating) in pending where !inFlight.contains(id) {
-      send(rating, playbackID: id)
-    }
-  }
-
-  private func send(_ rating: Int, playbackID id: String) {
-    inFlight.insert(id)
-    let generation = account
-    AlbumService.shared.setRating(id: id, rating: rating) { result in
-      Task { @MainActor in
-        RatingStore.shared.finish(rating, playbackID: id, result: result, account: generation)
-      }
-    }
-  }
-
-  private func finish(
-    _ rating: Int, playbackID id: String, result: Result<Void, Error>, account generation: Int
-  ) {
-    guard account == generation else { return }
-    inFlight.remove(id)
-
-    switch result {
-    case .success:
-      debugLog("rating confirmed: \(id)=\(rating)")
+  private func settle(_ rating: Int, playbackID id: String, accepted: Bool) {
+    if accepted {
       confirmedEdits += 1
       server[id] = rating > 0 ? rating : nil
       // Kept on disk until a refresh stored it in the cache, so a relaunch
-      // before then still knows it without sending it again.
-      if pending[id] == rating {
-        pending[id] = nil
+      // before then still knows it without sending it again. Not when a
+      // newer edit for the song waits.
+      if edits[id] == nil {
         confirmed[id] = rating
         UserDefaultsManager.confirmedRatings = confirmed
       }
-    case .failure(let error):
-      // A song the server no longer knows cannot be rated; anything else
-      // waits for the next flush.
-      guard FloooService.shared.isPermanentScrobbleFailure(error) else {
-        debugLog("rating pending: \(id)=\(rating) (\(error.localizedDescription))")
-        return
-      }
-      debugLog("rating dropped: \(id)=\(rating) (\(error.localizedDescription))")
-      if pending[id] == rating { pending[id] = nil }
     }
-    UserDefaultsManager.pendingRatings = pending
     publish()
-
-    if pending[id] != nil {
-      // Changed again while this one was under way.
-      flush()
-    } else if inFlight.isEmpty, pending.isEmpty {
-      // Brings the cached list up to date for the next launch.
-      Task { await refreshFromServer() }
-    }
+    // Brings the cached list up to date for the next launch.
+    if edits.isIdle { Task { await refreshFromServer() } }
   }
 
   private func forgetAccount() {
     account += 1
     server = [:]
     serverFetched = false
-    pending = [:]
-    inFlight = []
+    edits.forgetAccount()
     confirmed = [:]
-    UserDefaultsManager.removeObject(key: UserDefaultsKeys.pendingRatings)
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.confirmedRatings)
     publish()
   }

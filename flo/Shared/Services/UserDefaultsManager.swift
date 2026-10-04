@@ -131,18 +131,6 @@ class UserDefaultsManager {
     }
   }
 
-  /// Ratings set on the watch that the server has not confirmed yet, by
-  /// playback id; 0 clears.
-  static var pendingRatings: [String: Int] {
-    get {
-      return UserDefaults.standard.dictionary(forKey: UserDefaultsKeys.pendingRatings)
-        as? [String: Int] ?? [:]
-    }
-    set {
-      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.pendingRatings)
-    }
-  }
-
 
 
 
