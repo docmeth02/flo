@@ -50,18 +50,13 @@ class WatchPlayerViewModel: ObservableObject {
   /// The now playing cover, resolved once per song rather than on every redraw.
   @Published private(set) var coverArt: String = ""
 
-  @Published var isStarred: Bool = false
-  // Bumped by a song change and by every tap on the heart; a starred lookup
-  // or a failed toggle from before must not overwrite the newer state.
-  private var starGeneration = 0
-  // Song stars the server confirmed this session, by id; song lists keep the
-  // state they were loaded with.
-  private var confirmedStars: [String: Bool] = [:]
-  // starGeneration at the last song change; a tap since then moves past it.
-  private var starSongGeneration = 0
-  // The song change's lookup failed with the server unreachable; announcing
-  // the song asks again.
+  /// The heart: StarStore's edits over the server's star for the song.
+  @Published private(set) var isStarred: Bool = false
+  // The server's star for the current song, looked up once per song.
+  private var serverStarred = false
+  // That lookup failed; announcing the song asks again.
   private var starLookupFailed = false
+  private var starObservation: AnyCancellable?
   private var resumeAfterInterruption = false
 
   private var isLocallySaved: Bool = false
@@ -199,11 +194,15 @@ class WatchPlayerViewModel: ObservableObject {
     }
 
     self.setupRemoteCommandCenter()
-    // Like and dislike follow the rating, wherever it was changed.
+    // Like and dislike follow the rating and the heart the star, wherever
+    // they were changed.
     Task { @MainActor [weak self] in
       self?.ratingObservation = RatingStore.shared.$ratings
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in self?.updateRatingCommands() }
+      self?.starObservation = StarStore.shared.$stars
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in self?.updateHeart() }
     }
 
     #if DEBUG
@@ -571,7 +570,6 @@ class WatchPlayerViewModel: ObservableObject {
   private func clearForLogout() {
     // No report: the credentials are gone before this runs.
     resetSession()
-    confirmedStars = [:]
     playGeneration += 1
     startGeneration += 1
     player?.pause()
@@ -690,31 +688,33 @@ class WatchPlayerViewModel: ObservableObject {
     }
 
     // Also for a restored queue, so the first tap on the heart is the right way.
-    self.loadStarred()
+    Task { @MainActor [weak self] in self?.loadStarred() }
   }
 
-  /// A refresh keeps the shown state and yields to a tap made meanwhile.
-  private func loadStarred(refresh: Bool = false) {
+  /// Asks the server whether the current song is starred; a refresh asks
+  /// again only when the song change's lookup failed.
+  @MainActor private func loadStarred(refresh: Bool = false) {
     if !refresh {
-      starGeneration += 1
-      starSongGeneration = starGeneration
-      isStarred = false
+      serverStarred = false
       starLookupFailed = false
-    } else if !starLookupFailed || starGeneration != starSongGeneration {
-      // A tap on the heart since the song changed wins; the server may not
-      // know about it yet.
+      updateHeart()
+    } else if !starLookupFailed {
       return
     }
-    let generation = starGeneration
     guard let songId = nowPlaying.id, !songId.isEmpty else { return }
     AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
-      DispatchQueue.main.async {
-        guard let self, self.starGeneration == generation else { return }
-        self.isStarred = starred
-        // The request has already updated the monitor; a failure reads false.
-        self.starLookupFailed = !starred && !ConnectivityMonitor.shared.isServerReachable
+      Task { @MainActor in
+        guard let self, self.nowPlaying.id == songId else { return }
+        self.serverStarred = starred ?? false
+        self.starLookupFailed = starred == nil
+        self.updateHeart()
       }
     }
+  }
+
+  @MainActor private func updateHeart() {
+    let starred = StarStore.shared.isStarred(nowPlaying.id ?? "", listed: serverStarred)
+    if starred != isStarred { isStarred = starred }
   }
 
   /// Reports the current song as playing to the server, once per song.
@@ -725,7 +725,7 @@ class WatchPlayerViewModel: ObservableObject {
     guard !isLiveRadio else { return }
     // The lookup at song change may have failed offline, as for a queue
     // restored at launch.
-    loadStarred(refresh: true)
+    Task { @MainActor [weak self] in self?.loadStarred(refresh: true) }
 
     FloooViewModel.shared.reportPlayback(
       state: .starting, nowPlaying: self.nowPlaying, positionSeconds: self.pendingStartPosition)
@@ -1509,57 +1509,16 @@ class WatchPlayerViewModel: ObservableObject {
     }
   }
 
-  func toggleStar() {
-    guard let songId = self.nowPlaying.id, !songId.isEmpty else { return }
-
-    let shouldStar = !self.isStarred
-    self.isStarred = shouldStar
-    starGeneration += 1
-    let generation = starGeneration
-
-    let account = LibraryCacheManager.shared.generation
-    let action = shouldStar ? AlbumService.shared.star : AlbumService.shared.unstar
-    action(songId) { [weak self] success in
-      DispatchQueue.main.async {
-        guard let self else { return }
-        if success {
-          // After a logout the answer belongs to the previous account.
-          guard LibraryCacheManager.shared.generation == account else { return }
-          self.confirmedStars[songId] = shouldStar
-        } else if self.starGeneration == generation {
-          self.isStarred = !shouldStar
-        }
-      }
-    }
+  @MainActor func toggleStar() {
+    guard let songId = nowPlaying.id, !songId.isEmpty else { return }
+    StarStore.shared.set(!isStarred, id: songId)
   }
 
   /// Whether a listed song is liked: the heart for the song playing, else
-  /// what the server confirmed this session, else the state it was listed with.
-  func isStarred(_ song: Song) -> Bool {
+  /// StarStore over the state it was listed with.
+  @MainActor func isStarred(_ song: Song) -> Bool {
     if isCurrent(song) { return isStarred }
-    return confirmedStars[song.playbackID] ?? (song.starred || song.starredAt != nil)
-  }
-
-  /// Likes or unlikes a listed song once the server takes it; `completion`
-  /// tells whether it did.
-  func setStar(_ starred: Bool, song: Song, completion: @escaping (Bool) -> Void) {
-    let songId = song.playbackID
-    let account = LibraryCacheManager.shared.generation
-    let action = starred ? AlbumService.shared.star : AlbumService.shared.unstar
-    action(songId) { [weak self] success in
-      DispatchQueue.main.async {
-        // After a logout the answer belongs to the previous account.
-        if success, let self, LibraryCacheManager.shared.generation == account {
-          self.confirmedStars[songId] = starred
-          if self.isCurrent(song) {
-            // A heart tap still in flight must not roll this back.
-            self.starGeneration += 1
-            self.isStarred = starred
-          }
-        }
-        completion(success)
-      }
-    }
+    return StarStore.shared.isStarred(song.playbackID, listed: song.starred || song.starredAt != nil)
   }
 
   /// Caches the next two songs, so a dropout or a skip does not stop the

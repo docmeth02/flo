@@ -163,9 +163,9 @@ extension View {
 private struct ItemMenuPresenter: ViewModifier {
   @Binding var target: MenuTarget?
 
-  @EnvironmentObject private var albumViewModel: AlbumViewModel
   @EnvironmentObject private var playerViewModel: WatchPlayerViewModel
   @EnvironmentObject private var pinStore: PinStore
+  @ObservedObject private var starStore = StarStore.shared
   @State private var toast: FloToast.Message?
 
   func body(content: Content) -> some View {
@@ -195,14 +195,14 @@ private struct ItemMenuPresenter: ViewModifier {
     }
   }
 
-  /// Songs ask the player, which knows the heart and the stars confirmed
-  /// since the song was listed; albums and artists carry their own.
+  /// Songs ask the player, which knows the heart; albums and artists ask
+  /// StarStore over the state they were listed with.
   private func isLiked(_ target: MenuTarget) -> Bool {
     switch target {
     case .song(let song, _, _):
       playerViewModel.isStarred(song)
-    case .album(let album): albumViewModel.isStarred(album)
-    case .artist(let artist): albumViewModel.isStarred(artist)
+    case .album(let album): starStore.isStarred(album.id, listed: album.starred)
+    case .artist(let artist): starStore.isStarred(artist.id, listed: artist.starred)
     }
   }
 
@@ -230,16 +230,14 @@ private struct ItemMenuPresenter: ViewModifier {
         if queued { show(next ? "Playing next" : "Added to queue") }
       }
     case .like:
+      // Offline it waits in StarStore until the server is back.
       let starred = !isLiked(target)
-      let done = { (success: Bool) in
-        show(success ? (starred ? "Liked" : "Removed from Liked") : "Not available offline")
-      }
       switch target {
-      case .song(let song, _, _):
-        playerViewModel.setStar(starred, song: song, completion: done)
-      case .album(let album): albumViewModel.setStar(starred, id: album.id, completion: done)
-      case .artist(let artist): albumViewModel.setStar(starred, id: artist.id, completion: done)
+      case .song(let song, _, _): starStore.set(starred, id: song.playbackID)
+      case .album(let album): starStore.set(starred, id: album.id)
+      case .artist(let artist): starStore.set(starred, id: artist.id)
       }
+      show(starred ? "Liked" : "Removed from Liked")
     }
   }
 

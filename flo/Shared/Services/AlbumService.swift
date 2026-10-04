@@ -237,7 +237,8 @@ class AlbumService {
     }
   }
 
-  func isStarred(songId: String, completion: @escaping (Bool) -> Void) {
+  /// Whether the server has the song starred; nil when it could not tell.
+  func isStarred(songId: String, completion: @escaping (Bool?) -> Void) {
     let params: [String: Any] = [
       "_start": 0, "_end": 1, "id": songId,
     ]
@@ -248,22 +249,20 @@ class AlbumService {
       case .success(let songs):
         completion(songs.first?.starred ?? false)
       case .failure:
-        completion(false)
+        completion(nil)
       }
     }
   }
 
   /// Stars a song, album or artist; Navidrome takes all three as `id`.
-  func star(id: String, completion: @escaping (Bool) -> Void) {
+  func star(id: String, completion: @escaping (Result<Void, Error>) -> Void) {
     APIManager.shared.SubsonicActionRequest(
-      endpoint: API.SubsonicEndpoint.star, parameters: ["id": id]
-    ) { completion((try? $0.get()) != nil) }
+      endpoint: API.SubsonicEndpoint.star, parameters: ["id": id], completion: completion)
   }
 
-  func unstar(id: String, completion: @escaping (Bool) -> Void) {
+  func unstar(id: String, completion: @escaping (Result<Void, Error>) -> Void) {
     APIManager.shared.SubsonicActionRequest(
-      endpoint: API.SubsonicEndpoint.unstar, parameters: ["id": id]
-    ) { completion((try? $0.get()) != nil) }
+      endpoint: API.SubsonicEndpoint.unstar, parameters: ["id": id], completion: completion)
   }
 
   /// Rates a song 1 to 5; 0 removes its rating.

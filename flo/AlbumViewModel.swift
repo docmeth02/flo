@@ -62,7 +62,6 @@ class AlbumViewModel: ObservableObject {
     albums = []
     starredSongs = []
     recentAlbums = []
-    confirmedStars = [:]
     listStates = [:]
   }
 
@@ -450,32 +449,6 @@ class AlbumViewModel: ObservableObject {
         .compactMap { songs[$0.id].flatMap { byId[$0.albumId] } }
         .filter { seen.insert($0.id).inserted }
         .prefix(4))
-  }
-
-  // MARK: - Stars
-
-  // Album and artist stars the server confirmed this session, by id; the
-  // lists, cached or fresh, keep the state they were loaded with.
-  private var confirmedStars: [String: Bool] = [:]
-
-  func isStarred(_ album: Album) -> Bool { confirmedStars[album.id] ?? album.starred }
-
-  func isStarred(_ artist: Artist) -> Bool { confirmedStars[artist.id] ?? artist.starred }
-
-  /// Likes or unlikes an album or artist once the server takes it;
-  /// `completion` tells whether it did.
-  func setStar(_ starred: Bool, id: String, completion: @escaping (Bool) -> Void) {
-    let generation = LibraryCacheManager.shared.generation
-    let request = starred ? AlbumService.shared.star : AlbumService.shared.unstar
-    request(id) { success in
-      DispatchQueue.main.async {
-        // After a logout the answer belongs to the previous account.
-        if success, LibraryCacheManager.shared.generation == generation {
-          self.confirmedStars[id] = starred
-        }
-        completion(success)
-      }
-    }
   }
 
   func fetchDownloadedAlbums() {

@@ -8,12 +8,17 @@
 
   extension WatchContentView {
     /// FLO_DEBUG_PIN=album:<id>|artist:<id> toggles a pin at launch,
-    /// FLO_DEBUG_STAR=album:<id>|artist:<id> a star on the server, logging
-    /// the result. FLO_DEBUG_MENU=song|album|artist opens the hold menu for
-    /// the first track of the first album, the first album or the first
-    /// artist over its screen, for screenshots.
+    /// FLO_DEBUG_STAR=album:<id>|artist:<id> a star through StarStore, which
+    /// logs when the server took it. FLO_DEBUG_STAR_PENDING=1 logs the stars
+    /// still waiting from the last session. FLO_DEBUG_MENU=song|album|artist
+    /// opens the hold menu for the first track of the first album, the first
+    /// album or the first artist over its screen, for screenshots.
     func runDebugMenuActions() async {
       let env = ProcessInfo.processInfo.environment
+      if env["FLO_DEBUG_STAR_PENDING"] == "1" {
+        let pending = UserDefaults.standard.dictionary(forKey: UserDefaultsKeys.pendingStars) ?? [:]
+        debugLog("star hook: \(pending.count) pending \(pending)")
+      }
       if case let (kind, id)? = env["FLO_DEBUG_PIN"].flatMap(Self.debugItem) {
         PinStore.shared.toggle(id, kind)
         debugLog("pin hook: \(kind) \(id) pinned=\(PinStore.shared.isPinned(id, kind))")
@@ -24,15 +29,13 @@
       let artists: [Artist] = await Self.debugLoad(AlbumService.shared.getArtists)
 
       if case let (kind, id)? = env["FLO_DEBUG_STAR"].flatMap(Self.debugItem) {
-        let done = { (success: Bool) in debugLog("star hook: \(kind) \(id) success=\(success)") }
-        if kind == .album, let album = albums.first(where: { $0.id == id }) {
-          let starred = albumViewModel.isStarred(album)
-          debugLog("star hook: album was starred=\(starred)")
-          albumViewModel.setStar(!starred, id: id, completion: done)
-        } else if kind == .artist, let artist = artists.first(where: { $0.id == id }) {
-          let starred = albumViewModel.isStarred(artist)
-          debugLog("star hook: artist was starred=\(starred)")
-          albumViewModel.setStar(!starred, id: id, completion: done)
+        let listed =
+          kind == .album
+          ? albums.first { $0.id == id }?.starred : artists.first { $0.id == id }?.starred
+        if let listed {
+          let starred = StarStore.shared.isStarred(id, listed: listed)
+          debugLog("star hook: \(kind) \(id) was starred=\(starred)")
+          StarStore.shared.set(!starred, id: id)
         } else {
           debugLog("star hook: \(kind) \(id) not found")
         }
