@@ -42,8 +42,8 @@ class FloooViewModel: ObservableObject {
   }
 
   func getLocalStorageInformation() {
-    self.downloadedAlbums = ScanStatusService.shared.getDownloadedAlbumsCount()
-    self.downloadedSongs = ScanStatusService.shared.getDownloadedSongsCount()
+    self.downloadedAlbums = CoreDataManager.shared.countRecords(entity: PlaylistEntity.self)
+    self.downloadedSongs = CoreDataManager.shared.countRecords(entity: SongEntity.self)
 
     Task {
       do {

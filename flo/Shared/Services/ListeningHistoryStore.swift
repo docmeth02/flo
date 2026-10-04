@@ -73,7 +73,7 @@ actor ListeningHistoryStore {
   static let shared = ListeningHistoryStore()
 
   enum Reason: String, Sendable {
-    case activation, mix, outbox, scrobble, rebuild, debug
+    case activation, mix, outbox, rebuild, debug
   }
 
   /// Half-life of positive affinity. Changing how plays are folded needs a
@@ -86,10 +86,8 @@ actor ListeningHistoryStore {
   // Rows re-read when a bootstrap continues, in case the offsets moved.
   private static let pageOverlap = 50
   private static let staleAfter: TimeInterval = 5 * 60
-  private static let scrobbleDelay: UInt64 = 120
 
   private var run: (id: UUID, task: Task<Void, Never>)?
-  private var scrobbleRefreshPending = false
   // A failed run holds the triggers off as long as a successful one would.
   private var lastFailedAt: Date?
 
@@ -131,12 +129,6 @@ actor ListeningHistoryStore {
     await start(reason: reason, reset: false)
   }
 
-  /// A scrobble from this watch reached the server: import it once things
-  /// settle, at most every two minutes.
-  nonisolated func scrobbleDelivered() {
-    Task { await self.scheduleScrobbleRefresh() }
-  }
-
   /// Throws the account's mirror and aggregates away and imports everything
   /// again. The old aggregates stay readable until the first page lands.
   func rebuild() async {
@@ -146,14 +138,6 @@ actor ListeningHistoryStore {
     }
     lastFailedAt = nil
     await start(reason: .rebuild, reset: true)
-  }
-
-  private func scheduleScrobbleRefresh() async {
-    guard !scrobbleRefreshPending else { return }
-    scrobbleRefreshPending = true
-    try? await Task.sleep(nanoseconds: Self.scrobbleDelay * 1_000_000_000)
-    scrobbleRefreshPending = false
-    await refreshIfStale(reason: .scrobble)
   }
 
   private func start(reason: Reason, reset: Bool) async {

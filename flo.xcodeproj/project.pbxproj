@@ -59,7 +59,6 @@
 		A696A6F708006E6ABC75D01C /* WatchLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B4EC1A2350C8A0C34B7AE02 /* WatchLoginView.swift */; };
 		AF8F4066A6464664404ECF80 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C33E4D7DFB09BB760978CACE /* Assets.xcassets */; };
 		B0330DD0198F131B14456A89 /* WatchAlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66B14F36AC2C06239FAD68BF /* WatchAlbumDetailView.swift */; };
-		B9D08EAB8C51BDB1AF9AD48C /* ScanStatusService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49495842C1C26D4006B4D1E /* ScanStatusService.swift */; };
 		BB9009B8D9D67F2A01F6A722 /* Playable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4824D222CE8C41D003EAB52 /* Playable.swift */; };
 		BBA7A0BDCD8BAFA9B2088999 /* AlbumViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4289F472C12391300C3A4FD /* AlbumViewModel.swift */; };
 		BD0EE3C15900C43F8F8F05A2 /* NowPlayingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCECEB2E491539A0CCEFF67F /* NowPlayingIndicator.swift */; };
@@ -170,7 +169,6 @@
 		C4875E012C149DDD00D9BAEB /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		C4875E032C149F9A00D9BAEB /* APIManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIManager.swift; sourceTree = "<group>"; };
 		C49134522C15BE0C00CCF2EB /* Strings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Strings.swift; sourceTree = "<group>"; };
-		C49495842C1C26D4006B4D1E /* ScanStatusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanStatusService.swift; sourceTree = "<group>"; };
 		C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamCacheManager.swift; sourceTree = "<group>"; };
 		C4D7F84C2C7F2AE900165EFD /* flo.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = flo.xcdatamodel; sourceTree = "<group>"; };
 		C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackService.swift; sourceTree = "<group>"; };
@@ -346,7 +344,6 @@
 				C4875E032C149F9A00D9BAEB /* APIManager.swift */,
 				C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */,
 				C4FE524C2C14E71B0053763A /* KeychainManager.swift */,
-				C49495842C1C26D4006B4D1E /* ScanStatusService.swift */,
 				C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */,
 				C401D0992C5AED9F009F91C7 /* LocalFileManager.swift */,
 				C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */,
@@ -576,7 +573,6 @@
 				A08ED21ABC61336BDD76B09E /* KeychainManager.swift in Sources */,
 				854D35E557CBD828EC654F35 /* UserDefaultsManager.swift in Sources */,
 				0D25BDE8239F8A39D2BC630E /* FloooService.swift in Sources */,
-				B9D08EAB8C51BDB1AF9AD48C /* ScanStatusService.swift in Sources */,
 				918D91B96EB2612541200A7F /* Constants.swift in Sources */,
 				E8AB6CFDF3CCA70D9FD9E2F9 /* Errors.swift in Sources */,
 				039F16C6B65D4284E6989F70 /* Strings.swift in Sources */,

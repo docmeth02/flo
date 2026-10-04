@@ -8,7 +8,7 @@
 @preconcurrency import CoreData
 import Foundation
 
-class CoreDataManager: ObservableObject {
+class CoreDataManager {
   static let shared = CoreDataManager()
 
   /// True when the store could not be opened and the app runs on a memory

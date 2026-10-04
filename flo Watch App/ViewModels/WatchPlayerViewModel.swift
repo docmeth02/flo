@@ -47,7 +47,6 @@ class WatchPlayerViewModel: ObservableObject {
     get { clock.currentTimeString }
     set { clock.currentTimeString = newValue }
   }
-  @Published var totalTimeString: String = "00:00"
   /// The now playing cover, resolved once per song rather than on every redraw.
   @Published private(set) var coverArt: String = ""
 
@@ -640,7 +639,6 @@ class WatchPlayerViewModel: ObservableObject {
     let playbackDuration = CMTimeGetSeconds(duration)
 
     self.totalDuration = playbackDuration
-    self.totalTimeString = timeString(for: playbackDuration)
 
     if playAudio {
       self.progress = 0
@@ -1186,7 +1184,6 @@ class WatchPlayerViewModel: ObservableObject {
     self.totalDuration = self.nowPlaying.duration
     self.progress = 0.0
     self.currentTimeString = "00:00"
-    self.totalTimeString = "00:00"
 
     self.addPeriodicTimeObserver()
     self.play()

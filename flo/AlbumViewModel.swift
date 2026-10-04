@@ -16,7 +16,6 @@ class AlbumViewModel: ObservableObject {
   @Published var album: Album = Album()
   @Published var starredSongs: [Song] = []
   @Published var downloadedAlbums: [Album] = []
-  @Published var isDownloaded = false
 
   /// A library list loaded from the server and cached on the watch.
   enum Library: String {
@@ -77,8 +76,6 @@ class AlbumViewModel: ObservableObject {
     self.album.albumCover = self.getAlbumCoverArt(id: album.id, albumCover: album.albumCover)
 
     if !album.id.isEmpty {
-      self.getAlbumById()
-
       if AlbumService.shared.isPlaylistDownload(id: album.id) {
         self.fetchPlaylistSongsIntoAlbum(id: album.id)
       } else {
@@ -89,7 +86,6 @@ class AlbumViewModel: ObservableObject {
 
   func setActivePlaylist(playlist: Playlist) {
     self.playlist = playlist
-    self.isDownloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: playlist.id)
     self.fetchSongsByPlaylist(id: playlist.id)
   }
 
@@ -232,10 +228,6 @@ class AlbumViewModel: ObservableObject {
   ) -> String {
     return AlbumService.shared.getAlbumCover(
       artistName: artistName, albumName: albumName, albumId: id, albumCover: albumCover)
-  }
-
-  func getAlbumById() {
-    self.isDownloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: self.album.id)
   }
 
   func downloadAlbum(_ albumToDownload: Album) {

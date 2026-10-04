@@ -9,8 +9,6 @@ import Foundation
 import KeychainAccess
 
 class AuthViewModel: ObservableObject {
-  @Published var user: UserAuth?
-
   @Published var serverUrl: String = ""
   @Published var username: String = ""
   @Published var password: String = ""
@@ -54,15 +52,12 @@ class AuthViewModel: ObservableObject {
       }
     }
 
-    if let data = Self.storedAuth() {
+    if Self.storedAuth() != nil {
       // Trust cached creds immediately; a cold launch must never block on a
       // login that can only time out while offline. AuthService already loaded
       // them from the Keychain. Navidrome tokens expire, so renew the session
       // once the first connectivity verdict is online, or later when the
       // network comes back.
-      user = UserAuth(
-        id: data.id, username: data.username, name: data.name, isAdmin: data.isAdmin,
-        lastFMApiKey: data.lastFMApiKey)
       isLoggedIn = true
       needsReauthentication = true
 
@@ -183,9 +178,9 @@ class AuthViewModel: ObservableObject {
       result in
       switch result {
       case .success(let data):
-        // persistAuthData mutates @Published state ("user"), so make sure the
-        // whole success path runs on the main actor regardless of which queue
-        // Alamofire delivered the response on.
+        // The success path mutates @Published state, so make sure it runs on
+        // the main actor regardless of which queue Alamofire delivered the
+        // response on.
         DispatchQueue.main.async {
           self.persistAuthData(data, serverUrl: self.serverUrl)
           self.needsReauthentication = false
@@ -269,7 +264,6 @@ class AuthViewModel: ObservableObject {
     CoverArtCacheManager.shared.clearCache()
     RequestLog.shared.clear()
 
-    user = nil
     isLoggedIn = false
     needsReauthentication = false
 
@@ -302,11 +296,6 @@ class AuthViewModel: ObservableObject {
       } catch {
         print("Error saving server URL to Keychain: \(error)")
       }
-
-      user = UserAuth(
-        id: data.id, username: data.username, name: data.name, isAdmin: data.isAdmin,
-        lastFMApiKey: data.lastFMApiKey
-      )
     } catch {
       print("Error encoding auth data: \(error)")
     }
