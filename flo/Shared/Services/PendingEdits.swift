@@ -46,9 +46,7 @@ import Foundation
 
   /// Sends only while logged in and the server answers.
   nonisolated static func serverReachable() -> Bool {
-    let connectivity = ConnectivityMonitor.shared
-    return AuthService.shared.accountKey != nil && connectivity.isOnline
-      && connectivity.isServerReachable
+    AuthService.shared.accountKey != nil && ConnectivityMonitor.shared.canReachServer
   }
 
   subscript(id: String) -> Value? { values[id] }

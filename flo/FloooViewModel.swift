@@ -94,8 +94,7 @@ class FloooViewModel: ObservableObject {
       return
     }
 
-    let connectivity = ConnectivityMonitor.shared
-    guard connectivity.isOnline, connectivity.isServerReachable else { return }
+    guard ConnectivityMonitor.shared.canReachServer else { return }
 
     let now = Date()
     if state == .playing, let last = lastPlayingReport, last.songId == payload.songId,
@@ -122,8 +121,7 @@ class FloooViewModel: ObservableObject {
   private func sendNextReport() {
     guard !reportInFlight, !waitingReports.isEmpty else { return }
     // Nothing waits out a dead link: a report describes this moment only.
-    let connectivity = ConnectivityMonitor.shared
-    guard connectivity.isOnline, connectivity.isServerReachable else {
+    guard ConnectivityMonitor.shared.canReachServer else {
       waitingReports = []
       return
     }
@@ -170,8 +168,7 @@ class FloooViewModel: ObservableObject {
       return
     }
 
-    let connectivity = ConnectivityMonitor.shared
-    guard connectivity.isOnline, connectivity.isServerReachable else { return }
+    guard ConnectivityMonitor.shared.canReachServer else { return }
 
     FloooService.shared.scrobbleToBuiltinEndpoint(
       submission: false, songId: payload.songId, time: payload.listenTime

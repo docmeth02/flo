@@ -17,6 +17,9 @@ final class ConnectivityMonitor: ObservableObject {
   @Published private(set) var isOnline: Bool = true
   @Published private(set) var isServerReachable: Bool = true
 
+  /// Online and the server answers. Read on the main thread, like its parts.
+  var canReachServer: Bool { isOnline && isServerReachable }
+
   private let session: URLSession = {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.timeoutIntervalForRequest = 10
@@ -183,11 +186,11 @@ final class ConnectivityMonitor: ObservableObject {
         if let lastVerdictAt = self.lastVerdictAt,
           Date().timeIntervalSince(lastVerdictAt) < maxAge
         {
-          continuation.resume(returning: self.isOnline && self.isServerReachable)
+          continuation.resume(returning: self.canReachServer)
           return
         }
         self.probeWaiters.append {
-          continuation.resume(returning: self.isOnline && self.isServerReachable)
+          continuation.resume(returning: self.canReachServer)
         }
         self.probeServerReachability()
       }

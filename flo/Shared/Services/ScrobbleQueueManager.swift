@@ -103,8 +103,7 @@ final class ScrobbleQueueManager {
     }
     reload()
 
-    let connectivity = ConnectivityMonitor.shared
-    if connectivity.isOnline, connectivity.isServerReachable {
+    if ConnectivityMonitor.shared.canReachServer {
       flush()
     } else {
       scheduleRetry()
@@ -141,7 +140,7 @@ final class ScrobbleQueueManager {
       return
     }
 
-    guard ConnectivityMonitor.shared.isOnline, ConnectivityMonitor.shared.isServerReachable else {
+    guard ConnectivityMonitor.shared.canReachServer else {
       // A successful probe comes back through the reachability subscription.
       ConnectivityMonitor.shared.probeServerReachability()
       backOff()

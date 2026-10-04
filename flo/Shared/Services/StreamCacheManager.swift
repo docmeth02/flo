@@ -42,8 +42,7 @@ class StreamCacheManager {
     }
 
     // Without the server, a copy cached at another bitrate beats no playback.
-    let connectivity = ConnectivityMonitor.shared
-    guard !(connectivity.isOnline && connectivity.isServerReachable) else { return nil }
+    guard !ConnectivityMonitor.shared.canReachServer else { return nil }
 
     return CoreDataManager.shared.getRecordByKey(
       entity: CacheEntity.self, key: \CacheEntity.mediaFileId, value: mediaFileId
