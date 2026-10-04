@@ -50,7 +50,8 @@ struct WatchSearchView: View {
     .searchable(text: $query)
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .navigationDestination(item: $openedAlbumId) { id in
-      if let album = results?.albums.first(where: { $0.id == id }) {
+      // From the library, not the results, which change with the query.
+      if let album = library?.albums.first(where: { $0.id == id }) {
         WatchAlbumDetailView(album: album)
       }
     }
