@@ -47,12 +47,7 @@ struct WatchHomeView: View {
       if !albumViewModel.recentAlbums.isEmpty {
         Section {
           ForEach(albumViewModel.recentAlbums) { album in
-            CoverRow(
-              tile: .album(album.id),
-              title: album.name,
-              subtitle: album.albumArtist)
-            .holdable(onTap: { openedAlbumId = album.id }, onHold: { menu = .album(album) })
-            .floRow()
+            AlbumRow(album: album, menu: $menu) { openedAlbumId = album.id }
           }
         } header: {
           FloSectionHeader("Recently Played")
