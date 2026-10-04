@@ -83,19 +83,22 @@ class PlaybackService {
     }
   }
 
+  /// Whether songs played from `item` come from a playlist: a playlist, or
+  /// one played as an album, which carries "Various Artists" and its owner
+  /// in the genre.
+  static func isPlaylist<T: Playable>(_ item: T) -> Bool {
+    if item is Playlist { return true }
+    guard let album = item as? Album else { return false }
+    return album.artist == "Various Artists" && album.albumArtist == "Various Artists"
+      && album.genre.contains(" by ")
+  }
+
   /// Replaces the stored queue in one save, so a failure keeps the old queue.
   /// Returns the new queue, or nothing if it could not be stored.
   func addToQueue<T: Playable>(item: T, isFromLocal: Bool = false) -> [QueueEntity] {
-    let isPlaylist = item is Playlist
-    let isPlaylistAlbum =
-      (item as? Album).map { album in
-        album.artist == "Various Artists" && album.albumArtist == "Various Artists"
-          && album.genre.contains(" by ")
-      } ?? false
-
     let entries = item.songs.map {
       makeEntry(
-        song: $0, context: item.name, isFromPlaylist: isPlaylist || isPlaylistAlbum,
+        song: $0, context: item.name, isFromPlaylist: Self.isPlaylist(item),
         isFromLocal: isFromLocal)
     }
     return store(order: entries) ? entries : []

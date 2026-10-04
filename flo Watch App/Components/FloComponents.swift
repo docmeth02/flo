@@ -86,6 +86,14 @@ struct CoverRow<Trailing: View>: View {
   }
 }
 
+extension CoverRow.Tile {
+  /// The album's cover, read from its download when there is one.
+  static func album(_ id: String) -> Self {
+    .cover(
+      url: AlbumService.shared.getAlbumCover(artistName: "", albumName: "", albumId: id), albumId: id)
+  }
+}
+
 extension CoverRow where Trailing == EmptyView {
   init(tile: Tile, title: String, subtitle: String) {
     self.init(tile: tile, title: title, subtitle: subtitle) {
@@ -364,10 +372,10 @@ struct HoldableRow: ViewModifier {
 
   func body(content: Content) -> some View {
     content
-      .opacity(isPressed ? 0.6 : 1)
+      .opacity(isPressed ? FloLayout.pressedOpacity : 1)
       .contentShape(Rectangle())
       .onTapGesture(perform: onTap)
-      .onLongPressGesture(minimumDuration: 0.5) {
+      .onLongPressGesture(minimumDuration: FloLayout.holdDuration) {
         guard let onHold else { return }
         WKInterfaceDevice.current().play(.click)
         onHold()
@@ -376,8 +384,7 @@ struct HoldableRow: ViewModifier {
 }
 
 /// A short message over the bottom of a screen, with Undo when the change
-/// can be taken back. The owner clears `message` to hide it; `FloToast.show`
-/// does that after a few seconds.
+/// can be taken back. It clears `message` itself after `duration`.
 struct FloToast: View {
   struct Message: Equatable {
     let id = UUID()

@@ -84,8 +84,9 @@ enum MenuTarget: Identifiable {
 }
 
 /// The one hold menu: a header with the item, then its actions (Pin or
-/// Unpin for albums and artists, Play Next, Add to Queue, Like or Unlike)
-/// and Cancel. It only reports the choice; `.itemMenu` carries it out.
+/// Unpin for albums and artists, Play Next, Add to Queue, Like or Unlike).
+/// The sheet's own close button cancels. It only reports the choice;
+/// `.itemMenu` carries it out.
 struct ItemMenu: View {
   enum Action {
     case pin, playNext, addToQueue, like
@@ -98,7 +99,6 @@ struct ItemMenu: View {
   let isLiked: Bool
   let onSelect: (Action) -> Void
 
-  @Environment(\.dismiss) private var dismiss
 
   var body: some View {
     ScrollView {
@@ -113,8 +113,6 @@ struct ItemMenu: View {
         row(
           isLiked ? "Unlike" : "Like", systemImage: isLiked ? "heart.fill" : "heart",
           tint: isLiked ? .floLiked : .floSecondary, .like)
-        Button("Cancel") { dismiss() }
-          .buttonStyle(FloTintedButtonStyle(tint: .white))
       }
       .padding(.horizontal, 8)
     }
@@ -177,9 +175,9 @@ private struct ItemMenuPresenter: ViewModifier {
   private func tile(_ target: MenuTarget) -> CoverRow<EmptyView>.Tile {
     switch target {
     case .song(let song, _, _):
-      .cover(url: albumViewModel.getAlbumCoverArt(id: song.albumId), albumId: song.albumId)
+      .album(song.albumId)
     case .album(let album):
-      .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id)
+      .album(album.id)
     case .artist:
       .glyph("music.mic", round: true)
     }

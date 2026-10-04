@@ -159,7 +159,7 @@ struct WatchNowPlayingView: View {
               playerViewModel.toggleStar()
               WKInterfaceDevice.current().play(.click)
             }
-            .onLongPressGesture(minimumDuration: 0.5) {
+            .onLongPressGesture(minimumDuration: FloLayout.holdDuration) {
               ratingTarget = playerViewModel.nowPlaying.id ?? ""
               showRating = true
               WKInterfaceDevice.current().play(.click)

@@ -58,7 +58,7 @@ struct WatchHomeView: View {
         Section {
           ForEach(albumViewModel.recentAlbums) { album in
             CoverRow(
-              tile: .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id),
+              tile: .album(album.id),
               title: album.name,
               subtitle: album.albumArtist)
             .holdable(onTap: { openedAlbumId = album.id }, onHold: { menu = .album(album) })

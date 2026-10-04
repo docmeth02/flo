@@ -35,6 +35,10 @@ enum FloLayout {
   static let coverRowHeight: CGFloat = 52
   static let thumbnail: CGFloat = 36
   static let thumbnailRadius: CGFloat = 6
+  /// How far a pressed control fades.
+  static let pressedOpacity: Double = 0.7
+  /// How long a hold takes to open a row's menu or the rating dialog.
+  static let holdDuration: Double = 0.5
 }
 
 extension Font {
@@ -70,7 +74,7 @@ struct FloPrimaryButtonStyle: ButtonStyle {
       .foregroundStyle(.white)
       .frame(maxWidth: .infinity, minHeight: height)
       .background(Capsule().fill(Color.floIndigo))
-      .opacity(configuration.isPressed ? 0.7 : 1)
+      .opacity(configuration.isPressed ? FloLayout.pressedOpacity : 1)
   }
 }
 
@@ -85,7 +89,7 @@ struct FloTintedButtonStyle: ButtonStyle {
       .foregroundStyle(tint)
       .frame(maxWidth: .infinity, minHeight: height)
       .background(Capsule().fill(Color.floSurface))
-      .opacity(configuration.isPressed ? 0.7 : 1)
+      .opacity(configuration.isPressed ? FloLayout.pressedOpacity : 1)
   }
 }
 

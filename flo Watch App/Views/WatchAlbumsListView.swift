@@ -23,7 +23,7 @@ struct WatchAlbumsListView: View {
       PinnedList(items: albumViewModel.albums, kind: .album, allLabel: "All Albums") {
         album, isPinned in
         CoverRow(
-          tile: .cover(url: albumViewModel.getAlbumCoverArt(id: album.id), albumId: album.id),
+          tile: .album(album.id),
           title: album.name,
           subtitle: album.albumArtist
         ) {
