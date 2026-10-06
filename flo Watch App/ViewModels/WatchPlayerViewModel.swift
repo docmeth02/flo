@@ -60,6 +60,23 @@ class WatchPlayerViewModel: ObservableObject {
   private var starLookup = 0
   private var starObservation: AnyCancellable?
   private var resumeAfterInterruption = false
+  // A start the system may still interrupt while it sets up the output. On
+  // watchOS 26 the activation succeeds without an output; the speaker or the
+  // headphones are only brought up once the player renders, and bringing them
+  // up interrupts the session (reason default) without ever ending the
+  // interruption. Those interruptions keep the start, which resumes once the
+  // route has settled, at most `maxSettleResumes` times. Over once the player
+  // has played `startHeardAfter` seconds into an output, or by a pause.
+  private struct PendingStart {
+    var resumes = 0
+    var played: Double = 0
+  }
+  private var pendingStart: PendingStart?
+  private var settleWork: DispatchWorkItem?
+  private static let settleDelay: TimeInterval = 1.5
+  private static let maxSettleResumes = 3
+  private static let startHeardAfter: Double = 3
+  private var accessLogObservation: AnyCancellable?
 
   private var isLocallySaved: Bool = false
   private(set) var isFinished: Bool = false
@@ -232,8 +249,18 @@ class WatchPlayerViewModel: ObservableObject {
           let value = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
           let reason = AVAudioSession.RouteChangeReason(rawValue: value)
         else { return }
-        RequestLog.shared.note("audio route \(reason.rawValue) outputs=\(Self.routeOutputs)")
+        let previous = (notification.userInfo?[AVAudioSessionRouteChangePreviousRouteKey]
+          as? AVAudioSessionRouteDescription)?.outputs.map(\.portType.rawValue)
+          .joined(separator: ",") ?? "-"
+        RequestLog.shared.note(
+          "audio route \(reason.rawValue) outputs=\(Self.routeOutputs) previous=\(previous)")
 
+        // Part of the output setup that interrupted the start, the speaker
+        // giving way to the headphones included.
+        if self.settleWork != nil {
+          self.armSettle()
+          return
+        }
         guard reason == .oldDeviceUnavailable else { return }
         // Headphones lost during a call: its end must not restart music
         // nobody hears.
@@ -249,6 +276,58 @@ class WatchPlayerViewModel: ObservableObject {
       .joined(separator: ",")
   }
 
+  private static var hasOutput: Bool {
+    !AVAudioSession.sharedInstance().currentRoute.outputs.isEmpty
+  }
+
+  /// (Re)starts the wait for the output setup to go quiet.
+  private func armSettle() {
+    settleWork?.cancel()
+    let work = DispatchWorkItem { [weak self] in self?.resumeAfterSettle() }
+    settleWork = work
+    DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay, execute: work)
+  }
+
+  /// Starts an interrupted start again once nothing changed for
+  /// `settleDelay`, if there is an output to play to. Without one it waits:
+  /// a call ends with an interruption end of its own.
+  private func resumeAfterSettle() {
+    settleWork = nil
+    RequestLog.shared.note(
+      "audio settled resume=\(resumeAfterInterruption) playing=\(isPlaying)"
+        + " outputs=\(Self.routeOutputs)")
+    guard resumeAfterInterruption, isPlaying, pendingStart != nil,
+      player?.timeControlStatus != .playing, Self.hasOutput
+    else { return }
+    let resumes = (pendingStart?.resumes ?? 0) + 1
+    play()
+    pendingStart?.resumes = resumes
+  }
+
+  /// A pause, or a logout, ends a start and anything waiting to resume it.
+  private func endStart() {
+    pendingStart = nil
+    cancelSettle()
+    resumeAfterInterruption = false
+  }
+
+  private func cancelSettle() {
+    settleWork?.cancel()
+    settleWork = nil
+  }
+
+  /// Counts what a start has played; once it was heard, interruptions are
+  /// treated as calls again.
+  private func countStartPlayed(_ step: Double) {
+    guard pendingStart != nil else { return }
+    pendingStart?.played += step
+    guard let start = pendingStart, start.played >= Self.startHeardAfter, Self.hasOutput
+    else { return }
+    RequestLog.shared.note(
+      "audio start heard resumes=\(start.resumes) outputs=\(Self.routeOutputs)")
+    pendingStart = nil
+  }
+
   func handleInterruptionNotification(_ notification: Notification) {
     guard let userInfo = notification.userInfo,
       let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? Int,
@@ -259,13 +338,26 @@ class WatchPlayerViewModel: ObservableObject {
 
     switch type {
     case .began:
+      let session = AVAudioSession.sharedInstance()
       let reason = (userInfo[AVAudioSessionInterruptionReasonKey] as? UInt).map(String.init) ?? "-"
+      let options = (userInfo[AVAudioSessionInterruptionOptionKey] as? UInt).map(String.init) ?? "-"
       RequestLog.shared.note(
-        "audio interruption began reason=\(reason) playing=\(isPlaying) outputs=\(Self.routeOutputs)")
+        "audio interruption began reason=\(reason) options=\(options) playing=\(isPlaying)"
+          + " start=\(pendingStart.map { "\($0.resumes)" } ?? "none") outputs=\(Self.routeOutputs)"
+          + " otherAudio=\(session.isOtherAudioPlaying)"
+          + " silenceHint=\(session.secondaryAudioShouldBeSilencedHint)")
+      // The system already paused the player; the start stays wanted.
+      if isPlaying, let start = pendingStart, start.resumes < Self.maxSettleResumes {
+        loadWatchdog?.cancel()
+        resumeAfterInterruption = true
+        armSettle()
+        return
+      }
       // Through pause() so a pending skip or Keep Playing mix does not start
       // playback during the call.
-      self.resumeAfterInterruption = self.isPlaying
-      self.pause()
+      let wasPlaying = isPlaying
+      pause()
+      resumeAfterInterruption = wasPlaying
     case .ended:
       RequestLog.shared.note("audio interruption ended resume=\(resumeAfterInterruption)")
       // Music the user had paused before the call stays paused.
@@ -275,8 +367,12 @@ class WatchPlayerViewModel: ObservableObject {
         let options = AVAudioSession.InterruptionOptions(rawValue: UInt(optionsValue))
         if options.contains(.shouldResume) {
           self.play()
+          return
         }
       }
+      // A start kept through the interruption stays paused when its end asks
+      // not to resume.
+      if isPlaying, player?.timeControlStatus != .playing { pause() }
     @unknown default:
       break
     }
@@ -356,6 +452,7 @@ class WatchPlayerViewModel: ObservableObject {
     playbackEndObservation?.cancel()
     playbackEndObservation = nil
     playbackFailureObservation = nil
+    accessLogObservation = nil
     loadWatchdog?.cancel()
   }
 
@@ -434,6 +531,28 @@ class WatchPlayerViewModel: ObservableObject {
       .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)
       .receive(on: DispatchQueue.main)
       .sink { [weak self, weak item] _ in self?.handleStreamFailure(trackId: trackId, item: item) }
+
+    // What the player itself saw of the stream: how long it took to start,
+    // stalls and errors.
+    accessLogObservation = NotificationCenter.default
+      .publisher(for: .AVPlayerItemNewAccessLogEntry, object: item)
+      .merge(
+        with: NotificationCenter.default.publisher(
+          for: .AVPlayerItemNewErrorLogEntry, object: item))
+      .receive(on: DispatchQueue.main)
+      .sink { [weak item] notification in
+        if notification.name == .AVPlayerItemNewErrorLogEntry {
+          guard let event = item?.errorLog()?.events.last else { return }
+          RequestLog.shared.note(
+            "player error \(event.errorDomain) \(event.errorStatusCode) \(event.errorComment ?? "")")
+        } else if let event = item?.accessLog()?.events.last {
+          RequestLog.shared.note(
+            String(
+              format: "player access startup=%.1f transfer=%.1f stalls=%d kbps=%.0f",
+              event.startupTime, event.transferDuration, event.numberOfStalls,
+              event.observedBitrate / 1000))
+        }
+      }
 
     // Fallback advance for items whose reported duration is off (VBR, missing
     // metadata): if the periodic check misses the end, the player item itself
@@ -591,6 +710,7 @@ class WatchPlayerViewModel: ObservableObject {
     resetSession()
     playGeneration += 1
     startGeneration += 1
+    endStart()
     player?.pause()
     detachItem()
 
@@ -816,6 +936,7 @@ class WatchPlayerViewModel: ObservableObject {
       // time was not heard either way.
       if (self.player?.rate ?? 0) > 0, step > 0, step <= 3 {
         self.secondsListened += step
+        self.countStartPlayed(step)
       }
       self.lastObservedTime = currentTime
 
@@ -1016,6 +1137,8 @@ class WatchPlayerViewModel: ObservableObject {
     // Activate audio session using watchOS async API
     playGeneration += 1
     let gen = playGeneration
+    cancelSettle()
+    pendingStart = PendingStart()
     RequestLog.shared.note(
       "audio activate \(gen) playing=\(isPlaying) item=\(playerItem != nil)")
     AVAudioSession.sharedInstance().activate(options: []) { [weak self] success, error in
@@ -1032,6 +1155,9 @@ class WatchPlayerViewModel: ObservableObject {
           debugLog("Audio session activation failed: \(error)")
           return
         }
+        // Playing from here: a later end of an interruption must not restart
+        // music the user may pause meanwhile.
+        self.resumeAfterInterruption = false
 
         if self.isFinished {
           self.stop()
@@ -1089,6 +1215,7 @@ class WatchPlayerViewModel: ObservableObject {
 
   func pause() {
     playGeneration += 1
+    endStart()
     player?.pause()
     reportPlayback(.paused)
 
@@ -1099,6 +1226,9 @@ class WatchPlayerViewModel: ObservableObject {
   func stop() {
     reportStopped()
     playGeneration += 1
+    // A queue run out restarts from play(), whose start this must not end.
+    cancelSettle()
+    resumeAfterInterruption = false
     player?.pause()
     // No observer tick follows while paused, so the reset is applied here.
     // Starting the song over is a new listen, which may count again.

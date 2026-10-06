@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import WatchKit
 
 /// Connection state, the history import, the latest mix and server requests,
 /// to tell a slow or broken server from an app problem on the device itself.
@@ -76,6 +77,15 @@ struct WatchDiagnosticsView: View {
     .task { await ListeningHistoryStore.shared.publishStoredState() }
   }
 
+  /// e.g. "Watch6,18"; the marketing name is not available on the watch.
+  private static var hardwareModel: String {
+    var info = utsname()
+    uname(&info)
+    return withUnsafeBytes(of: &info.machine) {
+      String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self)
+    }
+  }
+
   private static func connectionLines() -> [(String, String)] {
     let connectivity = ConnectivityMonitor.shared
     return [
@@ -132,8 +142,10 @@ struct WatchDiagnosticsView: View {
     let info = Bundle.main.infoDictionary
     let version = info?["CFBundleShortVersionString"] as? String ?? "?"
     let build = info?["CFBundleVersion"] as? String ?? "?"
+    let device = WKInterfaceDevice.current()
     var lines = [
-      "flo watch \(version) (\(build)), \(Date().formatted(.iso8601))"
+      "flo watch \(version) (\(build)), \(Date().formatted(.iso8601))",
+      "\(device.systemName) \(device.systemVersion), \(Self.hardwareModel)",
     ]
     lines += connectionLines().map { "\($0.0): \($0.1)" }
     lines.append("")
@@ -144,7 +156,10 @@ struct WatchDiagnosticsView: View {
     for entry in RequestLog.shared.entries {
       lines.append(
         "  \(String(format: "%.1f", entry.startedAt)) \(entry.text) "
-          + "status=\(entry.status.map(String.init) ?? "-") error=\(entry.error ?? "-")")
+          + "status=\(entry.status.map(String.init) ?? "-") error=\(entry.error ?? "-")"
+          + (entry.duration.map { String(format: " %.1fs", $0) } ?? "")
+          + (entry.bytes > 0 ? " \(entry.bytes)B" : "")
+          + (entry.retries > 0 ? " retry=\(entry.retries)" : ""))
     }
     lines.append("")
     lines.append("Last mixes")
