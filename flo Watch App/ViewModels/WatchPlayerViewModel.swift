@@ -1077,6 +1077,8 @@ class WatchPlayerViewModel: ObservableObject {
           self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
         }
         self.unheardStart = isRetry ? .retried : .first
+        // A Play while already heard (a remote command) leaves nothing unheard.
+        self.clearUnheardStartIfAudible()
 
         if self.playerItem == nil, self.hasNowPlaying(), !self.isLiveRadio {
           self.isFinished = false
