@@ -271,7 +271,8 @@ class WatchPlayerViewModel: ObservableObject {
     case .began:
       let reason = (userInfo[AVAudioSessionInterruptionReasonKey] as? UInt).map(String.init) ?? "-"
       RequestLog.shared.note(
-        "audio interruption began reason=\(reason) unheard=\(unheardStart.map { "\($0)" } ?? "none")")
+        "audio interruption began reason=\(reason) unheard=\(unheardStart.map { "\($0)" } ?? "none")"
+          + " outputs=\(Self.routeOutputs)")
       switch unheardStart {
       case .first? where isPlaying:
         unheardStart = .retrying
@@ -279,7 +280,9 @@ class WatchPlayerViewModel: ObservableObject {
         return
       case .retrying?:
         // The handover's second interruption, or a call while the retry
-        // activates; activating then fails, and its end resumes.
+        // activates. A retry that gets through clears the resume; a call's
+        // end resumes whether it comes before the failed activation or after.
+        resumeAfterInterruption = true
         return
       default:
         break
@@ -1077,8 +1080,10 @@ class WatchPlayerViewModel: ObservableObject {
         }
         if isRetry {
           self.unheardStart = .retried
-        } else if self.player?.timeControlStatus != .playing {
+        } else if self.player?.timeControlStatus == .playing {
           // A Play while already playing (a remote command) starts nothing.
+          self.unheardStart = nil
+        } else {
           self.unheardStart = .first
           self.playedSinceStart = 0
         }
