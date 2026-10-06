@@ -161,6 +161,23 @@ final class ConnectivityMonitor: ObservableObject {
     }
   }
 
+  /// Whether a request failed because the connection did, not the server or
+  /// the song; AVFoundation wraps the URL error, so wrapped errors count too.
+  static func isConnectionError(_ error: Error?) -> Bool {
+    var next = error as NSError?
+    while let error = next {
+      if error.domain == NSURLErrorDomain, connectionErrorCodes.contains(error.code) { return true }
+      next = error.userInfo[NSUnderlyingErrorKey] as? NSError
+    }
+    return false
+  }
+
+  private static let connectionErrorCodes: Set<Int> = Set(
+    [
+      URLError.Code.timedOut, .networkConnectionLost, .notConnectedToInternet, .cannotConnectToHost,
+      .cannotFindHost, .dnsLookupFailed, .dataNotAllowed, .internationalRoamingOff,
+    ].map(\.rawValue))
+
   private static func isOfflineError(_ error: Error?) -> Bool {
     switch (error as? URLError)?.code {
     case .notConnectedToInternet, .dataNotAllowed, .internationalRoamingOff, .callIsActive:

@@ -81,13 +81,7 @@ enum DecisionFailure: Error, Equatable {
     if let status {
       return [408, 429, 500, 502, 503, 504].contains(status) ? .transient : .unavailable
     }
-    switch (error as? URLError)?.code {
-    case .timedOut, .networkConnectionLost, .notConnectedToInternet, .cannotFindHost,
-      .cannotConnectToHost, .dnsLookupFailed:
-      return .transient
-    default:
-      return .unavailable
-    }
+    return ConnectivityMonitor.isConnectionError(error) ? .transient : .unavailable
   }
 
   var streamFailure: StreamSourceFailure { self == .unplayable ? .unplayable : .unavailable }

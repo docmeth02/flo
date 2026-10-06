@@ -70,7 +70,10 @@
       {
         DispatchQueue.main.asyncAfter(deadline: .now() + 5 + after) { [weak self] in
           guard let self, self.isPlaying, self.currentSourceIsRemote, let item = self.playerItem
-          else { return debugLog("stall: no remote item playing") }
+          else {
+            debugLog("stall: no remote item playing")
+            return
+          }
           debugLog("simulating stall at \(self.lastObservedTime)")
           if stall.last == "offline" {
             self.enterConnectionWait(cause: "debug")

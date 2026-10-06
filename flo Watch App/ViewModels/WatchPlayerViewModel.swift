@@ -570,23 +570,6 @@ class WatchPlayerViewModel: ObservableObject {
     RequestLog.shared.note("connection wait left: \(cause)")
   }
 
-  private static let connectionErrorCodes: Set<Int> = Set(
-    [
-      URLError.Code.timedOut, .networkConnectionLost, .notConnectedToInternet, .cannotConnectToHost,
-      .cannotFindHost, .dnsLookupFailed, .dataNotAllowed, .internationalRoamingOff,
-    ].map(\.rawValue))
-
-  /// Whether an item failed because the connection did, not the song;
-  /// AVFoundation wraps the URL error.
-  private static func isConnectionError(_ error: Error?) -> Bool {
-    var next = error as NSError?
-    while let error = next {
-      if error.domain == NSURLErrorDomain, connectionErrorCodes.contains(error.code) { return true }
-      next = error.userInfo[NSUnderlyingErrorKey] as? NSError
-    }
-    return false
-  }
-
   /// A player whose item failed can end up failed itself, and a failed
   /// AVPlayer refuses every later item; start over with a fresh one. Callers
   /// have already removed the time observer from the old player.
@@ -791,7 +774,7 @@ class WatchPlayerViewModel: ObservableObject {
       AlbumService.shared.forgetTranscodeDecision(songId: trackId)
     }
     if isNowPlaying, !isLiveRadio, currentSourceIsRemote, isPlaying,
-      Self.isConnectionError(error ?? item.error) || !ConnectivityMonitor.shared.isServerReachable
+      ConnectivityMonitor.isConnectionError(error ?? item.error) || !ConnectivityMonitor.shared.isServerReachable
     {
       enterConnectionWait(cause: "stream error")
       return
