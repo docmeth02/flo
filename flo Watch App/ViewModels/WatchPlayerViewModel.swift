@@ -278,15 +278,19 @@ class WatchPlayerViewModel: ObservableObject {
     case .began:
       let reason = (userInfo[AVAudioSessionInterruptionReasonKey] as? UInt).map(String.init) ?? "-"
       RequestLog.shared.note(
-        "audio interruption began reason=\(reason) unheard=\(String(describing: unheardStart))")
-      if unheardStart == .first {
+        "audio interruption began reason=\(reason) unheard=\(unheardStart.map { "\($0)" } ?? "none")")
+      // Marked before the activation returns, so a second interruption in
+      // between pauses instead of retrying again.
+      if unheardStart == .first, isPlaying {
+        unheardStart = .retried
         play(isRetry: true)
         return
       }
       // Through pause() so a pending skip or Keep Playing mix does not start
       // playback during the call.
-      self.resumeAfterInterruption = self.isPlaying
-      self.pause()
+      let wasPlaying = isPlaying
+      pause()
+      resumeAfterInterruption = wasPlaying
     case .ended:
       RequestLog.shared.note("audio interruption ended resume=\(resumeAfterInterruption)")
       // Music the user had paused before the call stays paused.
@@ -614,6 +618,7 @@ class WatchPlayerViewModel: ObservableObject {
     playGeneration += 1
     startGeneration += 1
     unheardStart = nil
+    resumeAfterInterruption = false
     player?.pause()
     detachItem()
 
@@ -1054,11 +1059,19 @@ class WatchPlayerViewModel: ObservableObject {
             + (error.map { " error=\(($0 as NSError).domain) \(($0 as NSError).code)" } ?? ""))
         guard gen == self.playGeneration else { return }
         if error != nil || !success {
-          // A retry that cannot activate leaves the controls on Play, not on
-          // a pause that plays nothing.
-          if self.isPlaying { self.pause() }
+          // A start that cannot activate leaves the controls on Play, not on
+          // a pause that plays nothing. A retry failed during a real
+          // interruption (a call) as likely as during a headphone switch;
+          // the call's end starts it.
+          if self.isPlaying {
+            self.pause()
+            self.resumeAfterInterruption = isRetry
+          }
           return
         }
+        // Playing from here: a later end of an interruption must not restart
+        // music the user may pause meanwhile.
+        self.resumeAfterInterruption = false
         if self.isFinished {
           self.stop()
           self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
@@ -1117,6 +1130,7 @@ class WatchPlayerViewModel: ObservableObject {
   func pause() {
     playGeneration += 1
     unheardStart = nil
+    resumeAfterInterruption = false
     player?.pause()
     reportPlayback(.paused)
 
@@ -1128,6 +1142,7 @@ class WatchPlayerViewModel: ObservableObject {
     reportStopped()
     playGeneration += 1
     unheardStart = nil
+    resumeAfterInterruption = false
     player?.pause()
     // No observer tick follows while paused, so the reset is applied here.
     // Starting the song over is a new listen, which may count again.
