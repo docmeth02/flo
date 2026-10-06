@@ -109,6 +109,8 @@ class WatchPlayerViewModel: ObservableObject {
   // reloaded where it stopped; a hanging connection never fails the item.
   private static let stallTimeout: TimeInterval = 15
   private var stallDeadline: DispatchWorkItem?
+  // Bumped whenever a no-progress check in flight no longer applies.
+  private var noProgressCheck = 0
   // The current item has played; before that the load watchdog guards it.
   private var itemHasPlayed = false
   // Behind isWaitingForConnection: when the wait began, its probe timer and
@@ -489,22 +491,29 @@ class WatchPlayerViewModel: ObservableObject {
     }
   }
 
+  /// Ends a stall deadline and any connectivity check started for it; a
+  /// pause, a seek or another item gives the song a fresh start.
   private func cancelStall() {
     stallDeadline?.cancel()
     stallDeadline = nil
+    noProgressCheck += 1
   }
 
-  /// An item that made no progress in time: with the server out of reach the
-  /// song waits for it, otherwise `broken` handles the item. Progress, a pause
-  /// or another item during the probe end it.
+  /// An item that made no progress in time: a remote song waits while the
+  /// server is out of reach, otherwise `broken` handles the item. Progress, a
+  /// pause, a seek or another item during the probe end it.
   private func handleNoProgress(
     of item: AVPlayerItem, cause: String, broken: @escaping () -> Void
   ) {
-    let listened = secondsListened
+    guard currentSourceIsRemote else {
+      broken()
+      return
+    }
+    let check = noProgressCheck
     Task { @MainActor [weak self, weak item] in
       let reachable = await ConnectivityMonitor.shared.canStream(maxAge: 0)
       guard let self, let item, item === self.playerItem, self.isPlaying,
-        self.secondsListened == listened
+        self.noProgressCheck == check
       else { return }
       if reachable {
         broken()
@@ -537,9 +546,12 @@ class WatchPlayerViewModel: ObservableObject {
       RequestLog.shared.note("connection wait goes on at \(Int(position)) s cause=\(cause)")
       return
     }
-    let timer = Timer.scheduledTimer(withTimeInterval: Self.connectionProbeInterval, repeats: true)
-    { [weak self] _ in self?.connectionWaitTick() }
+    let timer = Timer.scheduledTimer(
+      withTimeInterval: Self.connectionProbeInterval, repeats: true
+    ) { [weak self] _ in self?.connectionWaitTick() }
     connectionWait = ConnectionWait(since: Date(), timer: timer)
+    // The system's elapsed clock stops with the song.
+    updateNowPlayingInfo(progress: progress, rate: 0)
     RequestLog.shared.note("connection wait entered at \(Int(position)) s cause=\(cause)")
     ConnectivityMonitor.shared.probeIfIdle()
   }
@@ -682,8 +694,9 @@ class WatchPlayerViewModel: ObservableObject {
     observeItemStatus(trackId: trackId)
 
     // A server that never answers leaves the item loading forever without
-    // reporting .failed, and a stream can also break mid-song; the first is
-    // caught by the load watchdog, the second resumes or skips.
+    // reporting .failed, and a stream can also break or hang mid-song; the
+    // load watchdog and the stall deadline catch the silent cases, a break
+    // resumes, waits for the server or skips.
     loadWatchdog?.cancel()
     playbackFailureObservation = NotificationCenter.default
       .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)
@@ -774,7 +787,8 @@ class WatchPlayerViewModel: ObservableObject {
       AlbumService.shared.forgetTranscodeDecision(songId: trackId)
     }
     if isNowPlaying, !isLiveRadio, currentSourceIsRemote, isPlaying,
-      ConnectivityMonitor.isConnectionError(error ?? item.error) || !ConnectivityMonitor.shared.isServerReachable
+      ConnectivityMonitor.isConnectionError(error ?? item.error)
+        || !ConnectivityMonitor.shared.isServerReachable
     {
       enterConnectionWait(cause: "stream error")
       return
@@ -831,9 +845,15 @@ class WatchPlayerViewModel: ObservableObject {
       guard item.status != .readyToPlay
         || self.player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
       else { return }
-      self.handleNoProgress(of: item, cause: "load timeout") { [weak self] in
-        self?.player?.pause()
-        self?.skipFailedTrack(trackId: trackId)
+      self.handleNoProgress(of: item, cause: "load timeout") { [weak self, weak item] in
+        // A slow cell can leave a ready item silent; it is asked for once
+        // more before it counts as failed.
+        if item?.status == .readyToPlay {
+          self?.handleStreamFailure(trackId: trackId, item: item)
+        } else {
+          self?.player?.pause()
+          self?.skipFailedTrack(trackId: trackId)
+        }
       }
     }
     loadWatchdog = watchdog
@@ -842,8 +862,9 @@ class WatchPlayerViewModel: ObservableObject {
 
   /// A failed stream (deleted file, transcoder error, corrupt cache) never
   /// reaches its end, so nothing would advance and playback would sit silent.
-  /// Skip ahead after a moment, but stop after a few failures in a row so an
-  /// unreachable server does not burn through the whole queue.
+  /// Skip ahead after a moment, but stop after a few failures in a row so a
+  /// broken library does not burn through the whole queue; an unreachable
+  /// server is waited for instead.
   private func skipFailedTrack(trackId: String?) {
     loadWatchdog?.cancel()
     // Paused playback stays paused; pressing Play reloads the failed item.
@@ -1360,8 +1381,11 @@ class WatchPlayerViewModel: ObservableObject {
           return
         }
 
-        // A failed item cannot play; a fresh one gets one more chance.
-        if self.playerItem?.status == .failed, self.hasNowPlaying() {
+        // A failed item cannot play, nor can one already counted as failed
+        // (ready but silent); a fresh one gets one more chance.
+        if let item = self.playerItem, item.status == .failed || item === self.countedFailedItem,
+          self.hasNowPlaying()
+        {
           let trackId = self.nowPlaying.id
           if self.reloadedFailedTrackId != trackId {
             self.reloadedFailedTrackId = trackId
@@ -1402,6 +1426,8 @@ class WatchPlayerViewModel: ObservableObject {
   func pause() {
     playGeneration += 1
     endStart()
+    // A pause ends a run of resumes; a stall after Play is a fresh one.
+    resumedAtListened = nil
     endConnectionWait(because: "pause")
     cancelStall()
     // AVPlayer resumes a stalled item by waiting on its dead connection; Play
