@@ -28,7 +28,6 @@ enum API {
   }
 
   enum SubsonicEndpoint {
-    static let stream = "/rest/stream"
     static let coverArt = "/rest/getCoverArt"
     static let download = "/rest/download"
     static let scrobble = "/rest/scrobble"

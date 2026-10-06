@@ -91,6 +91,12 @@ final class ConnectivityMonitor: ObservableObject {
     task.resume()
   }
 
+  /// Probes now unless a probe is already under way. Main thread only.
+  func probeIfIdle() {
+    guard serverProbe == nil else { return }
+    probeServerReachability()
+  }
+
   /// Lets regular API traffic correct the state between probes. `error` is
   /// the URL loading error; a request that failed without one (cancelled or
   /// never sent) says nothing about the connection. Callable from any thread.

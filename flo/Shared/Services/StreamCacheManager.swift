@@ -123,10 +123,15 @@ class StreamCacheManager {
     CoreDataManager.shared.saveRecord()
 
     Task { @MainActor in
-      let source = await AlbumService.shared.resolveStreamSource(
+      let result = await AlbumService.shared.resolveStreamSource(
         songId: mediaFileId, originalSuffix: originalSuffix, offset: 0)
       // cancelAllInFlight may have run while the decision was pending.
       guard self.syncQueue.sync(execute: { self.inFlightKeys.contains(key) }) else {
+        self.removeCacheRecord(key: key)
+        return
+      }
+      guard case .success(let source) = result else {
+        self.syncQueue.async { self.inFlightKeys.remove(key) }
         self.removeCacheRecord(key: key)
         return
       }

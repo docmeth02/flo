@@ -22,6 +22,44 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertFalse(service.isPermanentScrobbleFailure(URLError(.notConnectedToInternet)))
   }
 
+  /// A dead zone is asked once more and then waited out; only the server's
+  /// own verdict on the song skips it.
+  func testDecisionFailuresSortIntoRetryWaitAndSkip() {
+    func classify(status: Int? = nil, _ error: Error? = nil, subsonicError: Bool = false)
+      -> DecisionFailure
+    {
+      DecisionFailure.classify(status: status, error: error, subsonicError: subsonicError)
+    }
+    let transientErrors: [URLError.Code] = [
+      .timedOut, .networkConnectionLost, .notConnectedToInternet, .cannotFindHost,
+      .cannotConnectToHost, .dnsLookupFailed,
+    ]
+    for code in transientErrors {
+      XCTAssertEqual(classify(URLError(code)), .transient, "\(code)")
+    }
+    for code in [408, 429, 500, 502, 503, 504] {
+      XCTAssertEqual(classify(status: code), .transient, "\(code)")
+    }
+
+    // Not worth a second request, but no reason to skip the song either.
+    for code in [401, 403, 404, 200] {
+      XCTAssertEqual(classify(status: code), .unavailable, "\(code)")
+    }
+    let lastingErrors: [URLError.Code] = [
+      .cancelled, .serverCertificateUntrusted, .secureConnectionFailed, .badServerResponse,
+    ]
+    for code in lastingErrors {
+      XCTAssertEqual(classify(URLError(code)), .unavailable, "\(code)")
+    }
+    XCTAssertEqual(classify(nil), .unavailable)
+
+    XCTAssertEqual(classify(status: 200, subsonicError: true), .unplayable)
+
+    XCTAssertEqual(DecisionFailure.transient.streamFailure, .unavailable)
+    XCTAssertEqual(DecisionFailure.unavailable.streamFailure, .unavailable)
+    XCTAssertEqual(DecisionFailure.unplayable.streamFailure, .unplayable)
+  }
+
   /// The journal and the ranker tell a song's origin by the queue's name.
   func testQueueNamesMapToOrigins() throws {
     // The app's model: a second copy of it makes the entity classes ambiguous.

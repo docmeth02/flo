@@ -47,16 +47,50 @@ struct ScrobbleRow: Decodable, Sendable {
 }
 
 /// Where a remote song streams from: a server-decided direct play or
-/// transcode (getTranscodeStream), or the classic stream endpoint.
+/// transcode (getTranscodeStream).
 struct StreamSource {
   let endpoint: String
   let parameters: [String: Any]
   let suffix: String
-  /// A decided transcode, which starts at the requested offset. Anything else
+  /// A decided transcode, which starts at the requested offset. A direct play
   /// starts at 0 and is seeked by the client.
   let isTranscoded: Bool
 
   var url: String { subsonicURL(endpoint: endpoint, parameters: parameters) }
+}
+
+/// Why no stream could be set up for a song.
+enum StreamSourceFailure: Error, Equatable {
+  /// The network or the server is away for now; the song itself may be fine.
+  case unavailable
+  /// The server says this song cannot be streamed.
+  case unplayable
+}
+
+/// How a failed transcode decision request is handled.
+enum DecisionFailure: Error, Equatable {
+  /// A hiccup on the way to the server: asked once more, then `.unavailable`.
+  case transient
+  case unavailable
+  case unplayable
+
+  /// Sorts a failed request by its HTTP status (nil without an answer), the
+  /// URL loading error and whether the body carried a Subsonic error.
+  static func classify(status: Int?, error: Error?, subsonicError: Bool) -> DecisionFailure {
+    if subsonicError { return .unplayable }
+    if let status {
+      return [408, 429, 500, 502, 503, 504].contains(status) ? .transient : .unavailable
+    }
+    switch (error as? URLError)?.code {
+    case .timedOut, .networkConnectionLost, .notConnectedToInternet, .cannotFindHost,
+      .cannotConnectToHost, .dnsLookupFailed:
+      return .transient
+    default:
+      return .unavailable
+    }
+  }
+
+  var streamFailure: StreamSourceFailure { self == .unplayable ? .unplayable : .unavailable }
 }
 
 /// A Subsonic URL with the credentials (which start with "?") and the
@@ -73,11 +107,11 @@ private func subsonicURL(endpoint: String, parameters: [String: Any]) -> String 
 class AlbumService {
   static let shared = AlbumService()
 
-  // Transcode decisions per song and bitrate setting. The Task is cached so
-  // the player and the pre-cache share one request. Main actor only.
-  private var transcodeDecisions: [String: (task: Task<TranscodeDecision?, Never>, at: Date)] = [:]
-  // The server lacks the transcoding extension; asked once per launch.
-  private var decisionUnsupported = false
+  // Usable transcode decisions per song and bitrate setting. The Task is
+  // cached so the player, the prefetch and the pre-cache share one request
+  // and its retry. Main actor only.
+  private var transcodeDecisions:
+    [String: (task: Task<Result<TranscodeDecision, DecisionFailure>, Never>, at: Date)] = [:]
   // The token is signed for 48 hours.
   private static let decisionLifetime: TimeInterval = 24 * 3600
   private var logoutObserver: NSObjectProtocol?
@@ -86,8 +120,9 @@ class AlbumService {
     logoutObserver = NotificationCenter.default.addObserver(
       forName: .didLogout, object: nil, queue: .main
     ) { [weak self] _ in
+      // A pending request must not retry for the next account.
+      self?.transcodeDecisions.values.forEach { $0.task.cancel() }
       self?.transcodeDecisions = [:]
-      self?.decisionUnsupported = false
     }
   }
 
@@ -123,53 +158,30 @@ class AlbumService {
     downloadedFileURL(mediaFileId: id) ?? StreamCacheManager.shared.cachedFileURL(mediaFileId: id)
   }
 
-  /// How to stream a song from the server. Asks for the server's decision and
-  /// falls back to the classic stream endpoint when there is none. `offset`
-  /// (seconds) only applies to a transcode.
+  /// How to stream a song from the server, as the server decides it.
+  /// `offset` (seconds) only applies to a transcode.
   @MainActor func resolveStreamSource(songId: String, originalSuffix: String?, offset: Int) async
-    -> StreamSource
+    -> Result<StreamSource, StreamSourceFailure>
   {
     let kbps = Int(UserDefaultsManager.maxBitRate) ?? 0
-
-    // With the server away the decision would only add its timeout to the
-    // stream's own failure.
-    if ConnectivityMonitor.shared.isServerReachable,
-      let decision = await transcodeDecision(songId: songId, kbps: kbps),
-      let token = decision.transcodeParams, !token.isEmpty
-    {
-      // Never estimateContentLength: the estimate ignores the offset.
-      var parameters: [String: Any] = [
-        "mediaId": songId, "mediaType": "song", "transcodeParams": token,
-      ]
-      // The original file first whenever the server allows it.
-      if decision.canDirectPlay == true {
-        return StreamSource(
-          endpoint: API.SubsonicEndpoint.getTranscodeStream, parameters: parameters,
-          suffix: decision.sourceStream?.container ?? Self.rawSuffix(originalSuffix),
-          isTranscoded: false)
-      }
-      if decision.canTranscode == true, let stream = decision.transcodeStream {
-        if offset > 0 { parameters["offset"] = offset }
-        return StreamSource(
-          endpoint: API.SubsonicEndpoint.getTranscodeStream, parameters: parameters,
-          suffix: stream.container ?? TranscodingSettings.targetFormat, isTranscoded: true)
-      }
+    // Asked even while the monitor says the server is away: its verdict can
+    // be stale, and the request is bounded.
+    switch await transcodeDecision(songId: songId, kbps: kbps) {
+    case .failure(let failure):
+      return .failure(failure.streamFailure)
+    case .success(let decision):
+      guard
+        let source = Self.streamSource(
+          decision, songId: songId, originalSuffix: originalSuffix, offset: offset)
+      else { return .failure(.unplayable) }
+      return .success(source)
     }
-
-    let maxBitRate = UserDefaultsManager.maxBitRate
-    let format =
-      maxBitRate == TranscodingSettings.sourceBitRate
-      ? TranscodingSettings.sourceFormat : TranscodingSettings.targetFormat
-    return StreamSource(
-      endpoint: API.SubsonicEndpoint.stream,
-      parameters: ["id": songId, "maxBitRate": maxBitRate, "format": format],
-      suffix: format == TranscodingSettings.sourceFormat ? Self.rawSuffix(originalSuffix) : format,
-      isTranscoded: false)
   }
 
   /// Asks for the next song's decision ahead of time. Main thread.
   func prefetchTranscodeDecision(songId: String) {
-    guard !decisionUnsupported, localFileURL(mediaFileId: songId) == nil else { return }
+    guard ConnectivityMonitor.shared.isServerReachable, localFileURL(mediaFileId: songId) == nil
+    else { return }
     let kbps = Int(UserDefaultsManager.maxBitRate) ?? 0
     Task { @MainActor in _ = await transcodeDecision(songId: songId, kbps: kbps) }
   }
@@ -184,8 +196,33 @@ class AlbumService {
     (originalSuffix?.isEmpty == false) ? originalSuffix! : TranscodingSettings.sourceFormat
   }
 
-  @MainActor private func transcodeDecision(songId: String, kbps: Int) async -> TranscodeDecision? {
-    guard !decisionUnsupported, !songId.isEmpty else { return nil }
+  /// The stream a decision allows, the original file first; nil when it
+  /// allows none.
+  private static func streamSource(
+    _ decision: TranscodeDecision, songId: String, originalSuffix: String?, offset: Int
+  ) -> StreamSource? {
+    guard let token = decision.transcodeParams, !token.isEmpty else { return nil }
+    // Never estimateContentLength: the estimate ignores the offset.
+    var parameters: [String: Any] = [
+      "mediaId": songId, "mediaType": "song", "transcodeParams": token,
+    ]
+    if decision.canDirectPlay == true {
+      return StreamSource(
+        endpoint: API.SubsonicEndpoint.getTranscodeStream, parameters: parameters,
+        suffix: decision.sourceStream?.container ?? rawSuffix(originalSuffix),
+        isTranscoded: false)
+    }
+    guard decision.canTranscode == true, let stream = decision.transcodeStream else { return nil }
+    if offset > 0 { parameters["offset"] = offset }
+    return StreamSource(
+      endpoint: API.SubsonicEndpoint.getTranscodeStream, parameters: parameters,
+      suffix: stream.container ?? TranscodingSettings.targetFormat, isTranscoded: true)
+  }
+
+  @MainActor private func transcodeDecision(songId: String, kbps: Int) async
+    -> Result<TranscodeDecision, DecisionFailure>
+  {
+    guard !songId.isEmpty else { return .failure(.unplayable) }
     let key = "\(songId)_\(kbps)"
 
     if let cached = transcodeDecisions[key],
@@ -194,18 +231,27 @@ class AlbumService {
       return await cached.task.value
     }
 
-    let task = Task { await self.fetchTranscodeDecision(songId: songId, kbps: kbps) }
+    let task = Task { () -> Result<TranscodeDecision, DecisionFailure> in
+      let first = await self.fetchTranscodeDecision(songId: songId, kbps: kbps)
+      guard case .failure(.transient) = first else { return first }
+      // Once more after a short pause, unless a logout cancelled the task.
+      guard (try? await Task.sleep(for: .seconds(1))) != nil else { return first }
+      RequestLog.shared.note("transcode decision retry \(songId)")
+      return await self.fetchTranscodeDecision(songId: songId, kbps: kbps)
+    }
     transcodeDecisions[key] = (task, Date())
-    let decision = await task.value
+    let result = await task.value
     // A failed request is asked again next time.
-    if decision == nil, transcodeDecisions[key]?.task == task {
+    if case .failure = result, transcodeDecisions[key]?.task == task {
       transcodeDecisions[key] = nil
     }
-    return decision
+    return result
   }
 
+  /// One decision request of at most 10 s. A decision that allows no stream
+  /// counts as `.unplayable`.
   @MainActor private func fetchTranscodeDecision(songId: String, kbps: Int) async
-    -> TranscodeDecision?
+    -> Result<TranscodeDecision, DecisionFailure>
   {
     let url = subsonicURL(
       endpoint: API.SubsonicEndpoint.getTranscodeDecision,
@@ -218,23 +264,28 @@ class AlbumService {
     .validate(statusCode: 200..<300)
     .serializingDecodable(TranscodeDecisionResponse.self).response
 
-    ConnectivityMonitor.shared.record(
-      response: response.response, error: response.error?.underlyingError)
+    let underlyingError = response.error?.underlyingError
+    ConnectivityMonitor.shared.record(response: response.response, error: underlyingError)
 
-    switch response.result {
-    case .success(let body):
-      // A server without the extension answers 404 below; a failed decision
-      // (ffprobe on a damaged file, a database hiccup) concerns this song only.
-      if let error = body.subsonicResponse.error {
-        debugLog("transcode decision for \(songId) failed: \(error.code) \(error.message ?? "")")
-        return nil
-      }
-      return body.subsonicResponse.data
-    case .failure:
-      // Only a missing endpoint means unsupported; transport errors do not.
-      if response.response?.statusCode == 404 { decisionUnsupported = true }
-      return nil
+    let subsonicError = response.value?.subsonicResponse.error
+    if let error = subsonicError {
+      // A failed decision (ffprobe on a damaged file, a database hiccup)
+      // concerns this song only.
+      debugLog("transcode decision for \(songId) failed: \(error.code) \(error.message ?? "")")
     }
+    guard let decision = response.value?.subsonicResponse.data, subsonicError == nil else {
+      return .failure(
+        DecisionFailure.classify(
+          status: response.response?.statusCode, error: underlyingError,
+          subsonicError: subsonicError != nil))
+    }
+    guard
+      Self.streamSource(decision, songId: songId, originalSuffix: nil, offset: 0) != nil
+    else {
+      debugLog("transcode decision for \(songId) allows no stream: \(decision.errorReason ?? "")")
+      return .failure(.unplayable)
+    }
+    return .success(decision)
   }
 
   /// Whether the server has the song starred; nil when it could not tell.
