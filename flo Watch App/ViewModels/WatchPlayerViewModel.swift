@@ -60,15 +60,13 @@ class WatchPlayerViewModel: ObservableObject {
   private var starLookup = 0
   private var starObservation: AnyCancellable?
   private var resumeAfterInterruption = false
-  // A play request not yet heard: set by play(), cleared by a pause or stop
-  // the user asked for. Connecting headphones can swallow the first start
-  // (the activation fails or an interruption arrives while the device list
-  // shows); the new route then starts it.
-  private var playRequestedAt: Date?
-  private var isActivatingSession = false
-  // A new route came up while the session was still activating; a failed
-  // activation then tries once more.
-  private var routeChangedWhileActivating = false
+  // A start whose session is active but whose sound has not come out yet.
+  // Headphones still switching over from the phone report the session active
+  // without an output, and the system interrupts the start once the player
+  // runs; that start is made once more instead of pausing. Cleared once the
+  // player plays into an output, and by a pause or stop.
+  private enum UnheardStart { case first, retried }
+  private var unheardStart: UnheardStart?
 
   private var isLocallySaved: Bool = false
   private(set) var isFinished: Bool = false
@@ -241,30 +239,31 @@ class WatchPlayerViewModel: ObservableObject {
           let value = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
           let reason = AVAudioSession.RouteChangeReason(rawValue: value)
         else { return }
-        let outputs = AVAudioSession.sharedInstance().currentRoute.outputs
-          .map(\.portType.rawValue).joined(separator: ",")
-        RequestLog.shared.note("audio route \(reason.rawValue) outputs=\(outputs)")
+        RequestLog.shared.note("audio route \(reason.rawValue) outputs=\(Self.routeOutputs)")
+        self.clearUnheardStartIfAudible()
 
-        switch reason {
-        case .oldDeviceUnavailable:
-          // Headphones lost during a call: its end must not restart music
-          // nobody hears.
-          self.resumeAfterInterruption = false
-          guard self.isPlaying else { return }
-          self.pause()
-        case .newDeviceAvailable:
-          if self.isActivatingSession { self.routeChangedWhileActivating = true }
-          // Headphones just connected for a start that did not happen.
-          guard !self.isPlaying, !self.isActivatingSession,
-            let requested = self.playRequestedAt, Date().timeIntervalSince(requested) < 60
-          else { return }
-          RequestLog.shared.note("audio resume pending play on new route")
-          self.play(isRetry: true)
-        default:
-          break
-        }
+        guard reason == .oldDeviceUnavailable else { return }
+        // Headphones lost during a call: its end must not restart music
+        // nobody hears.
+        self.resumeAfterInterruption = false
+        guard self.isPlaying else { return }
+        self.pause()
       }
       .store(in: &interruptionObservation)
+  }
+
+  private static var routeOutputs: String {
+    AVAudioSession.sharedInstance().currentRoute.outputs.map(\.portType.rawValue)
+      .joined(separator: ",")
+  }
+
+  /// The player can run while the route has no output yet; only playing into
+  /// an output counts as heard.
+  private func clearUnheardStartIfAudible() {
+    guard player?.timeControlStatus == .playing,
+      !AVAudioSession.sharedInstance().currentRoute.outputs.isEmpty
+    else { return }
+    unheardStart = nil
   }
 
   func handleInterruptionNotification(_ notification: Notification) {
@@ -279,16 +278,15 @@ class WatchPlayerViewModel: ObservableObject {
     case .began:
       let reason = (userInfo[AVAudioSessionInterruptionReasonKey] as? UInt).map(String.init) ?? "-"
       RequestLog.shared.note(
-        "audio interruption began reason=\(reason) activating=\(isActivatingSession)")
-      // A first start still activating (the device list may be up): nothing
-      // plays to pause, and the start must survive. No resume either, or
-      // dismissing the list would open it again.
-      if isActivatingSession, !isPlaying { return }
+        "audio interruption began reason=\(reason) unheard=\(String(describing: unheardStart))")
+      if unheardStart == .first {
+        play(isRetry: true)
+        return
+      }
       // Through pause() so a pending skip or Keep Playing mix does not start
       // playback during the call.
-      let wasPlaying = isPlaying
-      pause()
-      resumeAfterInterruption = wasPlaying
+      self.resumeAfterInterruption = self.isPlaying
+      self.pause()
     case .ended:
       RequestLog.shared.note("audio interruption ended resume=\(resumeAfterInterruption)")
       // Music the user had paused before the call stays paused.
@@ -335,12 +333,17 @@ class WatchPlayerViewModel: ObservableObject {
 
   private func observeBuffering() {
     bufferingObservation = player?.publisher(for: \.timeControlStatus)
-      .map { $0 == .waitingToPlayAtSpecifiedRate }
       .removeDuplicates()
       .receive(on: DispatchQueue.main)
-      .sink { [weak self] in
-        debugLog("buffering \($0)")
-        self?.isBuffering = $0
+      .sink { [weak self] status in
+        guard let self else { return }
+        let waitReason = self.player?.reasonForWaitingToPlay.map { " \($0.rawValue)" } ?? ""
+        RequestLog.shared.note("audio player \(status.rawValue)\(waitReason)")
+        self.clearUnheardStartIfAudible()
+        let isWaiting = status == .waitingToPlayAtSpecifiedRate
+        guard isWaiting != self.isBuffering else { return }
+        debugLog("buffering \(isWaiting)")
+        self.isBuffering = isWaiting
       }
   }
 
@@ -610,9 +613,7 @@ class WatchPlayerViewModel: ObservableObject {
     resetSession()
     playGeneration += 1
     startGeneration += 1
-    playRequestedAt = nil
-    isActivatingSession = false
-    resumeAfterInterruption = false
+    unheardStart = nil
     player?.pause()
     detachItem()
 
@@ -951,12 +952,7 @@ class WatchPlayerViewModel: ObservableObject {
     commandCenter.pauseCommand.addTarget { [weak self] event in
       guard let self = self else { return .commandFailed }
       DispatchQueue.main.async {
-        // Headphones often send pause as they connect, before anything plays;
-        // that one must not cancel the waiting start. Any other pause counts,
-        // also one that keeps an interruption from resuming.
-        RequestLog.shared.note(
-          "audio remote pause activating=\(self.isActivatingSession) playing=\(self.isPlaying)")
-        guard self.isPlaying || self.resumeAfterInterruption else { return }
+        RequestLog.shared.note("audio remote pause playing=\(self.isPlaying)")
         self.pause()
       }
       return .success
@@ -1039,15 +1035,12 @@ class WatchPlayerViewModel: ObservableObject {
         + "dislike=\(commandCenter.dislikeCommand.isActive)")
   }
 
-  /// `isRetry` is a start the app makes again for an earlier request, which
-  /// keeps the request's time, so retries cannot extend it forever.
+  /// `isRetry` starts again a start the system interrupted before its sound
+  /// came out; it gets no further retry.
   func play(isRetry: Bool = false) {
     // Activate audio session using watchOS async API
     playGeneration += 1
     let gen = playGeneration
-    if !isRetry { playRequestedAt = Date() }
-    isActivatingSession = true
-    routeChangedWhileActivating = false
     RequestLog.shared.note(
       "audio activate \(gen) retry=\(isRetry) playing=\(isPlaying) item=\(playerItem != nil)")
     AVAudioSession.sharedInstance().activate(options: []) { [weak self] success, error in
@@ -1057,27 +1050,20 @@ class WatchPlayerViewModel: ObservableObject {
         guard let self = self else { return }
         RequestLog.shared.note(
           "audio activated \(gen) success=\(success) current=\(self.playGeneration)"
+            + " outputs=\(Self.routeOutputs)"
             + (error.map { " error=\(($0 as NSError).domain) \(($0 as NSError).code)" } ?? ""))
         guard gen == self.playGeneration else { return }
-        self.isActivatingSession = false
         if error != nil || !success {
-          // The request stays; a route coming up afterwards starts it, or the
-          // one that came up while this activation was under way.
-          if self.routeChangedWhileActivating, !isRetry {
-            RequestLog.shared.note("audio retry after the route that came up meanwhile")
-            self.play(isRetry: true)
-          }
+          // A retry that cannot activate leaves the controls on Play, not on
+          // a pause that plays nothing.
+          if self.isPlaying { self.pause() }
           return
         }
-        // Playing from here: the request is fulfilled, and a later end of an
-        // interruption must not restart music the user may pause meanwhile.
-        self.playRequestedAt = nil
-        self.resumeAfterInterruption = false
-
         if self.isFinished {
           self.stop()
           self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
         }
+        self.unheardStart = isRetry ? .retried : .first
 
         if self.playerItem == nil, self.hasNowPlaying(), !self.isLiveRadio {
           self.isFinished = false
@@ -1130,9 +1116,7 @@ class WatchPlayerViewModel: ObservableObject {
 
   func pause() {
     playGeneration += 1
-    playRequestedAt = nil
-    isActivatingSession = false
-    resumeAfterInterruption = false
+    unheardStart = nil
     player?.pause()
     reportPlayback(.paused)
 
@@ -1143,9 +1127,7 @@ class WatchPlayerViewModel: ObservableObject {
   func stop() {
     reportStopped()
     playGeneration += 1
-    playRequestedAt = nil
-    isActivatingSession = false
-    resumeAfterInterruption = false
+    unheardStart = nil
     player?.pause()
     // No observer tick follows while paused, so the reset is applied here.
     // Starting the song over is a new listen, which may count again.
