@@ -274,14 +274,16 @@ class WatchPlayerViewModel: ObservableObject {
         "audio interruption began reason=\(reason) unheard=\(unheardStart.map { "\($0)" } ?? "none")"
           + " outputs=\(Self.routeOutputs)")
       switch unheardStart {
+      // A retry that gets through clears the resume; if this was a call, its
+      // end resumes whether it comes before the failed activation or after.
       case .first? where isPlaying:
+        resumeAfterInterruption = true
         unheardStart = .retrying
         play(isRetry: true)
         return
       case .retrying?:
         // The handover's second interruption, or a call while the retry
-        // activates. A retry that gets through clears the resume; a call's
-        // end resumes whether it comes before the failed activation or after.
+        // activates.
         resumeAfterInterruption = true
         return
       default:
@@ -297,11 +299,13 @@ class WatchPlayerViewModel: ObservableObject {
       // Music the user had paused before the call stays paused.
       let wasPlaying = self.resumeAfterInterruption
       self.resumeAfterInterruption = false
-      if wasPlaying, let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? Int {
-        let options = AVAudioSession.InterruptionOptions(rawValue: UInt(optionsValue))
-        if options.contains(.shouldResume) {
-          self.play()
-        }
+      let options = (userInfo[AVAudioSessionInterruptionOptionKey] as? UInt)
+        .map(AVAudioSession.InterruptionOptions.init) ?? []
+      if wasPlaying, options.contains(.shouldResume) {
+        self.play()
+      } else if unheardStart == .retrying {
+        // An end that asks not to resume also stops a retry still activating.
+        self.pause()
       }
     @unknown default:
       break
