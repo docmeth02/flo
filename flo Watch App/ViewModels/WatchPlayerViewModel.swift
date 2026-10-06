@@ -256,8 +256,8 @@ class WatchPlayerViewModel: ObservableObject {
           "audio route \(reason.rawValue) outputs=\(Self.routeOutputs) previous=\(previous)")
 
         // Part of the output setup that interrupted the start, the speaker
-        // giving way to the headphones included.
-        if self.settleWork != nil {
+        // giving way to the headphones included. Headphones taken off end it.
+        if self.settleWork != nil, reason != .oldDeviceUnavailable {
           self.armSettle()
           return
         }
@@ -289,17 +289,26 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   /// Starts an interrupted start again once nothing changed for
-  /// `settleDelay`, if there is an output to play to. Without one it waits:
-  /// a call ends with an interruption end of its own.
+  /// `settleDelay`, if there is an output to play to. Without one it waits
+  /// another round, as often as it may resume, then shows Play.
   private func resumeAfterSettle() {
     settleWork = nil
     RequestLog.shared.note(
       "audio settled resume=\(resumeAfterInterruption) playing=\(isPlaying)"
         + " outputs=\(Self.routeOutputs)")
-    guard resumeAfterInterruption, isPlaying, pendingStart != nil,
-      player?.timeControlStatus != .playing, Self.hasOutput
+    guard resumeAfterInterruption, isPlaying, let start = pendingStart,
+      player?.timeControlStatus != .playing
     else { return }
-    let resumes = (pendingStart?.resumes ?? 0) + 1
+    guard start.resumes < Self.maxSettleResumes else {
+      pause()
+      return
+    }
+    pendingStart?.resumes += 1
+    guard Self.hasOutput else {
+      armSettle()
+      return
+    }
+    let resumes = start.resumes + 1
     play()
     pendingStart?.resumes = resumes
   }
@@ -1151,8 +1160,9 @@ class WatchPlayerViewModel: ObservableObject {
             + " outputs=\(Self.routeOutputs)"
             + (error.map { " error=\(($0 as NSError).domain) \(($0 as NSError).code)" } ?? ""))
         guard gen == self.playGeneration else { return }
-        if let error = error {
-          debugLog("Audio session activation failed: \(error)")
+        // A dismissed device list completes without an error.
+        if error != nil || !success {
+          debugLog("Audio session activation failed: \(String(describing: error))")
           return
         }
         // Playing from here: a later end of an interruption must not restart
