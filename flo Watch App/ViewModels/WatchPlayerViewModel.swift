@@ -60,13 +60,16 @@ class WatchPlayerViewModel: ObservableObject {
   private var starLookup = 0
   private var starObservation: AnyCancellable?
   private var resumeAfterInterruption = false
-  // A start whose session is active but whose sound has not come out yet.
-  // Headphones still switching over from the phone report the session active
-  // without an output, and the system interrupts the start once the player
-  // runs; that start is made once more instead of pausing. Cleared once the
-  // player plays into an output, and by a pause or stop.
-  private enum UnheardStart { case first, retried }
+  // A start whose session is active but which has not played long enough to
+  // be heard. Headphones still switching over from the phone report the
+  // session active without an output, and the system interrupts the start
+  // (twice) within a second or two of the player running; that start is made
+  // once more instead of pausing. Cleared after `heardAfter` seconds played,
+  // and by a pause or stop.
+  private enum UnheardStart { case first, retrying, retried }
   private var unheardStart: UnheardStart?
+  private var playedSinceStart: Double = 0
+  private static let heardAfter: Double = 5
 
   private var isLocallySaved: Bool = false
   private(set) var isFinished: Bool = false
@@ -240,7 +243,6 @@ class WatchPlayerViewModel: ObservableObject {
           let reason = AVAudioSession.RouteChangeReason(rawValue: value)
         else { return }
         RequestLog.shared.note("audio route \(reason.rawValue) outputs=\(Self.routeOutputs)")
-        self.clearUnheardStartIfAudible()
 
         guard reason == .oldDeviceUnavailable else { return }
         // Headphones lost during a call: its end must not restart music
@@ -257,15 +259,6 @@ class WatchPlayerViewModel: ObservableObject {
       .joined(separator: ",")
   }
 
-  /// The player can run while the route has no output yet; only playing into
-  /// an output counts as heard.
-  private func clearUnheardStartIfAudible() {
-    guard player?.timeControlStatus == .playing,
-      !AVAudioSession.sharedInstance().currentRoute.outputs.isEmpty
-    else { return }
-    unheardStart = nil
-  }
-
   func handleInterruptionNotification(_ notification: Notification) {
     guard let userInfo = notification.userInfo,
       let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? Int,
@@ -279,12 +272,17 @@ class WatchPlayerViewModel: ObservableObject {
       let reason = (userInfo[AVAudioSessionInterruptionReasonKey] as? UInt).map(String.init) ?? "-"
       RequestLog.shared.note(
         "audio interruption began reason=\(reason) unheard=\(unheardStart.map { "\($0)" } ?? "none")")
-      // Marked before the activation returns, so a second interruption in
-      // between pauses instead of retrying again.
-      if unheardStart == .first, isPlaying {
-        unheardStart = .retried
+      switch unheardStart {
+      case .first? where isPlaying:
+        unheardStart = .retrying
         play(isRetry: true)
         return
+      case .retrying?:
+        // The handover's second interruption, or a call while the retry
+        // activates; activating then fails, and its end resumes.
+        return
+      default:
+        break
       }
       // Through pause() so a pending skip or Keep Playing mix does not start
       // playback during the call.
@@ -343,7 +341,6 @@ class WatchPlayerViewModel: ObservableObject {
         guard let self else { return }
         let waitReason = self.player?.reasonForWaitingToPlay.map { " \($0.rawValue)" } ?? ""
         RequestLog.shared.note("audio player \(status.rawValue)\(waitReason)")
-        self.clearUnheardStartIfAudible()
         let isWaiting = status == .waitingToPlayAtSpecifiedRate
         guard isWaiting != self.isBuffering else { return }
         debugLog("buffering \(isWaiting)")
@@ -844,6 +841,8 @@ class WatchPlayerViewModel: ObservableObject {
       // time was not heard either way.
       if (self.player?.rate ?? 0) > 0, step > 0, step <= 3 {
         self.secondsListened += step
+        self.playedSinceStart += step
+        if self.playedSinceStart >= Self.heardAfter { self.unheardStart = nil }
       }
       self.lastObservedTime = currentTime
 
@@ -1076,9 +1075,13 @@ class WatchPlayerViewModel: ObservableObject {
           self.stop()
           self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
         }
-        self.unheardStart = isRetry ? .retried : .first
-        // A Play while already heard (a remote command) leaves nothing unheard.
-        self.clearUnheardStartIfAudible()
+        if isRetry {
+          self.unheardStart = .retried
+        } else if self.player?.timeControlStatus != .playing {
+          // A Play while already playing (a remote command) starts nothing.
+          self.unheardStart = .first
+          self.playedSinceStart = 0
+        }
 
         if self.playerItem == nil, self.hasNowPlaying(), !self.isLiveRadio {
           self.isFinished = false
