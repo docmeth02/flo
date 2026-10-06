@@ -131,7 +131,8 @@ class WatchPlayerViewModel: ObservableObject {
   private var playbackFailureObservation: AnyCancellable?
   private var needsNowPlayingAnnouncement = false
   // The song whose failed item Play already reloaded once; a second failure
-  // goes through the capped skip instead of reloading again.
+  // goes through the capped skip instead of reloading again. Cleared once the
+  // song plays.
   private var reloadedFailedTrackId: String?
   private var radioURL: URL?
   // The item whose failure was already counted; KVO, the failure notification
@@ -150,8 +151,8 @@ class WatchPlayerViewModel: ObservableObject {
   // Listening time, not position: a seek back must not block the next resume.
   private var resumedAtListened: Double?
   // The song whose stream was asked for a second time after failing before it
-  // got going; unlike reloadedFailedTrackId it survives the new item becoming
-  // ready, so a stream that keeps dying right after its start is not reloaded
+  // got going; unlike reloadedFailedTrackId it survives the new item playing,
+  // so a stream that keeps dying right after its start is not reloaded
   // forever.
   private var restartedTrackId: String?
   // Bumped whenever the item is detached; a stream source resolved for an
@@ -424,7 +425,6 @@ class WatchPlayerViewModel: ObservableObject {
         guard let self = self, let item, item === self.playerItem else { return }
         switch status {
         case .readyToPlay:
-          self.reloadedFailedTrackId = nil
           // Waiting for the first data shows as buffering from here on.
           self.isMediaLoading = false
           self.isMediaFailed = false
@@ -512,8 +512,9 @@ class WatchPlayerViewModel: ObservableObject {
     let check = noProgressCheck
     Task { @MainActor [weak self, weak item] in
       let reachable = await ConnectivityMonitor.shared.canStream(maxAge: 0)
+      // Playing again before the next progress tick counts as progress too.
       guard let self, let item, item === self.playerItem, self.isPlaying,
-        self.noProgressCheck == check
+        self.noProgressCheck == check, self.player?.timeControlStatus != .playing
       else { return }
       if reachable {
         broken()
@@ -527,6 +528,7 @@ class WatchPlayerViewModel: ObservableObject {
   private func noteProgress() {
     itemHasPlayed = true
     consecutiveFailures = 0
+    reloadedFailedTrackId = nil
     loadWatchdog?.cancel()
     cancelStall()
     endConnectionWait(because: "playing")
@@ -541,6 +543,8 @@ class WatchPlayerViewModel: ObservableObject {
     pendingStartPosition = position
     isMediaLoading = false
     isMediaFailed = false
+    // The system's elapsed clock stops with the song.
+    updateNowPlayingInfo(progress: progress, rate: 0)
     guard connectionWait == nil else {
       connectionWait?.isReloading = false
       RequestLog.shared.note("connection wait goes on at \(Int(position)) s cause=\(cause)")
@@ -550,8 +554,6 @@ class WatchPlayerViewModel: ObservableObject {
       withTimeInterval: Self.connectionProbeInterval, repeats: true
     ) { [weak self] _ in self?.connectionWaitTick() }
     connectionWait = ConnectionWait(since: Date(), timer: timer)
-    // The system's elapsed clock stops with the song.
-    updateNowPlayingInfo(progress: progress, rate: 0)
     RequestLog.shared.note("connection wait entered at \(Int(position)) s cause=\(cause)")
     ConnectivityMonitor.shared.probeIfIdle()
   }
@@ -1508,7 +1510,7 @@ class WatchPlayerViewModel: ObservableObject {
         to: CMTime(seconds: target - streamOffset, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
       // A fresh grace period from the new position.
       cancelStall()
-      armStallDeadline()
+      if itemHasPlayed { armStallDeadline() } else { armLoadWatchdog() }
     }
     self.updateNowPlayingInfo(progress: progress, rate: isPlaying ? 1.0 : 0.0)
     if isPlaying { reportPlayback(.playing, at: target) }
