@@ -97,9 +97,15 @@ struct WatchNowPlayingView: View {
         Text(playerViewModel.nowPlaying.songName ?? "Unknown")
           .font(.floSong)
           .foregroundStyle(.white)
-        Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
-          .font(.floMeta)
-          .foregroundStyle(Color.floOnCover)
+        if playerViewModel.isWaitingForConnection {
+          Text("Offline")
+            .font(.floMeta)
+            .foregroundStyle(Color.floWarningText)
+        } else {
+          Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
+            .font(.floMeta)
+            .foregroundStyle(Color.floOnCover)
+        }
       }
       .lineLimit(1)
       // A long title stops short of the round toolbar buttons above it.
@@ -203,10 +209,12 @@ struct WatchNowPlayingView: View {
       .contentShape(Rectangle())
   }
 
-  /// Fetching the stream or waiting for its first data, as after a skip.
+  /// Fetching the stream, waiting for its data, as after a skip, or for the
+  /// server to be back.
   private var isLoading: Bool {
     !playerViewModel.isMediaFailed
-      && (playerViewModel.isMediaLoading || playerViewModel.isBuffering)
+      && (playerViewModel.isMediaLoading || playerViewModel.isBuffering
+        || playerViewModel.isWaitingForConnection)
   }
 
   /// A quarter arc going round once a second while the song loads. The

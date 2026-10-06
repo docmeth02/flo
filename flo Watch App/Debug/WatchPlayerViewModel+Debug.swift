@@ -15,6 +15,9 @@
   // position, and FLO_DEBUG_DUMP_LOG=<s> logs the request log at that time.
   // FLO_DEBUG_RATE=<playbackID>:<0-5> rates a song at launch;
   // FLO_DEBUG_SKIP_AFTER=<s> presses next once the first song was heard that long.
+  // FLO_DEBUG_STALL=<s> treats the remote item as stalled <s> seconds after the
+  // mix started (the simulator never stalls); FLO_DEBUG_STALL=<s>:offline
+  // enters the connection wait instead.
   extension WatchPlayerViewModel {
     func runDebugLaunchActions() {
       let env = ProcessInfo.processInfo.environment
@@ -59,6 +62,21 @@
             userInfo: [
               AVPlayerItemFailedToPlayToEndTimeErrorKey: NSError(domain: "flo-debug", code: -1)
             ])
+        }
+      }
+
+      if let stall = env["FLO_DEBUG_STALL"]?.split(separator: ":"),
+        let after = stall.first.flatMap({ Double($0) })
+      {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5 + after) { [weak self] in
+          guard let self, self.isPlaying, self.currentSourceIsRemote, let item = self.playerItem
+          else { return debugLog("stall: no remote item playing") }
+          debugLog("simulating stall at \(self.lastObservedTime)")
+          if stall.last == "offline" {
+            self.enterConnectionWait(cause: "debug")
+          } else {
+            self.recoverStalledItem(item, trackId: self.nowPlaying.id)
+          }
         }
       }
 
