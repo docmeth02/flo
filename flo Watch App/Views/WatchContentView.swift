@@ -101,6 +101,8 @@ struct WatchContentView: View {
       }
     }
     .onChange(of: scenePhase) { _, phase in
+      // Whether a stall happened in the background shows in Diagnostics.
+      RequestLog.shared.note("app \(phase)")
       // Like the system Now Playing app: coming back to the watch while music
       // plays shows the player. A short glance away keeps the browsing place.
       if phase != .active {

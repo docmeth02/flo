@@ -80,6 +80,7 @@ class WatchPlayerViewModel: ObservableObject {
   private static let maxSettleResumes = 3
   private static let startHeardAfter: Double = 3
   private var accessLogObservation: AnyCancellable?
+  private var bufferObservation: AnyCancellable?
 
   private var isLocallySaved: Bool = false
   private(set) var isFinished: Bool = false
@@ -456,6 +457,34 @@ class WatchPlayerViewModel: ObservableObject {
       }
   }
 
+  /// An on-the-fly transcode stays connected while it plays, because AVPlayer
+  /// stops reading once a little is buffered, and a connection that sits idle
+  /// can be cut on the way (a reverse proxy's send timeout, nginx closes one
+  /// after 60 s by default, or the cellular link). Asking for the whole rest
+  /// of the song fetches it in one go; at the transcode's bitrate that is a
+  /// few megabytes. A direct play is left to AVPlayer: it arrives at full
+  /// speed anyway, and an original file can be large. Logs once when nearly all of it is buffered; a transcode of
+  /// unknown length is timed from its bytes and can end a little short.
+  private func bufferWholeSong(of item: AVPlayerItem, from offset: Double) {
+    guard totalDuration.isFinite, totalDuration > offset else { return }
+    let length = totalDuration - offset
+    item.preferredForwardBufferDuration = length
+    let attachedAt = Date()
+    bufferObservation = item.publisher(for: \.loadedTimeRanges)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self, weak item] ranges in
+        guard let self, let item, item === self.playerItem,
+          let end = ranges.last.map({ CMTimeRangeGetEnd($0.timeRangeValue).seconds }),
+          end >= length * 0.9
+        else { return }
+        RequestLog.shared.note(
+          String(
+            format: "player buffered %.0f of %.0f s after %.1f s", end, length,
+            Date().timeIntervalSince(attachedAt)))
+        self.bufferObservation = nil
+      }
+  }
+
   /// Gives a remote song that stopped for data after it had played
   /// `stallTimeout` to move on. One deadline per item, ended by progress, a
   /// pause, a seek or another item; a pending settle postpones it.
@@ -464,9 +493,11 @@ class WatchPlayerViewModel: ObservableObject {
       let item = playerItem, player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
     else { return }
     let trackId = hasNowPlaying() ? nowPlaying.id : nil
+    let buffered = item.loadedTimeRanges.last
+      .map { Int(streamOffset + CMTimeRangeGetEnd($0.timeRangeValue).seconds) }
     RequestLog.shared.note(
-      "stall armed at \(Int(lastObservedTime)) s reason="
-        + (player?.reasonForWaitingToPlay?.rawValue ?? "-"))
+      "stall armed at \(Int(lastObservedTime)) s buffered=\(buffered.map { "\($0) s" } ?? "-")"
+        + " reason=" + (player?.reasonForWaitingToPlay?.rawValue ?? "-"))
     let deadline = DispatchWorkItem { [weak self, weak item] in
       guard let self, let item, item === self.playerItem else { return }
       self.stallDeadline = nil
@@ -616,6 +647,7 @@ class WatchPlayerViewModel: ObservableObject {
     playbackEndObservation = nil
     playbackFailureObservation = nil
     accessLogObservation = nil
+    bufferObservation = nil
     loadWatchdog?.cancel()
     cancelStall()
   }
@@ -687,6 +719,7 @@ class WatchPlayerViewModel: ObservableObject {
     seekTo position: Double?, endpointName: String?
   ) {
     let item = AVPlayerItem(url: url)
+    if isTranscoded { bufferWholeSong(of: item, from: offset) }
     playerItem = item
     player?.replaceCurrentItem(with: item)
     streamOffset = offset
