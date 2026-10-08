@@ -463,8 +463,9 @@ class WatchPlayerViewModel: ObservableObject {
   /// after 60 s by default, or the cellular link). Asking for the whole rest
   /// of the song fetches it in one go; at the transcode's bitrate that is a
   /// few megabytes. A direct play is left to AVPlayer: it arrives at full
-  /// speed anyway, and an original file can be large. Logs once when nearly all of it is buffered; a transcode of
-  /// unknown length is timed from its bytes and can end a little short.
+  /// speed anyway, and an original file can be large. Logs once when nearly
+  /// all of it is buffered without a gap; a transcode of unknown length is
+  /// timed from its bytes and can end a little short.
   private func bufferWholeSong(of item: AVPlayerItem, from offset: Double) {
     guard totalDuration.isFinite, totalDuration > offset else { return }
     let length = totalDuration - offset
@@ -472,17 +473,25 @@ class WatchPlayerViewModel: ObservableObject {
     let attachedAt = Date()
     bufferObservation = item.publisher(for: \.loadedTimeRanges)
       .receive(on: DispatchQueue.main)
-      .sink { [weak self, weak item] ranges in
+      .sink { [weak self, weak item] _ in
         guard let self, let item, item === self.playerItem,
-          let end = ranges.last.map({ CMTimeRangeGetEnd($0.timeRangeValue).seconds }),
-          end >= length * 0.9
+          let ahead = Self.bufferedAhead(of: item),
+          item.currentTime().seconds + ahead >= length * 0.9
         else { return }
         RequestLog.shared.note(
           String(
-            format: "player buffered %.0f of %.0f s after %.1f s", end, length,
-            Date().timeIntervalSince(attachedAt)))
+            format: "player buffered through %.0f of %.0f s after %.1f s",
+            item.currentTime().seconds + ahead, length, Date().timeIntervalSince(attachedAt)))
         self.bufferObservation = nil
       }
+  }
+
+  /// Seconds buffered without a gap from the playhead on; loaded ranges can
+  /// have holes.
+  private static func bufferedAhead(of item: AVPlayerItem) -> Double? {
+    let now = item.currentTime()
+    return item.loadedTimeRanges.map(\.timeRangeValue).first { $0.containsTime(now) }
+      .map { CMTimeRangeGetEnd($0).seconds - now.seconds }
   }
 
   /// Gives a remote song that stopped for data after it had played
@@ -493,10 +502,9 @@ class WatchPlayerViewModel: ObservableObject {
       let item = playerItem, player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
     else { return }
     let trackId = hasNowPlaying() ? nowPlaying.id : nil
-    let buffered = item.loadedTimeRanges.last
-      .map { Int(streamOffset + CMTimeRangeGetEnd($0.timeRangeValue).seconds) }
+    let ahead = Self.bufferedAhead(of: item).map { String(format: "%.1f s", $0) } ?? "-"
     RequestLog.shared.note(
-      "stall armed at \(Int(lastObservedTime)) s buffered=\(buffered.map { "\($0) s" } ?? "-")"
+      "stall armed at \(Int(lastObservedTime)) s ahead=\(ahead)"
         + " reason=" + (player?.reasonForWaitingToPlay?.rawValue ?? "-"))
     let deadline = DispatchWorkItem { [weak self, weak item] in
       guard let self, let item, item === self.playerItem else { return }
