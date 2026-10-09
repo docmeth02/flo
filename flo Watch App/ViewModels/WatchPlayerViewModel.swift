@@ -323,8 +323,9 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   /// Starts an interrupted start again once nothing changed for
-  /// `settleDelay`, if there is an output to play to. Without one it waits
-  /// another round, as often as it may resume, then shows Play.
+  /// `settleDelay`, if there is an output to play to and no activation is
+  /// still under way. Without an output it waits another round, as often as
+  /// it may resume, then shows Play.
   private func resumeAfterSettle() {
     settleWork = nil
     RequestLog.shared.note(
@@ -333,6 +334,12 @@ class WatchPlayerViewModel: ObservableObject {
     guard resumeAfterInterruption, let start = pendingStart,
       isPlaying || start.interruptedWhileActivating, player?.timeControlStatus != .playing
     else { return }
+    // An activation still under way answers first; a second one on top of it
+    // would discard it.
+    guard !start.isActivating else {
+      armSettle()
+      return
+    }
     guard start.resumes < Self.maxSettleResumes else {
       pause()
       return
@@ -417,8 +424,10 @@ class WatchPlayerViewModel: ObservableObject {
         }
       }
       // A start kept through the interruption stays paused when its end asks
-      // not to resume.
-      if isPlaying, player?.timeControlStatus != .playing { pause() }
+      // not to resume, one still activating too.
+      if (isPlaying && player?.timeControlStatus != .playing) || pendingStart?.isActivating == true {
+        pause()
+      }
     @unknown default:
       break
     }
@@ -1409,9 +1418,17 @@ class WatchPlayerViewModel: ObservableObject {
             + (error.map { " error=\(($0 as NSError).domain) \(($0 as NSError).code)" } ?? ""))
         guard gen == self.playGeneration else { return }
         self.pendingStart?.isActivating = false
-        // A dismissed device list completes without an error.
+        // A dismissed device list completes without an error: the user said
+        // no, so nothing tries again.
         if error != nil || !success {
           debugLog("Audio session activation failed: \(String(describing: error))")
+          if error == nil {
+            self.endStart()
+          } else if self.resumeAfterInterruption {
+            // A kept start tries again once the route is quiet, within its
+            // resumes.
+            self.armSettle()
+          }
           return
         }
         // Playing from here: a later end of an interruption must not restart
