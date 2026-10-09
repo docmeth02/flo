@@ -342,6 +342,8 @@ class WatchPlayerViewModel: ObservableObject {
     }
     guard start.resumes < Self.maxSettleResumes else {
       pause()
+      // Like the cap in .began: a real interruption's end may still resume it.
+      resumeAfterInterruption = true
       return
     }
     pendingStart?.resumes += 1
@@ -349,9 +351,13 @@ class WatchPlayerViewModel: ObservableObject {
       armSettle()
       return
     }
-    let resumes = start.resumes + 1
+    // play() begins a fresh start; this one carries on with its count and
+    // its interruption, only its activation is new.
+    var carried = start
+    carried.resumes += 1
     play()
-    pendingStart?.resumes = resumes
+    carried.isActivating = true
+    pendingStart = carried
   }
 
   /// A pause, or a logout, ends a start and anything waiting to resume it.
@@ -424,8 +430,10 @@ class WatchPlayerViewModel: ObservableObject {
         }
       }
       // A start kept through the interruption stays paused when its end asks
-      // not to resume, one still activating too.
-      if (isPlaying && player?.timeControlStatus != .playing) || pendingStart?.isActivating == true {
+      // not to resume, one kept while still activating too.
+      if (isPlaying && player?.timeControlStatus != .playing)
+        || (wasPlaying && pendingStart?.isActivating == true)
+      {
         pause()
       }
     @unknown default:
