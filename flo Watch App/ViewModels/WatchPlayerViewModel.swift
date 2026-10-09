@@ -70,9 +70,14 @@ class WatchPlayerViewModel: ObservableObject {
   // interruption. Those interruptions keep the start, which resumes once the
   // route has settled, at most `maxSettleResumes` times. Over once the player
   // has played `startHeardAfter` seconds into an output, or by a pause.
+  // The setup can also interrupt before the activation has answered, while
+  // isPlaying is not set yet; that start is kept too.
   private struct PendingStart {
     var resumes = 0
     var played: Double = 0
+    // From play() until its activation answers, or a stop drops it.
+    var isActivating = true
+    var interruptedWhileActivating = false
   }
   private var pendingStart: PendingStart?
   private var settleWork: DispatchWorkItem?
@@ -325,8 +330,8 @@ class WatchPlayerViewModel: ObservableObject {
     RequestLog.shared.note(
       "audio settled resume=\(resumeAfterInterruption) playing=\(isPlaying)"
         + " outputs=\(Self.routeOutputs)")
-    guard resumeAfterInterruption, isPlaying, let start = pendingStart,
-      player?.timeControlStatus != .playing
+    guard resumeAfterInterruption, let start = pendingStart,
+      isPlaying || start.interruptedWhileActivating, player?.timeControlStatus != .playing
     else { return }
     guard start.resumes < Self.maxSettleResumes else {
       pause()
@@ -385,7 +390,10 @@ class WatchPlayerViewModel: ObservableObject {
           + " otherAudio=\(session.isOtherAudioPlaying)"
           + " silenceHint=\(session.secondaryAudioShouldBeSilencedHint)")
       // The system already paused the player; the start stays wanted.
-      if isPlaying, let start = pendingStart, start.resumes < Self.maxSettleResumes {
+      if let start = pendingStart, isPlaying || start.isActivating,
+        start.resumes < Self.maxSettleResumes
+      {
+        if !isPlaying { pendingStart?.interruptedWhileActivating = true }
         loadWatchdog?.cancel()
         resumeAfterInterruption = true
         armSettle()
@@ -1400,6 +1408,7 @@ class WatchPlayerViewModel: ObservableObject {
             + " outputs=\(Self.routeOutputs)"
             + (error.map { " error=\(($0 as NSError).domain) \(($0 as NSError).code)" } ?? ""))
         guard gen == self.playGeneration else { return }
+        self.pendingStart?.isActivating = false
         // A dismissed device list completes without an error.
         if error != nil || !success {
           debugLog("Audio session activation failed: \(String(describing: error))")
@@ -1492,7 +1501,9 @@ class WatchPlayerViewModel: ObservableObject {
   func stop() {
     reportStopped()
     playGeneration += 1
-    // A queue run out restarts from play(), whose start this must not end.
+    // A queue run out restarts from play(), whose start this must not end;
+    // an activation it overtakes is not answered any more.
+    pendingStart?.isActivating = false
     cancelSettle()
     resumeAfterInterruption = false
     endConnectionWait(because: "stop")
