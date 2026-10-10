@@ -131,17 +131,17 @@ import WatchKit
     publish()
   }
 
-  // MARK: - Private
-
   /// Starts a refresh when the ratings are stale, or joins the one under
   /// way; nil while they are fresh.
-  @discardableResult private func refreshIfStale() -> Task<Void, Never>? {
+  @discardableResult func refreshIfStale() -> Task<Void, Never>? {
     if let refreshing { return refreshing.task }
     guard refreshedAt.map({ Date().timeIntervalSince($0) > Self.maxAge }) ?? true else {
       return nil
     }
     return startRefresh()
   }
+
+  // MARK: - Private
 
   private func startRefresh() -> Task<Void, Never> {
     let id = UUID()

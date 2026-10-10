@@ -1,3 +1,8 @@
+//
+//  ScrobbleReceipts.swift
+//  flo
+//
+
 import Foundation
 
 /// Outbox rows the server accepted, written to a small file before the row is

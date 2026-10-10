@@ -322,8 +322,9 @@ final class SmartPlaybackService {
         }
       }
     }
-    // Ratings leave updatedAt alone as well.
-    await RatingStore.shared.refreshFromServer()
+    // Ratings leave updatedAt alone as well; activation may have just
+    // refreshed them.
+    await RatingStore.shared.refreshIfStale()?.value
 
     // Songs cached before the metadata fields lack them.
     let force = force || cachedStamp?.format != stamp.format
