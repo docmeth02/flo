@@ -25,6 +25,7 @@
 		3334D3E1F41C3BD65DD6E300 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */; };
 		34390AC1ABD4A1A5B9CFBCE8 /* QueueEditingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 962CC9FEC81B29C1608ADC91 /* QueueEditingTests.swift */; };
 		3911EF003135778456337152 /* ScrobbleQueueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */; };
+		C49F698F7C861FE281739025 /* ScrobbleReceipts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29E53048E3A319C3B7EA7D87 /* ScrobbleReceipts.swift */; };
 		3B2E32B9217BF519B4C0D093 /* PinStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6543C7E35E9DD723A4C89C0F /* PinStore.swift */; };
 		3F1F384C57AEEBC202326F8B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9FF8B518F2ED916918EB6C66 /* Foundation.framework */; };
 		3FED4C4043890696D075FFBC /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
@@ -80,6 +81,7 @@
 		CA89010362A86EC66584ECF3 /* PendingEditsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20859017241A75867B4A0DF /* PendingEditsTests.swift */; };
 		C105EB0E16FB9856AB613D33 /* QueueOrdersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C4C47133E096CE3E8B1ABE /* QueueOrdersTests.swift */; };
 		12D83EDF91E5B5228E54A120 /* ScrobbleOutboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08F2C213C08E776F8F5BD78A /* ScrobbleOutboxTests.swift */; };
+		F086EED3115413433538A190 /* KeychainReadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB103792407F3592AC4D765 /* KeychainReadTests.swift */; };
 		D25AF44BCEB4F1ECC4EAA971 /* WatchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE281A2946A2E18C84927D8 /* WatchSettingsView.swift */; };
 		D349080D92950A1C67EDADB6 /* TrackRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA601DF6D60F70D262CE557B /* TrackRowView.swift */; };
 		D493E3043CDDF727DCE79E63 /* flo Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 9A72287ACF3C11B43C138CED /* flo Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -165,6 +167,7 @@
 		5055C3CF1C4E3BB88F96CCCD /* WatchStarredSongsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchStarredSongsView.swift; sourceTree = "<group>"; };
 		57E112194EA92A3D3A5A451C /* ItemMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ItemMenu.swift; sourceTree = "<group>"; };
 		5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrobbleQueueManager.swift; sourceTree = "<group>"; };
+		29E53048E3A319C3B7EA7D87 /* ScrobbleReceipts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrobbleReceipts.swift; sourceTree = "<group>"; };
 		5E0ED598C9F56E94612957B1 /* MixRankerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MixRankerTests.swift; sourceTree = "<group>"; };
 		638B2D1AECAA38268427598A /* WatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
 		64FB5C179BC0B76201835B86 /* WatchContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
@@ -195,6 +198,7 @@
 		B20859017241A75867B4A0DF /* PendingEditsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PendingEditsTests.swift; sourceTree = "<group>"; };
 		15C4C47133E096CE3E8B1ABE /* QueueOrdersTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QueueOrdersTests.swift; sourceTree = "<group>"; };
 		08F2C213C08E776F8F5BD78A /* ScrobbleOutboxTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScrobbleOutboxTests.swift; sourceTree = "<group>"; };
+		AAB103792407F3592AC4D765 /* KeychainReadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeychainReadTests.swift; sourceTree = "<group>"; };
 		B41738B26DF74C4135ED3B6B /* WatchArtistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchArtistDetailView.swift; sourceTree = "<group>"; };
 		BA6E4B95E86671912ADCC03D /* LibrarySearch.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LibrarySearch.swift; sourceTree = "<group>"; };
 		BCC2E67CCE3ED944C69F8973 /* WatchAlbumArtView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumArtView.swift; sourceTree = "<group>"; };
@@ -326,6 +330,7 @@
 				B20859017241A75867B4A0DF /* PendingEditsTests.swift */,
 				15C4C47133E096CE3E8B1ABE /* QueueOrdersTests.swift */,
 				08F2C213C08E776F8F5BD78A /* ScrobbleOutboxTests.swift */,
+				AAB103792407F3592AC4D765 /* KeychainReadTests.swift */,
 				0BAA3FBF223B4846D4BAC9C7 /* StarStoreTests.swift */,
 				B27B0002A1B2C3D4E5F60002 /* RatingStoreTests.swift */,
 				A47046B69F3F233D98063F27 /* LibrarySearchTests.swift */,
@@ -441,6 +446,7 @@
 			children = (
 				C4F870CD2CEFCC5B00312F8A /* FloooService.swift */,
 				5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */,
+				29E53048E3A319C3B7EA7D87 /* ScrobbleReceipts.swift */,
 				C4875DFF2C149D9000D9BAEB /* AlbumService.swift */,
 				C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */,
 				0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */,
@@ -741,6 +747,7 @@
 				FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */,
 				4F8E0BD04AC14F52D5C8E033 /* ExplicitStatus.swift in Sources */,
 				3911EF003135778456337152 /* ScrobbleQueueManager.swift in Sources */,
+				C49F698F7C861FE281739025 /* ScrobbleReceipts.swift in Sources */,
 				2C95BE4D2933E3895658C87D /* RequestLog.swift in Sources */,
 				4DE465B1CC1E6A07B1AAF79C /* WatchDiagnosticsView.swift in Sources */,
 				24FB8009A829D52B8837011C /* ListeningHistoryStore.swift in Sources */,
@@ -772,6 +779,7 @@
 				CA89010362A86EC66584ECF3 /* PendingEditsTests.swift in Sources */,
 				C105EB0E16FB9856AB613D33 /* QueueOrdersTests.swift in Sources */,
 				12D83EDF91E5B5228E54A120 /* ScrobbleOutboxTests.swift in Sources */,
+				F086EED3115413433538A190 /* KeychainReadTests.swift in Sources */,
 				672A202F6B6304AC47224A24 /* StarStoreTests.swift in Sources */,
 				B27B0001A1B2C3D4E5F60001 /* RatingStoreTests.swift in Sources */,
 				706A9BA48D41460C03ECD61A /* LibrarySearchTests.swift in Sources */,

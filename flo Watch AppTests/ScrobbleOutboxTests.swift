@@ -21,6 +21,8 @@ final class ScrobbleOutboxTests: XCTestCase {
   private var outbox: ScrobbleQueueManager!
   private var triggers: PassthroughSubject<Void, Never>!
   private var reachable = true
+  private var account: String? = "server|a"
+  private var receiptsURL: URL!
   private var probes = 0
   private var sends: [(songId: String, storedRows: Int, complete: (Result<Void, Error>) -> Void)] =
     []
@@ -36,9 +38,18 @@ final class ScrobbleOutboxTests: XCTestCase {
     store = Store()
     store.persistentContainer = container
 
+    receiptsURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString).appendingPathComponent("receipts.json")
     triggers = PassthroughSubject()
+    makeOutbox()
+  }
+
+  /// A new outbox over the same store and receipts file, as after a relaunch.
+  private func makeOutbox() {
     outbox = ScrobbleQueueManager(
       store: store,
+      receipts: ScrobbleReceipts(fileURL: receiptsURL),
+      accountKey: { [unowned self] in account },
       send: { [unowned self] songId, _, completion in
         sends.append((songId, store.countRecords(entity: ScrobbleEntity.self), completion))
       },
@@ -51,6 +62,7 @@ final class ScrobbleOutboxTests: XCTestCase {
     // A retry timer still pending must find no outbox.
     outbox = nil
     store = nil
+    try? FileManager.default.removeItem(at: receiptsURL.deletingLastPathComponent())
   }
 
   private func payload(_ songId: String) -> ScrobblePayload {
@@ -145,5 +157,96 @@ final class ScrobbleOutboxTests: XCTestCase {
     XCTAssertEqual(sends.count, 1)
     XCTAssertEqual(outbox.pendingCount, 0)
     XCTAssertTrue(storedRows.isEmpty)
+  }
+
+  func testAcceptedEntryIsNotResentAfterARelaunch() {
+    outbox.enqueue(payload("a"))
+    store.failSaves = true
+    answer(0, .success(()))
+
+    // Relaunched while deletes still fail: the receipt keeps it from the server.
+    makeOutbox()
+    triggers.send()
+    XCTAssertEqual(sends.count, 1)
+    XCTAssertEqual(outbox.pendingCount, 1)
+
+    // Once the delete saves, the receipt goes too.
+    store.failSaves = false
+    makeOutbox()
+    triggers.send()
+    XCTAssertEqual(sends.count, 1)
+    XCTAssertTrue(storedRows.isEmpty)
+    XCTAssertEqual(try Data(contentsOf: receiptsURL), Data("[]".utf8))
+  }
+
+  func testReceiptsOfAnotherAccountDoNotApply() {
+    outbox.enqueue(payload("a"))
+    store.failSaves = true
+    answer(0, .success(()))
+
+    store.failSaves = false
+    account = "server|b"
+    makeOutbox()
+    triggers.send()
+    XCTAssertEqual(sends.map(\.songId), ["a", "a"])
+  }
+
+  func testReceiptsWhoseRowIsGoneAreDropped() {
+    let stale = ScrobbleReceipts.Receipt(
+      account: "server|a", row: "x-coredata://gone/ScrobbleEntity/p1")
+    ScrobbleReceipts(fileURL: receiptsURL).insert(stale)
+    XCTAssertTrue(ScrobbleReceipts(fileURL: receiptsURL).contains(stale))
+
+    makeOutbox()
+    XCTAssertFalse(ScrobbleReceipts(fileURL: receiptsURL).contains(stale))
+  }
+
+  func testUnsavedReceiptStillProtectsThisProcess() throws {
+    // A regular file where the receipts directory should be.
+    let blocker = receiptsURL.deletingLastPathComponent()
+    try FileManager.default.createDirectory(
+      at: blocker.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try Data().write(to: blocker)
+    makeOutbox()
+
+    outbox.enqueue(payload("a"))
+    store.failSaves = true
+    answer(0, .success(()))
+    XCTAssertEqual(outbox.pendingCount, 1)
+
+    store.failSaves = false
+    triggers.send()
+    XCTAssertEqual(sends.count, 1)
+    XCTAssertTrue(storedRows.isEmpty)
+  }
+
+  func testNothingIsSentWithoutALogin() {
+    account = nil
+    outbox.enqueue(payload("a"))
+    XCTAssertTrue(sends.isEmpty)
+    XCTAssertEqual(outbox.pendingCount, 1)
+
+    account = "server|a"
+    triggers.send()
+    XCTAssertEqual(sends.map(\.songId), ["a"])
+  }
+
+  func testPendingListensAreTheCurrentAccountsQueuedPlays() {
+    reachable = false
+    let first = payload("a")
+    outbox.enqueue(first)
+    outbox.enqueue(payload("b"))
+    XCTAssertEqual(outbox.pendingListens().map(\.songId), ["a", "b"])
+    XCTAssertEqual(outbox.pendingListens().first?.at, first.listenTime)
+
+    // Logged out, or the login unreadable: no account owns them.
+    account = nil
+    XCTAssertTrue(outbox.pendingListens().isEmpty)
+
+    // A logout drops the rows, and a play of the previous account stays out.
+    account = "server|b"
+    outbox.clearAll()
+    outbox.enqueue(first)
+    XCTAssertTrue(outbox.pendingListens().isEmpty)
   }
 }

@@ -32,8 +32,8 @@ struct ScrobblePayload {
 
 /// Persistent outbox for scrobble submissions that could not be delivered
 /// right away. Entries are deleted once the server acknowledges them, retried
-/// with a growing delay while the server is unreachable, and dropped only when
-/// the server says they can never succeed.
+/// with a growing delay while the server is unreachable or no login can be
+/// read, and dropped only when the server says they can never succeed.
 final class ScrobbleQueueManager {
   static let shared = ScrobbleQueueManager()
 
@@ -55,23 +55,29 @@ final class ScrobbleQueueManager {
   private var scrobbles: [ScrobbleEntity] = []
   private var isFlushing = false
   private var flushRequested = false
-  // Entries the server accepted whose delete failed to save; never sent again.
-  private var delivered = Set<NSManagedObjectID>()
   private var retryTimer: Timer?
   private(set) var retryDelay = initialRetryDelay
   private var triggers: AnyCancellable?
   private(set) var accountGeneration = 0
+  // What pendingListens returns, renewed with every reload.
+  private var listens: [(songId: String, at: Date)] = []
+  private let listensLock = NSLock()
 
   private let store: CoreDataManager
+  private let receipts: ScrobbleReceipts
+  private let accountKey: () -> String?
   private let send: Send
   private let canReachServer: () -> Bool
   private let probeServer: () -> Void
 
-  /// The parameters are for tests; the app uses the shared store, the server
-  /// and ConnectivityMonitor. Each value `flushTriggers` publishes on the main
-  /// thread is a chance to deliver.
+  /// The parameters are for tests; the app uses the shared store, the
+  /// receipts file, AuthService, the server and ConnectivityMonitor. Each
+  /// value `flushTriggers` publishes on the main thread is a chance to
+  /// deliver.
   init(
     store: CoreDataManager = .shared,
+    receipts: ScrobbleReceipts = ScrobbleReceipts(),
+    accountKey: @escaping () -> String? = { AuthService.shared.accountKey },
     send: @escaping Send = { songId, time, completion in
       FloooService.shared.scrobbleToBuiltinEndpoint(
         submission: true, songId: songId, time: time, completion: completion)
@@ -81,12 +87,18 @@ final class ScrobbleQueueManager {
     flushTriggers: AnyPublisher<Void, Never> = ScrobbleQueueManager.appAndServerTriggers()
   ) {
     self.store = store
+    self.receipts = receipts
+    self.accountKey = accountKey
     self.send = send
     self.canReachServer = canReachServer
     self.probeServer = probeServer
 
     purgeLegacySent()
     reload()
+    // A memory store shows none of the rows the receipts were written for.
+    if !store.isUsingVolatileStore {
+      receipts.keep(rows: Set(scrobbles.map(Self.rowID)))
+    }
 
     triggers = flushTriggers.sink { [weak self] in self?.flush() }
   }
@@ -107,6 +119,13 @@ final class ScrobbleQueueManager {
 
   /// Submissions waiting for the server. Main thread only.
   var pendingCount: Int { scrobbles.count }
+
+  /// Counted plays still waiting in the outbox for the current account, as
+  /// (song playback id, listen time). Thread-safe snapshot.
+  func pendingListens() -> [(songId: String, at: Date)] {
+    guard accountKey() != nil else { return [] }
+    return listensLock.withLock { listens }
+  }
 
   func enqueue(_ payload: ScrobblePayload) {
     guard payload.accountGeneration == accountGeneration else { return }
@@ -148,7 +167,7 @@ final class ScrobbleQueueManager {
   func clearAll() {
     accountGeneration += 1
     cancelRetry()
-    delivered = []
+    receipts.removeAll()
     scrobbles.forEach { store.viewContext.delete($0) }
     store.saveRecord()
     reload()
@@ -158,6 +177,14 @@ final class ScrobbleQueueManager {
     scrobbles = store.getRecordsByEntity(
       entity: ScrobbleEntity.self,
       sortDescriptors: [NSSortDescriptor(key: "queuedAt", ascending: true)])
+    let listens = scrobbles.compactMap { entry in
+      entry.songId.flatMap { songId in entry.listenTime.map { (songId: songId, at: $0) } }
+    }
+    listensLock.withLock { self.listens = listens }
+  }
+
+  private static func rowID(_ entry: ScrobbleEntity) -> String {
+    entry.objectID.uriRepresentation().absoluteString
   }
 
   private func flush() {
@@ -181,14 +208,21 @@ final class ScrobbleQueueManager {
       return
     }
 
+    // Without credentials the server would refuse every listen for good.
+    guard let account = accountKey() else {
+      backOff()
+      scheduleRetry()
+      return
+    }
+
     isFlushing = true
     flushRequested = false
     // A timer firing mid-flush would request a second pass over the same rows.
     cancelRetry()
-    submitPending(scrobbles)
+    submitPending(scrobbles, account: account)
   }
 
-  private func submitPending(_ entries: [ScrobbleEntity]) {
+  private func submitPending(_ entries: [ScrobbleEntity], account: String) {
     guard let entry = entries.first else {
       isFlushing = false
       reload()
@@ -210,10 +244,11 @@ final class ScrobbleQueueManager {
     }
 
     let remaining = Array(entries.dropFirst())
+    let receipt = ScrobbleReceipts.Receipt(account: account, row: Self.rowID(entry))
 
-    guard let songId = entry.songId, !songId.isEmpty, !delivered.contains(entry.objectID) else {
-      delete(entry)
-      submitPending(remaining)
+    guard let songId = entry.songId, !songId.isEmpty, !receipts.contains(receipt) else {
+      if delete(entry) { receipts.remove(receipt) }
+      submitPending(remaining, account: account)
       return
     }
 
@@ -230,13 +265,13 @@ final class ScrobbleQueueManager {
         switch result {
         case .success:
           debugLog("queued scrobble delivered: \(songId)")
-          self.delivered.insert(entry.objectID)
-          self.delete(entry)
-          self.submitPending(remaining)
+          self.receipts.insert(receipt)
+          if self.delete(entry) { self.receipts.remove(receipt) }
+          self.submitPending(remaining, account: account)
 
         case .failure(let error) where FloooService.shared.isPermanentScrobbleFailure(error):
           self.delete(entry)
-          self.submitPending(remaining)
+          self.submitPending(remaining, account: account)
 
         case .failure(let error):
           entry.status = Status.failed
@@ -252,9 +287,11 @@ final class ScrobbleQueueManager {
     }
   }
 
-  private func delete(_ entry: ScrobbleEntity) {
+  /// Whether the delete saved.
+  @discardableResult
+  private func delete(_ entry: ScrobbleEntity) -> Bool {
     store.viewContext.delete(entry)
-    store.saveRecord()
+    return store.saveRecord()
   }
 
   /// Schedules the next delivery attempt unless one is already pending, so
