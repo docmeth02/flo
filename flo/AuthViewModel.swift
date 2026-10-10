@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import KeychainAccess
+import WatchKit
 
 class AuthViewModel: ObservableObject {
   @Published var serverUrl: String = ""
@@ -26,6 +26,9 @@ class AuthViewModel: ObservableObject {
   // Set while the session could not be renewed for lack of a connection, so
   // the next time the network comes back triggers another attempt.
   private var needsReauthentication = false
+  // Set while the stored login could not be read: the app stays logged in
+  // without credentials and reads it again on every return to the app.
+  private var storedLoginUnreadable = false
 
   init() {
     NotificationCenter.default.addObserver(
@@ -33,31 +36,32 @@ class AuthViewModel: ObservableObject {
     NotificationCenter.default.addObserver(
       self, selector: #selector(handleNetworkBecameOnline), name: .networkBecameOnline,
       object: nil)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(handleDidBecomeActive),
+      name: WKApplication.didBecomeActiveNotification, object: nil)
 
-    // Keychain items outlive an uninstall while the stored server URL does
-    // not, so the Keychain keeps a copy of it. Credentials without any server
-    // (stored before that copy existed) are unusable and would leave the app
-    // "logged in" with every request going nowhere.
-    // An unreadable Keychain URL (nil here) leaves everything as it is.
-    if Self.storedAuth() != nil, let keychainURL = try? KeychainManager.getServerURL() ?? "" {
-      if !UserDefaultsManager.serverBaseURL.isEmpty {
-        if keychainURL.isEmpty {
-          try? KeychainManager.setServerURL(newValue: UserDefaultsManager.serverBaseURL)
-        }
-      } else if !keychainURL.isEmpty {
-        UserDefaultsManager.serverBaseURL = keychainURL
-      } else {
-        try? KeychainManager.removeAuthCreds()
-        try? KeychainManager.removeAuthPassword()
+    // AuthService read the stored login when it was created.
+    adopt(AuthService.shared.launchLogin)
+
+    #if DEBUG
+      applyDebugLaunchOptions()
+    #endif
+  }
+
+  /// Found, the stored login is in use: trust it immediately, since a cold
+  /// launch must never block on a login that can only time out while
+  /// offline. Navidrome tokens expire, so the session is renewed once the
+  /// first connectivity verdict is online, or later when the network comes
+  /// back. Only a confirmed absence shows the login screen; an unreadable
+  /// Keychain keeps the app logged in and never wipes anything.
+  private func adopt(_ login: KeychainRead<UserAuth>) {
+    switch login {
+    case .found:
+      storedLoginUnreadable = false
+      guard Self.restoreServerURL() else {
+        isLoggedIn = false
+        return
       }
-    }
-
-    if Self.storedAuth() != nil {
-      // Trust cached creds immediately; a cold launch must never block on a
-      // login that can only time out while offline. AuthService already loaded
-      // them from the Keychain. Navidrome tokens expire, so renew the session
-      // once the first connectivity verdict is online, or later when the
-      // network comes back.
       isLoggedIn = true
       needsReauthentication = true
 
@@ -66,37 +70,37 @@ class AuthViewModel: ObservableObject {
         guard let self, online, self.needsReauthentication else { return }
         self.reauthenticate()
       }
+
+    case .missing:
+      storedLoginUnreadable = false
+      isLoggedIn = false
+
+    case .unreadable(let error):
+      RequestLog.shared.note("stored login unreadable: \(error)")
+      storedLoginUnreadable = true
+      isLoggedIn = true
     }
-
-    #if DEBUG
-      applyDebugLaunchOptions()
-    #endif
   }
 
-  private static func storedAuth() -> UserAuth? {
-    guard let json = try? KeychainManager.getAuthCreds(), let data = json.data(using: .utf8)
-    else { return nil }
-    return try? JSONDecoder().decode(UserAuth.self, from: data)
-  }
-
-  private enum StoredPassword {
-    case found(String)
-    case missing
-    case unreadable
-  }
-
-  /// A Keychain read error is not a missing password: the item may well be
-  /// there and readable on the next attempt.
-  private static func storedPassword() -> StoredPassword {
-    do {
-      guard let password = try KeychainManager.getAuthPassword(), !password.isEmpty else {
-        return .missing
+  /// Keychain items outlive an uninstall while the stored server URL does
+  /// not, so the Keychain keeps a copy of it. Credentials without any server
+  /// (stored before that copy existed) are unusable and would leave the app
+  /// "logged in" with every request going nowhere: they are removed and the
+  /// result is false. An unreadable Keychain URL leaves everything as it is.
+  private static func restoreServerURL() -> Bool {
+    guard let keychainURL = try? KeychainManager.getServerURL() ?? "" else { return true }
+    if !UserDefaultsManager.serverBaseURL.isEmpty {
+      if keychainURL.isEmpty {
+        try? KeychainManager.setServerURL(newValue: UserDefaultsManager.serverBaseURL)
       }
-      return .found(password)
-    } catch {
-      debugLog("error reading password from Keychain: \(error)")
-      return .unreadable
+    } else if !keychainURL.isEmpty {
+      UserDefaultsManager.serverBaseURL = keychainURL
+    } else {
+      try? KeychainManager.removeAuthCreds()
+      try? KeychainManager.removeAuthPassword()
+      return false
     }
+    return true
   }
 
   /// Silent re-login with the stored server, username and saved password. Only
@@ -104,19 +108,20 @@ class AuthViewModel: ObservableObject {
   /// included, keeps the session and retries once the network comes back.
   private func reauthenticate() {
     let serverUrl = UserDefaultsManager.serverBaseURL
-    guard isLoggedIn, !isReauthenticating, !serverUrl.isEmpty,
-      let stored = Self.storedAuth()
-    else { return }
+    guard isLoggedIn, !isReauthenticating, !serverUrl.isEmpty else { return }
 
+    let stored: UserAuth
     let password: String
-    switch Self.storedPassword() {
-    case .found(let found):
+    switch (KeychainManager.loadAuth(), KeychainManager.loadPassword()) {
+    case (.found(let auth), .found(let found)):
+      stored = auth
       password = found
-    case .missing:
-      return
-    case .unreadable:
+    case (.unreadable(let error), _), (_, .unreadable(let error)):
+      debugLog("error reading the stored login from Keychain: \(error)")
       needsReauthentication = true
       AuthService.shared.abandonRenewal()
+      return
+    default:
       return
     }
 
@@ -148,15 +153,22 @@ class AuthViewModel: ObservableObject {
   }
 
   @objc private func handleSessionExpired(_ notification: Notification) {
-    guard let requestSession = notification.object as? AuthSessionSnapshot,
+    // Without a readable login there is no session to renew or end.
+    guard !storedLoginUnreadable,
+      let requestSession = notification.object as? AuthSessionSnapshot,
       AuthService.shared.isCurrentSession(requestSession)
     else { return }
 
-    if case .missing = Self.storedPassword() {
+    if case .missing = KeychainManager.loadPassword() {
       logout()
     } else {
       reauthenticate()
     }
+  }
+
+  @objc private func handleDidBecomeActive() {
+    guard storedLoginUnreadable else { return }
+    adopt(AuthService.shared.loadStoredLogin())
   }
 
   @objc private func handleNetworkBecameOnline() {
@@ -266,6 +278,7 @@ class AuthViewModel: ObservableObject {
 
     isLoggedIn = false
     needsReauthentication = false
+    storedLoginUnreadable = false
 
     NotificationCenter.default.post(name: .didLogout, object: nil)
   }

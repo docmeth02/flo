@@ -33,17 +33,22 @@ class AuthService {
     let timeout: DispatchWorkItem
   }
 
+  /// What the read of the stored login at launch found.
+  private(set) var launchLogin: KeychainRead<UserAuth> = .missing
+
   private init() {
-    if let jsonString = try? KeychainManager.getAuthCreds(),
-      let jsonData = jsonString.data(using: .utf8)
-    {
-      if let data: UserAuth = try? JSONDecoder().decode(UserAuth.self, from: jsonData) {
-        NDToken = data.token
-        subsonicParams = Self.subsonicQuery(for: data)
-        userId = data.id
-        credentialGeneration = 1
-      }
+    launchLogin = loadStoredLogin()
+  }
+
+  /// Reads the stored login and uses it when found. Anything else leaves the
+  /// session as it is, so an unreadable Keychain never ends one.
+  @discardableResult
+  func loadStoredLogin() -> KeychainRead<UserAuth> {
+    let read = KeychainManager.loadAuth()
+    if case .found(let data) = read {
+      setCreds(data)
     }
+    return read
   }
 
   /// Subsonic token authentication as a query string. Values are percent
@@ -183,8 +188,7 @@ class AuthService {
     credentialsLock.lock()
     defer { credentialsLock.unlock() }
     guard tokenNeedsPersisting, let token = NDToken, !token.isEmpty,
-      let json = try? KeychainManager.getAuthCreds(), let data = json.data(using: .utf8),
-      let stored = try? JSONDecoder().decode(UserAuth.self, from: data), stored.id == userId
+      case .found(let stored) = KeychainManager.loadAuth(), stored.id == userId
     else { return }
 
     let renewed = UserAuth(
