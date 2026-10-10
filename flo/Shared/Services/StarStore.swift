@@ -147,6 +147,8 @@ import WatchKit
   }
 
   private func forgetAccount() {
+    // A list asked for by the previous account is not this one's.
+    listRevision += 1
     edits.forgetAccount()
     confirmed = [:]
     songIds = []
