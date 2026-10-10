@@ -328,18 +328,19 @@ class WatchPlayerViewModel: ObservableObject {
   /// it may resume, then shows Play.
   private func resumeAfterSettle() {
     settleWork = nil
+    // An activation still under way answers first; a second one on top of it
+    // would discard it. Not logged: the wait can last as long as the device
+    // list is up.
+    if pendingStart?.isActivating == true, resumeAfterInterruption {
+      armSettle()
+      return
+    }
     RequestLog.shared.note(
       "audio settled resume=\(resumeAfterInterruption) playing=\(isPlaying)"
         + " outputs=\(Self.routeOutputs)")
     guard resumeAfterInterruption, let start = pendingStart,
       isPlaying || start.interruptedWhileActivating, player?.timeControlStatus != .playing
     else { return }
-    // An activation still under way answers first; a second one on top of it
-    // would discard it.
-    guard !start.isActivating else {
-      armSettle()
-      return
-    }
     guard start.resumes < Self.maxSettleResumes else {
       pause()
       // Like the cap in .began: a real interruption's end may still resume it.
