@@ -7,12 +7,47 @@ final class StarStoreTests: XCTestCase {
   private var reachable = true
   private var answers: [(Result<Void, Error>) -> Void] = []
 
-  private func makeStore() -> StarStore {
+  private func makeStore(defaults: UserDefaults? = nil) -> StarStore {
+    StarStore(
+      defaults: defaults ?? makeDefaults(), canSend: { [unowned self] in self.reachable },
+      send: { [unowned self] _, _, completion in self.answers.append(completion) })
+  }
+
+  private func makeDefaults() -> UserDefaults {
     let name = "StarStoreTests.\(UUID().uuidString)"
     addTeardownBlock { UserDefaults().removePersistentDomain(forName: name) }
-    return StarStore(
-      defaults: UserDefaults(suiteName: name)!, canSend: { [unowned self] in self.reachable },
-      send: { [unowned self] _, _, completion in self.answers.append(completion) })
+    return UserDefaults(suiteName: name)!
+  }
+
+  /// A song liked offline is still known as a song after a relaunch, so a
+  /// liked list that lacks it once the like was taken clears it.
+  func testAPendingSongLikeSurvivesARelaunch() async {
+    reachable = false
+    let defaults = makeDefaults()
+    makeStore(defaults: defaults).setSong(true, id: "s1")
+
+    reachable = true
+    let store = makeStore(defaults: defaults)
+    answers[0](.success(()))
+    for _ in 0..<5 { await Task.yield() }
+    XCTAssertTrue(store.isStarred("s1", listed: false))
+
+    store.adoptServerStars([], since: store.listRevision)
+    XCTAssertFalse(store.isStarred("s1", listed: true))
+  }
+
+  /// A confirmation makes an older full list stale, not a song's lookup.
+  func testAConfirmationInvalidatesOlderListsOnly() async {
+    let store = makeStore()
+    store.setSong(true, id: "s1")
+    let list = store.listRevision
+    let lookup = store.editCount
+    answers[0](.success(()))
+    for _ in 0..<5 { await Task.yield() }
+
+    store.adoptServerStars([], since: list)
+    XCTAssertTrue(store.isStarred("s1", listed: false))
+    XCTAssertEqual(store.editCount, lookup)
   }
 
   func testListedStateWithoutAnEdit() {

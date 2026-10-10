@@ -259,8 +259,9 @@ extension Song {
 
   /// Whether the song is by this artist: by id, or by the same artist as
   /// ArtistIdentity tells them apart. `keys` maps server artist ids to their
-  /// identity keys (LibraryIndex.artistKeys). A song known by name only
-  /// (downloads and the stream cache keep no artist id) matches by name.
+  /// identity keys (LibraryIndex.artistKeys, every artist with songs in the
+  /// cache). A song known by name only (downloads and the stream cache keep
+  /// no artist id), or an artist without cached songs, matches by name.
   func isBy(artistId: String, name: String, keys: [String: String]) -> Bool {
     if let ownId = self.artistId, !ownId.isEmpty {
       if ownId == artistId { return true }

@@ -47,11 +47,15 @@ import WatchKit
     }
   ) {
     self.defaults = defaults
-    pendingSongs = Set(defaults.stringArray(forKey: UserDefaultsKeys.pendingStarSongs) ?? [])
-    songIds = pendingSongs
-    edits = PendingEdits(
+    let edits = PendingEdits<Bool>(
       name: "star", key: UserDefaultsKeys.pendingStars, defaults: defaults, canSend: canSend,
       send: send)
+    self.edits = edits
+    // Saved apart from the edits, so one can outlive the other in a kill.
+    let stored = Set(defaults.stringArray(forKey: UserDefaultsKeys.pendingStarSongs) ?? [])
+    pendingSongs = stored.filter { edits[$0] != nil }
+    songIds = pendingSongs
+    if pendingSongs.count != stored.count { savePendingSongs() }
     edits.onSettle = { [unowned self] id, starred, accepted in
       // Not when a newer edit for the item waits, as for ratings.
       if accepted, self.edits[id] == nil { self.confirmed[id] = starred }
