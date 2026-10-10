@@ -327,6 +327,16 @@ class AlbumService {
     }
   }
 
+  /// Every album the account rated, with its rating.
+  func getRatedAlbums(completion: @escaping (Result<[Album], Error>) -> Void) {
+    let params: [String: Any] = ["has_rating": "true", "_start": 0, "_end": 0]
+
+    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getAlbum, parameters: params) {
+      (response: DataResponse<[Album], AFError>) in
+      completion(response.result.mapError { $0 })
+    }
+  }
+
   func getStarredSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
     APIManager.shared.SubsonicEndpointRequest(
       endpoint: API.SubsonicEndpoint.getStarred2, parameters: nil

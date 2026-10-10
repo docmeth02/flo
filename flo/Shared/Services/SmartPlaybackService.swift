@@ -106,6 +106,11 @@ final class SmartPlaybackService {
 
     async let affinity = ListeningHistoryStore.shared.snapshot()
     async let journal = PlaybackJournal.shared.snapshot()
+    // Ratings changed in another client since the last refresh count when
+    // the server answers quickly.
+    if canStream, case .playSomething = mode {
+      await RatingStore.shared.refreshIfStale(waitingAtMost: .seconds(3))
+    }
     let index = await libraryIndex(allowSync: canStream)
     let ratings = await MainActor.run { RatingStore.shared.ratings }
     var rng = SplitMix64(seed: Self.debugSeed ?? .random(in: .min ... .max))

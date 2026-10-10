@@ -9,53 +9,80 @@ import WatchKit
 /// The account's song ratings by playback id: the server's, overlaid with
 /// edits made here that it has not confirmed yet. An edit is shown at once
 /// and kept until the server accepts it, across launches and offline spells.
+/// Album ratings come from the server only and stand in for songs rated
+/// nowhere.
 @MainActor final class RatingStore: ObservableObject {
-  static let shared = RatingStore()
+  static let shared: RatingStore = {
+    let store = RatingStore()
+    store.loadCache()
+    return store
+  }()
 
   /// 1 to 5 per playback id; unrated songs are absent.
   @Published private(set) var ratings: [String: Int] = [:]
+  /// 1 to 5 per album id; unrated albums are absent.
+  private(set) var albumRatings: [String: Int] = [:]
 
   private var server: [String: Int] = [:]
-  private var serverFetched = false
-  private let edits = PendingEdits<Int>(
-    name: "rating", key: UserDefaultsKeys.pendingRatings, send: AlbumService.shared.setRating)
+  // When the server last answered for songs and albums; nil after a login
+  // until it does.
+  private var refreshedAt: Date?
+  private var refreshing: (id: UUID, task: Task<Void, Never>)?
+  private let edits: PendingEdits<Int>
+  private let defaults: UserDefaults
   // Edits the server took but no refresh has stored in the cache yet; a
   // successful refresh is newer than all of them, whatever it says.
-  private var confirmed = UserDefaultsManager.confirmedRatings
+  private var confirmed: [String: Int]
   // Bumped when the server confirms an edit; a refresh asked for before that
   // may answer with the old rating and is dropped.
   private var confirmedEdits = 0
   // Bumped on logout; answers for the previous account are dropped.
   private var account = 0
 
-  private init() {
-    let center = NotificationCenter.default
-    for name: Notification.Name in [.networkBecameOnline, WKApplication.didBecomeActiveNotification] {
-      center.addObserver(forName: name, object: nil, queue: .main) { _ in
-        Task { @MainActor in
-          let store = RatingStore.shared
-          store.edits.flush()
-          // After a login the server set is unknown until the next song sync.
-          if !store.serverFetched, AuthService.shared.accountKey != nil {
-            await store.refreshFromServer()
-          }
-        }
-      }
-    }
-    center.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
-      Task { @MainActor in RatingStore.shared.forgetAccount() }
-    }
+  // Ratings changed in another client show up within this on activation.
+  private static let maxAge: TimeInterval = 5 * 60
 
+  /// `defaults`, `canSend` and `send` are for tests.
+  init(
+    defaults: UserDefaults = .standard,
+    canSend: @escaping () -> Bool = PendingEdits<Int>.serverReachable,
+    send: @escaping PendingEdits<Int>.Send = AlbumService.shared.setRating
+  ) {
+    self.defaults = defaults
+    confirmed = defaults.dictionary(forKey: UserDefaultsKeys.confirmedRatings) as? [String: Int] ?? [:]
+    edits = PendingEdits(
+      name: "rating", key: UserDefaultsKeys.pendingRatings, defaults: defaults, canSend: canSend,
+      send: send)
     edits.onSettle = { [unowned self] id, rating, accepted in
       self.settle(rating, playbackID: id, accepted: accepted)
     }
+
+    let center = NotificationCenter.default
+    for name: Notification.Name in [.networkBecameOnline, WKApplication.didBecomeActiveNotification] {
+      center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+        Task { @MainActor in
+          guard let self else { return }
+          self.edits.flush()
+          if ConnectivityMonitor.shared.canReachServer { self.refreshIfStale() }
+        }
+      }
+    }
+    center.addObserver(forName: .didLogout, object: nil, queue: .main) { [weak self] _ in
+      Task { @MainActor in self?.forgetAccount() }
+    }
+
     publish()
-    loadCache()
     edits.flush()
   }
 
   func rating(for playbackID: String) -> Int {
     ratings[playbackID] ?? 0
+  }
+
+  /// A song's rating for recommendations: its own (pending or confirmed) 1...5,
+  /// else its album's 1...5, else 0. Main thread.
+  func effectiveRating(songId: String, albumId: String?) -> Int {
+    ratings[songId] ?? albumId.flatMap { albumRatings[$0] } ?? 0
   }
 
   /// Rates the song 1 to 5; 0 clears its rating.
@@ -69,41 +96,94 @@ import WatchKit
     edits.set(min(max(rating, 0), 5), id: id)
     // A new edit supersedes what the server took before it.
     confirmed[id] = nil
-    UserDefaultsManager.confirmedRatings = confirmed
+    defaults.set(confirmed, forKey: UserDefaultsKeys.confirmedRatings)
     publish()
   }
 
-  /// Replaces the server's ratings with its current list. A failed request
-  /// keeps the ones known; edits not confirmed yet stay on top either way.
+  /// Replaces the server's song and album ratings with its current lists. A
+  /// failed request keeps the ones known; edits not confirmed yet stay on
+  /// top either way.
   func refreshFromServer() async {
+    await startRefresh().value
+  }
+
+  /// Refreshes ratings older than five minutes, waiting for at most `limit`;
+  /// past it the caller goes on with the ones known.
+  func refreshIfStale(waitingAtMost limit: Duration) async {
+    guard let refresh = refreshIfStale() else { return }
+    let (done, finish) = AsyncStream<Void>.makeStream()
+    Task { await refresh.value; finish.yield() }
+    Task {
+      try? await Task.sleep(for: limit)
+      finish.yield()
+    }
+    for await _ in done { break }
+  }
+
+  /// The server's ratings, newer than the cache and than every edit it took
+  /// before. Main thread.
+  func adoptServer(songs: [Song], albums: [Album]) {
+    server = Self.ratings(of: songs)
+    albumRatings = Self.ratings(of: albums)
+    refreshedAt = Date()
+    confirmed = [:]
+    defaults.removeObject(forKey: UserDefaultsKeys.confirmedRatings)
+    publish()
+  }
+
+  // MARK: - Private
+
+  /// Starts a refresh when the ratings are stale, or joins the one under
+  /// way; nil while they are fresh.
+  @discardableResult private func refreshIfStale() -> Task<Void, Never>? {
+    if let refreshing { return refreshing.task }
+    guard refreshedAt.map({ Date().timeIntervalSince($0) > Self.maxAge }) ?? true else {
+      return nil
+    }
+    return startRefresh()
+  }
+
+  private func startRefresh() -> Task<Void, Never> {
+    let id = UUID()
+    let task = Task {
+      await fetchFromServer()
+      if refreshing?.id == id { refreshing = nil }
+    }
+    refreshing = (id, task)
+    return task
+  }
+
+  private func fetchFromServer() async {
     guard AuthService.shared.accountKey != nil else { return }
     let generation = account
     let confirmations = confirmedEdits
     let cacheGeneration = LibraryCacheManager.shared.generation
 
-    guard
-      let songs = try? await withCheckedThrowingContinuation({ continuation in
-        AlbumService.shared.getRatedSongs { continuation.resume(with: $0) }
-      })
-    else {
+    async let ratedSongs = Self.fetch(AlbumService.shared.getRatedSongs)
+    async let ratedAlbums = Self.fetch(AlbumService.shared.getRatedAlbums)
+    guard let songs = try? await ratedSongs, let albums = try? await ratedAlbums else {
       debugLog("ratings refresh failed")
       return
     }
     guard account == generation, confirmedEdits == confirmations else { return }
 
-    server = Self.ratings(of: songs)
-    serverFetched = true
-    // The server's answer is newer than every edit it took before.
-    confirmed = [:]
-    UserDefaultsManager.removeObject(key: UserDefaultsKeys.confirmedRatings)
-    publish()
-    debugLog("ratings refreshed: \(server.count) rated, \(edits.values.count) pending")
+    adoptServer(songs: songs, albums: albums)
+    debugLog(
+      "ratings refreshed: \(server.count) songs, \(albumRatings.count) albums, "
+        + "\(edits.values.count) pending")
     await Task.detached(priority: .utility) {
       LibraryCacheManager.shared.save(songs, forKey: "ratedSongs", generation: cacheGeneration)
+      LibraryCacheManager.shared.save(albums, forKey: "ratedAlbums", generation: cacheGeneration)
     }.value
   }
 
-  // MARK: - Private
+  private nonisolated static func fetch<T>(
+    _ request: (@escaping (Result<T, Error>) -> Void) -> Void
+  ) async throws -> T {
+    try await withCheckedThrowingContinuation { continuation in
+      request { continuation.resume(with: $0) }
+    }
+  }
 
   private func publish() {
     var merged = server
@@ -120,17 +200,21 @@ import WatchKit
     let generation = account
     Task.detached(priority: .utility) {
       let songs = LibraryCacheManager.shared.load([Song].self, forKey: "ratedSongs")
-      await RatingStore.shared.adoptCached(Self.ratings(of: songs ?? []), account: generation)
-      // No cache yet (first launch with ratings, or an upgrade): the song
-      // sync that refreshes ratings may be a day away.
-      if songs == nil { await RatingStore.shared.refreshFromServer() }
+      let albums = LibraryCacheManager.shared.load([Album].self, forKey: "ratedAlbums")
+      await self.adoptCached(
+        songs: Self.ratings(of: songs ?? []), albums: Self.ratings(of: albums ?? []),
+        account: generation)
+      // No cache yet (first launch with ratings, or an upgrade): the next
+      // activation may be far away.
+      if songs == nil || albums == nil { await self.refreshFromServer() }
     }
   }
 
-  private func adoptCached(_ cached: [String: Int], account generation: Int) {
+  private func adoptCached(songs: [String: Int], albums: [String: Int], account generation: Int) {
     // A refresh that landed first is newer than the cache.
-    guard account == generation, !serverFetched else { return }
-    server = cached
+    guard account == generation, refreshedAt == nil else { return }
+    server = songs
+    albumRatings = albums
     publish()
   }
 
@@ -143,7 +227,7 @@ import WatchKit
       // newer edit for the song waits.
       if edits[id] == nil {
         confirmed[id] = rating
-        UserDefaultsManager.confirmedRatings = confirmed
+        defaults.set(confirmed, forKey: UserDefaultsKeys.confirmedRatings)
       }
     }
     publish()
@@ -154,18 +238,31 @@ import WatchKit
   private func forgetAccount() {
     account += 1
     server = [:]
-    serverFetched = false
+    albumRatings = [:]
+    refreshedAt = nil
+    refreshing = nil
     edits.forgetAccount()
     confirmed = [:]
-    UserDefaultsManager.removeObject(key: UserDefaultsKeys.confirmedRatings)
+    defaults.removeObject(forKey: UserDefaultsKeys.confirmedRatings)
     publish()
   }
 
-  private nonisolated static func ratings(of songs: [Song]) -> [String: Int] {
+  /// 1 to 5 by id, without the unrated.
+  private nonisolated static func ratings<Item>(
+    of items: [Item], id: (Item) -> String, rating: (Item) -> Int?
+  ) -> [String: Int] {
     var result: [String: Int] = [:]
-    for song in songs {
-      if let rating = song.rating, rating > 0 { result[song.playbackID] = min(rating, 5) }
+    for item in items {
+      if let rating = rating(item), rating > 0 { result[id(item)] = min(rating, 5) }
     }
     return result
+  }
+
+  private nonisolated static func ratings(of songs: [Song]) -> [String: Int] {
+    ratings(of: songs, id: \.playbackID, rating: \.rating)
+  }
+
+  private nonisolated static func ratings(of albums: [Album]) -> [String: Int] {
+    ratings(of: albums, id: \.id, rating: \.rating)
   }
 }

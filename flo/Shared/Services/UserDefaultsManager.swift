@@ -119,18 +119,6 @@ class UserDefaultsManager {
     }
   }
 
-  /// Ratings the server took from this watch that no refresh has stored in
-  /// the cache yet, by playback id; the next successful refresh replaces them.
-  static var confirmedRatings: [String: Int] {
-    get {
-      return UserDefaults.standard.dictionary(forKey: UserDefaultsKeys.confirmedRatings)
-        as? [String: Int] ?? [:]
-    }
-    set {
-      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.confirmedRatings)
-    }
-  }
-
 
 
 
