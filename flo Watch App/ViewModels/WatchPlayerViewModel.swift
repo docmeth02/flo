@@ -1670,7 +1670,7 @@ class WatchPlayerViewModel: ObservableObject {
       var songs: [Song] = []
       if online {
         let result = await withCheckedContinuation { continuation in
-          RadioService.shared.getTopSongs(artistName: name) { continuation.resume(returning: $0) }
+          RadioService.shared.getTopSongs(artistId: id) { continuation.resume(returning: $0) }
         }
         songs = (try? result.get()) ?? []
         // A failed request most likely means the link went; the monitor may

@@ -33,8 +33,10 @@ class RadioService {
     }
   }
   
-  func getTopSongs(artistName: String, count: Int = 20, completion: @escaping (Result<[Song], Error>) -> Void) {
-    let params: [String: Any] = ["artist": artistName, "count": count]
+  /// The artist's most played songs, looked up by id (OpenSubsonic
+  /// topSongsByArtistId), so artists that share a name stay apart.
+  func getTopSongs(artistId: String, count: Int = 20, completion: @escaping (Result<[Song], Error>) -> Void) {
+    let params: [String: Any] = ["id": artistId, "count": count]
     
     APIManager.shared.SubsonicEndpointRequest(endpoint: API.SubsonicEndpoint.topSongs, parameters: params) {
       (response: DataResponse<TopSongsResponse, AFError>) in

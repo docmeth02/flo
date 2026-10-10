@@ -37,7 +37,7 @@ class ArtistDetailViewModel: ObservableObject {
   func fetchTopSongs(artist: Artist) {
     isLoadingTopSongs = true
 
-    RadioService.shared.getTopSongs(artistName: artist.name, count: 20) { [weak self] result in
+    RadioService.shared.getTopSongs(artistId: artist.id, count: 20) { [weak self] result in
       DispatchQueue.main.async {
         guard let self else { return }
 
