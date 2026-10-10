@@ -259,14 +259,13 @@ extension Song {
 
   /// Whether the song is by this artist: by id, or by the same artist as
   /// ArtistIdentity tells them apart. `keys` maps server artist ids to their
-  /// identity keys (LibraryIndex.artistKeys); artists missing from it are
-  /// compared by name.
+  /// identity keys (LibraryIndex.artistKeys). A song known by name only
+  /// (downloads and the stream cache keep no artist id) matches by name.
   func isBy(artistId: String, name: String, keys: [String: String]) -> Bool {
     if let ownId = self.artistId, !ownId.isEmpty, ownId == artistId { return true }
-    guard let wanted = keys[artistId] ?? ArtistIdentity.key(name: name, mbid: nil) else {
-      return false
-    }
-    let own = self.artistId.flatMap { keys[$0] } ?? ArtistIdentity.key(name: artist, mbid: nil)
-    return own == wanted
+    guard
+      let own = self.artistId.flatMap({ keys[$0] }) ?? ArtistIdentity.key(name: artist, mbid: nil)
+    else { return false }
+    return own == keys[artistId] || own == ArtistIdentity.key(name: name, mbid: nil)
   }
 }

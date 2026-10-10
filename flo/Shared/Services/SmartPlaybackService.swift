@@ -165,9 +165,7 @@ final class SmartPlaybackService {
       let id = song.playbackID
       let stars = store.effectiveRating(songId: id, albumId: song.albumId)
       guard stars > 0 else { continue }
-      // Without its album, a song has only its own rating.
-      let own = store.effectiveRating(songId: id, albumId: nil)
-      ratings[id] = MixRanker.Rating(stars: stars, fromAlbum: own == 0)
+      ratings[id] = MixRanker.Rating(stars: stars, fromAlbum: store.rating(for: id) == 0)
     }
     return ratings
   }

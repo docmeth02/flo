@@ -22,8 +22,8 @@ import WatchKit
   // Ids known to be songs: a full list of starred songs speaks for these
   // and for no album or artist.
   private var songIds = Set<String>()
-  /// Bumped by every edit made here; a server answer asked for before an
-  /// edit is older than it.
+  /// Bumped by every edit made here and every one the server took; a server
+  /// answer asked for before either is older than it.
   private(set) var editCount = 0
   private let edits: PendingEdits<Bool>
 
@@ -46,6 +46,8 @@ import WatchKit
     edits.onSettle = { [unowned self] id, starred, accepted in
       // Not when a newer edit for the item waits, as for ratings.
       if accepted, self.edits[id] == nil { self.confirmed[id] = starred }
+      // A list asked for before the server took it may still lack it.
+      if accepted { self.editCount += 1 }
       self.publish()
     }
 

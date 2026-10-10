@@ -71,6 +71,8 @@ final class ArtistIdentityTests: XCTestCase {
     let keys = ["ar1": "mbz:a", "ar2": "mbz:b", "ar3": "mbz:a"]
     XCTAssertFalse(song("President", artistId: "ar2").isBy(artistId: "ar1", name: "President", keys: keys))
     XCTAssertTrue(song("Prez", artistId: "ar3").isBy(artistId: "ar1", name: "President", keys: keys))
+    // A download keeps no artist id and matches by name.
+    XCTAssertTrue(song("PRESIDENT", artistId: nil).isBy(artistId: "ar1", name: "President", keys: keys))
   }
 
   func testLibraryIndexKeysSongsByIdentityAndHistoryById() {
