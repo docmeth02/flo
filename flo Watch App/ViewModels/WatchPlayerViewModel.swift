@@ -1678,7 +1678,10 @@ class WatchPlayerViewModel: ObservableObject {
         if case .failure = result { online = false }
       }
       if songs.isEmpty {
-        let byArtist = { (library: [Song]) in library.filter { $0.isBy(artistId: id, name: name) } }
+        let keys = await SmartPlaybackService.shared.libraryIndex(allowSync: false).artistKeys
+        let byArtist = { (library: [Song]) in
+          library.filter { $0.isBy(artistId: id, name: name, keys: keys) }
+        }
         // Offline only what is downloaded or cached can play. Online a cache
         // without the artist (a fresh login, an artist added since) is synced.
         let service = SmartPlaybackService.shared
@@ -2053,7 +2056,7 @@ class WatchPlayerViewModel: ObservableObject {
 
   @MainActor func toggleStar() {
     guard hasNowPlaying(), let songId = nowPlaying.id, !songId.isEmpty else { return }
-    StarStore.shared.set(!isStarred, id: songId)
+    StarStore.shared.setSong(!isStarred, id: songId)
   }
 
   /// Whether a listed song is liked: the heart for the song playing, else

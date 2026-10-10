@@ -80,7 +80,8 @@ enum MenuTarget: Identifiable {
       if library.isEmpty, serverReachable {
         library = await SmartPlaybackService.shared.syncSongLibrary()
       }
-      let songs = library.filter { $0.isBy(artistId: artist.id, name: artist.name) }
+      let keys = await SmartPlaybackService.shared.libraryIndex(allowSync: false).artistKeys
+      let songs = library.filter { $0.isBy(artistId: artist.id, name: artist.name, keys: keys) }
       return (
         songs.sorted {
           ($0.year ?? 0, $0.albumName, $0.discNumber, $0.trackNumber)
@@ -230,7 +231,7 @@ private struct ItemMenuPresenter: ViewModifier {
       // Offline it waits in StarStore until the server is back.
       let starred = !isLiked(target)
       switch target {
-      case .song(let song, _, _): starStore.set(starred, id: song.playbackID)
+      case .song(let song, _, _): starStore.setSong(starred, id: song.playbackID)
       case .album(let album): starStore.set(starred, id: album.id)
       case .artist(let artist): starStore.set(starred, id: artist.id)
       }

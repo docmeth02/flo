@@ -19,8 +19,9 @@ import WatchKit
   // Stars the server took this session; lists loaded before still carry the
   // old state.
   private var confirmed: [String: Bool] = [:]
-  // The songs the server's latest full list starred.
-  private var listedSongs = Set<String>()
+  // Ids known to be songs: a full list of starred songs speaks for these
+  // and for no album or artist.
+  private var songIds = Set<String>()
   /// Bumped by every edit made here; a server answer asked for before an
   /// edit is older than it.
   private(set) var editCount = 0
@@ -79,28 +80,37 @@ import WatchKit
   /// A fresh answer from the server: newer than what it took earlier this
   /// session and than the state lists were loaded with. An edit still
   /// waiting stays on top.
+  /// Only songs are looked up one by one.
   func adoptServerState(_ starred: Bool, id: String) {
+    songIds.insert(id)
     guard confirmed[id] != starred else { return }
     confirmed[id] = starred
     publish()
   }
 
   /// The server's full list of starred songs, asked for when `editCount`
-  /// was `since`: newer than earlier lookups, and a song the previous list
-  /// had and this one lacks was unstarred. Ignored when an edit was made
-  /// meanwhile; edits still waiting stay on top.
+  /// was `since`: newer than earlier lookups, and any song known here that
+  /// it lacks was unstarred. Ignored when an edit was made meanwhile; edits
+  /// still waiting stay on top.
   func adoptServerStars(_ ids: [String], since: Int) {
     guard since == editCount else { return }
-    let songs = Set(ids)
-    for id in listedSongs.subtracting(songs) { confirmed[id] = false }
-    for id in songs { confirmed[id] = true }
-    listedSongs = songs
+    let starred = Set(ids)
+    songIds.formUnion(starred)
+    for id in songIds.subtracting(starred) { confirmed[id] = false }
+    for id in starred { confirmed[id] = true }
     publish()
   }
 
   /// An edit made here that the server has not taken yet.
   func isPending(_ id: String) -> Bool {
     edits[id] != nil
+  }
+
+  /// `set` for a song, which a later full list of starred songs covers.
+  func setSong(_ starred: Bool, id: String) {
+    guard !id.isEmpty else { return }
+    songIds.insert(id)
+    set(starred, id: id)
   }
 
   func set(_ starred: Bool, id: String) {
@@ -118,7 +128,7 @@ import WatchKit
   private func forgetAccount() {
     edits.forgetAccount()
     confirmed = [:]
-    listedSongs = []
+    songIds = []
     publish()
   }
 }

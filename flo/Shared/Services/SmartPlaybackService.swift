@@ -62,7 +62,10 @@ final class SmartPlaybackService {
         if genres.isEmpty, let genre = song.genre { genres = [genre] }
         if artistId.isEmpty {
           artistKey = ArtistIdentity.key(name: song.artist, mbid: nil) ?? ""
-          historyArtistKey = artistKey
+          // The key history was stored under before ArtistIdentity.
+          historyArtistKey = song.artist
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .trimmingCharacters(in: .whitespaces)
         } else {
           artistKey = artistKeys[artistId] ?? artistId
           historyArtistKey = artistId
@@ -308,9 +311,13 @@ final class SmartPlaybackService {
     // Stars leave updatedAt alone, so the starred list is refreshed on every
     // run that reaches the server; the cached library's own flags go stale.
     let starredRequestedAt = Date()
+    let starsSince = await MainActor.run { StarStore.shared.editCount }
     if let starred = try? await withCheckedThrowingContinuation({ continuation in
       AlbumService.shared.getStarredSongs { continuation.resume(with: $0) }
     }) {
+      await MainActor.run {
+        StarStore.shared.adoptServerStars(starred.map(\.playbackID), since: starsSince)
+      }
       await withCheckedContinuation { continuation in
         DispatchQueue.global(qos: .utility).async {
           // The Liked Songs screen may have saved a newer list meanwhile.
