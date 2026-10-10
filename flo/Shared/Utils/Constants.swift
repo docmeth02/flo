@@ -70,6 +70,8 @@ enum UserDefaultsKeys {
   // 1 to 5 or 0 to clear, and stars.
   static let pendingRatings = "pendingRatings"
   static let pendingStars = "pendingStars"
+  // The songs among pendingStars (StarStore).
+  static let pendingStarSongs = "pendingStarSongs"
   static let confirmedRatings = "confirmedRatings"
 }
 

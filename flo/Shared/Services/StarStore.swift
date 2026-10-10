@@ -20,12 +20,18 @@ import WatchKit
   // old state.
   private var confirmed: [String: Bool] = [:]
   // Ids known to be songs: a full list of starred songs speaks for these
-  // and for no album or artist.
+  // and for no album or artist. The songs of edits still waiting are kept
+  // across launches with them.
   private var songIds = Set<String>()
-  /// Bumped by every edit made here and every one the server took; a server
-  /// answer asked for before either is older than it.
+  private var pendingSongs: Set<String>
+  /// Bumped by every edit made here; a server answer asked for before an
+  /// edit is older than it.
   private(set) var editCount = 0
+  /// Bumped by every edit and by every one the server took: a full list
+  /// asked for before either may lack it.
+  private(set) var listRevision = 0
   private let edits: PendingEdits<Bool>
+  private let defaults: UserDefaults
 
   /// `defaults`, `canSend` and `send` are for tests.
   init(
@@ -40,14 +46,17 @@ import WatchKit
       }
     }
   ) {
+    self.defaults = defaults
+    pendingSongs = Set(defaults.stringArray(forKey: UserDefaultsKeys.pendingStarSongs) ?? [])
+    songIds = pendingSongs
     edits = PendingEdits(
       name: "star", key: UserDefaultsKeys.pendingStars, defaults: defaults, canSend: canSend,
       send: send)
     edits.onSettle = { [unowned self] id, starred, accepted in
       // Not when a newer edit for the item waits, as for ratings.
       if accepted, self.edits[id] == nil { self.confirmed[id] = starred }
-      // A list asked for before the server took it may still lack it.
-      if accepted { self.editCount += 1 }
+      if accepted { self.listRevision += 1 }
+      if self.edits[id] == nil, self.pendingSongs.remove(id) != nil { self.savePendingSongs() }
       self.publish()
     }
 
@@ -90,12 +99,12 @@ import WatchKit
     publish()
   }
 
-  /// The server's full list of starred songs, asked for when `editCount`
+  /// The server's full list of starred songs, asked for when `listRevision`
   /// was `since`: newer than earlier lookups, and any song known here that
-  /// it lacks was unstarred. Ignored when an edit was made meanwhile; edits
-  /// still waiting stay on top.
+  /// it lacks was unstarred. Ignored when an edit was made or taken
+  /// meanwhile; edits still waiting stay on top.
   func adoptServerStars(_ ids: [String], since: Int) {
-    guard since == editCount else { return }
+    guard since == listRevision else { return }
     let starred = Set(ids)
     songIds.formUnion(starred)
     for id in songIds.subtracting(starred) { confirmed[id] = false }
@@ -112,12 +121,14 @@ import WatchKit
   func setSong(_ starred: Bool, id: String) {
     guard !id.isEmpty else { return }
     songIds.insert(id)
+    if pendingSongs.insert(id).inserted { savePendingSongs() }
     set(starred, id: id)
   }
 
   func set(_ starred: Bool, id: String) {
     guard !id.isEmpty else { return }
     editCount += 1
+    listRevision += 1
     edits.set(starred, id: id)
     publish()
   }
@@ -127,10 +138,16 @@ import WatchKit
     if merged != stars { stars = merged }
   }
 
+  private func savePendingSongs() {
+    defaults.set(Array(pendingSongs), forKey: UserDefaultsKeys.pendingStarSongs)
+  }
+
   private func forgetAccount() {
     edits.forgetAccount()
     confirmed = [:]
     songIds = []
+    pendingSongs = []
+    defaults.removeObject(forKey: UserDefaultsKeys.pendingStarSongs)
     publish()
   }
 }

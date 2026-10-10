@@ -228,7 +228,7 @@ class AlbumViewModel: ObservableObject {
   /// The server's Liked Songs, which also tell StarStore what is starred now
   /// (the cached copy shown meanwhile does not).
   private static func starredSongsRequest(_ completion: @escaping (Result<[Song], Error>) -> Void) {
-    let since = MainActor.assumeIsolated { StarStore.shared.editCount }
+    let since = MainActor.assumeIsolated { StarStore.shared.listRevision }
     AlbumService.shared.getStarredSongs { result in
       if case .success(let songs) = result {
         DispatchQueue.main.async {

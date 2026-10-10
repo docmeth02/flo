@@ -69,10 +69,10 @@ final class StarStoreTests: XCTestCase {
   func testAFreshStarredListIsAdoptedUnlessAnEditCameInBetween() {
     let store = makeStore()
     store.adoptServerState(false, id: "s1")
-    store.adoptServerStars(["s1"], since: store.editCount)
+    store.adoptServerStars(["s1"], since: store.listRevision)
     XCTAssertTrue(store.isStarred("s1", listed: false))
 
-    let since = store.editCount
+    let since = store.listRevision
     reachable = false
     store.set(false, id: "s2")
     store.adoptServerStars(["s2"], since: since)
@@ -89,8 +89,8 @@ final class StarStoreTests: XCTestCase {
 
   func testASongMissingFromAFreshListIsUnstarred() {
     let store = makeStore()
-    store.adoptServerStars(["s1", "s2"], since: store.editCount)
-    store.adoptServerStars(["s2"], since: store.editCount)
+    store.adoptServerStars(["s1", "s2"], since: store.listRevision)
+    store.adoptServerStars(["s2"], since: store.listRevision)
     XCTAssertFalse(store.isStarred("s1", listed: true))
     XCTAssertTrue(store.isStarred("s2", listed: false))
     // An item no song list had keeps its state.

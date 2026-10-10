@@ -309,7 +309,7 @@ final class SmartPlaybackService {
     // Stars leave updatedAt alone, so the starred list is refreshed on every
     // run that reaches the server; the cached library's own flags go stale.
     let starredRequestedAt = Date()
-    let starsSince = await MainActor.run { StarStore.shared.editCount }
+    let starsSince = await MainActor.run { StarStore.shared.listRevision }
     if let starred = try? await withCheckedThrowingContinuation({ continuation in
       AlbumService.shared.getStarredSongs { continuation.resume(with: $0) }
     }) {
