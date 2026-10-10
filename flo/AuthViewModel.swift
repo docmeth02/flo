@@ -59,6 +59,7 @@ class AuthViewModel: ObservableObject {
     case .found:
       storedLoginUnreadable = false
       guard Self.restoreServerURL() else {
+        AuthService.shared.clearCreds()
         isLoggedIn = false
         return
       }
@@ -166,9 +167,14 @@ class AuthViewModel: ObservableObject {
     }
   }
 
+  /// An unreadable login is read again; a renewal that could not read the
+  /// Keychain (locked watch) is tried again.
   @objc private func handleDidBecomeActive() {
-    guard storedLoginUnreadable else { return }
-    adopt(AuthService.shared.loadStoredLogin())
+    if storedLoginUnreadable {
+      adopt(AuthService.shared.loadStoredLogin())
+    } else if needsReauthentication {
+      reauthenticate()
+    }
   }
 
   @objc private func handleNetworkBecameOnline() {

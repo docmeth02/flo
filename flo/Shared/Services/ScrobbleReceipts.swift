@@ -11,7 +11,6 @@ import Foundation
 /// memory, which protects this process only. Main thread.
 final class ScrobbleReceipts {
   struct Receipt: Codable, Hashable {
-    let account: String
     /// The outbox row's object id URI, stable across launches.
     let row: String
   }

@@ -179,7 +179,8 @@ final class ScrobbleOutboxTests: XCTestCase {
     XCTAssertEqual(try Data(contentsOf: receiptsURL), Data("[]".utf8))
   }
 
-  func testReceiptsOfAnotherAccountDoNotApply() {
+  /// A delivered row is never sent again, also not under the next account.
+  func testADeliveredRowIsNotResentUnderAnotherAccount() {
     outbox.enqueue(payload("a"))
     store.failSaves = true
     answer(0, .success(()))
@@ -188,12 +189,11 @@ final class ScrobbleOutboxTests: XCTestCase {
     account = "server|b"
     makeOutbox()
     triggers.send()
-    XCTAssertEqual(sends.map(\.songId), ["a", "a"])
+    XCTAssertEqual(sends.map(\.songId), ["a"])
   }
 
   func testReceiptsWhoseRowIsGoneAreDropped() {
-    let stale = ScrobbleReceipts.Receipt(
-      account: "server|a", row: "x-coredata://gone/ScrobbleEntity/p1")
+    let stale = ScrobbleReceipts.Receipt(row: "x-coredata://gone/ScrobbleEntity/p1")
     ScrobbleReceipts(fileURL: receiptsURL).insert(stale)
     XCTAssertTrue(ScrobbleReceipts(fileURL: receiptsURL).contains(stale))
 

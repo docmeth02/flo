@@ -167,9 +167,9 @@ final class ScrobbleQueueManager {
   func clearAll() {
     accountGeneration += 1
     cancelRetry()
-    receipts.removeAll()
     scrobbles.forEach { store.viewContext.delete($0) }
-    store.saveRecord()
+    // Rows a failed delete brings back keep their receipts.
+    if store.saveRecord() { receipts.removeAll() }
     reload()
   }
 
@@ -209,7 +209,7 @@ final class ScrobbleQueueManager {
     }
 
     // Without credentials the server would refuse every listen for good.
-    guard let account = accountKey() else {
+    guard accountKey() != nil else {
       backOff()
       scheduleRetry()
       return
@@ -219,10 +219,10 @@ final class ScrobbleQueueManager {
     flushRequested = false
     // A timer firing mid-flush would request a second pass over the same rows.
     cancelRetry()
-    submitPending(scrobbles, account: account)
+    submitPending(scrobbles)
   }
 
-  private func submitPending(_ entries: [ScrobbleEntity], account: String) {
+  private func submitPending(_ entries: [ScrobbleEntity]) {
     guard let entry = entries.first else {
       isFlushing = false
       reload()
@@ -244,11 +244,12 @@ final class ScrobbleQueueManager {
     }
 
     let remaining = Array(entries.dropFirst())
-    let receipt = ScrobbleReceipts.Receipt(account: account, row: Self.rowID(entry))
+    // A row one server took is never sent again, to any account.
+    let receipt = ScrobbleReceipts.Receipt(row: Self.rowID(entry))
 
     guard let songId = entry.songId, !songId.isEmpty, !receipts.contains(receipt) else {
       if delete(entry) { receipts.remove(receipt) }
-      submitPending(remaining, account: account)
+      submitPending(remaining)
       return
     }
 
@@ -267,11 +268,11 @@ final class ScrobbleQueueManager {
           debugLog("queued scrobble delivered: \(songId)")
           self.receipts.insert(receipt)
           if self.delete(entry) { self.receipts.remove(receipt) }
-          self.submitPending(remaining, account: account)
+          self.submitPending(remaining)
 
         case .failure(let error) where FloooService.shared.isPermanentScrobbleFailure(error):
           self.delete(entry)
-          self.submitPending(remaining, account: account)
+          self.submitPending(remaining)
 
         case .failure(let error):
           entry.status = Status.failed
