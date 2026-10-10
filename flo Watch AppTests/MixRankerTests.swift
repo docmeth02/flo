@@ -30,8 +30,24 @@ final class MixRankerTests: XCTestCase {
     var rng = SplitMix64(seed: seed)
     return MixRanker().rank(
       library: songs, index: index, affinity: AffinitySnapshot(), journal: JournalSnapshot(),
-      ratings: [:], starred: [], mode: .playSomething, count: count, now: now, rng: &rng
+      pendingPlays: [:], ratings: [:], starred: [], mode: .playSomething, count: count, now: now,
+      rng: &rng
     ).songs
+  }
+
+  /// The score line of the first song ranked alone.
+  private func scores(
+    journal: JournalSnapshot = JournalSnapshot(), pendingPlays: [String: Date] = [:],
+    ratings: [String: MixRanker.Rating] = [:]
+  ) -> String? {
+    let song = library()[0]
+    let index = SmartPlaybackService.LibraryIndex(songs: [song.playbackID: .init(song)])
+    var rng = SplitMix64(seed: 1)
+    return MixRanker().rank(
+      library: [song], index: index, affinity: AffinitySnapshot(), journal: journal,
+      pendingPlays: pendingPlays, ratings: ratings, starred: [], mode: .playSomething, count: 1,
+      now: now, rng: &rng
+    ).record.picks.first?.scores
   }
 
   func testSameSeedGivesTheSameMix() {
@@ -65,5 +81,64 @@ final class MixRankerTests: XCTestCase {
     let spread = MixRanker.spreadArtists(["A", "A", "B", "C"], after: "C") { $0 }
     XCTAssertEqual(spread, ["A", "B", "A", "C"])
     XCTAssertNotEqual(MixRanker.spreadArtists(["C", "D"], after: "C") { $0 }.first, "C")
+  }
+
+  func testArtistAffinityIsSummedPerArtistKey() {
+    let earlier = Date(timeIntervalSince1970: 100)
+    let latest = Date(timeIntervalSince1970: 200)
+    var president = library()[0]
+    president.artistId = "ar1"
+    var shouting = library()[1]
+    shouting.artistId = "ar2"
+    let keys = ["ar1": "name:president", "ar2": "name:president"]
+    let index = SmartPlaybackService.LibraryIndex(songs: [
+      president.playbackID: .init(president, artistKeys: keys),
+      shouting.playbackID: .init(shouting, artistKeys: keys),
+    ])
+    let stored: [String: AffinitySnapshot.Aggregate] = [
+      "ar1": .init(weight: 2, lastPlayAt: latest, plays: 3),
+      "ar2": .init(weight: 1.5, lastPlayAt: earlier, plays: 2),
+      "ar9": .init(weight: 1, lastPlayAt: nil, plays: 1),
+    ]
+    let groups = MixRanker.artistAffinity(stored, index: index)
+    XCTAssertEqual(groups.count, 2)
+    XCTAssertEqual(groups["name:president"]?.weight ?? 0, 3.5, accuracy: 1e-9)
+    XCTAssertEqual(groups["name:president"]?.plays, 5)
+    XCTAssertEqual(groups["name:president"]?.lastPlayAt, latest)
+    XCTAssertEqual(groups["ar9"]?.plays, 1)
+  }
+
+  func testAnOutboxPlayCoolsASongDownOnceAndAddsNoPlays() throws {
+    let id = library()[0].playbackID
+    let heard = now.addingTimeInterval(-3600)
+    var journal = JournalSnapshot()
+    journal.lastHeardAt[id] = heard
+
+    let fresh = try XCTUnwrap(scores())
+    let outbox = try XCTUnwrap(scores(pendingPlays: [id: heard]))
+    XCTAssertNotEqual(outbox, fresh)
+    XCTAssertEqual(outbox, scores(journal: journal))
+    XCTAssertEqual(outbox, scores(journal: journal, pendingPlays: [id: heard]))
+    // An older outbox play leaves the journal's newer one in charge.
+    XCTAssertEqual(
+      outbox, scores(journal: journal, pendingPlays: [id: heard.addingTimeInterval(-7200)]))
+  }
+
+  func testLatestListensKeepTheNewestPerSong() {
+    let early = Date(timeIntervalSince1970: 100)
+    let late = Date(timeIntervalSince1970: 200)
+    let latest = SmartPlaybackService.latestListens([
+      (songId: "s1", at: late), (songId: "s1", at: early), (songId: "s2", at: early),
+    ])
+    XCTAssertEqual(latest, ["s1": late, "s2": early])
+  }
+
+  func testAnAlbumRatingShowsAsTheAlbums() throws {
+    let id = library()[0].playbackID
+    let own = try XCTUnwrap(scores(ratings: [id: .init(stars: 5, fromAlbum: false)]))
+    let album = try XCTUnwrap(scores(ratings: [id: .init(stars: 5, fromAlbum: true)]))
+    XCTAssertTrue(own.contains("rating=5+.35"), own)
+    XCTAssertTrue(album.contains("rating=5(album)+.35"), album)
+    XCTAssertNil(scores(ratings: [id: .init(stars: 1, fromAlbum: true)]))
   }
 }

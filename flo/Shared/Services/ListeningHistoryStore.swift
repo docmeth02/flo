@@ -417,8 +417,8 @@ actor ListeningHistoryStore {
       // A play stamped in the future counts as played now.
       let at = min(time, now)
       folds.append(Fold(kind: .song, key: mediaFileId, time: at, weight: 1))
-      if !song.artistKey.isEmpty {
-        folds.append(Fold(kind: .artist, key: song.artistKey, time: at, weight: 1))
+      if !song.historyArtistKey.isEmpty {
+        folds.append(Fold(kind: .artist, key: song.historyArtistKey, time: at, weight: 1))
       }
       if !song.albumId.isEmpty {
         folds.append(Fold(kind: .album, key: song.albumId, time: at, weight: 1))

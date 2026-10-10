@@ -79,7 +79,7 @@ final class PlaybackJournal {
           snapshot.skips[id, default: []].append(
             JournalSnapshot.SkipEvent(
               at: at, weight: Self.skipWeight(origin: row.origin, listened: row.listenedSeconds),
-              artistKey: row.artistName.map(SmartPlaybackService.artistKey) ?? ""))
+              artistKey: ArtistIdentity.key(name: row.artistName, mbid: nil) ?? ""))
         }
       }
       return snapshot

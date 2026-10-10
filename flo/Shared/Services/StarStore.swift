@@ -19,6 +19,8 @@ import WatchKit
   // Stars the server took this session; lists loaded before still carry the
   // old state.
   private var confirmed: [String: Bool] = [:]
+  // The songs the server's latest full list starred.
+  private var listedSongs = Set<String>()
   /// Bumped by every edit made here; a server answer asked for before an
   /// edit is older than it.
   private(set) var editCount = 0
@@ -66,6 +68,14 @@ import WatchKit
     stars[id] ?? listed
   }
 
+  /// `isStarred` over a whole list: the starred ids among `listed` and the
+  /// items this store knows of.
+  func starred(listed: Set<String>) -> Set<String> {
+    stars.reduce(into: listed) { result, star in
+      if star.value { result.insert(star.key) } else { result.remove(star.key) }
+    }
+  }
+
   /// A fresh answer from the server: newer than what it took earlier this
   /// session and than the state lists were loaded with. An edit still
   /// waiting stays on top.
@@ -75,12 +85,16 @@ import WatchKit
     publish()
   }
 
-  /// The server's list of starred items, asked for when `editCount` was
-  /// `since`: newer than earlier lookups. Ignored when an edit was made
+  /// The server's full list of starred songs, asked for when `editCount`
+  /// was `since`: newer than earlier lookups, and a song the previous list
+  /// had and this one lacks was unstarred. Ignored when an edit was made
   /// meanwhile; edits still waiting stay on top.
   func adoptServerStars(_ ids: [String], since: Int) {
     guard since == editCount else { return }
-    for id in ids { confirmed[id] = true }
+    let songs = Set(ids)
+    for id in listedSongs.subtracting(songs) { confirmed[id] = false }
+    for id in songs { confirmed[id] = true }
+    listedSongs = songs
     publish()
   }
 
@@ -104,6 +118,7 @@ import WatchKit
   private func forgetAccount() {
     edits.forgetAccount()
     confirmed = [:]
+    listedSongs = []
     publish()
   }
 }

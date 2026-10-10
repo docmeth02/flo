@@ -33,7 +33,9 @@
           func size(_ song: Song) -> Int {
             index.songs[song.playbackID]?.genres.map { genreSizes[$0] ?? 0 }.max() ?? 0
           }
-          if let song = library.songs.filter({ index.songs[$0.playbackID]?.artistKey == top })
+          if let song = library.songs.filter({
+            index.songs[$0.playbackID]?.historyArtistKey == top
+          })
             .max(by: { size($0) < size($1) })
           {
             let genres = Set(index.songs[song.playbackID]?.genres ?? [])
@@ -66,7 +68,10 @@
             "skip \(id): \(events.count) events P_song="
               + String(format: "%.3f", MixRanker().skipPenalty(events, now: Date())))
         }
-        let ratings = await MainActor.run { RatingStore.shared.ratings }
+        let pendingPlays = Self.latestListens(ScrobbleQueueManager.shared.pendingListens())
+        let (ratings, starred) = await MainActor.run { [songs = library.songs] in
+          (Self.effectiveRatings(of: songs), StarStore.shared.starred(listed: library.starredIds))
+        }
 
         // The scores of one song, ranked alone: priors differ from a full
         // library, cooldown, skips and ratings do not.
@@ -76,8 +81,8 @@
           var rng = SplitMix64(seed: 1)
           let alone = MixRanker().rank(
             library: [song], index: index, affinity: affinity, journal: journal,
-            ratings: ratings, starred: library.starredIds, mode: mode, count: 1, now: Date(),
-            rng: &rng)
+            pendingPlays: pendingPlays, ratings: ratings, starred: starred, mode: mode,
+            count: 1, now: Date(), rng: &rng)
           debugLog(
             "song \(id) \(song.title): "
               + (alone.record.picks.first.map { "\($0.slot) \($0.scores)" } ?? "excluded"))
@@ -112,8 +117,8 @@
           let started = DispatchTime.now().uptimeNanoseconds
           let result = MixRanker().rank(
             library: inflated, index: inflatedIndex, affinity: affinity, journal: journal,
-            ratings: ratings, starred: library.starredIds, mode: mode, count: 15, now: Date(),
-            rng: &rng)
+            pendingPlays: pendingPlays, ratings: ratings, starred: starred, mode: mode,
+            count: 15, now: Date(), rng: &rng)
           debugLog(
             "mix timing: \(inflated.count) songs, \(result.songs.count) picked in "
               + String(

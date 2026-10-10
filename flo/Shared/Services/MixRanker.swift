@@ -82,6 +82,12 @@ struct MixRanker {
 
   var config = Config()
 
+  /// A song's rating for the mix and whether it is its album's.
+  struct Rating: Sendable, Equatable {
+    let stars: Int
+    let fromAlbum: Bool
+  }
+
   private struct Candidate {
     let index: Int
     var artist = 0.0
@@ -90,8 +96,10 @@ struct MixRanker {
     var era = 0.0
     var song = 0.0
     var rating = 0
+    var ratingFromAlbum = false
     var starred = false
     var skip = 0.0
+    var pressure = 0.0
     var cool = 1.0
     var context = 0.0
     var anchored = false
@@ -116,22 +124,32 @@ struct MixRanker {
     case preferred, explore
   }
 
+  /// How a pick got into the mix, for diagnostics.
+  private enum Source: String {
+    case explore, sampled, remainder
+    case relaxedGenre = "relaxed genre"
+    case relaxedCaps = "relaxed caps"
+  }
+
   private enum Admission {
     case taken, capped, rejected
   }
 
   // MARK: - Ranking
 
+  /// `pendingPlays` are the latest listens per song still in the outbox: the
+  /// server's log has not counted them yet, so they only cool their songs
+  /// down, like the journal's.
   func rank(
     library: [Song], index: SmartPlaybackService.LibraryIndex, affinity: AffinitySnapshot,
-    journal: JournalSnapshot, ratings: [String: Int], starred: Set<String>,
-    mode: SmartPlaybackService.MixMode, count: Int, now: Date,
+    journal: JournalSnapshot, pendingPlays: [String: Date], ratings: [String: Rating],
+    starred: Set<String>, mode: SmartPlaybackService.MixMode, count: Int, now: Date,
     rng: inout some RandomNumberGenerator
   ) -> (songs: [Song], record: MixRecord) {
     let cfg = config
     var notes: [String] = []
 
-    let artistAgg = affinity.aggregates[.artist] ?? [:]
+    let artistAgg = Self.artistAffinity(affinity.aggregates[.artist] ?? [:], index: index)
     let albumAgg = affinity.aggregates[.album] ?? [:]
     let genreAgg = affinity.aggregates[.genre] ?? [:]
     let eraAgg = affinity.aggregates[.era] ?? [:]
@@ -146,9 +164,11 @@ struct MixRanker {
     if case .keepPlaying(let keep) = mode { context = keep }
     let modeName = context == nil ? "playSomething" : "keepPlaying"
 
-    // Skips and the seed name artists; the library maps names to artist ids.
+    // Skips and the seed name artists; the library maps names to artist keys.
     var wantedNames = Set<String>()
-    if let context { wantedNames.insert(SmartPlaybackService.artistKey(context.seed.artist)) }
+    if let context, let name = ArtistIdentity.key(name: context.seed.artist, mbid: nil) {
+      wantedNames.insert(name)
+    }
     for (id, events) in journal.skips where index.songs[id] == nil {
       wantedNames.formUnion(events.map(\.artistKey))
     }
@@ -157,7 +177,8 @@ struct MixRanker {
     // Pass 1: keys, server-count priors, catalogue plays and title cooldowns.
     let ids = library.map(\.playbackID)
     let entries = library.indices.map {
-      index.songs[ids[$0]] ?? SmartPlaybackService.LibraryIndex.Entry(library[$0])
+      index.songs[ids[$0]]
+        ?? SmartPlaybackService.LibraryIndex.Entry(library[$0], artistKeys: index.artistKeys)
     }
     var artists: [String: ArtistStats] = [:]
     var albumPrior: [String: Double] = [:]
@@ -213,20 +234,20 @@ struct MixRanker {
       artists[entry.artistKey, default: ArtistStats()].songs += 1
       artists[entry.artistKey, default: ArtistStats()].plays.append(plays)
 
-      let rating = ratings[ids[i]] ?? 0
+      let rating = ratings[ids[i]]?.stars ?? 0
       if rating >= 4 || starred.contains(ids[i]) { favouredArtists.insert(entry.artistKey) }
 
       if !wantedNames.isEmpty {
         // Folding is slow; a library repeats few artist spellings.
-        let name = foldedNames[song.artist] ?? SmartPlaybackService.artistKey(song.artist)
+        let name =
+          foldedNames[song.artist] ?? ArtistIdentity.key(name: song.artist, mbid: nil) ?? ""
         foldedNames[song.artist] = name
         if wantedNames.contains(name), artistIds[name] == nil { artistIds[name] = entry.artistKey }
       }
 
-      var heard = aggregate?.lastPlayAt
-      if let journaled = journal.lastHeardAt[ids[i]], heard.map({ journaled > $0 }) ?? true {
-        heard = journaled
-      }
+      // Each source of a play cools it down once: the latest of them counts.
+      let heard = [aggregate?.lastPlayAt, journal.lastHeardAt[ids[i]], pendingPlays[ids[i]]]
+        .compactMap { $0 }.max()
       heardAt[i] = heard
       if let heard, now.timeIntervalSince(heard) < cfg.titleCooldownWindow {
         let key = titleKey(i)
@@ -256,7 +277,7 @@ struct MixRanker {
     }
 
     let seedArtist = context.map {
-      let name = SmartPlaybackService.artistKey($0.seed.artist)
+      let name = ArtistIdentity.key(name: $0.seed.artist, mbid: nil) ?? ""
       return artistIds[name] ?? name
     }
     let anchorGenres = context?.anchorGenres ?? []
@@ -309,7 +330,8 @@ struct MixRanker {
       let entry = entries[i]
       let id = ids[i]
       // Lookups in empty dictionaries still hash, and most of these are empty.
-      let rating = ratings.isEmpty ? 0 : ratings[id] ?? 0
+      let rated = ratings.isEmpty ? nil : ratings[id]
+      let rating = rated?.stars ?? 0
       if rating == 1 || (!queueIds.isEmpty && (queueIds.contains(song.id) || queueIds.contains(id)))
       {
         continue
@@ -329,8 +351,10 @@ struct MixRanker {
       c.song = feature(
         songWeights[i], Double(min(song.playCount ?? 0, cfg.priorPlayCap)), cfg.songK)
       c.rating = rating
+      c.ratingFromAlbum = rated?.fromAlbum ?? false
       c.starred = !starred.isEmpty && starred.contains(id)
       c.skip = songSkip.isEmpty ? 0 : cfg.skipPenalty * min(cfg.skipLoadCap, songSkip[id] ?? 0)
+      c.pressure = artist.pressure
 
       if let heard = heardAt[i] {
         let hours = max(0, now.timeIntervalSince(heard)) / 3600
@@ -353,13 +377,12 @@ struct MixRanker {
           - (seedAlbum ? cfg.seedAlbumPenalty : 0)
       }
 
-      let bonus = rating == 5 ? cfg.boostBonus : rating == 4 ? cfg.ratedFourBonus : 0
       let base =
         cfg.baseWeight + cfg.artistWeight * c.artist + cfg.albumWeight * c.album
         + cfg.genreWeight * c.genre + cfg.eraWeight * c.era + cfg.songWeight * c.song
-        + (c.starred ? cfg.starWeight : 0) + bonus - c.skip
-        - artist.pressure + c.context
-      c.preferred = c.cool * (rating == 2 ? cfg.ratedTwoMultiplier : 1) * max(0.01, base)
+        + (c.starred ? cfg.starWeight : 0) + ratingBonus(rating) - c.skip - c.pressure
+        + c.context
+      c.preferred = c.cool * ratingMultiplier(rating) * max(0.01, base)
 
       // Lesser-played songs from the listener's own clusters, never one rated down.
       let plays = lifetimePlays[i]
@@ -484,9 +507,9 @@ struct MixRanker {
       exploreSongs[a].append(n)
       exploreTotals[a] += candidates[n].explore
     }
-    notes.append(
+    let explorePool =
       "explore pool: \(exploreSongs.reduce(0) { $0 + $1.count }) songs by "
-        + "\(exploreSongs.count) artists, quota \(exploreQuota)")
+      + "\(exploreSongs.count) artists"
     var explorePicks: [Int] = []
     // One discovery per artist leaves the favourites room in the caps; the
     // artists' remaining songs are kept for a second round in case the
@@ -560,10 +583,15 @@ struct MixRanker {
       }
       .sorted { $0.1 > $1.1 }
       .map(\.0) + rest
+    notes.append("\(explorePool), quota \(exploreQuota), taken \(explorePicks.count)")
+    let sampled = Set(pool)
+    var sources: [Int: Source] = [:]
     var preferredPicks: [Int] = []
     for n in preferredOrder where preferredPicks.count + explorePicks.count < count {
       switch admit(n) {
-      case .taken: preferredPicks.append(n)
+      case .taken:
+        preferredPicks.append(n)
+        sources[n] = sampled.contains(n) ? .sampled : .remainder
       case .capped: overflow.append(n)
       case .rejected: break
       }
@@ -571,7 +599,10 @@ struct MixRanker {
     let capped = preferredPicks.count
     for relax in [Relax.genre, .all] {
       for n in overflow where preferredPicks.count + explorePicks.count < count {
-        if admit(n, relax: relax) == .taken { preferredPicks.append(n) }
+        if admit(n, relax: relax) == .taken {
+          preferredPicks.append(n)
+          sources[n] = relax == .genre ? .relaxedGenre : .relaxedCaps
+        }
       }
     }
     if preferredPicks.count > capped { notes.append("caps relaxed") }
@@ -608,7 +639,9 @@ struct MixRanker {
         reason: reason(
           c, slot: item.slot, frequentArtist: artists[entries[c.index].artistKey]?.cluster ?? false,
           bootstrap: bootstrap),
-        scores: scores(c, slot: item.slot, keepPlaying: context != nil))
+        scores: scores(
+          c, source: sources[item.n] ?? .explore, plays: lifetimePlays[c.index],
+          keepPlaying: context != nil))
     }
     let record = MixRecord(
       at: now, mode: modeName, picks: picks,
@@ -668,7 +701,8 @@ struct MixRanker {
         ? "less-played track by a frequent artist" : "less-played track in a favourite genre"
     }
     var parts: [String] = []
-    if c.rating == 5 { parts.append("boosted") } else if c.rating == 4 { parts.append("rated 4") }
+    let rated = c.rating == 5 ? "boosted" : c.rating == 4 ? "rated 4" : nil
+    if let rated { parts.append(c.ratingFromAlbum ? "album \(rated)" : rated) }
     if c.starred { parts.append("liked") }
     if c.song >= 0.5 { parts.append("favourite") }
     if c.seedArtist {
@@ -685,18 +719,58 @@ struct MixRanker {
     return parts.isEmpty ? "steady pick" : parts.prefix(3).joined(separator: ", ")
   }
 
-  private func scores(_ c: Candidate, slot: Slot, keepPlaying: Bool) -> String {
+  private func ratingBonus(_ rating: Int) -> Double {
+    rating == 5 ? config.boostBonus : rating == 4 ? config.ratedFourBonus : 0
+  }
+
+  private func ratingMultiplier(_ rating: Int) -> Double {
+    rating == 2 ? config.ratedTwoMultiplier : 1
+  }
+
+  /// The terms of the pick's weight. A preferred song's are its weighted
+  /// contributions (`final` = cool × rating multiplier × their sum with the
+  /// base weight); an explore song's are the features its weight grows with.
+  private func scores(_ c: Candidate, source: Source, plays: Int, keepPlaying: Bool) -> String {
     func f(_ x: Double) -> String {
       let text = String(format: "%.2f", x)
       if text.hasPrefix("0.") { return String(text.dropFirst()) }
       if text.hasPrefix("-0.") { return "-" + text.dropFirst(2) }
       return text
     }
-    var text =
-      "artist=\(f(c.artist)) genre=\(f(c.genre)) song=\(f(c.song)) rating=\(c.rating) "
-      + "star=\(c.starred ? 1 : 0) skip=\(f(c.skip)) cool=\(f(c.cool))"
+    let cfg = config
+    let rating = "rating=\(c.rating)" + (c.ratingFromAlbum ? "(album)" : "")
+    var text = "src=\(source.rawValue) "
+    if source == .explore {
+      text += "artist=\(f(c.artist)) genre=\(f(c.genre)) plays=\(plays) \(rating)"
+    } else {
+      let ratingTerm =
+        c.rating == 2 ? "x" + f(ratingMultiplier(c.rating)) : "+" + f(ratingBonus(c.rating))
+      text +=
+        "artist=\(f(cfg.artistWeight * c.artist)) album=\(f(cfg.albumWeight * c.album)) "
+        + "genre=\(f(cfg.genreWeight * c.genre)) era=\(f(cfg.eraWeight * c.era)) "
+        + "song=\(f(cfg.songWeight * c.song)) star=\(f(c.starred ? cfg.starWeight : 0)) "
+        + "\(rating)\(ratingTerm) skip=\(f(-c.skip)) press=\(f(-c.pressure))"
+    }
     if keepPlaying { text += " ctx=\(f(c.context))" }
-    return text + " final=\(f(slot == .explore ? c.explore : c.preferred))"
+    return text + " cool=\(f(c.cool)) final=\(f(source == .explore ? c.explore : c.preferred))"
+  }
+
+  /// The listening history's artist aggregates, stored per server artist,
+  /// summed per artist key: spellings of one artist share their plays.
+  static func artistAffinity(
+    _ stored: [String: AffinitySnapshot.Aggregate], index: SmartPlaybackService.LibraryIndex
+  ) -> [String: AffinitySnapshot.Aggregate] {
+    stored.reduce(into: [:]) { groups, row in
+      let key = index.artistKeys[row.key] ?? row.key
+      guard let group = groups[key] else {
+        groups[key] = row.value
+        return
+      }
+      groups[key] = AffinitySnapshot.Aggregate(
+        weight: group.weight + row.value.weight,
+        lastPlayAt: [group.lastPlayAt, row.value.lastPlayAt].compactMap { $0 }.max(),
+        plays: group.plays + row.value.plays)
+    }
   }
 }
 

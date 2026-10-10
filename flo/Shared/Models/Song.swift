@@ -257,10 +257,11 @@ extension Song {
     mediaFileId.isEmpty ? id : mediaFileId
   }
 
-  /// Whether the song is by this artist: by id, or by name for a song cached
-  /// without one.
+  /// Whether the song is by this artist: by id, or by a name spelled the
+  /// same way as far as ArtistIdentity can tell.
   func isBy(artistId: String, name: String) -> Bool {
-    guard let ownId = self.artistId, !ownId.isEmpty else { return artist == name }
-    return ownId == artistId
+    if let ownId = self.artistId, !ownId.isEmpty, ownId == artistId { return true }
+    guard let key = ArtistIdentity.key(name: name, mbid: nil) else { return false }
+    return ArtistIdentity.key(name: artist, mbid: nil) == key
   }
 }

@@ -78,4 +78,22 @@ final class StarStoreTests: XCTestCase {
     store.adoptServerStars(["s2"], since: since)
     XCTAssertFalse(store.isStarred("s2", listed: false))
   }
+
+  func testAStarredListIsOverlaidWithTheStoresStars() {
+    reachable = false
+    let store = makeStore()
+    store.set(true, id: "s1")
+    store.set(false, id: "s2")
+    XCTAssertEqual(store.starred(listed: ["s2", "s3"]), ["s1", "s3"])
+  }
+
+  func testASongMissingFromAFreshListIsUnstarred() {
+    let store = makeStore()
+    store.adoptServerStars(["s1", "s2"], since: store.editCount)
+    store.adoptServerStars(["s2"], since: store.editCount)
+    XCTAssertFalse(store.isStarred("s1", listed: true))
+    XCTAssertTrue(store.isStarred("s2", listed: false))
+    // An item no song list had keeps its state.
+    XCTAssertTrue(store.isStarred("al1", listed: true))
+  }
 }

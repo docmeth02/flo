@@ -42,18 +42,31 @@ final class SmartPlaybackService {
   /// is aggregated under: plays mirrored from the server join songs through it.
   struct LibraryIndex: Sendable {
     struct Entry: Sendable {
+      /// The artist history is stored under: the server's artist id, else
+      /// the artist key.
+      let historyArtistKey: String
+      /// One artist for recommendations across spellings (ArtistIdentity),
+      /// else the server's artist id; "" for neither.
       let artistKey: String
       let albumId: String
       let genres: [String]
       /// Decade such as "1990s"; nil without a year.
       let era: String?
 
-      /// The keys of a song, from its own metadata.
-      init(_ song: Song) {
+      /// The keys of a song from its own metadata, `artistKeys` mapping server
+      /// artist ids to identity keys. An artist missing from them keeps its
+      /// server id: the song's own artist tag may name guests as well.
+      init(_ song: Song, artistKeys: [String: String] = [:]) {
         let artistId = song.artistId ?? ""
         var genres = song.genres ?? []
         if genres.isEmpty, let genre = song.genre { genres = [genre] }
-        artistKey = artistId.isEmpty ? SmartPlaybackService.artistKey(song.artist) : artistId
+        if artistId.isEmpty {
+          artistKey = ArtistIdentity.key(name: song.artist, mbid: nil) ?? ""
+          historyArtistKey = artistKey
+        } else {
+          artistKey = artistKeys[artistId] ?? artistId
+          historyArtistKey = artistId
+        }
         albumId = song.albumId
         self.genres = genres.filter { !$0.isEmpty }
         era = song.year.flatMap { $0 > 0 ? "\($0 / 10 * 10)s" : nil }
@@ -61,6 +74,13 @@ final class SmartPlaybackService {
     }
 
     let songs: [String: Entry]
+    /// History artist key → artist key, for every artist in the library.
+    let artistKeys: [String: String]
+
+    init(songs: [String: Entry]) {
+      self.songs = songs
+      artistKeys = songs.values.reduce(into: [:]) { $0[$1.historyArtistKey] = $1.artistKey }
+    }
   }
 
   private static let songCacheMaxAge: TimeInterval = 24 * 60 * 60
@@ -72,7 +92,7 @@ final class SmartPlaybackService {
 
   private let syncLock = NSLock()
   private let indexLock = NSLock()
-  private var indexCache: (stampDate: Date?, index: LibraryIndex)?
+  private var indexCache: (stampDate: Date?, artistsDate: Date?, index: LibraryIndex)?
   private var syncRun: (id: UUID, task: Task<[Song], Never>, forced: Bool)?
 
   private init() {}
@@ -112,13 +132,17 @@ final class SmartPlaybackService {
       await RatingStore.shared.refreshIfStale(waitingAtMost: .seconds(3))
     }
     let index = await libraryIndex(allowSync: canStream)
-    let ratings = await MainActor.run { RatingStore.shared.ratings }
+    let pendingPlays = Self.latestListens(ScrobbleQueueManager.shared.pendingListens())
+    let (ratings, starred) = await MainActor.run { [songs, starredIds] in
+      (Self.effectiveRatings(of: songs), StarStore.shared.starred(listed: starredIds))
+    }
     var rng = SplitMix64(seed: Self.debugSeed ?? .random(in: .min ... .max))
 
     let started = DispatchTime.now().uptimeNanoseconds
     let (picked, record) = MixRanker().rank(
       library: songs, index: index, affinity: await affinity, journal: await journal,
-      ratings: ratings, starred: starredIds, mode: mode, count: count, now: Date(), rng: &rng)
+      pendingPlays: pendingPlays, ratings: ratings, starred: starred, mode: mode, count: count,
+      now: Date(), rng: &rng)
     let elapsed = Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
 
     await MainActor.run { RecommendationLog.shared.record(record) }
@@ -127,6 +151,29 @@ final class SmartPlaybackService {
         + "eligible=\(record.eligible) explore=\(String(format: "%.2f", record.exploreShare)) "
         + "ranker=\(String(format: "%.1f", elapsed))ms")
     return (picked, record)
+  }
+
+  /// The rating each song brings into a mix (RatingStore.effectiveRating)
+  /// and whether it is its album's; unrated songs are absent.
+  @MainActor static func effectiveRatings(of songs: [Song]) -> [String: MixRanker.Rating] {
+    let store = RatingStore.shared
+    var ratings: [String: MixRanker.Rating] = [:]
+    for song in songs {
+      let id = song.playbackID
+      let stars = store.effectiveRating(songId: id, albumId: song.albumId)
+      guard stars > 0 else { continue }
+      // Without its album, a song has only its own rating.
+      let own = store.effectiveRating(songId: id, albumId: nil)
+      ratings[id] = MixRanker.Rating(stars: stars, fromAlbum: own == 0)
+    }
+    return ratings
+  }
+
+  /// The latest listen per song of plays not delivered yet.
+  static func latestListens(_ listens: [(songId: String, at: Date)]) -> [String: Date] {
+    listens.reduce(into: [:]) { latest, listen in
+      latest[listen.songId] = max(latest[listen.songId] ?? listen.at, listen.at)
+    }
   }
 
   private static var debugSeed: UInt64? {
@@ -187,23 +234,27 @@ final class SmartPlaybackService {
     }
   }
 
-  /// Built from the cached song library on every call. A library that is
-  /// missing or cached without the metadata is synced first, so plays are
-  /// never folded without their genres and decades.
+  /// Built from the cached song library on every call, with the artists'
+  /// identities from the cached artist list. A library that is missing or
+  /// cached without the metadata is synced first, so plays are never folded
+  /// without their genres and decades.
   func libraryIndex(allowSync: Bool = true) async -> LibraryIndex {
-    // Decoding the whole cache is the expensive part; the stamp's date says
-    // whether the cache changed since the last index was built.
+    // Decoding the whole cache is the expensive part; the dates say whether
+    // the caches changed since the last index was built.
+    let artistsKey = AlbumViewModel.Library.artists.rawValue
     let stampDate = LibraryCacheManager.shared.modificationDate(forKey: "songs.stamp")
+    let artistsDate = LibraryCacheManager.shared.modificationDate(forKey: artistsKey)
     if let cached = indexLock.withLock({ indexCache }), cached.stampDate == stampDate,
-      stampDate != nil
+      cached.artistsDate == artistsDate, stampDate != nil
     {
       return cached.index
     }
-    let (cached, format) = await withCheckedContinuation { continuation in
+    let (cached, format, artistKeys) = await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .utility).async {
         let songs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
         let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: "songs.stamp")
-        continuation.resume(returning: (songs, stamp?.format))
+        let artists = LibraryCacheManager.shared.load([Artist].self, forKey: artistsKey) ?? []
+        continuation.resume(returning: (songs, stamp?.format, ArtistIdentity.keys(of: artists)))
       }
     }
     // Remembered as of before the songs were read: a sync landing meanwhile
@@ -232,10 +283,10 @@ final class SmartPlaybackService {
     var entries: [String: LibraryIndex.Entry] = [:]
     entries.reserveCapacity(songs.count)
     for song in songs {
-      entries[song.playbackID] = LibraryIndex.Entry(song)
+      entries[song.playbackID] = LibraryIndex.Entry(song, artistKeys: artistKeys)
     }
     let index = LibraryIndex(songs: entries)
-    indexLock.withLock { indexCache = (builtFrom, index) }
+    indexLock.withLock { indexCache = (builtFrom, artistsDate, index) }
     return index
   }
 
@@ -407,13 +458,6 @@ final class SmartPlaybackService {
   }
 
   // MARK: - Normalization
-
-  /// Case- and diacritic-insensitive key so "Beyoncé" and "beyonce" pool
-  /// their plays.
-  static func artistKey(_ artist: String) -> String {
-    artist.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-      .trimmingCharacters(in: .whitespaces)
-  }
 
   /// Strip version markers ("(Live)", "[2019 Remaster]", "- acoustic",
   /// "feat. X") so variants of a just-played track share its cooldown, while
