@@ -8,24 +8,6 @@
 import Alamofire
 import Foundation
 
-enum AuthResult<T> {
-  case success(T)
-  case failure(AuthError)
-
-  init(result: Result<T, Error>) {
-    switch result {
-    case .success(let value):
-      self = .success(value)
-    case .failure(let error):
-      if let authError = error as? AuthError {
-        self = .failure(authError)
-      } else {
-        self = .failure(.unknown)
-      }
-    }
-  }
-}
-
 enum AuthError: Error, Equatable {
   case server(message: String)
   // The server rejected the username or password.
@@ -38,41 +20,21 @@ struct ErrorResponse: Decodable {
   let error: String
 }
 
-class ErrorHandler {
-  static func isSessionExpired(error: AFError) -> Bool {
-    return error.responseCode == 401 || error.responseCode == 403
-  }
-
-  static func mapError(_ error: AFError) -> Error {
-    if isSessionExpired(error: error) {
-      return AuthError.sessionExpired
-    }
-    if let underlyingError = error.underlyingError as? URLError {
-      return AuthError.server(message: underlyingError.localizedDescription)
-    }
-    return AuthError.unknown
-  }
-
-  static func handleFailure<T>(
-    _ afError: AFError, response: DataResponse<T, AFError>,
-    completion: @escaping (Result<T, Error>) -> Void
-  ) {
-    // Preserve server message when available; 401 from /auth/login should
-    // surface as .server("invalid username or password"), not as a ghost
-    // session — the caller is not yet logged in. For other endpoints the
-    // 401 is surfaced via APIManager's sessionExpired notification and
-    // ErrorHandler.isSessionExpired / mapError.
-    if let data = response.data {
-      do {
-        let decoder = JSONDecoder()
-        let errorResponse = try decoder.decode(ErrorResponse.self, from: data)
-        let errorMessage = errorResponse.error
-        completion(.failure(AuthError.server(message: errorMessage)))
-      } catch {
-        completion(.failure(mapError(afError)))
-      }
+extension AuthError {
+  /// A failed login. Navidrome's own error body on a 401/403 is a rejected
+  /// password and on any other status a server message; a bare 401/403 from
+  /// a reverse proxy (expired proxy session, bot challenge) stays a transient
+  /// failure that keeps the session.
+  init(login error: AFError, body: Data?) {
+    let rejected = error.responseCode == 401 || error.responseCode == 403
+    if let body, let message = try? JSONDecoder().decode(ErrorResponse.self, from: body).error {
+      self = rejected ? .invalidCredentials(message: message) : .server(message: message)
+    } else if rejected {
+      self = .sessionExpired
+    } else if let urlError = error.underlyingError as? URLError {
+      self = .server(message: urlError.localizedDescription)
     } else {
-      completion(.failure(mapError(afError)))
+      self = .unknown
     }
   }
 }

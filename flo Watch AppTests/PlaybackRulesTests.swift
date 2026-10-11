@@ -22,6 +22,23 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertFalse(service.isPermanentFailure(URLError(.notConnectedToInternet)))
   }
 
+  /// Only Navidrome's own answer to a login logs out; a bare 401 from a proxy
+  /// and a lost connection keep the session.
+  func testLoginErrors() {
+    let body = Data(#"{"error":"Invalid username or password"}"#.utf8)
+    XCTAssertEqual(
+      AuthError(login: status(401), body: body),
+      .invalidCredentials(message: "Invalid username or password"))
+    XCTAssertEqual(AuthError(login: status(500), body: body), .server(message: "Invalid username or password"))
+    XCTAssertEqual(AuthError(login: status(401), body: Data("<html>".utf8)), .sessionExpired)
+    XCTAssertEqual(AuthError(login: status(403), body: nil), .sessionExpired)
+    let offline = URLError(.notConnectedToInternet)
+    XCTAssertEqual(
+      AuthError(login: .sessionTaskFailed(error: offline), body: nil),
+      .server(message: offline.localizedDescription))
+    XCTAssertEqual(AuthError(login: status(502), body: nil), .unknown)
+  }
+
   /// A dead zone is asked once more and then waited out; only the server's
   /// own verdict on the song skips it.
   func testDecisionFailuresSortIntoRetryWaitAndSkip() {

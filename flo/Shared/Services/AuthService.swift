@@ -68,19 +68,6 @@ class AuthService {
     return "?" + query.replacingOccurrences(of: "+", with: "%2B")
   }
 
-  func getCreds(key: String = "") -> String {
-    let snapshot = sessionSnapshot()
-    if key == "NDToken" {
-      return snapshot.ndToken
-    }
-
-    if key == "subsonicToken" {
-      return snapshot.subsonicCredentials
-    }
-
-    return ""
-  }
-
   func sessionSnapshot() -> AuthSessionSnapshot {
     credentialsLock.lock()
     defer { credentialsLock.unlock() }
@@ -250,37 +237,14 @@ class AuthService {
 
   func login(
     serverUrl: String, username: String, password: String,
-    completion: @escaping (AuthResult<UserAuth>) -> Void
+    completion: @escaping (Result<UserAuth, AuthError>) -> Void
   ) {
-    // The server the user typed wins over a stored one.
-    let baseUrl = serverUrl.isEmpty ? UserDefaultsManager.serverBaseURL : serverUrl
-    let url = "\(baseUrl)\(API.NDEndpoint.login)"
-
+    let url = "\(serverUrl)\(API.NDEndpoint.login)"
     let parameters: [String: Any] = ["username": username, "password": password]
 
     APIManager.shared.login(endpoint: url, parameters: parameters) {
       (response: DataResponse<UserAuth, AFError>) in
-      switch response.result {
-      case .success(let authResponse):
-        completion(.success(authResponse))
-      case .failure(let afError):
-        ErrorHandler.handleFailure(afError, response: response) { result in
-          let authResult = AuthResult(result: result)
-
-          // A 401/403 carrying Navidrome's own error body is a rejected
-          // password; callers must tell it apart from an unreachable server.
-          // A bare 401/403 from a reverse proxy (expired proxy session, bot
-          // challenge) stays a transient failure and keeps the session.
-          guard ErrorHandler.isSessionExpired(error: afError),
-            case .failure(.server(let message)) = authResult
-          else {
-            completion(authResult)
-            return
-          }
-
-          completion(.failure(.invalidCredentials(message: message)))
-        }
-      }
+      completion(response.result.mapError { AuthError(login: $0, body: response.data) })
     }
   }
 }

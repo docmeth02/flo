@@ -28,7 +28,7 @@
         AuthService.shared.invalidateNDTokenForTesting()
         debugLog("token invalidated at launch")
         DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in
-          let renewed = AuthService.shared.getCreds(key: "NDToken") != "expired"
+          let renewed = AuthService.shared.sessionSnapshot().ndToken != "expired"
           debugLog("loggedIn=\(self?.isLoggedIn ?? false) tokenRenewed=\(renewed)")
         }
       } else if isLoggedIn, let delay = env["FLO_DEBUG_LOGOUT_AFTER"].flatMap(Double.init) {
@@ -44,7 +44,7 @@
           AlbumService.shared.isStarred(songId: "debug") { _ in }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in
-          let renewed = AuthService.shared.getCreds(key: "NDToken") != "expired"
+          let renewed = AuthService.shared.sessionSnapshot().ndToken != "expired"
           debugLog("loggedIn=\(self?.isLoggedIn ?? false) tokenRenewed=\(renewed)")
         }
       }

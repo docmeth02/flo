@@ -31,8 +31,7 @@ class APIManager {
   }
 
   func NDEndpointRequest<T: Decodable>(
-    endpoint: String, method: HTTPMethod = .get, parameters: Parameters?,
-    encoding: ParameterEncoding = URLEncoding.queryString, timeout: TimeInterval? = nil,
+    endpoint: String, parameters: Parameters?,
     completion: @escaping (DataResponse<T, AFError>) -> Void
   ) {
     let authSession = AuthService.shared.sessionSnapshot()
@@ -41,14 +40,7 @@ class APIManager {
     let url = "\(UserDefaultsManager.serverBaseURL)\(endpoint)"
     let headers: HTTPHeaders = [API.NDAuthHeader: "Bearer \(token)"]
 
-    session.request(
-      url, method: method, parameters: parameters, encoding: encoding, headers: headers,
-      requestModifier: { request in
-        if let timeout = timeout {
-          request.timeoutInterval = timeout
-        }
-      }
-    )
+    session.request(url, parameters: parameters, headers: headers)
     .validate(statusCode: 200..<300)
     .responseDecodable(of: T.self) { response in
       if response.error == nil,
@@ -63,24 +55,14 @@ class APIManager {
   }
 
   func SubsonicEndpointRequest<T: Decodable>(
-    endpoint: String, method: HTTPMethod = .get, parameters: Parameters?,
-    encoding: ParameterEncoding = URLEncoding.queryString, timeout: TimeInterval? = nil,
+    endpoint: String, parameters: Parameters?,
     completion: @escaping (DataResponse<T, AFError>) -> Void
   ) {
-
-    // FIXME: refactor getCreds(key: "subsonicToken")
     let authSession = AuthService.shared.sessionSnapshot()
     let url =
       "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(authSession.subsonicCredentials)"
 
-    session.request(
-      url, method: method, parameters: parameters, encoding: encoding,
-      requestModifier: { request in
-        if let timeout = timeout {
-          request.timeoutInterval = timeout
-        }
-      }
-    )
+    session.request(url, parameters: parameters)
     .validate(statusCode: 200..<300)
     .responseDecodable(of: T.self) { response in
       Self.notifyIfSessionExpired(
@@ -116,20 +98,15 @@ class APIManager {
   /// Downloads to a temporary file; progress, when asked for, is in percent.
   @discardableResult
   func SubsonicEndpointDownload(
-    endpoint: String, method: HTTPMethod = .get, parameters: Parameters?,
-    encoding: ParameterEncoding = URLEncoding.queryString,
+    endpoint: String, parameters: Parameters?,
     progressUpdate: ((Double) -> Void)? = nil,
     completion: @escaping (Result<URL, AFError>) -> Void
   ) -> DownloadRequest {
-
-    // FIXME: refactor getCreds(key: "subsonicToken")
     let url =
-      "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(AuthService.shared.getCreds(key: "subsonicToken"))"
+      "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(AuthService.shared.sessionSnapshot().subsonicCredentials)"
 
     let request = session.download(
-      url, method: method, parameters: parameters, encoding: encoding,
-      requestModifier: { $0.timeoutInterval = 60 }
-    )
+      url, parameters: parameters, requestModifier: { $0.timeoutInterval = 60 })
     if let progressUpdate {
       request.downloadProgress { progressUpdate($0.fractionCompleted * 100) }
     }

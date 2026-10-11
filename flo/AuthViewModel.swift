@@ -231,7 +231,7 @@ class AuthViewModel: ObservableObject {
             self.alertMessage = "The server refused the request. Please try again."
 
           case .unknown:
-            self.alertMessage = "Unknown error ocurred"
+            self.alertMessage = "Unknown error occurred"
           }
 
           self.showAlert = true
@@ -240,7 +240,6 @@ class AuthViewModel: ObservableObject {
     }
   }
 
-  // TODO: how to deal with "last playing" data?
   func logout() {
     sessionGeneration += 1
 
@@ -255,7 +254,11 @@ class AuthViewModel: ObservableObject {
     // Nothing of this account may be answered or retried under the next.
     APIManager.shared.session.cancelAllRequests()
 
-    destroySavedPassword()
+    do {
+      try KeychainManager.removeAuthPassword()
+    } catch {
+      debugLog("error removing password from Keychain: \(error)")
+    }
     do {
       try KeychainManager.removeServerURL()
     } catch {
@@ -287,14 +290,6 @@ class AuthViewModel: ObservableObject {
     storedLoginUnreadable = false
 
     NotificationCenter.default.post(name: .didLogout, object: nil)
-  }
-
-  func destroySavedPassword() {
-    do {
-      try KeychainManager.removeAuthPassword()
-    } catch {
-      debugLog("error removing password from Keychain: \(error)")
-    }
   }
 
   func persistAuthData(_ data: UserAuth, serverUrl: String) {

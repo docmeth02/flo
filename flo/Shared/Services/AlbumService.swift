@@ -95,7 +95,7 @@ private func subsonicURL(endpoint: String, parameters: [String: Any]) -> String 
     .map { "\($0)=\($1)" }
     .joined(separator: "&")
   return
-    "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(AuthService.shared.getCreds(key: "subsonicToken"))&\(query)"
+    "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(AuthService.shared.sessionSnapshot().subsonicCredentials)&\(query)"
 }
 
 class AlbumService {
@@ -605,7 +605,7 @@ class AlbumService {
       return cached
     } else {
       return
-        "\(UserDefaultsManager.serverBaseURL)\(API.SubsonicEndpoint.coverArt)\(AuthService.shared.getCreds(key: "subsonicToken"))&id=al-\(albumId)&size=\(API.coverArtSize)"
+        "\(UserDefaultsManager.serverBaseURL)\(API.SubsonicEndpoint.coverArt)\(AuthService.shared.sessionSnapshot().subsonicCredentials)&id=al-\(albumId)&size=\(API.coverArtSize)"
     }
   }
 
