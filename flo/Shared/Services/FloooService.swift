@@ -1,12 +1,12 @@
-import Alamofire
-import Foundation
-
 //
 //  FloooService.swift
 //  flo
 //
 //  Created by rizaldy on 22/11/24.
 //
+
+import Alamofire
+import Foundation
 
 /// A playback state as OpenSubsonic's reportPlayback takes it.
 enum PlaybackReportState: String {
@@ -50,11 +50,11 @@ class FloooService {
       endpoint: API.SubsonicEndpoint.reportPlayback, parameters: params, completion: completion)
   }
 
-  /// Whether a failed scrobble can never succeed and should be dropped instead
-  /// of retried: the song is gone or the server refuses the request itself.
-  /// Offline, timeouts, server errors, rate limits and expired sessions all
-  /// stay queued.
-  func isPermanentScrobbleFailure(_ error: Error) -> Bool {
+  /// Whether a failed scrobble, star or rating edit can never succeed and
+  /// should be dropped instead of retried: the item is gone or the server
+  /// refuses the request itself. Offline, timeouts, server errors, rate limits
+  /// and expired sessions all stay queued.
+  func isPermanentFailure(_ error: Error) -> Bool {
     if let subsonicError = error as? SubsonicError {
       // 10: required parameter missing, 70: requested data not found
       return subsonicError.code == 10 || subsonicError.code == 70

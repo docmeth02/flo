@@ -11,16 +11,6 @@ class UserDefaultsManager {
   private static let sharedDefaults =
     UserDefaults(suiteName: "group.com.penerbangwalet.flo") ?? UserDefaults.standard
 
-  private static func migrateIfNeeded(_ key: String) {
-    let migrationKey = "migrated_\(key)"
-    if !sharedDefaults.bool(forKey: migrationKey) {
-      if let value = UserDefaults.standard.object(forKey: key) {
-        sharedDefaults.set(value, forKey: key)
-      }
-      sharedDefaults.set(true, forKey: migrationKey)
-    }
-  }
-
   static func removeObject(key: String) {
     UserDefaults.standard.removeObject(forKey: key)
     sharedDefaults.removeObject(forKey: key)
@@ -28,7 +18,6 @@ class UserDefaultsManager {
 
   static var serverBaseURL: String {
     get {
-      migrateIfNeeded(UserDefaultsKeys.serverURL)
       // Endpoints start with "/"; a stored trailing slash would double it.
       var url = (sharedDefaults.string(forKey: UserDefaultsKeys.serverURL) ?? "")
         .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -88,7 +77,6 @@ class UserDefaultsManager {
     }
   }
 
-
   static var maxBitRate: String {
     get {
       TranscodingSettings.offeredBitRate(
@@ -98,7 +86,6 @@ class UserDefaultsManager {
       UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.enableMaxBitRate)
     }
   }
-
 
   static var streamCacheMaxSize: Int64 {
     get {
@@ -118,8 +105,4 @@ class UserDefaultsManager {
       UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.keepPlaying)
     }
   }
-
-
-
-
 }

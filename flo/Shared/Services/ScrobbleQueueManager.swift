@@ -8,9 +8,6 @@ import WatchKit
 /// has to be queued.
 struct ScrobblePayload {
   let songId: String
-  let trackName: String?
-  let artistName: String?
-  let albumName: String?
   let listenTime: Date
   // Logout bumps the outbox generation; a submission that fails afterwards
   // belongs to the previous account and must not be queued.
@@ -22,9 +19,6 @@ struct ScrobblePayload {
   ) {
     guard let songId = nowPlaying.id, !songId.isEmpty else { return nil }
     self.songId = songId
-    self.trackName = nowPlaying.songName
-    self.artistName = nowPlaying.artistName
-    self.albumName = nowPlaying.albumName
     self.listenTime = Date()
     self.accountGeneration = accountGeneration
   }
@@ -45,8 +39,6 @@ final class ScrobbleQueueManager {
   private enum Status {
     static let pending = "pending"
     static let failed = "failed"
-    // Written by earlier builds for delivered entries; only purged now.
-    static let legacySent = "sent"
   }
 
   private static let initialRetryDelay: TimeInterval = 30
@@ -93,7 +85,6 @@ final class ScrobbleQueueManager {
     self.canReachServer = canReachServer
     self.probeServer = probeServer
 
-    purgeLegacySent()
     reload()
     // A memory store shows none of the rows the receipts were written for.
     if !store.isUsingVolatileStore {
@@ -140,9 +131,6 @@ final class ScrobbleQueueManager {
     let entry = ScrobbleEntity(context: store.viewContext)
 
     entry.songId = payload.songId
-    entry.trackName = payload.trackName
-    entry.artistName = payload.artistName
-    entry.albumName = payload.albumName
     entry.listenTime = payload.listenTime
     entry.queuedAt = Date()
     entry.status = Status.pending
@@ -270,13 +258,12 @@ final class ScrobbleQueueManager {
           if self.delete(entry) { self.receipts.remove(receipt) }
           self.submitPending(remaining)
 
-        case .failure(let error) where FloooService.shared.isPermanentScrobbleFailure(error):
+        case .failure(let error) where FloooService.shared.isPermanentFailure(error):
           self.delete(entry)
           self.submitPending(remaining)
 
-        case .failure(let error):
+        case .failure:
           entry.status = Status.failed
-          entry.errorReason = error.localizedDescription
           self.store.saveRecord()
 
           self.isFlushing = false
@@ -319,15 +306,5 @@ final class ScrobbleQueueManager {
   private func cancelRetry() {
     retryTimer?.invalidate()
     retryTimer = nil
-  }
-
-  private func purgeLegacySent() {
-    let sent = store.getRecordsByEntity(entity: ScrobbleEntity.self)
-      .filter { $0.status == Status.legacySent }
-
-    guard !sent.isEmpty else { return }
-
-    sent.forEach { store.viewContext.delete($0) }
-    store.saveRecord()
   }
 }

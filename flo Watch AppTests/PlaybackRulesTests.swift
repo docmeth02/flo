@@ -11,15 +11,15 @@ final class PlaybackRulesTests: XCTestCase {
 
   func testOnlyRejectionsDropAScrobble() {
     let service = FloooService.shared
-    XCTAssertTrue(service.isPermanentScrobbleFailure(SubsonicError(code: 10, message: nil)))
-    XCTAssertTrue(service.isPermanentScrobbleFailure(SubsonicError(code: 70, message: nil)))
-    XCTAssertFalse(service.isPermanentScrobbleFailure(SubsonicError(code: 0, message: nil)))
-    XCTAssertTrue(service.isPermanentScrobbleFailure(status(404)))
+    XCTAssertTrue(service.isPermanentFailure(SubsonicError(code: 10, message: nil)))
+    XCTAssertTrue(service.isPermanentFailure(SubsonicError(code: 70, message: nil)))
+    XCTAssertFalse(service.isPermanentFailure(SubsonicError(code: 0, message: nil)))
+    XCTAssertTrue(service.isPermanentFailure(status(404)))
     // Auth, timeouts, throttling and server errors are worth another try.
     for code in [401, 403, 408, 429, 500, 503] {
-      XCTAssertFalse(service.isPermanentScrobbleFailure(status(code)), "\(code)")
+      XCTAssertFalse(service.isPermanentFailure(status(code)), "\(code)")
     }
-    XCTAssertFalse(service.isPermanentScrobbleFailure(URLError(.notConnectedToInternet)))
+    XCTAssertFalse(service.isPermanentFailure(URLError(.notConnectedToInternet)))
   }
 
   /// A dead zone is asked once more and then waited out; only the server's
