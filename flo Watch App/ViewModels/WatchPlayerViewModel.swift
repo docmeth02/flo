@@ -18,11 +18,11 @@ final class PlayerClock: ObservableObject {
 }
 
 class WatchPlayerViewModel: ObservableObject {
-  private(set) var player: AVPlayer? {
+  var player: AVPlayer? {
     didSet { observeBuffering() }
   }
-  private(set) var playerItem: AVPlayerItem?
-  private var timeObserverToken: Any?
+  var playerItem: AVPlayerItem?
+  var timeObserverToken: Any?
 
   @Published var queue: [QueueEntity] = []
   @Published var playbackMode = PlaybackMode.defaultPlayback
@@ -34,7 +34,7 @@ class WatchPlayerViewModel: ObservableObject {
   /// AVPlayer is waiting for data before it can play, as at the start of a
   /// song after a skip; isMediaLoading only covers the time until the item
   /// exists.
-  @Published private(set) var isBuffering = false
+  @Published var isBuffering = false
   /// The server is out of reach: the song keeps its position and stays
   /// wanted (isPlaying) until it can load again.
   @Published private(set) var isWaitingForConnection = false
@@ -51,18 +51,18 @@ class WatchPlayerViewModel: ObservableObject {
     set { clock.currentTimeString = newValue }
   }
   /// The now playing cover, resolved once per song rather than on every redraw.
-  @Published private(set) var coverArt: String = ""
+  @Published var coverArt: String = ""
 
   /// The heart: StarStore's edits over the server's star for the song.
-  @Published private(set) var isStarred: Bool = false
+  @Published var isStarred: Bool = false
   // The server's star for the current song, looked up once per song.
-  private var serverStarred = false
+  var serverStarred = false
   // That lookup failed; announcing the song asks again.
-  private var starLookupFailed = false
+  var starLookupFailed = false
   // Bumped by every lookup; an older answer, even for the same song, is stale.
-  private var starLookup = 0
+  var starLookup = 0
   private var starObservation: AnyCancellable?
-  private var resumeAfterInterruption = false
+  var resumeAfterInterruption = false
   // A start the system may still interrupt while it sets up the output. On
   // watchOS 26 the activation succeeds without an output; the speaker or the
   // headphones are only brought up once the player renders, and bringing them
@@ -72,29 +72,29 @@ class WatchPlayerViewModel: ObservableObject {
   // has played `startHeardAfter` seconds into an output, or by a pause.
   // The setup can also interrupt before the activation has answered, while
   // isPlaying is not set yet; that start is kept too.
-  private struct PendingStart {
+  struct PendingStart {
     var resumes = 0
     var played: Double = 0
     // From play() until its activation answers, or a stop drops it.
     var isActivating = true
     var interruptedWhileActivating = false
   }
-  private var pendingStart: PendingStart?
-  private var settleWork: DispatchWorkItem?
-  private static let settleDelay: TimeInterval = 1.5
-  private static let maxSettleResumes = 3
-  private static let startHeardAfter: Double = 3
-  private var accessLogObservation: AnyCancellable?
-  private var loadedRangesObservation: AnyCancellable?
+  var pendingStart: PendingStart?
+  var settleWork: DispatchWorkItem?
+  static let settleDelay: TimeInterval = 1.5
+  static let maxSettleResumes = 3
+  static let startHeardAfter: Double = 3
+  var accessLogObservation: AnyCancellable?
+  var loadedRangesObservation: AnyCancellable?
 
-  private var hasQualified: Bool = false
+  var hasQualified: Bool = false
   private(set) var isFinished: Bool = false
-  private var isAutoContinuing: Bool = false
-  private var totalDuration: Double = 0.0
-  private var playerItemObservation: AnyCancellable?
-  private var bufferingObservation: AnyCancellable?
-  private var playbackEndObservation: AnyCancellable?
-  private var interruptionObservation = Set<AnyCancellable>()
+  var isAutoContinuing: Bool = false
+  var totalDuration: Double = 0.0
+  var playerItemObservation: AnyCancellable?
+  var bufferingObservation: AnyCancellable?
+  var playbackEndObservation: AnyCancellable?
+  var interruptionObservation = Set<AnyCancellable>()
   private var logoutObservation: AnyCancellable?
   private var reachabilityObservation: AnyCancellable?
   // The stored order while shuffling (`queue` is the play order), else empty.
@@ -105,72 +105,72 @@ class WatchPlayerViewModel: ObservableObject {
   // seeking cannot inflate or erase it.
   private(set) var secondsListened: Double = 0
   private(set) var lastObservedTime: Double = 0
-  private var playGeneration: Int = 0
-  private var consecutiveFailures: Int = 0
-  private static let maxConsecutiveFailures = 3
+  var playGeneration: Int = 0
+  var consecutiveFailures: Int = 0
+  static let maxConsecutiveFailures = 3
   // Long enough for a slow cellular start, short enough not to feel stuck.
-  private static let loadTimeout: TimeInterval = 20
-  private var loadWatchdog: DispatchWorkItem?
+  static let loadTimeout: TimeInterval = 20
+  var loadWatchdog: DispatchWorkItem?
   // A remote song waiting for data mid-song gets this long before it is
   // reloaded where it stopped; a hanging connection never fails the item.
-  private static let stallTimeout: TimeInterval = 15
-  private var stallDeadline: DispatchWorkItem?
+  static let stallTimeout: TimeInterval = 15
+  var stallDeadline: DispatchWorkItem?
   // Bumped whenever a no-progress check in flight no longer applies.
-  private var noProgressCheck = 0
+  var noProgressCheck = 0
   // The current item has played; before that the load watchdog guards it.
-  private var itemHasPlayed = false
+  var itemHasPlayed = false
   // Behind isWaitingForConnection: when the wait began, its probe timer and
   // whether a load is under way.
-  private struct ConnectionWait {
+  struct ConnectionWait {
     let since: Date
     let timer: Timer
     var isReloading = false
   }
-  private var connectionWait: ConnectionWait? {
+  var connectionWait: ConnectionWait? {
     didSet {
       let waiting = connectionWait != nil
       if waiting != isWaitingForConnection { isWaitingForConnection = waiting }
     }
   }
-  private static let connectionProbeInterval: TimeInterval = 30
-  private static let connectionWaitLimit: TimeInterval = 5 * 60
-  private var playbackFailureObservation: AnyCancellable?
+  static let connectionProbeInterval: TimeInterval = 30
+  static let connectionWaitLimit: TimeInterval = 5 * 60
+  var playbackFailureObservation: AnyCancellable?
   private var needsNowPlayingAnnouncement = false
   // The song whose failed item Play already reloaded once; a second failure
   // goes through the capped skip instead of reloading again. Cleared once the
   // song plays.
-  private var reloadedFailedTrackId: String?
-  private var radioURL: URL?
+  var reloadedFailedTrackId: String?
+  var radioURL: URL?
   // The item whose failure was already counted; KVO, the failure notification
   // and Play can all report the same one.
-  private weak var countedFailedItem: AVPlayerItem?
+  weak var countedFailedItem: AVPlayerItem?
   // Track seconds at the current item's time 0; above 0 only for a transcode
   // the server started mid-track.
-  private var streamOffset: Double = 0
+  var streamOffset: Double = 0
   // Where Play starts the song while no item is attached (restored queue,
   // stop, a load still waiting for its stream source).
-  private var pendingStartPosition: Double = 0
-  private(set) var currentSourceIsRemote = false
-  private var currentSourceIsTranscoded = false
+  var pendingStartPosition: Double = 0
+  var currentSourceIsRemote = false
+  var currentSourceIsTranscoded = false
   // Listening time at the last mid-song resume; a stream that breaks again
   // before 30 s more were heard is skipped rather than resumed over and over.
   // Listening time, not position: a seek back must not block the next resume.
-  private var resumedAtListened: Double?
+  var resumedAtListened: Double?
   // The song whose stream was asked for a second time after failing before it
   // got going; unlike reloadedFailedTrackId it survives the new item playing,
   // so a stream that keeps dying right after its start is not reloaded
   // forever.
-  private var restartedTrackId: String?
+  var restartedTrackId: String?
   // Bumped whenever the item is detached; a stream source resolved for an
   // older load is dropped. playGeneration moves with play/pause and cannot
   // tell.
-  private var loadGeneration = 0
+  var loadGeneration = 0
   // The listening session Keep Playing continues: when it began, the last
   // song heard out (never a skip) and the genres the first such song set.
-  private(set) var sessionStartedAt: Date?
+  var sessionStartedAt: Date?
   private var lastPlaybackAt: Date?
-  private var lastAcceptedSong: (id: String, artist: String, albumId: String)?
-  private var anchorGenres: Set<String> = []
+  var lastAcceptedSong: (id: String, artist: String, albumId: String)?
+  var anchorGenres: Set<String> = []
   private static let sessionTimeout: TimeInterval = 30 * 60
   private var ratingObservation: AnyCancellable?
   /// Bumped whenever the user starts something new; a mix built in the
@@ -264,712 +264,6 @@ class WatchPlayerViewModel: ObservableObject {
     #endif
   }
 
-  private func observeInterruptionNotifications() {
-    NotificationCenter.default
-      .publisher(for: AVAudioSession.interruptionNotification)
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] notification in
-        self?.handleInterruptionNotification(notification)
-      }
-      .store(in: &interruptionObservation)
-
-    // The system pauses the player when the headphones go away; the controls
-    // and the server have to follow, or the next tap pauses again.
-    NotificationCenter.default
-      .publisher(for: AVAudioSession.routeChangeNotification)
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] notification in
-        guard let self,
-          let value = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-          let reason = AVAudioSession.RouteChangeReason(rawValue: value)
-        else { return }
-        let previous = (notification.userInfo?[AVAudioSessionRouteChangePreviousRouteKey]
-          as? AVAudioSessionRouteDescription)?.outputs.map(\.portType.rawValue)
-          .joined(separator: ",") ?? "-"
-        RequestLog.shared.note(
-          "audio route \(reason.rawValue) outputs=\(Self.routeOutputs) previous=\(previous)")
-
-        // Part of the output setup that interrupted the start, the speaker
-        // giving way to the headphones included. Headphones taken off end it.
-        if self.settleWork != nil, reason != .oldDeviceUnavailable {
-          self.armSettle()
-          return
-        }
-        guard reason == .oldDeviceUnavailable else { return }
-        // Headphones lost during a call: its end must not restart music
-        // nobody hears.
-        self.resumeAfterInterruption = false
-        guard self.isPlaying else { return }
-        self.pause()
-      }
-      .store(in: &interruptionObservation)
-  }
-
-  private static var routeOutputs: String {
-    AVAudioSession.sharedInstance().currentRoute.outputs.map(\.portType.rawValue)
-      .joined(separator: ",")
-  }
-
-  private static var hasOutput: Bool {
-    !AVAudioSession.sharedInstance().currentRoute.outputs.isEmpty
-  }
-
-  /// (Re)starts the wait for the output setup to go quiet.
-  private func armSettle() {
-    settleWork?.cancel()
-    let work = DispatchWorkItem { [weak self] in self?.resumeAfterSettle() }
-    settleWork = work
-    DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay, execute: work)
-  }
-
-  /// Starts an interrupted start again once nothing changed for
-  /// `settleDelay`, if there is an output to play to and no activation is
-  /// still under way. Without an output it waits another round, as often as
-  /// it may resume, then shows Play.
-  private func resumeAfterSettle() {
-    settleWork = nil
-    // An activation still under way answers first; a second one on top of it
-    // would discard it. Not logged: the wait can last as long as the device
-    // list is up.
-    if pendingStart?.isActivating == true, resumeAfterInterruption {
-      armSettle()
-      return
-    }
-    RequestLog.shared.note(
-      "audio settled resume=\(resumeAfterInterruption) playing=\(isPlaying)"
-        + " outputs=\(Self.routeOutputs)")
-    guard resumeAfterInterruption, let start = pendingStart,
-      isPlaying || start.interruptedWhileActivating, player?.timeControlStatus != .playing
-    else { return }
-    guard start.resumes < Self.maxSettleResumes else {
-      pause()
-      // Like the cap in .began: a real interruption's end may still resume it.
-      resumeAfterInterruption = true
-      return
-    }
-    pendingStart?.resumes += 1
-    guard Self.hasOutput else {
-      armSettle()
-      return
-    }
-    // play() begins a fresh start; this one carries on with its count and
-    // its interruption, only its activation is new.
-    let carried = pendingStart
-    play()
-    pendingStart = carried
-    pendingStart?.isActivating = true
-  }
-
-  /// A pause, or a logout, ends a start and anything waiting to resume it.
-  private func endStart() {
-    pendingStart = nil
-    cancelSettle()
-    resumeAfterInterruption = false
-  }
-
-  private func cancelSettle() {
-    settleWork?.cancel()
-    settleWork = nil
-  }
-
-  /// Counts what a start has played; once it was heard, interruptions are
-  /// treated as calls again.
-  private func countStartPlayed(_ step: Double) {
-    guard pendingStart != nil else { return }
-    pendingStart?.played += step
-    guard let start = pendingStart, start.played >= Self.startHeardAfter, Self.hasOutput
-    else { return }
-    RequestLog.shared.note(
-      "audio start heard resumes=\(start.resumes) outputs=\(Self.routeOutputs)")
-    pendingStart = nil
-  }
-
-  private func handleInterruptionNotification(_ notification: Notification) {
-    guard let userInfo = notification.userInfo,
-      let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? Int,
-      let type = AVAudioSession.InterruptionType(rawValue: UInt(typeValue))
-    else {
-      return
-    }
-
-    switch type {
-    case .began:
-      let session = AVAudioSession.sharedInstance()
-      let reason = (userInfo[AVAudioSessionInterruptionReasonKey] as? UInt).map(String.init) ?? "-"
-      let options = (userInfo[AVAudioSessionInterruptionOptionKey] as? UInt).map(String.init) ?? "-"
-      RequestLog.shared.note(
-        "audio interruption began reason=\(reason) options=\(options) playing=\(isPlaying)"
-          + " start=\(pendingStart.map { "\($0.resumes)" } ?? "none") outputs=\(Self.routeOutputs)"
-          + " otherAudio=\(session.isOtherAudioPlaying)"
-          + " silenceHint=\(session.secondaryAudioShouldBeSilencedHint)")
-      // The system already paused the player; the start stays wanted.
-      if let start = pendingStart, isPlaying || start.isActivating,
-        start.resumes < Self.maxSettleResumes
-      {
-        if !isPlaying { pendingStart?.interruptedWhileActivating = true }
-        loadWatchdog?.cancel()
-        resumeAfterInterruption = true
-        armSettle()
-        return
-      }
-      // Through pause() so a pending skip or Keep Playing mix does not start
-      // playback during the call.
-      let wasPlaying = isPlaying
-      pause()
-      resumeAfterInterruption = wasPlaying
-    case .ended:
-      RequestLog.shared.note("audio interruption ended resume=\(resumeAfterInterruption)")
-      // Music the user had paused before the call stays paused.
-      let wasPlaying = self.resumeAfterInterruption
-      self.resumeAfterInterruption = false
-      if wasPlaying, let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? Int {
-        let options = AVAudioSession.InterruptionOptions(rawValue: UInt(optionsValue))
-        if options.contains(.shouldResume) {
-          self.play()
-          return
-        }
-      }
-      // A start kept through the interruption stays paused when its end asks
-      // not to resume, one kept while still activating too.
-      if (isPlaying && player?.timeControlStatus != .playing)
-        || (wasPlaying && pendingStart?.isActivating == true)
-      {
-        pause()
-      }
-    @unknown default:
-      break
-    }
-  }
-
-  /// Tracks the current item's loading state for both songs and radio.
-  private func observeItemStatus(trackId: String?) {
-    let item = playerItem
-    playerItemObservation = playerItem?.publisher(for: \.status)
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self, weak item] status in
-        // A late report for a replaced item must not touch the new one's flags.
-        guard let self = self, let item, item === self.playerItem else { return }
-        switch status {
-        case .readyToPlay:
-          // Waiting for the first data shows as buffering from here on.
-          self.isMediaLoading = false
-          self.isMediaFailed = false
-        case .failed:
-          self.isMediaLoading = false
-          self.handleStreamFailure(trackId: trackId, item: item)
-        case .unknown:
-          // Every new item starts here; it is still loading.
-          break
-        @unknown default:
-          break
-        }
-      }
-  }
-
-  private func observeBuffering() {
-    bufferingObservation = player?.publisher(for: \.timeControlStatus)
-      .removeDuplicates()
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] status in
-        guard let self else { return }
-        let waitReason = self.player?.reasonForWaitingToPlay.map { " \($0.rawValue)" } ?? ""
-        RequestLog.shared.note("audio player \(status.rawValue)\(waitReason)")
-        let isWaiting = status == .waitingToPlayAtSpecifiedRate
-        if isWaiting { self.armStallDeadline() }
-        guard isWaiting != self.isBuffering else { return }
-        debugLog("buffering \(isWaiting)")
-        self.isBuffering = isWaiting
-      }
-  }
-
-  /// An on-the-fly transcode stays connected while it plays, because AVPlayer
-  /// stops reading once a little is buffered, and a connection that sits idle
-  /// can be cut on the way (a reverse proxy's send timeout, nginx closes one
-  /// after 60 s by default, or the cellular link). Asking for the whole rest
-  /// of the song fetches it in one go; at the transcode's bitrate that is a
-  /// few megabytes. A direct play is left to AVPlayer: it arrives at full
-  /// speed anyway, and an original file can be large. Logs once when nearly
-  /// all of it is buffered without a gap; a transcode of unknown length is
-  /// timed from its bytes and can end a little short.
-  private func bufferWholeSong(of item: AVPlayerItem, from offset: Double) {
-    guard totalDuration.isFinite, totalDuration > offset else { return }
-    let length = totalDuration - offset
-    item.preferredForwardBufferDuration = length
-    let attachedAt = Date()
-    loadedRangesObservation = item.publisher(for: \.loadedTimeRanges)
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self, weak item] _ in
-        guard let self, let item, item === self.playerItem,
-          let ahead = Self.bufferedAhead(of: item),
-          item.currentTime().seconds + ahead >= length * 0.9
-        else { return }
-        RequestLog.shared.note(
-          String(
-            format: "player buffered through %.0f of %.0f s after %.1f s",
-            item.currentTime().seconds + ahead, length, Date().timeIntervalSince(attachedAt)))
-        self.loadedRangesObservation = nil
-      }
-  }
-
-  /// Seconds buffered without a gap from the playhead on; loaded ranges can
-  /// have holes.
-  private static func bufferedAhead(of item: AVPlayerItem) -> Double? {
-    let now = item.currentTime()
-    return item.loadedTimeRanges.map(\.timeRangeValue).first { $0.containsTime(now) }
-      .map { CMTimeRangeGetEnd($0).seconds - now.seconds }
-  }
-
-  /// Gives a remote song that stopped for data after it had played
-  /// `stallTimeout` to move on. One deadline per item, ended by progress, a
-  /// pause, a seek or another item; a pending settle postpones it.
-  private func armStallDeadline() {
-    guard stallDeadline == nil, isPlaying, itemHasPlayed, currentSourceIsRemote, !isLiveRadio,
-      let item = playerItem, player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
-    else { return }
-    let trackId = nowPlayingId
-    let ahead = Self.bufferedAhead(of: item).map { String(format: "%.1f s", $0) } ?? "-"
-    RequestLog.shared.note(
-      "stall armed at \(Int(lastObservedTime)) s ahead=\(ahead)"
-        + " reason=" + (player?.reasonForWaitingToPlay?.rawValue ?? "-"))
-    let deadline = DispatchWorkItem { [weak self, weak item] in
-      guard let self, let item, item === self.playerItem else { return }
-      self.stallDeadline = nil
-      if self.settleWork != nil {
-        self.armStallDeadline()
-        return
-      }
-      guard self.isPlaying, self.player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
-      else { return }
-      RequestLog.shared.note("stall fired at \(Int(self.lastObservedTime)) s")
-      self.recoverStalledItem(item, trackId: trackId)
-    }
-    stallDeadline = deadline
-    DispatchQueue.main.asyncAfter(deadline: .now() + Self.stallTimeout, execute: deadline)
-  }
-
-  /// A stalled song reloads where it stopped, or waits while the server is
-  /// out of reach. Internal for the debug hooks.
-  func recoverStalledItem(_ item: AVPlayerItem, trackId: String?) {
-    handleNoProgress(of: item, cause: "stall") { [weak self, weak item] in
-      self?.handleStreamFailure(trackId: trackId, item: item)
-    }
-  }
-
-  /// Ends a stall deadline and any connectivity check started for it; a
-  /// pause, a seek or another item gives the song a fresh start.
-  private func cancelStall() {
-    stallDeadline?.cancel()
-    stallDeadline = nil
-    noProgressCheck += 1
-  }
-
-  /// An item that made no progress in time: a remote song waits while the
-  /// server is out of reach, otherwise `broken` handles the item. Progress, a
-  /// pause, a seek or another item during the probe end it.
-  private func handleNoProgress(
-    of item: AVPlayerItem, cause: String, broken: @escaping () -> Void
-  ) {
-    guard currentSourceIsRemote else {
-      broken()
-      return
-    }
-    let check = noProgressCheck
-    Task { @MainActor [weak self, weak item] in
-      let reachable = await ConnectivityMonitor.shared.canStream(maxAge: 0)
-      // Playing again before the next progress tick counts as progress too.
-      guard let self, let item, item === self.playerItem, self.isPlaying,
-        self.noProgressCheck == check, self.player?.timeControlStatus != .playing
-      else { return }
-      if reachable {
-        broken()
-      } else {
-        self.enterConnectionWait(cause: cause)
-      }
-    }
-  }
-
-  /// The current item played on: its load and any stall are over.
-  private func noteProgress() {
-    itemHasPlayed = true
-    consecutiveFailures = 0
-    reloadedFailedTrackId = nil
-    loadWatchdog?.cancel()
-    cancelStall()
-    endConnectionWait(because: "playing")
-  }
-
-  /// Keeps the song, its position and the wish to play while the server is
-  /// out of reach. Probes every `connectionProbeInterval`, reloads once a
-  /// probe reaches the server and pauses after `connectionWaitLimit`.
-  /// Internal for the debug hooks.
-  func enterConnectionWait(cause: String) {
-    let position = itemHasPlayed ? floor(lastObservedTime) : pendingStartPosition
-    detachItem()
-    pendingStartPosition = position
-    isMediaLoading = false
-    isMediaFailed = false
-    // The system's elapsed clock stops with the song.
-    updateNowPlayingInfo(progress: progress, rate: 0)
-    guard connectionWait == nil else {
-      connectionWait?.isReloading = false
-      RequestLog.shared.note("connection wait goes on at \(Int(position)) s cause=\(cause)")
-      return
-    }
-    let timer = Timer.scheduledTimer(
-      withTimeInterval: Self.connectionProbeInterval, repeats: true
-    ) { [weak self] _ in self?.connectionWaitTick() }
-    connectionWait = ConnectionWait(since: Date(), timer: timer)
-    RequestLog.shared.note("connection wait entered at \(Int(position)) s cause=\(cause)")
-    ConnectivityMonitor.shared.probeIfIdle()
-  }
-
-  private func connectionWaitTick() {
-    guard let wait = connectionWait else { return }
-    guard Date().timeIntervalSince(wait.since) < Self.connectionWaitLimit else {
-      endConnectionWait(because: "gave up")
-      pause()
-      return
-    }
-    RequestLog.shared.note("connection wait probe")
-    ConnectivityMonitor.shared.probeIfIdle()
-  }
-
-  /// The server answered: a waiting song loads again where it was, unless a
-  /// load is already under way.
-  private func reloadAfterConnectionWait() {
-    guard let wait = connectionWait, !wait.isReloading else { return }
-    RequestLog.shared.note("connection wait reload at \(Int(pendingStartPosition)) s")
-    loadItem(at: pendingStartPosition)
-  }
-
-  private func endConnectionWait(because cause: String) {
-    guard let wait = connectionWait else { return }
-    wait.timer.invalidate()
-    connectionWait = nil
-    RequestLog.shared.note("connection wait left: \(cause)")
-  }
-
-  /// A player whose item failed can end up failed itself, and a failed
-  /// AVPlayer refuses every later item; start over with a fresh one. Callers
-  /// have already removed the time observer from the old player.
-  private func replacePlayerIfFailed() {
-    guard let old = player, old.status == .failed else { return }
-    player = AVPlayer()
-    debugLog("replaced failed player")
-  }
-
-  /// Reconnects a failed radio station to its own stream URL; the song
-  /// stream endpoint knows nothing about stations.
-  private func reloadRadioItem() {
-    guard let radioURL = radioURL else { return }
-    tearDownItemObservers()
-    attachRadioItem(radioURL)
-  }
-
-  private func attachRadioItem(_ url: URL) {
-    replacePlayerIfFailed()
-    playerItem = AVPlayerItem(url: url)
-    player?.replaceCurrentItem(with: playerItem)
-    observeItemStatus(trackId: nowPlayingId)
-    addPeriodicTimeObserver()
-  }
-
-  /// Detaches every observer tied to the current item.
-  private func tearDownItemObservers() {
-    if let timeObserverToken = timeObserverToken {
-      player?.removeTimeObserver(timeObserverToken)
-      self.timeObserverToken = nil
-    }
-    playerItemObservation?.cancel()
-    playbackEndObservation?.cancel()
-    playbackEndObservation = nil
-    playbackFailureObservation = nil
-    accessLogObservation = nil
-    loadedRangesObservation = nil
-    loadWatchdog?.cancel()
-    cancelStall()
-  }
-
-  /// Removes the current item and its observers; a stream source still being
-  /// resolved for it is dropped when it arrives.
-  private func detachItem() {
-    loadGeneration += 1
-    tearDownItemObservers()
-    player?.replaceCurrentItem(with: nil)
-    playerItem = nil
-    itemHasPlayed = false
-    streamOffset = 0
-  }
-
-  /// Attaches the now playing song's item, starting at `position` seconds of
-  /// the track: a transcode is started there by the server, anything else is
-  /// seeked there. Remote songs wait for the server's transcode decision.
-  private func loadItem(at position: Double) {
-    guard hasNowPlaying(), !isLiveRadio else { return }
-    detachItem()
-    replacePlayerIfFailed()
-    pendingStartPosition = position
-    isMediaLoading = true
-    isMediaFailed = false
-    connectionWait?.isReloading = true
-
-    let generation = loadGeneration
-    let trackId = nowPlaying.id
-    let songId = trackId ?? ""
-
-    if let fileURL = AlbumService.shared.localFileURL(mediaFileId: songId) {
-      attachItem(
-        url: fileURL, trackId: trackId, isRemote: false, isTranscoded: false, offset: 0,
-        seekTo: position)
-      return
-    }
-
-    let suffix = nowPlaying.suffix
-    Task { @MainActor [weak self] in
-      let result = await AlbumService.shared.resolveStreamSource(
-        songId: songId, originalSuffix: suffix, offset: Int(position))
-      guard let self, self.loadGeneration == generation, self.isCurrentTrack(trackId) else { return }
-      // Paused, Play asks again.
-      if case .failure(.unavailable) = result {
-        self.isMediaLoading = false
-        if self.isPlaying { self.enterConnectionWait(cause: "no stream source") }
-        return
-      }
-      guard case .success(let source) = result, let url = URL(string: source.url) else {
-        self.isMediaLoading = false
-        self.isMediaFailed = true
-        self.skipFailedTrack(trackId: trackId)
-        return
-      }
-
-      let startsAtOffset = source.isTranscoded && position > 0
-      self.attachItem(
-        url: url, trackId: trackId, isRemote: true, isTranscoded: source.isTranscoded,
-        offset: startsAtOffset ? floor(position) : 0, seekTo: startsAtOffset ? nil : position)
-    }
-  }
-
-  private func attachItem(
-    url: URL, trackId: String?, isRemote: Bool, isTranscoded: Bool, offset: Double,
-    seekTo position: Double?
-  ) {
-    let item = AVPlayerItem(url: url)
-    if isTranscoded { bufferWholeSong(of: item, from: offset) }
-    playerItem = item
-    player?.replaceCurrentItem(with: item)
-    streamOffset = offset
-    currentSourceIsRemote = isRemote
-    currentSourceIsTranscoded = isTranscoded
-
-    observeItemStatus(trackId: trackId)
-
-    // A server that never answers leaves the item loading forever without
-    // reporting .failed, and a stream can also break or hang mid-song; the
-    // load watchdog and the stall deadline catch the silent cases, a break
-    // resumes, waits for the server or skips.
-    playbackFailureObservation = NotificationCenter.default
-      .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self, weak item] notification in
-        self?.handleStreamFailure(
-          trackId: trackId, item: item,
-          error: notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error)
-      }
-
-    // What the player itself saw of the stream: how long it took to start,
-    // stalls and errors.
-    accessLogObservation = NotificationCenter.default
-      .publisher(for: .AVPlayerItemNewAccessLogEntry, object: item)
-      .merge(
-        with: NotificationCenter.default.publisher(
-          for: .AVPlayerItemNewErrorLogEntry, object: item))
-      .receive(on: DispatchQueue.main)
-      .sink { [weak item] notification in
-        if notification.name == .AVPlayerItemNewErrorLogEntry {
-          guard let event = item?.errorLog()?.events.last else { return }
-          RequestLog.shared.note(
-            "player error \(event.errorDomain) \(event.errorStatusCode) \(event.errorComment ?? "")")
-        } else if let event = item?.accessLog()?.events.last {
-          RequestLog.shared.note(
-            String(
-              format: "player access startup=%.1f transfer=%.1f stalls=%d kbps=%.0f",
-              event.startupTime, event.transferDuration, event.numberOfStalls,
-              event.observedBitrate / 1000))
-        }
-      }
-
-    // Fallback advance for items whose reported duration is off (VBR, missing
-    // metadata): if the periodic check misses the end, the player item itself
-    // tells us. The observation is per-item, so a track advanced by the
-    // periodic check never double-fires here.
-    playbackEndObservation = NotificationCenter.default
-      .publisher(for: .AVPlayerItemDidPlayToEndTime, object: item)
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self, weak item] _ in
-        guard let self else { return }
-        // A transcode whose encoder died ends cleanly, far short of the song.
-        if self.currentSourceIsTranscoded, self.totalDuration.isFinite,
-          self.lastObservedTime < self.totalDuration - 10
-        {
-          self.handleStreamFailure(trackId: trackId, item: item)
-          return
-        }
-        self.finishCurrentSong()
-      }
-
-    if let position, position > 0 {
-      player?.seek(to: CMTime(seconds: position, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
-    }
-    addPeriodicTimeObserver()
-
-    if isPlaying {
-      player?.play()
-      armLoadWatchdog()
-    }
-    // Re-anchors the system's elapsed time clock.
-    updateNowPlayingInfo(progress: progress, rate: isPlaying ? 1.0 : 0.0)
-
-    // AVPlayer loads bypass the request log's Alamofire monitor.
-    if isRemote {
-      RequestLog.shared.note("player stream offset=\(Int(offset))\(isTranscoded ? " transcode" : "")")
-    }
-  }
-
-  /// A stream that breaks mid-song resumes where it was instead of skipping
-  /// ahead: a transcode restarts there, direct play seeks there. Failing to
-  /// load, or breaking again within 30 s of the last resume, counts as failed.
-  /// A broken connection waits for the server instead. `error` is the
-  /// failure notification's; the item's own error is used without one.
-  private func handleStreamFailure(trackId: String?, item: AVPlayerItem?, error: Error? = nil) {
-    // KVO and the failure notification can both report the same item, and a
-    // late report can arrive for an item already replaced.
-    guard let item, item === playerItem else { return }
-    // The load watchdog already counted this item and scheduled the skip.
-    guard item !== countedFailedItem else { return }
-    // Only the current queue entry's remote song is waited for, reloaded or
-    // resumed; anything else that fails is skipped.
-    let remoteSong = isCurrentTrack(trackId) && !isLiveRadio && currentSourceIsRemote
-    // The server may no longer accept the decision's token.
-    if remoteSong, let trackId {
-      AlbumService.shared.forgetTranscodeDecision(songId: trackId)
-    }
-    if remoteSong, isPlaying,
-      ConnectivityMonitor.isConnectionError(error ?? item.error)
-        || !ConnectivityMonitor.shared.isServerReachable
-    {
-      enterConnectionWait(cause: "stream error")
-      return
-    }
-
-    // Paused, the dead item is dropped so that Play loads the song again where
-    // it was; its status may still read ready, which play() would otherwise
-    // trust. A song that never got going is asked for once more: the server
-    // rejects a decision's token after a rescan touched the file.
-    if remoteSong, !isPlaying {
-      if lastObservedTime > 5 { pendingStartPosition = floor(lastObservedTime) }
-      detachItem()
-      isMediaFailed = true
-      return
-    }
-    if remoteSong, lastObservedTime <= 5, restartedTrackId != trackId {
-      restartedTrackId = trackId
-      loadItem(at: pendingStartPosition)
-      return
-    }
-    guard remoteSong, isPlaying, lastObservedTime > 5,
-      resumedAtListened.map({ secondsListened - $0 >= 30 }) ?? true
-    else {
-      isMediaFailed = true
-      skipFailedTrack(trackId: trackId)
-      return
-    }
-
-    let position = floor(lastObservedTime)
-    resumedAtListened = secondsListened
-    RequestLog.shared.note("stream resume at \(Int(position)) s")
-    loadItem(at: position)
-  }
-
-  /// Treats an item that has not played after `loadTimeout` of trying as
-  /// failed, or as a connection wait while the server is out of reach. A user
-  /// who paused in the meantime is left alone, and so is a ready item the
-  /// player is not waiting for (the system paused it).
-  private func armLoadWatchdog() {
-    loadWatchdog?.cancel()
-    guard let item = playerItem, !itemHasPlayed, !isLiveRadio else { return }
-
-    let trackId = nowPlayingId
-    let watchdog = DispatchWorkItem { [weak self, weak item] in
-      guard let self = self, self.isPlaying, let item = item, self.playerItem === item,
-        !self.itemHasPlayed
-      else { return }
-      if self.settleWork != nil {
-        self.armLoadWatchdog()
-        return
-      }
-      guard item.status != .readyToPlay
-        || self.player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
-      else { return }
-      self.handleNoProgress(of: item, cause: "load timeout") { [weak self, weak item] in
-        // A slow cell can leave a ready item silent; it is asked for once
-        // more before it counts as failed.
-        if item?.status == .readyToPlay {
-          self?.handleStreamFailure(trackId: trackId, item: item)
-        } else {
-          self?.player?.pause()
-          self?.skipFailedTrack(trackId: trackId)
-        }
-      }
-    }
-    loadWatchdog = watchdog
-    DispatchQueue.main.asyncAfter(deadline: .now() + Self.loadTimeout, execute: watchdog)
-  }
-
-  /// A failed stream (deleted file, transcoder error, corrupt cache) never
-  /// reaches its end, so nothing would advance and playback would sit silent.
-  /// Skip ahead after a moment, but stop after a few failures in a row so a
-  /// broken library does not burn through the whole queue; an unreachable
-  /// server is waited for instead.
-  private func skipFailedTrack(trackId: String?) {
-    loadWatchdog?.cancel()
-    // Paused playback stays paused; pressing Play reloads the failed item.
-    guard isPlaying, isCurrentTrack(trackId),
-      !isLiveRadio, playerItem == nil || playerItem !== countedFailedItem
-    else {
-      return
-    }
-    endConnectionWait(because: "song failed")
-    countedFailedItem = playerItem
-    consecutiveFailures += 1
-    debugLog(
-      "stream failed: \(trackId ?? "") (\(consecutiveFailures) in a row) "
-        + "item=\(String(describing: playerItem?.status.rawValue)) "
-        + "error=\(String(describing: playerItem?.error))")
-    guard consecutiveFailures <= Self.maxConsecutiveFailures else {
-      // Give up: nothing is playing any more, and the UI must say so.
-      isPlaying = false
-      isMediaLoading = false
-      player?.pause()
-      updateNowPlayingInfo(progress: progress, rate: 0.0)
-      // Several songs in a row failing on a reachable server usually means the
-      // server rebuilt its library and the cached song ids are gone.
-      if consecutiveFailures == Self.maxConsecutiveFailures + 1,
-        ConnectivityMonitor.shared.isServerReachable
-      {
-        SmartPlaybackService.shared.refreshSongLibrary()
-      }
-      return
-    }
-
-    let generation = playGeneration
-    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-      // A pause or play in the meantime means the user took over.
-      guard let self = self, self.playGeneration == generation, self.isCurrentTrack(trackId)
-      else { return }
-      self.nextSong()
-    }
-  }
-
   /// Stops playback and forgets the queue; its songs belong to the account
   /// that just logged out.
   private func clearForLogout() {
@@ -999,7 +293,7 @@ class WatchPlayerViewModel: ObservableObject {
     MainActor.assumeIsolated { updateRatingCommands() }
   }
 
-  private func addToQueue(idx: Int, item: [QueueEntity], playAudio: Bool = true) {
+  func addToQueue(idx: Int, item: [QueueEntity], playAudio: Bool = true) {
     // A new queue starts unshuffled; the saved order belongs to the old one.
     self.isShuffling = false
     self.unshuffledQueue = []
@@ -1014,9 +308,9 @@ class WatchPlayerViewModel: ObservableObject {
     queue.indices.contains(activeQueueIdx)
   }
 
-  private var nowPlayingId: String? { hasNowPlaying() ? nowPlaying.id : nil }
+  var nowPlayingId: String? { hasNowPlaying() ? nowPlaying.id : nil }
 
-  private func isCurrentTrack(_ id: String?) -> Bool {
+  func isCurrentTrack(_ id: String?) -> Bool {
     hasNowPlaying() && nowPlaying.id == id
   }
 
@@ -1085,44 +379,6 @@ class WatchPlayerViewModel: ObservableObject {
     MainActor.assumeIsolated { loadStarred() }
   }
 
-  /// Asks the server whether the current song is starred; a refresh asks
-  /// again only when the song change's lookup failed.
-  @MainActor private func loadStarred(refresh: Bool = false) {
-    if !refresh {
-      serverStarred = false
-      starLookupFailed = false
-      updateHeart()
-    } else if !starLookupFailed {
-      return
-    }
-    guard hasNowPlaying(), let songId = nowPlaying.id, !songId.isEmpty else { return }
-    starLookup += 1
-    let lookup = starLookup
-    // Adopted only if no edit was waiting or made meanwhile: an edit being
-    // sent can reach the server after it answered this lookup.
-    let canAdopt = !StarStore.shared.isPending(songId)
-    let edits = StarStore.shared.editCount
-    AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
-      Task { @MainActor in
-        // A newer lookup, another song or a cleared queue (logout) meanwhile.
-        guard let self, self.starLookup == lookup, self.isCurrentTrack(songId) else { return }
-        self.serverStarred = starred ?? false
-        self.starLookupFailed = starred == nil
-        if let starred, canAdopt, StarStore.shared.editCount == edits {
-          StarStore.shared.adoptServerState(starred, id: songId)
-        }
-        self.updateHeart()
-      }
-    }
-  }
-
-  /// Runs on every StarStore change, also with an empty queue.
-  @MainActor private func updateHeart() {
-    let songId = nowPlayingId ?? ""
-    let starred = !songId.isEmpty && StarStore.shared.isStarred(songId, listed: serverStarred)
-    if starred != isStarred { isStarred = starred }
-  }
-
   /// Reports the current song as playing to the server, once per song.
   private func announceNowPlaying() {
     guard needsNowPlayingAnnouncement, hasNowPlaying() else { return }
@@ -1154,7 +410,7 @@ class WatchPlayerViewModel: ObservableObject {
     needsNowPlayingAnnouncement = true
   }
 
-  private func addPeriodicTimeObserver() {
+  func addPeriodicTimeObserver() {
     guard let player = self.player else { return }
 
     let interval = CMTime(seconds: 1, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
@@ -1225,152 +481,11 @@ class WatchPlayerViewModel: ObservableObject {
   /// A song heard to its end was accepted, also when qualification did not
   /// run this time (counted before a relaunch, or joined late); a last tick
   /// may still owe it the count.
-  private func finishCurrentSong() {
+  func finishCurrentSong() {
     qualifyIfDue()
     acceptNowPlaying()
     nextSong()
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
-  }
-
-  /// Publishes the current song's cover for the player, and its title,
-  /// artist, duration and artwork for the system's Now Playing.
-  private func publishNowPlaying(title: String, artist: String, duration: Double) {
-    // Set title/artist/duration immediately so Now Playing is never empty
-    var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
-    nowPlayingInfo[MPMediaItemPropertyTitle] = title
-    nowPlayingInfo[MPMediaItemPropertyArtist] = artist
-    nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
-    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-    MainActor.assumeIsolated { updateRatingCommands() }
-
-    coverArt = AlbumService.shared.coverURL(albumId: nowPlaying.albumId ?? "")
-    if coverArt.hasPrefix("/") {
-      if let image = UIImage(contentsOfFile: coverArt) { Self.setArtwork(image) }
-    } else if let albumId = nowPlaying.albumId {
-      let trackId = nowPlaying.id
-      Task { @MainActor [weak self] in
-        // Shares the cover cache's single download with the album art views,
-        // and only for the song still playing.
-        guard let path = await CoverArtCacheManager.shared.coverPath(albumId: albumId),
-          let image = UIImage(contentsOfFile: path), let self, self.isCurrentTrack(trackId)
-        else { return }
-        Self.setArtwork(image)
-      }
-    }
-  }
-
-  private static func setArtwork(_ image: UIImage) {
-    var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
-    info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-    MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-  }
-
-  private func updateNowPlayingInfo(progress: TimeInterval, rate: Float) {
-    var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
-
-    // A station has no length to show a position in.
-    let isFinite = totalDuration.isFinite
-    nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] =
-      isFinite ? progress * totalDuration : nil
-    nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = isFinite ? totalDuration : nil
-    nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = rate
-
-    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-  }
-
-  private func setupRemoteCommandCenter() {
-    let commandCenter = MPRemoteCommandCenter.shared()
-
-    // Remote commands can arrive off the main thread; every handler hops to
-    // main before touching playback or published state.
-    commandCenter.playCommand.isEnabled = true
-    commandCenter.playCommand.addTarget { [weak self] event in
-      guard let self = self else { return .commandFailed }
-      DispatchQueue.main.async {
-        RequestLog.shared.note("audio remote play playing=\(self.isPlaying)")
-        self.play()
-      }
-      return .success
-    }
-
-    commandCenter.pauseCommand.addTarget { [weak self] event in
-      guard let self = self else { return .commandFailed }
-      DispatchQueue.main.async {
-        RequestLog.shared.note("audio remote pause playing=\(self.isPlaying)")
-        self.pause()
-      }
-      return .success
-    }
-
-    commandCenter.nextTrackCommand.isEnabled = true
-    commandCenter.nextTrackCommand.addTarget { [weak self] event in
-      guard let self = self else { return .commandFailed }
-      DispatchQueue.main.async { self.nextSong(userInitiated: true) }
-      return .success
-    }
-
-    commandCenter.previousTrackCommand.isEnabled = true
-    commandCenter.previousTrackCommand.addTarget { [weak self] event in
-      guard let self = self else { return .commandFailed }
-      DispatchQueue.main.async { self.prevSong() }
-      return .success
-    }
-
-    commandCenter.changePlaybackPositionCommand.isEnabled = true
-    commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
-      guard let self = self, let event = event as? MPChangePlaybackPositionCommandEvent
-      else { return .commandFailed }
-      let positionTime = event.positionTime
-      DispatchQueue.main.async {
-        guard !self.isLiveRadio, self.totalDuration > 0 else { return }
-        self.seek(to: positionTime / self.totalDuration)
-      }
-      return .success
-    }
-
-    // Like and dislike stand for Boost and Avoid; pressing the active one
-    // clears the rating.
-    commandCenter.likeCommand.localizedTitle = "Boost"
-    commandCenter.likeCommand.localizedShortTitle = "Boost"
-    commandCenter.likeCommand.addTarget { [weak self] _ in
-      Task { @MainActor in
-        guard let self, self.hasNowPlaying() else { return }
-        let rating = RatingStore.shared.rating(for: self.nowPlaying.id ?? "")
-        self.rateNowPlaying(rating >= 4 ? 0 : 5)
-      }
-      return .success
-    }
-
-    commandCenter.dislikeCommand.localizedTitle = "Avoid in Smart Shuffle"
-    commandCenter.dislikeCommand.localizedShortTitle = "Avoid"
-    commandCenter.dislikeCommand.addTarget { [weak self] _ in
-      Task { @MainActor in
-        guard let self, self.hasNowPlaying() else { return }
-        let rating = RatingStore.shared.rating(for: self.nowPlaying.id ?? "")
-        self.rateNowPlaying((1...2).contains(rating) ? 0 : 1)
-      }
-      return .success
-    }
-  }
-
-  /// Rates the now playing song from the rating dialog or the remote like
-  /// and dislike; 0 clears the rating.
-  @MainActor func rateNowPlaying(_ rating: Int) {
-    guard hasNowPlaying(), !isLiveRadio else { return }
-    RatingStore.shared.set(rating, for: nowPlaying)
-  }
-
-  @MainActor private func updateRatingCommands() {
-    let commandCenter = MPRemoteCommandCenter.shared()
-    let isRateable = hasNowPlaying() && !isLiveRadio
-    let rating = isRateable ? RatingStore.shared.rating(for: nowPlaying.id ?? "") : 0
-    commandCenter.likeCommand.isEnabled = isRateable
-    commandCenter.dislikeCommand.isEnabled = isRateable
-    commandCenter.likeCommand.isActive = rating >= 4
-    commandCenter.dislikeCommand.isActive = (1...2).contains(rating)
-    debugLog(
-      "rating commands: rating=\(rating) like=\(commandCenter.likeCommand.isActive) "
-        + "dislike=\(commandCenter.dislikeCommand.isActive)")
   }
 
   func play() {
@@ -1589,7 +704,7 @@ class WatchPlayerViewModel: ObservableObject {
 
   /// Starts something the user chose: a mix in flight and the old session
   /// are dropped.
-  private func beginUserStart() {
+  func beginUserStart() {
     startGeneration += 1
     reportStopped()
     resetSession()
@@ -1651,56 +766,6 @@ class WatchPlayerViewModel: ObservableObject {
     isGeneratingMix = false
     guard startGeneration == generation else { return false }
     return playItem(item: item)
-  }
-
-  @discardableResult
-  func playRadioItem(radio: Radio) -> Bool {
-    guard let radioUrl = Self.normalizedRadioURL(from: radio.streamUrl) else {
-      return false
-    }
-    beginUserStart()
-    endConnectionWait(because: "radio")
-
-    let item = radio.toPlayable()
-    let queue = PlaybackService.shared.addToQueue(item: item)
-    guard !queue.isEmpty else { return false }
-
-    self.activeQueueIdx = 0
-    self.queue = queue
-    self.hasQualified = false
-
-    // A queued end notification from the previous track must not advance the
-    // radio queue; live streams have no track end.
-    detachItem()
-
-    self.radioURL = radioUrl
-    attachRadioItem(radioUrl)
-
-    self.isMediaLoading = true
-    self.isMediaFailed = false
-    self.totalDuration = self.nowPlaying.duration
-    self.progress = 0.0
-    self.currentTimeString = "00:00"
-
-    self.play()
-
-    self.publishNowPlaying(title: item.name, artist: nowPlaying.artistName ?? "", duration: 0)
-    UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
-    return true
-  }
-
-  /// The station's URL as given, else percent-encoded, else either with https
-  /// in front; a stream needs a scheme and a host.
-  private static func normalizedRadioURL(from streamUrl: String) -> URL? {
-    let trimmed = streamUrl.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return nil }
-    for base in [trimmed, "https://\(trimmed)"] {
-      let encoded = base.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed)
-      for text in [base, encoded].compactMap({ $0 }) {
-        if let url = URL(string: text), url.scheme != nil, url.host != nil { return url }
-      }
-    }
-    return nil
   }
 
   func shuffleCurrentQueue() {
@@ -1799,165 +864,6 @@ class WatchPlayerViewModel: ObservableObject {
         setNowPlaying()
       }
     }
-  }
-
-  /// Pressing next on a barely heard song is a negative signal for smart
-  /// shuffle. Only early, user-initiated abandonment counts: natural track
-  /// ends, radio, repeat modes that restart the same track and accidental
-  /// starts under five seconds do not.
-  private func logSkipIfAbandoned() {
-    guard self.hasNowPlaying(), !self.isLiveRadio else { return }
-    guard !self.hasQualified else { return }
-
-    let restartsSameTrack =
-      self.playbackMode == PlaybackMode.repeatOnce
-      || (self.queue.count == 1 && self.playbackMode != PlaybackMode.defaultPlayback)
-    guard !restartsSameTrack else { return }
-
-    guard self.totalDuration.isFinite, self.totalDuration > 0,
-      self.secondsListened >= 5, self.progress < 0.3
-    else { return }
-
-    PlaybackJournal.shared.recordSkip(
-      self.nowPlaying, origin: self.nowPlaying.playbackOrigin,
-      listenedSeconds: self.secondsListened)
-  }
-
-  /// Something the user started, a logout or a long break ends the session.
-  private func resetSession() {
-    sessionStartedAt = nil
-    lastAcceptedSong = nil
-    anchorGenres = []
-  }
-
-  /// Navidrome's rule: a play counts after half the song or four minutes of
-  /// listening, whichever comes first; seeking ahead does not count. Runs
-  /// on main: journal writes stay on the view context's queue and the
-  /// submission is asynchronous inside the service.
-  private func qualifyIfDue() {
-    guard !hasQualified, hasNowPlaying(), totalDuration.isFinite,
-      totalDuration > 0, secondsListened >= min(0.5 * totalDuration, 240)
-    else { return }
-    hasQualified = true
-    UserDefaultsManager.nowPlayingQualified = true
-    debugLog(
-      "qualified after \(String(format: "%.1f", secondsListened))s of "
-        + "\(String(format: "%.0f", totalDuration))s")
-    PlaybackJournal.shared.recordHeard(
-      nowPlaying, origin: nowPlaying.playbackOrigin, listenedSeconds: secondsListened)
-    FloooViewModel.shared.scrobble(submission: true, nowPlaying: nowPlaying)
-    acceptNowPlaying()
-  }
-
-  /// A song heard out seeds the next continuation; the first one of the
-  /// session also anchors its genres.
-  private func acceptNowPlaying() {
-    guard let id = nowPlaying.id, !id.isEmpty else { return }
-    lastAcceptedSong = (id, nowPlaying.artistName ?? "", nowPlaying.albumId ?? "")
-    guard anchorGenres.isEmpty else { return }
-    let session = sessionStartedAt
-    Task { @MainActor [weak self] in
-      let genres =
-        await SmartPlaybackService.shared.libraryIndex(allowSync: false).songs[id]?.genres ?? []
-      guard let self, self.sessionStartedAt == session, self.anchorGenres.isEmpty else { return }
-      self.anchorGenres = Set(genres)
-    }
-  }
-
-  private func autoPlayOrStop() {
-    guard UserDefaultsManager.keepPlaying, hasNowPlaying() else {
-      self.stop()
-      return
-    }
-    guard !isAutoContinuing else { return }
-    isAutoContinuing = true
-
-    // Capture the playback context before the queue is replaced. Until a song
-    // was heard out, the session continues from the one that just ended.
-    let lastPlayedId = self.nowPlaying.id
-    let accepted = self.lastAcceptedSong
-    let seedId = accepted?.id ?? lastPlayedId ?? ""
-    let seed = SmartPlaybackService.Seed(
-      artist: accepted?.artist ?? self.nowPlaying.artistName ?? "",
-      albumId: accepted?.albumId ?? self.nowPlaying.albumId ?? "")
-    let sessionGenres = self.anchorGenres
-    let sessionMinutes = self.sessionStartedAt.map { Date().timeIntervalSince($0) / 60 } ?? 0
-    let queueIdList = self.queue.compactMap { $0.id }
-    let queueIds = Set(queueIdList)
-    // Any play, pause or stop while the mix is generated bumps this; the user
-    // took over and the mix must not start playing behind their back.
-    let generation = self.playGeneration
-
-    Task { [weak self] in
-      // A session without an anchor yet keeps to the seed's genres.
-      let anchorGenres =
-        sessionGenres.isEmpty
-        ? Set(
-          await SmartPlaybackService.shared.libraryIndex(allowSync: false).songs[seedId]?.genres
-            ?? [])
-        : sessionGenres
-      debugLog(
-        "keep playing: seed=\(seedId) accepted=\(accepted != nil) artist=\(seed.artist) "
-          + "album=\(seed.albumId) anchorGenres=\(anchorGenres.sorted()) "
-          + "sessionMinutes=\(String(format: "%.1f", sessionMinutes)) queueIds=\(queueIds.count)")
-      let songs = await SmartPlaybackService.shared.generateMix(
-        count: 10,
-        mode: .keepPlaying(
-          SmartPlaybackService.KeepPlayingContext(
-            seed: seed, anchorGenres: anchorGenres, sessionMinutes: sessionMinutes,
-            queueIds: queueIds)))
-
-      await MainActor.run {
-        guard let self = self else { return }
-        self.isAutoContinuing = false
-
-        // Discard the mix if the user started something else while it was
-        // being generated — the ordered queue contents are compared too, so a
-        // new queue that happens to start on the same song is not overwritten.
-        guard self.isCurrentTrack(lastPlayedId), self.playGeneration == generation
-        else { return }
-        guard self.queue.compactMap({ $0.id }) == queueIdList, UserDefaultsManager.keepPlaying
-        else {
-          // Songs queued while the mix was built play instead of it; with
-          // none and Keep Playing turned off meanwhile, playback ends.
-          if self.queue.indices.contains(self.activeQueueIdx + 1) {
-            self.nextSong()
-          } else {
-            self.stop()
-          }
-          return
-        }
-
-        guard !songs.isEmpty else {
-          self.stop()
-          return
-        }
-        debugLog("keep playing: \(songs.count) songs follow")
-
-        let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: songs)
-        // A mix that could not be stored ends playback like an empty one.
-        let queue = PlaybackService.shared.addToQueue(item: autoPlay)
-        guard !queue.isEmpty else {
-          self.stop()
-          return
-        }
-        // Through addToQueue, so shuffle state and failure counts reset like
-        // for any other new queue.
-        self.addToQueue(idx: 0, item: queue)
-      }
-    }
-  }
-
-  @MainActor func toggleStar() {
-    guard hasNowPlaying(), let songId = nowPlaying.id, !songId.isEmpty else { return }
-    StarStore.shared.setSong(!isStarred, id: songId)
-  }
-
-  /// Whether a listed song is liked: the heart for the song playing, else
-  /// StarStore over the state it was listed with.
-  @MainActor func isStarred(_ song: Song) -> Bool {
-    if isCurrent(song) { return isStarred }
-    return StarStore.shared.isStarred(song.playbackID, listed: song.starred || song.starredAt != nil)
   }
 
   /// Caches the next two songs, so a dropout or a skip does not stop the
