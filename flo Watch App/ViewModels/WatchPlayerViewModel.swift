@@ -1243,9 +1243,7 @@ class WatchPlayerViewModel: ObservableObject {
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     MainActor.assumeIsolated { updateRatingCommands() }
 
-    coverArt = AlbumService.shared.getAlbumCover(
-      artistName: nowPlaying.artistName ?? "", albumName: nowPlaying.albumName ?? "",
-      albumId: nowPlaying.albumId ?? "", trackId: nowPlaying.id ?? "")
+    coverArt = AlbumService.shared.coverURL(albumId: nowPlaying.albumId ?? "")
     if coverArt.hasPrefix("/") {
       if let image = UIImage(contentsOfFile: coverArt) { Self.setArtwork(image) }
     } else if let albumId = nowPlaying.albumId {

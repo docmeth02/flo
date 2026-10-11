@@ -123,8 +123,7 @@ class AlbumService {
   // Downloads live in one folder per collection (album or playlist) named by
   // its id, with files named by media file id, so equal titles or track
   // numbers can never overwrite each other. Covers are stored once per album
-  // or playlist id. Older downloads keep the artist/album paths stored in
-  // SongEntity.fileURL and stay playable.
+  // or playlist id.
   static func downloadPath(collectionId: String, mediaFileId: String, suffix: String) -> String {
     "Media/\(collectionId)/\(mediaFileId).\(suffix)"
   }
@@ -319,22 +318,12 @@ class AlbumService {
 
   /// Every song the account rated, with its rating.
   func getRatedSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
-    let params: [String: Any] = ["has_rating": "true", "_start": 0, "_end": 0]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
-      (response: DataResponse<[Song], AFError>) in
-      completion(response.result.mapError { $0 })
-    }
+    ndList(API.NDEndpoint.getSong, ["has_rating": "true", "_start": 0, "_end": 0], completion)
   }
 
   /// Every album the account rated, with its rating.
   func getRatedAlbums(completion: @escaping (Result<[Album], Error>) -> Void) {
-    let params: [String: Any] = ["has_rating": "true", "_start": 0, "_end": 0]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getAlbum, parameters: params) {
-      (response: DataResponse<[Album], AFError>) in
-      completion(response.result.mapError { $0 })
-    }
+    ndList(API.NDEndpoint.getAlbum, ["has_rating": "true", "_start": 0, "_end": 0], completion)
   }
 
   func getStarredSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
@@ -342,116 +331,61 @@ class AlbumService {
       endpoint: API.SubsonicEndpoint.getStarred2, parameters: nil
     ) {
       (response: DataResponse<Starred2Response, AFError>) in
-      switch response.result {
-      case .success(let starred):
-        completion(.success(starred.songs))
-      case .failure(let error):
-        completion(.failure(error))
-      }
+      completion(response.result.map(\.songs).mapError { $0 })
     }
   }
 
   func getSongFromAlbum(id: String, completion: @escaping (Result<[Song], Error>) -> Void) {
-    // FIXME: get all songs for now
-    let params: [String: Any] = [
-      "_start": 0, "_end": 0, "_order": "ASC", "_sort": "album", "album_id": id,
-    ]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
-      (response: DataResponse<[Song], AFError>) in
-      switch response.result {
-      case .success(let song):
-        completion(.success(song))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(
+      API.NDEndpoint.getSong,
+      ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "album", "album_id": id], completion)
   }
 
-  func getDownloadedAlbum(completion: @escaping (Result<[Album], Error>) -> Void) {
-    completion(
-      .success(
-        CoreDataManager.shared.getRecordsByEntity(entity: PlaylistEntity.self).map(Album.init)))
+  func downloadedAlbums() -> [Album] {
+    CoreDataManager.shared.getRecordsByEntity(entity: PlaylistEntity.self).map(Album.init)
   }
 
   func getAlbum(completion: @escaping (Result<[Album], Error>) -> Void) {
-    // FIXME: now we fetch all albums. let's see if this will affect performance
-    let params: [String: Any] = ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getAlbum, parameters: params) {
-      (response: DataResponse<[Album], AFError>) in
-      switch response.result {
-      case .success(let albums):
-        completion(.success(albums))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(
+      API.NDEndpoint.getAlbum, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"],
+      completion)
   }
 
   func getArtists(completion: @escaping (Result<[Artist], Error>) -> Void) {
-    let params: [String: Any] = ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getArtists, parameters: params) {
-      (response: DataResponse<[Artist], AFError>) in
-      switch response.result {
-      case .success(let artists):
-        completion(.success(artists))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(
+      API.NDEndpoint.getArtists, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"],
+      completion)
   }
 
   func getAlbumsByArtist(id: String, completion: @escaping (Result<[Album], Error>) -> Void) {
-    // TODO: now we fetch all albums. let's see if this will affect performance
-    let params: [String: Any] = [
-      "_start": 0, "_end": 0, "_order": "ASC", "_sort": "max_year desc,date desc", "artist_id": id,
-    ]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getAlbum, parameters: params) {
-      (response: DataResponse<[Album], AFError>) in
-      switch response.result {
-      case .success(let albums):
-        completion(.success(albums))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(
+      API.NDEndpoint.getAlbum,
+      [
+        "_start": 0, "_end": 0, "_order": "ASC", "_sort": "max_year desc,date desc",
+        "artist_id": id,
+      ], completion)
   }
 
   func getPlaylists(completion: @escaping (Result<[Playlist], Error>) -> Void) {
-    let params: [String: Any] = ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getPlaylists, parameters: params) {
-      (response: DataResponse<[Playlist], AFError>) in
-      switch response.result {
-      case .success(let playlists):
-        completion(.success(playlists))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(
+      API.NDEndpoint.getPlaylists, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"],
+      completion)
   }
 
-  // FIXME: currently we can't stream from the local (offline) one :)
   func getSongsByPlaylist(id: String, completion: @escaping (Result<[Song], Error>) -> Void) {
-    let params: [String: Any] = [
-      "playlist_id": id, "_start": 0, "_end": 0, "_order": "ASC", "_sort": "id",
-    ]
+    ndList(
+      "\(API.NDEndpoint.getPlaylists)/\(id)/tracks",
+      ["playlist_id": id, "_start": 0, "_end": 0, "_order": "ASC", "_sort": "id"], completion)
+  }
 
-    let endpoint = "\(API.NDEndpoint.getPlaylists)/\(id)/tracks"
-
-    APIManager.shared.NDEndpointRequest(
-      endpoint: endpoint, parameters: params
-    ) {
-      (response: DataResponse<[Song], AFError>) in
-      switch response.result {
-      case .success(let songs):
-        completion(.success(songs))
-      case .failure(let error):
-        completion(.failure(error))
-      }
+  /// A whole list from Navidrome's own API.
+  private func ndList<T: Decodable>(
+    _ endpoint: String, _ parameters: [String: Any],
+    _ completion: @escaping (Result<[T], Error>) -> Void
+  ) {
+    APIManager.shared.NDEndpointRequest(endpoint: endpoint, parameters: parameters) {
+      (response: DataResponse<[T], AFError>) in
+      completion(response.result.mapError { $0 })
     }
   }
 
@@ -483,15 +417,7 @@ class AlbumService {
       "_start": start, "_end": end, "_sort": "updated_at", "_order": "DESC",
     ]
 
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
-      (response: DataResponse<[SongPageItem], AFError>) in
-      switch response.result {
-      case .success(let items):
-        completion(.success(items))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(API.NDEndpoint.getSong, params, completion)
   }
 
   /// One page of the server's play log, highest id first, with the log's size.
@@ -514,7 +440,7 @@ class AlbumService {
     }
   }
 
-  func getSongsByAlbumId(albumId: String, limit: Int = 0) -> [Song] {
+  func getSongsByAlbumId(albumId: String) -> [Song] {
     let sortByTrackNumber = NSSortDescriptor(key: "trackNumber", ascending: true)
 
     return CoreDataManager.shared.getRecordByKey(
@@ -563,105 +489,28 @@ class AlbumService {
     }
   }
 
-  func getAlbumCover(
-    artistName: String,
-    albumName: String,
-    albumId: String = "",
-    trackId: String = "",
-    contextName: String? = nil,
-    albumCover: String = ""
-  ) -> String {
-    // If album already has a cover URL/path, use it
-    if !albumCover.isEmpty {
-      if albumCover.hasPrefix("/") {
-        return albumCover
-      } else if albumCover.hasPrefix("http") {
-        return albumCover
-      } else {
-        // Could be a relative path, try to get full path
-        if LocalFileManager.shared.fileExists(fileName: albumCover) {
-          return LocalFileManager.shared.fileURL(for: albumCover)?.path ?? ""
-        }
-      }
-    }
-
-    let coverTarget = Self.coverPath(id: albumId)
-    if !albumId.isEmpty, LocalFileManager.shared.fileExists(fileName: coverTarget) {
-      return LocalFileManager.shared.fileURL(for: coverTarget)?.path ?? ""
-    }
-
-    let target = "Media/\(artistName)/\(albumName)/cover.png"
-    let anotherTarget = "Media/Various Artists/\(albumName)/cover/\(trackId).png"
-    let contextTarget =
-      contextName.map { "Media/Various Artists/\($0)/cover/\(trackId).png" }
-
-    if LocalFileManager.shared.fileExists(fileName: target) {
-      return LocalFileManager.shared.fileURL(for: target)?.path ?? ""
-    } else if let contextTarget, LocalFileManager.shared.fileExists(fileName: contextTarget) {
-      return LocalFileManager.shared.fileURL(for: contextTarget)?.path ?? ""
-    } else if LocalFileManager.shared.fileExists(fileName: anotherTarget) {
-      return LocalFileManager.shared.fileURL(for: anotherTarget)?.path ?? ""
-    } else if let cached = CoverArtCacheManager.shared.cachedFilePath(albumId: albumId) {
-      return cached
-    } else {
-      return
-        "\(UserDefaultsManager.serverBaseURL)\(API.SubsonicEndpoint.coverArt)\(AuthService.shared.sessionSnapshot().subsonicCredentials)&id=al-\(albumId)&size=\(API.coverArtSize)"
-    }
+  /// The album's downloaded cover, if one is on disk.
+  func downloadedCoverPath(albumId: String) -> String? {
+    guard !albumId.isEmpty else { return nil }
+    let path = LocalFileManager.shared.fileURL(for: Self.coverPath(id: albumId)).path
+    return FileManager.default.fileExists(atPath: path) ? path : nil
   }
 
-  func downloadAlbumCover(
-    albumId: String,
-    completion: @escaping (Result<URL?, Error>) -> Void
-  ) {
-    let params: [String: Any] = ["id": "al-\(albumId)", "size": API.coverArtSize]
-
-    APIManager.shared.SubsonicEndpointDownload(
-      endpoint: API.SubsonicEndpoint.coverArt, parameters: params
-    ) { result in
-      switch result {
-      case .success(let tempFile):
-        guard let target = LocalFileManager.shared.fileURL(for: Self.coverPath(id: albumId)) else {
-          completion(.success(nil))
-          return
-        }
-        LocalFileManager.shared.moveFile(source: tempFile, target: target, completion: completion)
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+  /// The album's cover: its download, else the cover cache, else the server.
+  func coverURL(albumId: String) -> String {
+    downloadedCoverPath(albumId: albumId)
+      ?? CoverArtCacheManager.shared.cachedFilePath(albumId: albumId)
+      ?? subsonicURL(
+        endpoint: API.SubsonicEndpoint.coverArt,
+        parameters: ["id": "al-\(albumId)", "size": API.coverArtSize])
   }
 
-  /// Cover of a playlist track's album, stored once per album id.
-  func downloadAlbumCoverForPlaylist(
-    albumId: String,
-    completion: @escaping (Result<URL?, Error>) -> Void
+  /// Downloads the cover art `artId` as the stored cover of `id`; without
+  /// `overwrite` a cover already stored stays.
+  func downloadCover(
+    artId: String, as id: String, overwrite: Bool = true,
+    completion: @escaping (Result<URL, Error>) -> Void
   ) {
-    let params: [String: Any] = ["id": "al-\(albumId)", "size": API.coverArtSize]
-
-    APIManager.shared.SubsonicEndpointDownload(
-      endpoint: API.SubsonicEndpoint.coverArt, parameters: params
-    ) { result in
-      switch result {
-      case .success(let tempFile):
-        guard let target = LocalFileManager.shared.fileURL(for: Self.coverPath(id: albumId)) else {
-          completion(.success(nil))
-          return
-        }
-
-        LocalFileManager.shared.moveFile(
-          source: tempFile, target: target, forceOverride: false, completion: completion)
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
-  }
-
-  func downloadPlaylistCover(
-    playlistId: String,
-    coverArtId: String?,
-    completion: @escaping (Result<URL?, Error>) -> Void
-  ) {
-    let artId = coverArtId ?? (playlistId.hasPrefix("pl-") ? playlistId : "pl-\(playlistId)")
     let params: [String: Any] = ["id": artId, "size": API.coverArtSize]
 
     APIManager.shared.SubsonicEndpointDownload(
@@ -669,13 +518,9 @@ class AlbumService {
     ) { result in
       switch result {
       case .success(let tempFile):
-        guard let target = LocalFileManager.shared.fileURL(for: Self.coverPath(id: playlistId))
-        else {
-          completion(.success(nil))
-          return
-        }
-
-        LocalFileManager.shared.moveFile(source: tempFile, target: target, completion: completion)
+        LocalFileManager.shared.moveFile(
+          source: tempFile, target: LocalFileManager.shared.fileURL(for: Self.coverPath(id: id)),
+          forceOverride: overwrite, completion: completion)
       case .failure(let error):
         completion(.failure(error))
       }
@@ -787,7 +632,7 @@ class AlbumService {
   func downloadNew(
     collectionId: String, mediaFileId: String, suffix: String,
     progressUpdate: ((Double) -> Void)?,
-    completion: @escaping (Result<URL?, Error>) -> Void
+    completion: @escaping (Result<URL, Error>) -> Void
   ) -> DownloadRequest {
     let params: [String: Any] = ["id": mediaFileId, "format": "raw", "bitrate": 0]
     let path = Self.downloadPath(
@@ -798,40 +643,21 @@ class AlbumService {
     ) { result in
       switch result {
       case .success(let tempFile):
-        guard let target = LocalFileManager.shared.fileURL(for: path) else {
-          completion(.success(nil))
-          return
-        }
-
-        LocalFileManager.shared.moveFile(source: tempFile, target: target, completion: completion)
+        LocalFileManager.shared.moveFile(
+          source: tempFile, target: LocalFileManager.shared.fileURL(for: path),
+          completion: completion)
       case .failure(let error):
         completion(.failure(error))
       }
     }
   }
 
-  /// Deletes an old-layout artist/album or playlist-name folder only once it
-  /// holds nothing but cover images: a same-named collection downloaded by an
-  /// older build may still keep its songs there.
-  private func removeLegacyDirectoryIfUnused(_ path: String) {
-    guard let url = LocalFileManager.shared.fileURL(for: path),
-      let contents = try? FileManager.default.contentsOfDirectory(atPath: url.path)
-    else { return }
-
-    let onlyCovers = contents.allSatisfy { $0 == "cover.png" || $0 == "cover" || $0 == ".DS_Store" }
-    if onlyCovers {
-      try? FileManager.default.removeItem(at: url)
-    }
-  }
-
   /// Removes a downloaded album or playlist: every song file at its stored
-  /// path (older downloads used artist/album folders), the collection folder,
-  /// the collection's cover and, once empty, its legacy folder, then its
+  /// path, the collection folder and the collection's cover, then its
   /// records. Records go even when a folder is already missing, so nothing is
   /// left dangling.
   func removeDownloadedCollection(
-    id: String, legacyDirectory: String,
-    completion: @escaping (Result<Bool, Error>) -> Void
+    id: String, completion: @escaping (Result<Bool, Error>) -> Void
   ) {
     let songs = CoreDataManager.shared.getRecordByKey(
       entity: SongEntity.self, key: \SongEntity.albumId, value: id)
@@ -840,9 +666,8 @@ class AlbumService {
     paths += ["Media/\(id)", Self.coverPath(id: id)]
 
     for path in paths {
-      guard let url = LocalFileManager.shared.fileURL(for: path),
-        FileManager.default.fileExists(atPath: url.path)
-      else { continue }
+      let url = LocalFileManager.shared.fileURL(for: path)
+      guard FileManager.default.fileExists(atPath: url.path) else { continue }
 
       do {
         try FileManager.default.removeItem(at: url)
@@ -851,8 +676,6 @@ class AlbumService {
         return
       }
     }
-
-    removeLegacyDirectoryIfUnused(legacyDirectory)
 
     CoreDataManager.shared.deleteRecordByKey(
       entity: PlaylistEntity.self, key: \PlaylistEntity.id, value: id)

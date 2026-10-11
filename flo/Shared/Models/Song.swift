@@ -41,35 +41,7 @@ struct Song: Codable, Identifiable, Hashable {
     explicitStatus.isExplicit
   }
 
-  enum DecodeKeys: String, CodingKey {
-    case id
-    case title
-    case artist
-    case albumId
-    case album
-    case albumName
-    case trackNumber
-    case discNumber
-    case bitRate
-    case sampleRate
-    case suffix
-    case duration
-    case mediaFileId
-    case starred
-    case explicitStatus
-    case genre
-    case genres
-    case year
-    case playCount
-    case playDate
-    case rating
-    case ratedAt
-    case starredAt
-    case artistId
-    case albumArtistId
-  }
-
-  enum EncodeKeys: String, CodingKey {
+  enum CodingKeys: String, CodingKey {
     case id
     case title
     case artist
@@ -102,16 +74,13 @@ struct Song: Codable, Identifiable, Hashable {
   }
 
   init(from decoder: any Decoder) throws {
-    let container = try decoder.container(keyedBy: DecodeKeys.self)
+    let container = try decoder.container(keyedBy: CodingKeys.self)
 
     self.id = try container.decode(String.self, forKey: .id)
     self.title = try container.decode(String.self, forKey: .title)
     self.artist = try container.decode(String.self, forKey: .artist)
     self.albumId = try container.decode(String.self, forKey: .albumId)
-    self.albumName =
-      try container.decodeIfPresent(String.self, forKey: .album)
-      ?? container.decodeIfPresent(String.self, forKey: .albumName)
-      ?? ""
+    self.albumName = try container.decodeIfPresent(String.self, forKey: .albumName) ?? ""
 
     self.trackNumber = try container.decode(Int.self, forKey: .trackNumber)
     self.discNumber = try container.decode(Int.self, forKey: .discNumber)
@@ -137,7 +106,7 @@ struct Song: Codable, Identifiable, Hashable {
   }
 
   func encode(to encoder: any Encoder) throws {
-    var container = encoder.container(keyedBy: EncodeKeys.self)
+    var container = encoder.container(keyedBy: CodingKeys.self)
 
     try container.encode(id, forKey: .id)
     try container.encode(title, forKey: .title)
@@ -224,21 +193,7 @@ struct Song: Codable, Identifiable, Hashable {
     self.title = song.title ?? "N/A"
     self.artist = song.artistName ?? "N/A"
     self.albumId = song.albumId ?? ""
-
-    if let storedAlbumName = song.albumName, !storedAlbumName.isEmpty {
-      self.albumName = storedAlbumName
-    } else if let fileURL = song.fileURL {
-      let parts = fileURL.split(separator: "/")
-
-      if parts.count >= 3 {
-        self.albumName = String(parts[2])
-      } else {
-        self.albumName = ""
-      }
-    } else {
-      self.albumName = ""
-    }
-
+    self.albumName = song.albumName ?? ""
     self.trackNumber = Int(song.trackNumber)
     self.discNumber = Int(song.discNumber)
     self.bitRate = Int(song.bitRate)

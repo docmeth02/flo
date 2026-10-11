@@ -7,14 +7,21 @@
 
 import Foundation
 
-struct Album: Codable, Identifiable, Playable {
+struct Album: Codable, Hashable, Identifiable, Playable {
+  static func == (lhs: Album, rhs: Album) -> Bool {
+    lhs.id == rhs.id
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine(id)
+  }
+
   var id: String = ""
   var name: String = ""
   var albumArtist: String = ""
   var artist: String = ""
   var artistId: String = ""
   var albumArtistId: String = ""
-  var albumCover: String = ""
   var songs: [Song] = []
   var genre: String = ""
   var minYear: Int = 0
@@ -38,7 +45,6 @@ struct Album: Codable, Identifiable, Playable {
     case artist
     case artistId
     case albumArtistId
-    case albumCover
     case genre
     case minYear
     case songs
@@ -56,15 +62,7 @@ struct Album: Codable, Identifiable, Playable {
     self.artistId = try container.decodeIfPresent(String.self, forKey: .artistId) ?? ""
     self.albumArtistId = try container.decodeIfPresent(String.self, forKey: .albumArtistId) ?? ""
 
-    // pre BFR compatibility
-    // FIXME(@faultables): fix this in 2.x
-    if let artist = try? container.decode(String.self, forKey: .artist) {
-      self.artist = artist
-    } else {
-      self.artist = self.albumArtist
-    }
-
-    self.albumCover = try container.decodeIfPresent(String.self, forKey: .albumCover) ?? ""
+    self.artist = (try? container.decode(String.self, forKey: .artist)) ?? self.albumArtist
     self.genre = try container.decode(String.self, forKey: .genre)
     self.minYear = try container.decode(Int.self, forKey: .minYear)
     self.songs = try container.decodeIfPresent([Song].self, forKey: .songs) ?? []
@@ -99,7 +97,6 @@ struct Album: Codable, Identifiable, Playable {
     self.artist = playlist.artistName ?? "Unknown Artist"
     self.genre = playlist.genre ?? "Unknown Genre"
     self.minYear = Int(playlist.minYear)
-    self.albumCover = playlist.albumCover ?? ""
     self.explicitStatus = ExplicitStatus(from: playlist.explicitStatus)
   }
 
@@ -111,6 +108,5 @@ struct Album: Codable, Identifiable, Playable {
     self.songs = playlist.songs
     self.genre = "\(playlist.comment) by \(playlist.ownerName)"
     self.minYear = 0
-    self.albumCover = ""
   }
 }

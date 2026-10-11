@@ -54,10 +54,7 @@ class AlbumViewModel: ObservableObject {
   private var artistAlbumsId = ""
   private var artistAlbumsLoadedAt: Date?
 
-  init(album: Album = Album(), albums: [Album] = []) {
-    self.album = album
-    self.albums = albums
-
+  init() {
     NotificationCenter.default.addObserver(
       self, selector: #selector(handleLogout), name: .didLogout, object: nil)
   }
@@ -84,11 +81,12 @@ class AlbumViewModel: ObservableObject {
 
   func setActiveAlbum(album: Album) {
     self.album = album
-    self.album.albumCover = self.getAlbumCoverArt(id: album.id, albumCover: album.albumCover)
 
     if !album.id.isEmpty {
       if AlbumService.shared.isPlaylistDownload(id: album.id) {
-        self.fetchPlaylistSongsIntoAlbum(id: album.id)
+        fetchPlaylistSongs(id: album.id, isShown: { self.album.id == album.id }) {
+          self.album.songs = $0
+        }
       } else {
         self.fetchSongs(id: album.id)
       }
@@ -97,7 +95,9 @@ class AlbumViewModel: ObservableObject {
 
   func setActivePlaylist(playlist: Playlist) {
     self.playlist = playlist
-    self.fetchSongsByPlaylist(id: playlist.id)
+    fetchPlaylistSongs(id: playlist.id, isShown: { self.playlist.id == playlist.id }) {
+      self.playlist.songs = $0
+    }
   }
 
   func fetchSongs(id: String) {
@@ -130,10 +130,15 @@ class AlbumViewModel: ObservableObject {
     }
   }
 
-  func fetchPlaylistSongsIntoAlbum(id: String) {
+  /// The playlist's downloaded songs at once, then the server's order with
+  /// the downloads in place. `assign` is skipped for a late answer once
+  /// `isShown` says the playlist was left, so it never replaces the tracks
+  /// of the one now shown.
+  private func fetchPlaylistSongs(
+    id: String, isShown: @escaping () -> Bool, assign: @escaping ([Song]) -> Void
+  ) {
     let localSongs = AlbumService.shared.getPlaylistSongs(playlistId: id)
-
-    self.album.songs = localSongs
+    assign(localSongs)
 
     AlbumService.shared.getSongsByPlaylist(id: id) { result in
       DispatchQueue.main.async {
@@ -141,10 +146,8 @@ class AlbumViewModel: ObservableObject {
         case .success(let remoteSongs):
           let merged = Self.mergePlaylistSongs(local: localSongs, remote: remoteSongs)
           AlbumService.shared.updatePlaylistPositions(playlistId: id, songs: merged)
-          // A late response for a playlist the user already left must not
-          // replace the tracks of the one now shown.
-          guard self.album.id == id else { return }
-          self.album.songs = merged
+          guard isShown() else { return }
+          assign(merged)
 
         case .failure(let error):
           debugLog("playlist songs failed: \(error)")
@@ -252,60 +255,43 @@ class AlbumViewModel: ObservableObject {
 
   // MARK: - Fetch methods
 
-  func getAlbumCoverArt(
-    id: String, artistName: String = "", albumName: String = "", albumCover: String = ""
-  ) -> String {
-    return AlbumService.shared.getAlbumCover(
-      artistName: artistName, albumName: albumName, albumId: id, albumCover: albumCover)
-  }
-
   func downloadAlbum(_ albumToDownload: Album) {
     // The album record must exist even when its cover cannot be fetched,
     // otherwise its downloaded songs never show up in Downloads.
     AlbumService.shared.saveAlbum(albumToDownload)
 
-    AlbumService.shared.downloadAlbumCover(albumId: albumToDownload.id) { result in
+    AlbumService.shared.downloadCover(
+      artId: "al-\(albumToDownload.id)", as: albumToDownload.id
+    ) { result in
       if case .failure(let error) = result {
         debugLog("Failed to save album cover: \(error.localizedDescription)")
       }
     }
   }
 
-  func downloadPlaylist(_ playlistToDownload: Playlist, targetIdx: Int = -1) {
-    let maxConcurrentDownloads = ProcessInfo.processInfo.activeProcessorCount / 2
-    let downloadSemaphore = DispatchSemaphore(value: maxConcurrentDownloads)
-
-    let songs = targetIdx == -1 ? playlistToDownload.songs : [playlistToDownload.songs[targetIdx]]
-
-    // Core Data work stays on the main thread with the view context; only the
-    // cover downloads below go to a background queue.
+  func downloadPlaylist(_ playlistToDownload: Playlist) {
+    let id = playlistToDownload.id
     AlbumService.shared.savePlaylist(playlistToDownload)
 
     // The playlist's own cover lives next to its tracks so the Downloads tab
     // can pick it up; failure must not affect the song downloads.
-    AlbumService.shared.downloadPlaylistCover(
-      playlistId: playlistToDownload.id, coverArtId: playlistToDownload.coverArtId
+    AlbumService.shared.downloadCover(
+      artId: playlistToDownload.coverArtId ?? (id.hasPrefix("pl-") ? id : "pl-\(id)"), as: id
     ) { result in
       if case .failure(let error) = result {
         debugLog("Failed to save playlist cover: \(error.localizedDescription)")
       }
     }
 
-    songs.forEach { song in
-      DispatchQueue.global(qos: .background).async {
-        downloadSemaphore.wait()
-
-        AlbumService.shared.downloadAlbumCoverForPlaylist(albumId: song.albumId) { _ in
-          downloadSemaphore.signal()
-        }
-      }
+    // The tracks' album covers, once per album; a stored one stays.
+    for albumId in Set(playlistToDownload.songs.map(\.albumId))
+    where !albumId.isEmpty && AlbumService.shared.downloadedCoverPath(albumId: albumId) == nil {
+      AlbumService.shared.downloadCover(artId: "al-\(albumId)", as: albumId, overwrite: false) { _ in }
     }
   }
 
   func removeDownloadedAlbum(album: Album) {
-    AlbumService.shared.removeDownloadedCollection(
-      id: album.id, legacyDirectory: "Media/\(album.artist)/\(album.name)"
-    ) { result in
+    AlbumService.shared.removeDownloadedCollection(id: album.id) { result in
       DispatchQueue.main.async {
         switch result {
         case .success:
@@ -318,9 +304,7 @@ class AlbumViewModel: ObservableObject {
   }
 
   func removeDownloadedPlaylist(playlist: Playlist) {
-    AlbumService.shared.removeDownloadedCollection(
-      id: playlist.id, legacyDirectory: "Media/Various Artists/\(playlist.name)"
-    ) { result in
+    AlbumService.shared.removeDownloadedCollection(id: playlist.id) { result in
       DispatchQueue.main.async {
         switch result {
         case .success:
@@ -357,27 +341,6 @@ class AlbumViewModel: ObservableObject {
           self.artistAlbumsLoadedAt = Date()
         case .failure(let error):
           debugLog("artist albums failed: \(error)")
-        }
-      }
-    }
-  }
-
-  func fetchSongsByPlaylist(id: String) {
-    let localSongs = AlbumService.shared.getPlaylistSongs(playlistId: id)
-
-    self.playlist.songs = localSongs
-
-    AlbumService.shared.getSongsByPlaylist(id: id) { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let remoteSongs):
-          let merged = Self.mergePlaylistSongs(local: localSongs, remote: remoteSongs)
-          AlbumService.shared.updatePlaylistPositions(playlistId: id, songs: merged)
-          guard self.playlist.id == id else { return }
-          self.playlist.songs = merged
-
-        case .failure(let error):
-          debugLog("playlist songs failed: \(error)")
         }
       }
     }
@@ -502,21 +465,11 @@ class AlbumViewModel: ObservableObject {
   }
 
   func fetchDownloadedAlbums() {
-    AlbumService.shared.getDownloadedAlbum { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let albums):
-          // One row per album is enough to tell it still has songs.
-          self.downloadedAlbums = albums.filter { album in
-            !CoreDataManager.shared.getRecordByKey(
-              entity: SongEntity.self, key: \SongEntity.albumId, value: album.id, limit: 1
-            ).isEmpty
-          }
-
-        case .failure(let error):
-          debugLog("downloaded albums failed: \(error)")
-        }
-      }
+    // One row per album is enough to tell it still has songs.
+    downloadedAlbums = AlbumService.shared.downloadedAlbums().filter { album in
+      !CoreDataManager.shared.getRecordByKey(
+        entity: SongEntity.self, key: \SongEntity.albumId, value: album.id, limit: 1
+      ).isEmpty
     }
   }
 }

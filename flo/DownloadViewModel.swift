@@ -6,10 +6,10 @@
 //
 
 import Alamofire
+import Combine
 import SwiftUI
 
 enum DownloadStatus {
-  case idle
   case queued
   case downloading
   case completed
@@ -29,7 +29,7 @@ struct DownloadItem: Identifiable {
   let song: Song
   let playlistIndex: Int
   var progress: Double = 0
-  var status: DownloadStatus = .idle
+  var status: DownloadStatus = .queued
 }
 
 struct DownloadTrackCount: Identifiable {
@@ -44,7 +44,8 @@ class DownloadViewModel: ObservableObject {
   @Published internal(set) var currentDownloads: Set<String> = []
   @Published var downloadedTrackCount: [DownloadTrackCount] = []
 
-  @Published var downloadWatcher: Bool = true
+  /// Sent when a song finished downloading.
+  let downloadFinished = PassthroughSubject<Void, Never>()
 
   private var activeDownloads: [String: DownloadRequest] = [:]
 
@@ -67,7 +68,7 @@ class DownloadViewModel: ObservableObject {
   func isDownloading(collectionId: String) -> Bool {
     downloadItems.contains { item in
       item.albumId == collectionId
-        && (item.status == .downloading || item.status == .queued || item.status == .idle)
+        && (item.status == .downloading || item.status == .queued)
     }
   }
 
@@ -120,7 +121,7 @@ class DownloadViewModel: ObservableObject {
     let pendingDownloads =
       downloadItems
       .enumerated()
-      .filter { $0.element.status == .idle || $0.element.status == .queued }
+      .filter { $0.element.status == .queued }
       .prefix(availableSlots)
 
     for (index, _) in pendingDownloads {
@@ -183,7 +184,7 @@ class DownloadViewModel: ObservableObject {
         defer { self.finishDownload(item.id) }
 
         switch result {
-        case .success(.some):
+        case .success:
           AlbumService.shared.saveDownload(
             albumId: item.albumId,
             albumName: item.album,
@@ -193,16 +194,13 @@ class DownloadViewModel: ObservableObject {
             playlistIndex: item.playlistIndex
           )
           self.updateItemStatus(itemId: item.id, status: DownloadStatus.completed)
-          self.downloadWatcher = true
+          self.downloadFinished.send()
 
           if let index = self.downloadedTrackCount.firstIndex(where: {
             $0.id == item.albumId && $0.total == 1
           }) {
             self.downloadedTrackCount.remove(at: index)
           }
-
-        case .success(.none):
-          self.updateItemStatus(itemId: item.id, status: .failed)
 
         case .failure(let error):
           if let afError = error.asAFError, case .explicitlyCancelled = afError {
@@ -233,7 +231,7 @@ class DownloadViewModel: ObservableObject {
     // waiting item, which must not belong to the collection being cancelled.
     for index in downloadItems.indices
     where downloadItems[index].albumId == collectionId
-      && (downloadItems[index].status == .idle || downloadItems[index].status == .queued)
+      && downloadItems[index].status == .queued
     {
       downloadItems[index].status = .cancelled
     }

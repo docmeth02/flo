@@ -10,85 +10,53 @@ import Foundation
 class LocalFileManager {
   static let shared = LocalFileManager()
 
-  let fileManager: FileManager
-  let documentsDirectory: URL?
+  let fileManager = FileManager.default
+  let documentsDirectory = URL.documentsDirectory
 
-  private init() {
-    self.fileManager = FileManager.default
-    self.documentsDirectory =
-      self.fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
+  private init() {}
+
+  func fileURL(for fileName: String) -> URL {
+    documentsDirectory.appendingPathComponent(fileName)
   }
 
-  func fileURL(for fileName: String) -> URL? {
-    guard let documentsDirectory = self.documentsDirectory else {
-      return nil
-    }
-
-    return documentsDirectory.appendingPathComponent(fileName)
+  /// The size of the downloads folder, measured off the main thread.
+  func calculateDirectorySize() async -> String {
+    await Task.detached(priority: .userInitiated) { self.directorySize() }.value
   }
 
-  func _calculateDirectorySize() throws -> String {
-    var totalSize: Int64 = 0
-
-    guard let folderURL = self.fileURL(for: "Media") else {
+  private func directorySize() -> String {
+    guard
+      let enumerator = fileManager.enumerator(
+        at: fileURL(for: "Media"),
+        includingPropertiesForKeys: [.totalFileAllocatedSizeKey],
+        options: [.skipsHiddenFiles])
+    else {
       return "0 MB"
     }
 
-    do {
-      guard
-        let enumerator = fileManager.enumerator(
-          at: folderURL,
-          includingPropertiesForKeys: [.totalFileAllocatedSizeKey],
-          options: [.skipsHiddenFiles])
-      else {
-        return "0 MB"
-      }
+    var totalSize: Int64 = 0
+    for case let fileURL as URL in enumerator {
+      do {
+        let resourceValues = try fileURL.resourceValues(forKeys: [.totalFileAllocatedSizeKey])
 
-      for case let fileURL as URL in enumerator {
-        do {
-          let resourceValues = try fileURL.resourceValues(forKeys: [.totalFileAllocatedSizeKey])
-
-          if let size = resourceValues.totalFileAllocatedSize {
-            totalSize += Int64(size)
-          }
-        } catch {
-          debugLog("Error calculating size for \(fileURL.path): \(error)")
+        if let size = resourceValues.totalFileAllocatedSize {
+          totalSize += Int64(size)
         }
-      }
-
-      let formattedSize = bytesToMBOrGB(totalSize)
-
-      return formattedSize
-    }
-  }
-
-  func calculateDirectorySize() async throws -> String {
-    let calculateDirSize = self._calculateDirectorySize
-
-    return try await withCheckedThrowingContinuation { continuation in
-      DispatchQueue.global(qos: .userInitiated).async {
-        do {
-          let result = try calculateDirSize()
-
-          continuation.resume(returning: result)
-        } catch {
-          continuation.resume(throwing: error)
-        }
+      } catch {
+        debugLog("Error calculating size for \(fileURL.path): \(error)")
       }
     }
+
+    return bytesToMBOrGB(totalSize)
   }
 
   func fileExists(fileName: String) -> Bool {
-    guard let fileURL = self.fileURL(for: fileName) else {
-      return false
-    }
-
-    return self.fileManager.fileExists(atPath: fileURL.path)
+    fileManager.fileExists(atPath: fileURL(for: fileName).path)
   }
 
   func moveFile(
     source: URL, target: URL, forceOverride: Bool = true,
-    completion: @escaping (Result<URL?, Error>) -> Void
+    completion: @escaping (Result<URL, Error>) -> Void
   ) {
     do {
       let parentDirectory = target.deletingLastPathComponent()
@@ -114,11 +82,7 @@ class LocalFileManager {
   }
 
   func deleteDownloadedAlbums(completion: @escaping (Result<Bool, Error>) -> Void) {
-    guard let folderURL = self.fileURL(for: "Media") else {
-      completion(.success(false))
-
-      return
-    }
+    let folderURL = fileURL(for: "Media")
 
     do {
       if fileManager.fileExists(atPath: folderURL.path) {

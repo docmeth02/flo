@@ -46,16 +46,12 @@ class FloooViewModel: ObservableObject {
     self.downloadedSongs = CoreDataManager.shared.countRecords(entity: SongEntity.self)
 
     Task {
-      do {
-        let calculateDirectorySize = try await LocalFileManager.shared.calculateDirectorySize()
-        let cacheSize = await StreamCacheManager.shared.calculateCacheSize()
+      let directorySize = await LocalFileManager.shared.calculateDirectorySize()
+      let cacheSize = await StreamCacheManager.shared.calculateCacheSize()
 
-        await MainActor.run {
-          self.localDirectorySize = calculateDirectorySize
-          self.streamCacheSize = bytesToMBOrGB(cacheSize)
-        }
-      } catch {
-        debugLog("storage size failed: \(error)")
+      await MainActor.run {
+        self.localDirectorySize = directorySize
+        self.streamCacheSize = bytesToMBOrGB(cacheSize)
       }
     }
   }

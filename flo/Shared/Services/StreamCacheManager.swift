@@ -14,7 +14,6 @@ class StreamCacheManager {
   private let cacheDirectory: URL?
   private let syncQueue = DispatchQueue(label: "net.faultables.flo.streamcache")
   private var inFlightDownloads: [String: DownloadRequest] = [:]
-  private var inFlightProgress: [String: Double] = [:]
   private var inFlightKeys: Set<String> = []
   private var currentlyPlayingSongId: String?
 
@@ -149,18 +148,13 @@ class StreamCacheManager {
       CoreDataManager.shared.saveRecord()
     }
 
-    let progressUpdate: (Double) -> Void = { [weak self] progress in
-      self?.syncQueue.async { self?.inFlightProgress[key] = progress / 100.0 }
-    }
-
     let request = APIManager.shared.SubsonicEndpointDownload(
-      endpoint: source.endpoint, parameters: source.parameters, progressUpdate: progressUpdate
+      endpoint: source.endpoint, parameters: source.parameters
     ) { [weak self] result in
       guard let self = self else { return }
 
       self.syncQueue.async {
         self.inFlightDownloads.removeValue(forKey: key)
-        self.inFlightProgress.removeValue(forKey: key)
         self.inFlightKeys.remove(key)
       }
 
@@ -196,10 +190,7 @@ class StreamCacheManager {
           }
         }
 
-      case .failure(let error):
-        if let afError = error.asAFError, case .explicitlyCancelled = afError {
-          // Cancelled — clean up
-        }
+      case .failure:
         DispatchQueue.main.async { self.removeCacheRecord(key: key) }
       }
     }
@@ -238,44 +229,28 @@ class StreamCacheManager {
   func cancelAllInFlight(keeping mediaFileIds: Set<String> = []) {
     let bitrate = UserDefaultsManager.maxBitRate
     let kept = Set(mediaFileIds.map { cacheKey(mediaFileId: $0, bitrate: bitrate) })
-    let keysToClean: [String] = syncQueue.sync {
+    for key in cancelDownloads(keeping: kept) {
+      removeCacheRecord(key: key)
+    }
+  }
+
+  /// Cancels the downloads in flight except those of the `kept` cache keys,
+  /// and returns the cancelled keys.
+  @discardableResult
+  private func cancelDownloads(keeping kept: Set<String> = []) -> [String] {
+    syncQueue.sync {
       let keys = inFlightDownloads.keys.filter { !kept.contains($0) }
       for key in keys {
         inFlightDownloads.removeValue(forKey: key)?.cancel()
-        inFlightProgress.removeValue(forKey: key)
       }
       inFlightKeys.formIntersection(kept)
       return keys
     }
-
-    for key in keysToClean {
-      removeCacheRecord(key: key)
-    }
-
-    // Clean up any orphan downloading records from the cancelled keys
-    if !keysToClean.isEmpty {
-      let keySet = Set(keysToClean)
-      DispatchQueue.main.async {
-        let records = CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)
-        let orphans = records.filter { $0.state == "downloading" && keySet.contains($0.cacheKey ?? "") }
-        for record in orphans {
-          CoreDataManager.shared.viewContext.delete(record)
-        }
-        if !orphans.isEmpty {
-          CoreDataManager.shared.saveRecord()
-        }
-      }
-    }
   }
 
+  /// Main thread; the cache is empty on return.
   func clearCache() {
-    // Cancel all downloads
-    syncQueue.sync {
-      for (_, request) in inFlightDownloads { request.cancel() }
-      inFlightDownloads.removeAll()
-      inFlightProgress.removeAll()
-      inFlightKeys.removeAll()
-    }
+    cancelDownloads()
 
     // Delete all files
     if let dir = cacheDirectory, fileManager.fileExists(atPath: dir.path) {
@@ -283,12 +258,7 @@ class StreamCacheManager {
       try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
     }
 
-    // Delete all CacheEntity records (synchronous — callers expect cache to be clear on return)
-    if Thread.isMainThread {
-      deleteAllCacheRecords()
-    } else {
-      DispatchQueue.main.sync { deleteAllCacheRecords() }
-    }
+    deleteAllCacheRecords()
   }
 
   // A method rather than a closure: the Swift 6.4 optimizer crashes inlining
@@ -307,12 +277,7 @@ class StreamCacheManager {
 
   func reconcile() {
     // Cancel any active downloads first to prevent races
-    syncQueue.sync {
-      for (_, request) in inFlightDownloads { request.cancel() }
-      inFlightDownloads.removeAll()
-      inFlightProgress.removeAll()
-      inFlightKeys.removeAll()
-    }
+    cancelDownloads()
 
     DispatchQueue.main.async { [self] in
       let records = CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)

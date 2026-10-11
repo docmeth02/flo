@@ -11,7 +11,7 @@ struct WatchHomeView: View {
 
   @Environment(\.showPlayer) private var showPlayer
   @Environment(\.selectPlayerPage) private var selectPlayerPage
-  @State private var openedAlbumId: String?
+  @State private var openedAlbum: Album?
   @State private var menu: MenuTarget?
 
   var body: some View {
@@ -47,7 +47,7 @@ struct WatchHomeView: View {
       if !albumViewModel.recentAlbums.isEmpty {
         Section {
           ForEach(albumViewModel.recentAlbums) { album in
-            AlbumRow(album: album, menu: $menu) { openedAlbumId = album.id }
+            AlbumRow(album: album, menu: $menu) { openedAlbum = album }
           }
         } header: {
           FloSectionHeader("Recently Played")
@@ -108,11 +108,7 @@ struct WatchHomeView: View {
           url: playerViewModel.coverArt, height: 190)
       }
     }
-    .navigationDestination(item: $openedAlbumId) { id in
-      if let album = albumViewModel.recentAlbums.first(where: { $0.id == id }) {
-        WatchAlbumDetailView(album: album)
-      }
-    }
+    .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .itemMenu($menu)
     .navigationTitle("")
     // Runs again on every return to Home, so a song just heard shows up, and
