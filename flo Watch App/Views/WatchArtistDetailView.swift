@@ -78,7 +78,7 @@ struct WatchArtistDetailView: View {
           songs: songs,
           artist: artist.name
         )
-        if playerViewModel.playItem(item: playable, isFromLocal: false) { showPlayer() }
+        if playerViewModel.playItem(item: playable) { showPlayer() }
       }
     }
     .alert("Artist Radio", isPresented: $displayAlert) {

@@ -1612,42 +1612,28 @@ class WatchPlayerViewModel: ObservableObject {
   // queue untouched, so callers only show Now Playing on success.
 
   @discardableResult
-  func playBySong<T: Playable>(idx: Int, item: T, isFromLocal: Bool) -> Bool {
+  func playItem<T: Playable>(item: T, startingAt idx: Int = 0) -> Bool {
     guard item.songs.indices.contains(idx) else { return false }
-    startGeneration += 1
-    reportStopped()
-    resetSession()
-    let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
+    beginUserStart()
+    let queue = PlaybackService.shared.addToQueue(item: item)
     guard !queue.isEmpty else { return false }
     self.addToQueue(idx: idx, item: queue)
     return true
   }
 
   @discardableResult
-  func playItem<T: Playable>(item: T, isFromLocal: Bool) -> Bool {
-    guard !item.songs.isEmpty else { return false }
-    startGeneration += 1
-    reportStopped()
-    resetSession()
-    let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: isFromLocal)
-    guard !queue.isEmpty else { return false }
-    self.addToQueue(idx: 0, item: queue)
-    return true
-  }
-
-  @discardableResult
-  func shuffleItem<T: Playable>(item: T, isFromLocal: Bool) -> Bool {
-    guard !item.songs.isEmpty else { return false }
-    startGeneration += 1
-    reportStopped()
-    resetSession()
+  func shuffleItem<T: Playable>(item: T) -> Bool {
     var shuffledItem = item
     shuffledItem.songs.shuffle()
+    return playItem(item: shuffledItem)
+  }
 
-    let queue = PlaybackService.shared.addToQueue(item: shuffledItem, isFromLocal: isFromLocal)
-    guard !queue.isEmpty else { return false }
-    self.addToQueue(idx: 0, item: queue)
-    return true
+  /// Starts something the user chose: a mix in flight and the old session
+  /// are dropped.
+  private func beginUserStart() {
+    startGeneration += 1
+    reportStopped()
+    resetSession()
   }
 
   /// Builds a smart mix and plays it, for Home's button and the intent. False
@@ -1705,7 +1691,7 @@ class WatchPlayerViewModel: ObservableObject {
     let item = await build()
     isGeneratingMix = false
     guard startGeneration == generation else { return false }
-    return playItem(item: item, isFromLocal: false)
+    return playItem(item: item)
   }
 
   @discardableResult
@@ -1713,13 +1699,11 @@ class WatchPlayerViewModel: ObservableObject {
     guard let radioUrl = Self.normalizedRadioURL(from: radio.streamUrl) else {
       return false
     }
-    startGeneration += 1
-    reportStopped()
-    resetSession()
+    beginUserStart()
     endConnectionWait(because: "radio")
 
     let item = radio.toPlayable()
-    let queue = PlaybackService.shared.addToQueue(item: item, isFromLocal: false)
+    let queue = PlaybackService.shared.addToQueue(item: item)
     guard !queue.isEmpty else { return false }
 
     self.activeQueueIdx = 0
@@ -2043,7 +2027,7 @@ class WatchPlayerViewModel: ObservableObject {
 
         let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: songs)
         // A mix that could not be stored ends playback like an empty one.
-        let queue = PlaybackService.shared.addToQueue(item: autoPlay, isFromLocal: false)
+        let queue = PlaybackService.shared.addToQueue(item: autoPlay)
         guard !queue.isEmpty else {
           self.stop()
           return

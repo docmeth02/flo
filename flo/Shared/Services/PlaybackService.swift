@@ -42,9 +42,7 @@ class PlaybackService {
 
   /// A new, unsaved queue row for `song`; `context` names the collection it
   /// came from, which the journal reads as the song's origin.
-  func makeEntry(
-    song: Song, context name: String, isFromPlaylist: Bool, isFromLocal: Bool
-  ) -> QueueEntity {
+  func makeEntry(song: Song, context name: String, isFromPlaylist: Bool) -> QueueEntity {
     let entity = QueueEntity(context: context)
     entity.id = song.mediaFileId == "" ? song.id : song.mediaFileId
     entity.albumId = song.albumId
@@ -56,7 +54,6 @@ class PlaybackService {
     entity.songName = song.title
     entity.suffix = song.suffix
     entity.isFromPlaylist = isFromPlaylist
-    entity.isFromLocal = isFromLocal
     entity.duration = song.duration
     entity.explicitStatus = song.explicitStatus.rawValue
     return entity
@@ -95,11 +92,9 @@ class PlaybackService {
 
   /// Replaces the stored queue in one save, so a failure keeps the old queue.
   /// Returns the new queue, or nothing if it could not be stored.
-  func addToQueue<T: Playable>(item: T, isFromLocal: Bool = false) -> [QueueEntity] {
+  func addToQueue<T: Playable>(item: T) -> [QueueEntity] {
     let entries = item.songs.map {
-      makeEntry(
-        song: $0, context: item.name, isFromPlaylist: Self.isPlaylist(item),
-        isFromLocal: isFromLocal)
+      makeEntry(song: $0, context: item.name, isFromPlaylist: Self.isPlaylist(item))
     }
     return store(order: entries) ? entries : []
   }

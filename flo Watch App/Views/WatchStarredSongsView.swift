@@ -30,7 +30,7 @@ struct WatchStarredSongsView: View {
           onHold: { menu = .song(song, context: "Liked Songs", isFromPlaylist: false) }
         ) {
           let liked = SongCollection(id: "starred-songs", name: "Liked Songs", songs: albumViewModel.starredSongs)
-          if playerViewModel.playBySong(idx: idx, item: liked, isFromLocal: false) { showPlayer() }
+          if playerViewModel.playItem(item: liked, startingAt: idx) { showPlayer() }
         }
         .listRowBackground(Color.clear)
       }

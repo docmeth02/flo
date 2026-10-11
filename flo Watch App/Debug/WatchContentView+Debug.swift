@@ -162,8 +162,7 @@
         ? songs.filter { $0.duration > 0 }.min { $0.duration < $1.duration } : songs.first
       guard let song else { return debugLog("keep playing hook: no cached songs") }
       debugLog("keep playing hook: \(song.id) \(song.title) \(Int(song.duration))s")
-      playerViewModel.playItem(
-        item: SongCollection(id: "debug", name: "Debug", songs: [song]), isFromLocal: false)
+      playerViewModel.playItem(item: SongCollection(id: "debug", name: "Debug", songs: [song]))
       selectedTab = .nowPlaying
       guard mode != "short" else { return }
       try? await Task.sleep(nanoseconds: 3_000_000_000)
@@ -305,7 +304,7 @@
       try? await Task.sleep(nanoseconds: 3_000_000_000)
       // Library screens are links the reset drops; this one is hook state.
       debugScreen = nil
-      if playerViewModel.playBySong(idx: index, item: album, isFromLocal: false) { showPlayer() }
+      if playerViewModel.playItem(item: album, startingAt: index) { showPlayer() }
       debugLog("screen hook: played \(album.songs.indices.contains(index) ? album.songs[index].title : "-"), page=\(selectedTab)")
     }
 

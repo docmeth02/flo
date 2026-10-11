@@ -24,7 +24,7 @@ final class QueueEditingTests: XCTestCase {
           id: $0, title: "Song \($0)", albumId: "album", albumName: "Album", artist: "Artist",
           trackNumber: 1, discNumber: 1, bitRate: 320, sampleRate: 44100, suffix: "mp3",
           duration: 200, mediaFileId: ""),
-        context: "Album", isFromPlaylist: false, isFromLocal: false)
+        context: "Album", isFromPlaylist: false)
     }
   }
 
@@ -65,8 +65,7 @@ final class QueueEditingTests: XCTestCase {
     original.isFromPlaylist = true
     let song = Song(from: original)
     let rebuilt = service.makeEntry(
-      song: song, context: original.contextName ?? "", isFromPlaylist: original.isFromPlaylist,
-      isFromLocal: original.isFromLocal)
+      song: song, context: original.contextName ?? "", isFromPlaylist: original.isFromPlaylist)
 
     for key in original.entity.attributesByName.keys where key != "position" {
       XCTAssertEqual(

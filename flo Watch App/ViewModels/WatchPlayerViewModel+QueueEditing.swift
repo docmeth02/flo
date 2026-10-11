@@ -11,7 +11,6 @@ struct RemovedQueueEntry {
   let song: Song
   let context: String
   let isFromPlaylist: Bool
-  let isFromLocal: Bool
   /// Index in the play order the row had.
   let index: Int
   /// Index in the stored order the row had; differs from `index` while shuffling.
@@ -123,7 +122,7 @@ extension WatchPlayerViewModel {
     // Read before the save deletes the entity.
     let removed = RemovedQueueEntry(
       song: Song(from: entity), context: entity.contextName ?? "",
-      isFromPlaylist: entity.isFromPlaylist, isFromLocal: entity.isFromLocal, index: index,
+      isFromPlaylist: entity.isFromPlaylist, index: index,
       storedIndex: unshuffledQueue.firstIndex { $0 === entity } ?? index)
     return editQueue { $0.remove(entity) } ? removed : nil
   }
@@ -134,8 +133,7 @@ extension WatchPlayerViewModel {
   func undoRemove(_ entry: RemovedQueueEntry) -> Bool {
     guard isEditable else { return false }
     let entity = PlaybackService.shared.makeEntry(
-      song: entry.song, context: entry.context, isFromPlaylist: entry.isFromPlaylist,
-      isFromLocal: entry.isFromLocal)
+      song: entry.song, context: entry.context, isFromPlaylist: entry.isFromPlaylist)
     return editQueue { $0.reinsert(entity, at: entry.index, storedIndex: entry.storedIndex) }
   }
 
@@ -159,13 +157,12 @@ extension WatchPlayerViewModel {
 
   private func start(_ songs: [Song], context: String, isFromPlaylist: Bool) -> Bool {
     let item = SongCollection(id: context, name: context, songs: songs, isPlaylist: isFromPlaylist)
-    return playItem(item: item, isFromLocal: false)
+    return playItem(item: item)
   }
 
   private func makeEntries(_ songs: [Song], context: String, isFromPlaylist: Bool) -> [QueueEntity] {
     songs.map {
-      PlaybackService.shared.makeEntry(
-        song: $0, context: context, isFromPlaylist: isFromPlaylist, isFromLocal: false)
+      PlaybackService.shared.makeEntry(song: $0, context: context, isFromPlaylist: isFromPlaylist)
     }
   }
 
