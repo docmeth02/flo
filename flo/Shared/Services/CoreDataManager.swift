@@ -44,7 +44,6 @@ class CoreDataManager {
         return container
       }
       if attempt == 1 {
-        Self.removeDuplicateCollectionIds()
         Thread.sleep(forTimeInterval: 0.5)
       }
     }
@@ -52,49 +51,6 @@ class CoreDataManager {
     isUsingVolatileStore = true
     return Self.inMemoryContainer()
   }()
-
-  /// Model version 3 makes downloaded collections unique by id, and the
-  /// migration fails on an older store that holds the same id twice (an
-  /// album renamed on the server and downloaded again). Opens such a store
-  /// with the bundled model it was written with and keeps one record per id.
-  /// Version 3 stores already enforce the constraint and are left alone.
-  private static func removeDuplicateCollectionIds() {
-    let storeURL = NSPersistentContainer.defaultDirectoryURL()
-      .appendingPathComponent("flo.sqlite")
-    guard
-      FileManager.default.fileExists(atPath: storeURL.path),
-      let metadata = try? NSPersistentStoreCoordinator.metadataForPersistentStore(
-        ofType: NSSQLiteStoreType, at: storeURL),
-      let model = Bundle.main.urls(forResourcesWithExtension: "mom", subdirectory: "flo.momd")?
-        .lazy.compactMap({ NSManagedObjectModel(contentsOf: $0) })
-        .first(where: { $0.isConfiguration(withName: nil, compatibleWithStoreMetadata: metadata) })
-    else { return }
-
-    let coordinator = NSPersistentStoreCoordinator(managedObjectModel: model)
-    guard
-      let store = try? coordinator.addPersistentStore(
-        ofType: NSSQLiteStoreType, configurationName: nil, at: storeURL, options: nil)
-    else { return }
-    defer { try? coordinator.remove(store) }
-
-    let context = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
-    context.persistentStoreCoordinator = coordinator
-    context.performAndWait {
-      let request = NSFetchRequest<NSManagedObject>(entityName: "PlaylistEntity")
-      guard let collections = try? context.fetch(request) else { return }
-
-      var seen = Set<String>()
-      for collection in collections.reversed() {
-        let id = collection.value(forKey: "id") as? String ?? ""
-        if !seen.insert(id).inserted {
-          context.delete(collection)
-        }
-      }
-      if context.hasChanges {
-        try? context.save()
-      }
-    }
-  }
 
   private static func loadPersistentContainer() -> NSPersistentContainer? {
     let container = NSPersistentContainer(name: "flo")
@@ -153,22 +109,14 @@ class CoreDataManager {
   func getRecordByKey<T: NSManagedObject, V>(
     entity: T.Type,
     key: KeyPath<T, V>,
-    value: V?,
+    value: V,
     limit: Int = 0,
     sortDescriptors: [NSSortDescriptor]? = nil
   ) -> [T] {
     let request: NSFetchRequest<T> = NSFetchRequest<T>(entityName: String(describing: T.self))
 
-    guard let keyPathString = key._kvcKeyPathString else {
+    guard let predicate = Self.predicate(key, value) else {
       return []
-    }
-
-    let predicate: NSPredicate
-
-    if let identifier = value as? CVarArg {
-      predicate = NSPredicate(format: "%K == %@", keyPathString, identifier)
-    } else {
-      predicate = NSPredicate(format: "%K == NULL", keyPathString)
     }
 
     request.predicate = predicate
@@ -190,8 +138,7 @@ class CoreDataManager {
     request.resultType = .countResultType
 
     do {
-      let count = try self.viewContext.count(for: request)
-      return count
+      return try self.viewContext.count(for: request)
     } catch {
       debugLog("count failed: \(error.localizedDescription)")
 
@@ -220,21 +167,23 @@ class CoreDataManager {
   func deleteRecordByKey<T: NSManagedObject, V>(
     entity: T.Type,
     key: KeyPath<T, V>,
-    value: V?
+    value: V
   ) {
-    guard let keyPathString = key._kvcKeyPathString else {
+    guard let predicate = Self.predicate(key, value) else {
       return
     }
 
-    let predicate: NSPredicate
-
-    if let identifier = value as? CVarArg {
-      predicate = NSPredicate(format: "%K == %@", keyPathString, identifier)
-    } else {
-      predicate = NSPredicate(format: "%K == NULL", keyPathString)
-    }
-
     batchDelete(entityName: String(describing: T.self), predicate: predicate)
+  }
+
+  /// `key == value`; nil for a key path Core Data cannot name.
+  private static func predicate<T: NSManagedObject, V>(_ key: KeyPath<T, V>, _ value: V)
+    -> NSPredicate?
+  {
+    guard let keyPathString = key._kvcKeyPathString, let value = value as? CVarArg else {
+      return nil
+    }
+    return NSPredicate(format: "%K == %@", keyPathString, value)
   }
 
   /// Deletes the records of downloaded songs and collections. The play queue
