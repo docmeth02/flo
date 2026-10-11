@@ -53,10 +53,8 @@ final class PlaybackJournal {
 
   /// The user moved on from the song early. Rows keep the listened time, from
   /// which the snapshot tells early skips apart again.
-  func recordSkip(
-    _ item: QueueEntity, origin: PlaybackOrigin, listenedSeconds: Double, early: Bool
-  ) {
-    record(item, origin: origin, listenedSeconds: listenedSeconds, skipped: true, early: early)
+  func recordSkip(_ item: QueueEntity, origin: PlaybackOrigin, listenedSeconds: Double) {
+    record(item, origin: origin, listenedSeconds: listenedSeconds, skipped: true)
   }
 
   func snapshot() async -> JournalSnapshot {
@@ -105,8 +103,7 @@ final class PlaybackJournal {
   // MARK: - Private
 
   private func record(
-    _ item: QueueEntity, origin: PlaybackOrigin, listenedSeconds: Double, skipped: Bool,
-    early: Bool = false
+    _ item: QueueEntity, origin: PlaybackOrigin, listenedSeconds: Double, skipped: Bool
   ) {
     guard let key = AuthService.shared.accountKey, let id = item.id, !id.isEmpty else { return }
 
@@ -123,6 +120,7 @@ final class PlaybackJournal {
     row.timestamp = Date()
     CoreDataManager.shared.saveRecord()
 
+    let early = listenedSeconds <= Self.earlySkipSeconds
     debugLog(
       "journal: \(skipped ? (early ? "early skip" : "skip") : "heard") \(id) "
         + "origin=\(origin.rawValue) listened=\(String(format: "%.1f", listenedSeconds))s")

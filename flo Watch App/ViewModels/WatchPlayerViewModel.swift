@@ -85,9 +85,9 @@ class WatchPlayerViewModel: ObservableObject {
   private static let maxSettleResumes = 3
   private static let startHeardAfter: Double = 3
   private var accessLogObservation: AnyCancellable?
-  private var bufferObservation: AnyCancellable?
+  private var loadedRangesObservation: AnyCancellable?
 
-  private var isLocallySaved: Bool = false
+  private var hasQualified: Bool = false
   private(set) var isFinished: Bool = false
   private var isAutoContinuing: Bool = false
   private var totalDuration: Double = 0.0
@@ -235,10 +235,10 @@ class WatchPlayerViewModel: ObservableObject {
       }
       // A song that already counted must not count again after a relaunch,
       // and one that did not yet keeps the listening time it had.
-      self.isLocallySaved = UserDefaultsManager.nowPlayingQualified
+      self.hasQualified = UserDefaultsManager.nowPlayingQualified
       self.secondsListened = UserDefaultsManager.nowPlayingListened
       debugLog(
-        "restored \(self.nowPlaying.id ?? "") qualified=\(self.isLocallySaved) "
+        "restored \(self.nowPlaying.id ?? "") qualified=\(self.hasQualified) "
           + "listened=\(Int(self.secondsListened))s")
     } else {
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.queueActiveIdx)
@@ -264,7 +264,7 @@ class WatchPlayerViewModel: ObservableObject {
     #endif
   }
 
-  func observeInterruptionNotifications() {
+  private func observeInterruptionNotifications() {
     NotificationCenter.default
       .publisher(for: AVAudioSession.interruptionNotification)
       .receive(on: DispatchQueue.main)
@@ -354,11 +354,10 @@ class WatchPlayerViewModel: ObservableObject {
     }
     // play() begins a fresh start; this one carries on with its count and
     // its interruption, only its activation is new.
-    var carried = start
-    carried.resumes += 1
+    let carried = pendingStart
     play()
-    carried.isActivating = true
     pendingStart = carried
+    pendingStart?.isActivating = true
   }
 
   /// A pause, or a logout, ends a start and anything waiting to resume it.
@@ -385,7 +384,7 @@ class WatchPlayerViewModel: ObservableObject {
     pendingStart = nil
   }
 
-  func handleInterruptionNotification(_ notification: Notification) {
+  private func handleInterruptionNotification(_ notification: Notification) {
     guard let userInfo = notification.userInfo,
       let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? Int,
       let type = AVAudioSession.InterruptionType(rawValue: UInt(typeValue))
@@ -462,7 +461,7 @@ class WatchPlayerViewModel: ObservableObject {
           // Every new item starts here; it is still loading.
           break
         @unknown default:
-          self.isMediaLoading = true
+          break
         }
       }
   }
@@ -497,7 +496,7 @@ class WatchPlayerViewModel: ObservableObject {
     let length = totalDuration - offset
     item.preferredForwardBufferDuration = length
     let attachedAt = Date()
-    bufferObservation = item.publisher(for: \.loadedTimeRanges)
+    loadedRangesObservation = item.publisher(for: \.loadedTimeRanges)
       .receive(on: DispatchQueue.main)
       .sink { [weak self, weak item] _ in
         guard let self, let item, item === self.playerItem,
@@ -508,7 +507,7 @@ class WatchPlayerViewModel: ObservableObject {
           String(
             format: "player buffered through %.0f of %.0f s after %.1f s",
             item.currentTime().seconds + ahead, length, Date().timeIntervalSince(attachedAt)))
-        self.bufferObservation = nil
+        self.loadedRangesObservation = nil
       }
   }
 
@@ -527,7 +526,7 @@ class WatchPlayerViewModel: ObservableObject {
     guard stallDeadline == nil, isPlaying, itemHasPlayed, currentSourceIsRemote, !isLiveRadio,
       let item = playerItem, player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
     else { return }
-    let trackId = hasNowPlaying() ? nowPlaying.id : nil
+    let trackId = nowPlayingId
     let ahead = Self.bufferedAhead(of: item).map { String(format: "%.1f s", $0) } ?? "-"
     RequestLog.shared.note(
       "stall armed at \(Int(lastObservedTime)) s ahead=\(ahead)"
@@ -549,7 +548,7 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   /// A stalled song reloads where it stopped, or waits while the server is
-  /// out of reach.
+  /// out of reach. Internal for the debug hooks.
   func recoverStalledItem(_ item: AVPlayerItem, trackId: String?) {
     handleNoProgress(of: item, cause: "stall") { [weak self, weak item] in
       self?.handleStreamFailure(trackId: trackId, item: item)
@@ -602,6 +601,7 @@ class WatchPlayerViewModel: ObservableObject {
   /// Keeps the song, its position and the wish to play while the server is
   /// out of reach. Probes every `connectionProbeInterval`, reloads once a
   /// probe reaches the server and pauses after `connectionWaitLimit`.
+  /// Internal for the debug hooks.
   func enterConnectionWait(cause: String) {
     let position = itemHasPlayed ? floor(lastObservedTime) : pendingStartPosition
     detachItem()
@@ -670,7 +670,7 @@ class WatchPlayerViewModel: ObservableObject {
     replacePlayerIfFailed()
     playerItem = AVPlayerItem(url: url)
     player?.replaceCurrentItem(with: playerItem)
-    observeItemStatus(trackId: hasNowPlaying() ? nowPlaying.id : nil)
+    observeItemStatus(trackId: nowPlayingId)
     addPeriodicTimeObserver()
   }
 
@@ -685,7 +685,7 @@ class WatchPlayerViewModel: ObservableObject {
     playbackEndObservation = nil
     playbackFailureObservation = nil
     accessLogObservation = nil
-    bufferObservation = nil
+    loadedRangesObservation = nil
     loadWatchdog?.cancel()
     cancelStall()
   }
@@ -705,7 +705,7 @@ class WatchPlayerViewModel: ObservableObject {
   /// the track: a transcode is started there by the server, anything else is
   /// seeked there. Remote songs wait for the server's transcode decision.
   private func loadItem(at position: Double) {
-    guard queue.indices.contains(activeQueueIdx), !isLiveRadio else { return }
+    guard hasNowPlaying(), !isLiveRadio else { return }
     detachItem()
     replacePlayerIfFailed()
     pendingStartPosition = position
@@ -720,7 +720,7 @@ class WatchPlayerViewModel: ObservableObject {
     if let fileURL = AlbumService.shared.localFileURL(mediaFileId: songId) {
       attachItem(
         url: fileURL, trackId: trackId, isRemote: false, isTranscoded: false, offset: 0,
-        seekTo: position, endpointName: nil)
+        seekTo: position)
       return
     }
 
@@ -728,9 +728,7 @@ class WatchPlayerViewModel: ObservableObject {
     Task { @MainActor [weak self] in
       let result = await AlbumService.shared.resolveStreamSource(
         songId: songId, originalSuffix: suffix, offset: Int(position))
-      guard let self, self.loadGeneration == generation,
-        self.queue.indices.contains(self.activeQueueIdx), self.nowPlaying.id == trackId
-      else { return }
+      guard let self, self.loadGeneration == generation, self.isCurrentTrack(trackId) else { return }
       // Paused, Play asks again.
       if case .failure(.unavailable) = result {
         self.isMediaLoading = false
@@ -747,14 +745,13 @@ class WatchPlayerViewModel: ObservableObject {
       let startsAtOffset = source.isTranscoded && position > 0
       self.attachItem(
         url: url, trackId: trackId, isRemote: true, isTranscoded: source.isTranscoded,
-        offset: startsAtOffset ? floor(position) : 0, seekTo: startsAtOffset ? nil : position,
-        endpointName: (source.endpoint as NSString).lastPathComponent)
+        offset: startsAtOffset ? floor(position) : 0, seekTo: startsAtOffset ? nil : position)
     }
   }
 
   private func attachItem(
     url: URL, trackId: String?, isRemote: Bool, isTranscoded: Bool, offset: Double,
-    seekTo position: Double?, endpointName: String?
+    seekTo position: Double?
   ) {
     let item = AVPlayerItem(url: url)
     if isTranscoded { bufferWholeSong(of: item, from: offset) }
@@ -770,7 +767,6 @@ class WatchPlayerViewModel: ObservableObject {
     // reporting .failed, and a stream can also break or hang mid-song; the
     // load watchdog and the stall deadline catch the silent cases, a break
     // resumes, waits for the server or skips.
-    loadWatchdog?.cancel()
     playbackFailureObservation = NotificationCenter.default
       .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)
       .receive(on: DispatchQueue.main)
@@ -818,10 +814,7 @@ class WatchPlayerViewModel: ObservableObject {
           self.handleStreamFailure(trackId: trackId, item: item)
           return
         }
-        self.qualifyIfDue()
-        self.acceptNowPlaying()
-        self.nextSong()
-        UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
+        self.finishCurrentSong()
       }
 
     if let position, position > 0 {
@@ -837,9 +830,8 @@ class WatchPlayerViewModel: ObservableObject {
     updateNowPlayingInfo(progress: progress, rate: isPlaying ? 1.0 : 0.0)
 
     // AVPlayer loads bypass the request log's Alamofire monitor.
-    if let endpointName {
-      RequestLog.shared.note(
-        "player \(endpointName) offset=\(Int(offset))\(isTranscoded ? " transcode" : "")")
+    if isRemote {
+      RequestLog.shared.note("player stream offset=\(Int(offset))\(isTranscoded ? " transcode" : "")")
     }
   }
 
@@ -854,12 +846,14 @@ class WatchPlayerViewModel: ObservableObject {
     guard let item, item === playerItem else { return }
     // The load watchdog already counted this item and scheduled the skip.
     guard item !== countedFailedItem else { return }
-    let isNowPlaying = queue.indices.contains(activeQueueIdx) && nowPlaying.id == trackId
+    // Only the current queue entry's remote song is waited for, reloaded or
+    // resumed; anything else that fails is skipped.
+    let remoteSong = isCurrentTrack(trackId) && !isLiveRadio && currentSourceIsRemote
     // The server may no longer accept the decision's token.
-    if isNowPlaying, !isLiveRadio, currentSourceIsRemote, let trackId {
+    if remoteSong, let trackId {
       AlbumService.shared.forgetTranscodeDecision(songId: trackId)
     }
-    if isNowPlaying, !isLiveRadio, currentSourceIsRemote, isPlaying,
+    if remoteSong, isPlaying,
       ConnectivityMonitor.isConnectionError(error ?? item.error)
         || !ConnectivityMonitor.shared.isServerReachable
     {
@@ -867,26 +861,24 @@ class WatchPlayerViewModel: ObservableObject {
       return
     }
 
-    // A song that never got going is asked for once more: the server rejects a
-    // decision's token after a rescan touched the file. Paused, the dead item
-    // is dropped so that Play loads the song again where it was; its status
-    // may still read ready, which play() would otherwise trust.
-    guard isNowPlaying, !isLiveRadio, currentSourceIsRemote, isPlaying, lastObservedTime > 5,
+    // Paused, the dead item is dropped so that Play loads the song again where
+    // it was; its status may still read ready, which play() would otherwise
+    // trust. A song that never got going is asked for once more: the server
+    // rejects a decision's token after a rescan touched the file.
+    if remoteSong, !isPlaying {
+      if lastObservedTime > 5 { pendingStartPosition = floor(lastObservedTime) }
+      detachItem()
+      isMediaFailed = true
+      return
+    }
+    if remoteSong, lastObservedTime <= 5, restartedTrackId != trackId {
+      restartedTrackId = trackId
+      loadItem(at: pendingStartPosition)
+      return
+    }
+    guard remoteSong, isPlaying, lastObservedTime > 5,
       resumedAtListened.map({ secondsListened - $0 >= 30 }) ?? true
     else {
-      if isNowPlaying, !isLiveRadio, currentSourceIsRemote, !isPlaying {
-        if lastObservedTime > 5 { pendingStartPosition = floor(lastObservedTime) }
-        detachItem()
-        isMediaFailed = true
-        return
-      }
-      if isNowPlaying, !isLiveRadio, currentSourceIsRemote, lastObservedTime <= 5,
-        restartedTrackId != trackId
-      {
-        restartedTrackId = trackId
-        loadItem(at: pendingStartPosition)
-        return
-      }
       isMediaFailed = true
       skipFailedTrack(trackId: trackId)
       return
@@ -906,7 +898,7 @@ class WatchPlayerViewModel: ObservableObject {
     loadWatchdog?.cancel()
     guard let item = playerItem, !itemHasPlayed, !isLiveRadio else { return }
 
-    let trackId = hasNowPlaying() ? nowPlaying.id : nil
+    let trackId = nowPlayingId
     let watchdog = DispatchWorkItem { [weak self, weak item] in
       guard let self = self, self.isPlaying, let item = item, self.playerItem === item,
         !self.itemHasPlayed
@@ -941,7 +933,7 @@ class WatchPlayerViewModel: ObservableObject {
   private func skipFailedTrack(trackId: String?) {
     loadWatchdog?.cancel()
     // Paused playback stays paused; pressing Play reloads the failed item.
-    guard isPlaying, queue.indices.contains(activeQueueIdx), nowPlaying.id == trackId,
+    guard isPlaying, isCurrentTrack(trackId),
       !isLiveRadio, playerItem == nil || playerItem !== countedFailedItem
     else {
       return
@@ -972,8 +964,7 @@ class WatchPlayerViewModel: ObservableObject {
     let generation = playGeneration
     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
       // A pause or play in the meantime means the user took over.
-      guard let self = self, self.playGeneration == generation,
-        self.queue.indices.contains(self.activeQueueIdx), self.nowPlaying.id == trackId
+      guard let self = self, self.playGeneration == generation, self.isCurrentTrack(trackId)
       else { return }
       self.nextSong()
     }
@@ -1005,10 +996,10 @@ class WatchPlayerViewModel: ObservableObject {
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.queueActiveIdx)
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-    Task { @MainActor [weak self] in self?.updateRatingCommands() }
+    MainActor.assumeIsolated { updateRatingCommands() }
   }
 
-  func addToQueue(idx: Int, item: [QueueEntity], playAudio: Bool = true) {
+  private func addToQueue(idx: Int, item: [QueueEntity], playAudio: Bool = true) {
     // A new queue starts unshuffled; the saved order belongs to the old one.
     self.isShuffling = false
     self.unshuffledQueue = []
@@ -1019,33 +1010,27 @@ class WatchPlayerViewModel: ObservableObject {
     self.setNowPlaying(playAudio: playAudio)
   }
 
-  func getAlbumCoverArt() -> String {
-    return AlbumService.shared.getAlbumCover(
-      artistName: self.nowPlaying.artistName ?? "", albumName: self.nowPlaying.albumName ?? "",
-      albumId: self.nowPlaying.albumId ?? "", trackId: self.nowPlaying.id ?? "")
+  func hasNowPlaying() -> Bool {
+    queue.indices.contains(activeQueueIdx)
   }
 
-  func hasNowPlaying() -> Bool {
-    return !self.queue.isEmpty
+  private var nowPlayingId: String? { hasNowPlaying() ? nowPlaying.id : nil }
+
+  private func isCurrentTrack(_ id: String?) -> Bool {
+    hasNowPlaying() && nowPlaying.id == id
   }
 
   /// Whether the song is the one in the player, by the id the queue uses.
   func isCurrent(_ song: Song) -> Bool {
-    hasNowPlaying() && nowPlaying.id == song.playbackID
+    isCurrentTrack(song.playbackID)
   }
 
-  func setNowPlaying(playAudio: Bool = true) {
+  private func setNowPlaying(playAudio: Bool = true) {
     endConnectionWait(because: "song change")
-    guard queue.indices.contains(activeQueueIdx) else {
-      player?.pause()
-      tearDownItemObservers()
-      isMediaLoading = false
-      isMediaFailed = true
-      return
-    }
+    guard hasNowPlaying() else { return }
 
     self.persistActiveIndex()
-    self.isLocallySaved = false
+    self.hasQualified = false
     self.hasTriggeredCache = false
     self.secondsListened = 0
     self.lastObservedTime = 0
@@ -1063,15 +1048,7 @@ class WatchPlayerViewModel: ObservableObject {
     self.detachItem()
     self.isMediaLoading = false
 
-    // Songs from Subsonic endpoints can carry sampleRate 0, which would make
-    // an invalid CMTime and a NaN duration — the end-of-track check would
-    // never fire and playback would stall after every song.
-    let timescale =
-      self.nowPlaying.sampleRate > 0 ? self.nowPlaying.sampleRate : CMTimeScale(NSEC_PER_SEC)
-    let duration = CMTime(seconds: self.nowPlaying.duration, preferredTimescale: timescale)
-    let playbackDuration = CMTimeGetSeconds(duration)
-
-    self.totalDuration = playbackDuration
+    self.totalDuration = self.nowPlaying.duration
 
     if playAudio {
       self.progress = 0
@@ -1081,7 +1058,7 @@ class WatchPlayerViewModel: ObservableObject {
       UserDefaultsManager.nowPlayingQualified = false
       UserDefaultsManager.nowPlayingListened = 0
     }
-    self.pendingStartPosition = self.progress * playbackDuration
+    self.pendingStartPosition = self.progress * self.totalDuration
     self.currentTimeString = timeString(for: self.pendingStartPosition)
     // The first tick after a restore must not count the way to the position.
     self.lastObservedTime = self.pendingStartPosition
@@ -1095,20 +1072,17 @@ class WatchPlayerViewModel: ObservableObject {
       self.play()
     }
 
-    self.initNowPlayingInfo(
+    self.publishNowPlaying(
       title: self.nowPlaying.songName ?? "",
       artist: self.nowPlaying.artistName ?? "",
-      playbackDuration: self.totalDuration)
+      duration: self.totalDuration)
     // Nothing is attached yet, so the restored position is published here.
     if !playAudio {
       self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
     }
 
     // Also for a restored queue, so the first tap on the heart is the right way.
-    // Cleared now, so an announce hop queued before the lookup below does not
-    // ask the server about the new song twice.
-    starLookupFailed = false
-    Task { @MainActor [weak self] in self?.loadStarred() }
+    MainActor.assumeIsolated { loadStarred() }
   }
 
   /// Asks the server whether the current song is starred; a refresh asks
@@ -1131,9 +1105,7 @@ class WatchPlayerViewModel: ObservableObject {
     AlbumService.shared.isStarred(songId: songId) { [weak self] starred in
       Task { @MainActor in
         // A newer lookup, another song or a cleared queue (logout) meanwhile.
-        guard let self, self.starLookup == lookup, self.hasNowPlaying(),
-          self.nowPlaying.id == songId
-        else { return }
+        guard let self, self.starLookup == lookup, self.isCurrentTrack(songId) else { return }
         self.serverStarred = starred ?? false
         self.starLookupFailed = starred == nil
         if let starred, canAdopt, StarStore.shared.editCount == edits {
@@ -1146,20 +1118,20 @@ class WatchPlayerViewModel: ObservableObject {
 
   /// Runs on every StarStore change, also with an empty queue.
   @MainActor private func updateHeart() {
-    let songId = hasNowPlaying() ? nowPlaying.id ?? "" : ""
+    let songId = nowPlayingId ?? ""
     let starred = !songId.isEmpty && StarStore.shared.isStarred(songId, listed: serverStarred)
     if starred != isStarred { isStarred = starred }
   }
 
   /// Reports the current song as playing to the server, once per song.
   private func announceNowPlaying() {
-    guard needsNowPlayingAnnouncement, queue.indices.contains(activeQueueIdx) else { return }
+    guard needsNowPlayingAnnouncement, hasNowPlaying() else { return }
     needsNowPlayingAnnouncement = false
     // A station is no song the server knows.
     guard !isLiveRadio else { return }
     // The lookup at song change may have failed offline, as for a queue
     // restored at launch.
-    Task { @MainActor [weak self] in self?.loadStarred(refresh: true) }
+    MainActor.assumeIsolated { loadStarred(refresh: true) }
 
     FloooViewModel.shared.reportPlayback(
       state: .starting, nowPlaying: self.nowPlaying, positionSeconds: self.pendingStartPosition)
@@ -1168,7 +1140,7 @@ class WatchPlayerViewModel: ObservableObject {
   /// Tells the server where the announced song stands; the ViewModel drops a
   /// playing report within 30 s of the last one.
   private func reportPlayback(_ state: PlaybackReportState, at position: Double? = nil) {
-    guard !needsNowPlayingAnnouncement, queue.indices.contains(activeQueueIdx), !isLiveRadio
+    guard !needsNowPlayingAnnouncement, hasNowPlaying(), !isLiveRadio
     else { return }
     FloooViewModel.shared.reportPlayback(
       state: state, nowPlaying: nowPlaying,
@@ -1245,67 +1217,64 @@ class WatchPlayerViewModel: ObservableObject {
         self.totalDuration > 0,
         round(currentTime) >= roundedTotalDuration
       {
-        // A song heard to its end was accepted, also when qualification did
-        // not run this time (counted before a relaunch, or joined late); a
-        // last tick may still owe it the count.
-        self.qualifyIfDue()
-        self.acceptNowPlaying()
-        self.nextSong()
-        UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
+        self.finishCurrentSong()
       }
     }
   }
 
-  private func initNowPlayingInfo(
-    title: String, artist: String, playbackDuration: Double
-  ) {
+  /// A song heard to its end was accepted, also when qualification did not
+  /// run this time (counted before a relaunch, or joined late); a last tick
+  /// may still owe it the count.
+  private func finishCurrentSong() {
+    qualifyIfDue()
+    acceptNowPlaying()
+    nextSong()
+    UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
+  }
+
+  /// Publishes the current song's cover for the player, and its title,
+  /// artist, duration and artwork for the system's Now Playing.
+  private func publishNowPlaying(title: String, artist: String, duration: Double) {
     // Set title/artist/duration immediately so Now Playing is never empty
     var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
     nowPlayingInfo[MPMediaItemPropertyTitle] = title
     nowPlayingInfo[MPMediaItemPropertyArtist] = artist
-    nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = playbackDuration
+    nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-    Task { @MainActor [weak self] in self?.updateRatingCommands() }
+    MainActor.assumeIsolated { updateRatingCommands() }
 
-    // Load artwork asynchronously and merge it in
-    self.coverArt = self.getAlbumCoverArt()
-    let albumCoverArt = self.coverArt
-    let currentTrackId = self.queue.indices.contains(self.activeQueueIdx) ? self.nowPlaying.id : nil
-
-    if albumCoverArt.hasPrefix("/") {
-      // Local file - load directly
-      if let image = UIImage(contentsOfFile: albumCoverArt) {
-        let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-        var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
-        info[MPMediaItemPropertyArtwork] = artwork
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-      }
-    } else if let albumId = self.queue.indices.contains(self.activeQueueIdx)
-      ? self.nowPlaying.albumId : nil
-    {
-      // Shares the cover cache's single download with the album art views.
-      CoverArtCacheManager.shared.coverPath(albumId: albumId) { [weak self] path in
-        guard let path, let image = UIImage(contentsOfFile: path) else { return }
-        let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-
-        DispatchQueue.main.async {
-          // Only apply artwork if we're still on the same track
-          guard let self = self,
-                self.queue.indices.contains(self.activeQueueIdx),
-                self.nowPlaying.id == currentTrackId else { return }
-          var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
-          info[MPMediaItemPropertyArtwork] = artwork
-          MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-        }
+    coverArt = AlbumService.shared.getAlbumCover(
+      artistName: nowPlaying.artistName ?? "", albumName: nowPlaying.albumName ?? "",
+      albumId: nowPlaying.albumId ?? "", trackId: nowPlaying.id ?? "")
+    if coverArt.hasPrefix("/") {
+      if let image = UIImage(contentsOfFile: coverArt) { Self.setArtwork(image) }
+    } else if let albumId = nowPlaying.albumId {
+      let trackId = nowPlaying.id
+      Task { @MainActor [weak self] in
+        // Shares the cover cache's single download with the album art views,
+        // and only for the song still playing.
+        guard let path = await CoverArtCacheManager.shared.coverPath(albumId: albumId),
+          let image = UIImage(contentsOfFile: path), let self, self.isCurrentTrack(trackId)
+        else { return }
+        Self.setArtwork(image)
       }
     }
   }
 
-  func updateNowPlayingInfo(progress: TimeInterval, rate: Float) {
+  private static func setArtwork(_ image: UIImage) {
+    var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
+    info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+    MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+  }
+
+  private func updateNowPlayingInfo(progress: TimeInterval, rate: Float) {
     var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
 
-    nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = progress * self.totalDuration
-    nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = self.totalDuration
+    // A station has no length to show a position in.
+    let isFinite = totalDuration.isFinite
+    nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] =
+      isFinite ? progress * totalDuration : nil
+    nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = isFinite ? totalDuration : nil
     nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = rate
 
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
@@ -1393,12 +1362,6 @@ class WatchPlayerViewModel: ObservableObject {
     RatingStore.shared.set(rating, for: nowPlaying)
   }
 
-  /// Rates the song the dialog was opened for, which may have ended meanwhile.
-  @MainActor func rate(_ rating: Int, playbackID: String) {
-    guard !playbackID.isEmpty else { return }
-    RatingStore.shared.set(rating, playbackID: playbackID)
-  }
-
   @MainActor private func updateRatingCommands() {
     let commandCenter = MPRemoteCommandCenter.shared()
     let isRateable = hasNowPlaying() && !isLiveRadio
@@ -1413,7 +1376,6 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   func play() {
-    // Activate audio session using watchOS async API
     playGeneration += 1
     let gen = playGeneration
     cancelSettle()
@@ -1447,11 +1409,6 @@ class WatchPlayerViewModel: ObservableObject {
         // Playing from here: a later end of an interruption must not restart
         // music the user may pause meanwhile.
         self.resumeAfterInterruption = false
-
-        if self.isFinished {
-          self.stop()
-          self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
-        }
 
         if self.playerItem == nil, self.hasNowPlaying(), !self.isLiveRadio {
           self.isFinished = false
@@ -1531,8 +1488,8 @@ class WatchPlayerViewModel: ObservableObject {
   func stop() {
     reportStopped()
     playGeneration += 1
-    // A queue run out restarts from play(), whose start this must not end;
-    // an activation it overtakes is not answered any more.
+    // An activation it overtakes is not answered any more; the next play()
+    // begins a fresh start.
     pendingStart?.isActivating = false
     cancelSettle()
     resumeAfterInterruption = false
@@ -1544,7 +1501,7 @@ class WatchPlayerViewModel: ObservableObject {
     pendingStartPosition = 0
     progress = 0
     currentTimeString = timeString(for: 0)
-    isLocallySaved = false
+    hasQualified = false
     secondsListened = 0
     lastObservedTime = 0
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
@@ -1598,7 +1555,7 @@ class WatchPlayerViewModel: ObservableObject {
     if isPlaying { reportPlayback(.playing, at: target) }
   }
 
-  func setPlaybackMode() {
+  func cyclePlaybackMode() {
     if self.playbackMode == PlaybackMode.defaultPlayback {
       self.playbackMode = PlaybackMode.repeatAlbum
     } else if self.playbackMode == PlaybackMode.repeatAlbum {
@@ -1712,7 +1669,7 @@ class WatchPlayerViewModel: ObservableObject {
 
     self.activeQueueIdx = 0
     self.queue = queue
-    self.isLocallySaved = false
+    self.hasQualified = false
 
     // A queued end notification from the previous track must not advance the
     // radio queue; live streams have no track end.
@@ -1729,10 +1686,7 @@ class WatchPlayerViewModel: ObservableObject {
 
     self.play()
 
-    self.initNowPlayingInfo(
-      title: item.name,
-      artist: nowPlaying.artistName ?? "",
-      playbackDuration: 0)
+    self.publishNowPlaying(title: item.name, artist: nowPlaying.artistName ?? "", duration: 0)
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
     return true
   }
@@ -1752,7 +1706,7 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   func shuffleCurrentQueue() {
-    guard queue.indices.contains(activeQueueIdx) else { return }
+    guard hasNowPlaying() else { return }
     self.isShuffling.toggle()
 
     if self.isShuffling {
@@ -1797,7 +1751,7 @@ class WatchPlayerViewModel: ObservableObject {
   /// Saves the current song's position in the persisted queue order, which is
   /// the unshuffled one, so a relaunch restores the song that was playing.
   func persistActiveIndex() {
-    guard queue.indices.contains(activeQueueIdx) else { return }
+    guard hasNowPlaying() else { return }
 
     var index = activeQueueIdx
     if isShuffling,
@@ -1819,16 +1773,10 @@ class WatchPlayerViewModel: ObservableObject {
     // Live radio has no tracks; rebuilding it as a song would stop the stream.
     guard !isLiveRadio else { return }
     reportStopped()
-    if self.activeQueueIdx != 0 {
-      if self.playbackMode != PlaybackMode.repeatOnce {
-        self.activeQueueIdx = self.activeQueueIdx - 1
-      }
-    } else {
-      self.activeQueueIdx = 0
+    if playbackMode != PlaybackMode.repeatOnce, activeQueueIdx > 0 {
+      activeQueueIdx -= 1
     }
-
-    self.setNowPlaying()
-    WKInterfaceDevice.current().play(.click)
+    setNowPlaying()
   }
 
   func nextSong(userInitiated: Bool = false) {
@@ -1838,34 +1786,21 @@ class WatchPlayerViewModel: ObservableObject {
     }
     reportStopped()
 
-    if self.queue.count == 1 {
-      if self.playbackMode == PlaybackMode.defaultPlayback {
-        self.autoPlayOrStop()
+    let isLast = activeQueueIdx >= queue.count - 1
+    switch playbackMode {
+    case PlaybackMode.repeatOnce:
+      setNowPlaying()
+    case PlaybackMode.repeatAlbum:
+      activeQueueIdx = isLast ? 0 : activeQueueIdx + 1
+      setNowPlaying()
+    default:
+      if isLast {
+        autoPlayOrStop()
       } else {
-        self.setNowPlaying()
-      }
-    } else {
-      if self.playbackMode == PlaybackMode.repeatOnce {
-        self.setNowPlaying()
-      } else if self.playbackMode == PlaybackMode.repeatAlbum {
-        if self.activeQueueIdx + 1 > self.queue.count - 1 {
-          self.activeQueueIdx = 0
-          self.setNowPlaying()
-        } else {
-          self.activeQueueIdx = self.activeQueueIdx + 1
-          self.setNowPlaying()
-        }
-      } else {
-        if self.activeQueueIdx + 1 > self.queue.count - 1 {
-          self.autoPlayOrStop()
-        } else {
-          self.activeQueueIdx = self.activeQueueIdx + 1
-          self.setNowPlaying()
-        }
+        activeQueueIdx += 1
+        setNowPlaying()
       }
     }
-
-    WKInterfaceDevice.current().play(.click)
   }
 
   /// Pressing next on a barely heard song is a negative signal for smart
@@ -1873,8 +1808,8 @@ class WatchPlayerViewModel: ObservableObject {
   /// ends, radio, repeat modes that restart the same track and accidental
   /// starts under five seconds do not.
   private func logSkipIfAbandoned() {
-    guard self.queue.indices.contains(self.activeQueueIdx), !self.isLiveRadio else { return }
-    guard !self.isLocallySaved else { return }
+    guard self.hasNowPlaying(), !self.isLiveRadio else { return }
+    guard !self.hasQualified else { return }
 
     let restartsSameTrack =
       self.playbackMode == PlaybackMode.repeatOnce
@@ -1887,8 +1822,7 @@ class WatchPlayerViewModel: ObservableObject {
 
     PlaybackJournal.shared.recordSkip(
       self.nowPlaying, origin: self.nowPlaying.playbackOrigin,
-      listenedSeconds: self.secondsListened,
-      early: self.secondsListened <= PlaybackJournal.earlySkipSeconds)
+      listenedSeconds: self.secondsListened)
   }
 
   /// Something the user started, a logout or a long break ends the session.
@@ -1903,10 +1837,10 @@ class WatchPlayerViewModel: ObservableObject {
   /// on main: journal writes stay on the view context's queue and the
   /// submission is asynchronous inside the service.
   private func qualifyIfDue() {
-    guard !isLocallySaved, queue.indices.contains(activeQueueIdx), totalDuration.isFinite,
+    guard !hasQualified, hasNowPlaying(), totalDuration.isFinite,
       totalDuration > 0, secondsListened >= min(0.5 * totalDuration, 240)
     else { return }
-    isLocallySaved = true
+    hasQualified = true
     UserDefaultsManager.nowPlayingQualified = true
     debugLog(
       "qualified after \(String(format: "%.1f", secondsListened))s of "
@@ -1933,11 +1867,7 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   private func autoPlayOrStop() {
-    guard UserDefaultsManager.keepPlaying else {
-      self.stop()
-      return
-    }
-    guard self.queue.indices.contains(self.activeQueueIdx) else {
+    guard UserDefaultsManager.keepPlaying, hasNowPlaying() else {
       self.stop()
       return
     }
@@ -1986,8 +1916,7 @@ class WatchPlayerViewModel: ObservableObject {
         // Discard the mix if the user started something else while it was
         // being generated — the ordered queue contents are compared too, so a
         // new queue that happens to start on the same song is not overwritten.
-        guard self.queue.indices.contains(self.activeQueueIdx),
-          self.nowPlaying.id == lastPlayedId, self.playGeneration == generation
+        guard self.isCurrentTrack(lastPlayedId), self.playGeneration == generation
         else { return }
         guard self.queue.compactMap({ $0.id }) == queueIdList, UserDefaultsManager.keepPlaying
         else {
@@ -2063,7 +1992,7 @@ class WatchPlayerViewModel: ObservableObject {
   deinit {
     if let timeObserverToken = timeObserverToken {
       player?.removeTimeObserver(timeObserverToken)
-      player?.pause()
     }
+    player?.pause()
   }
 }

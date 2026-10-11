@@ -98,20 +98,14 @@ extension WatchPlayerViewModel {
   /// nothing plays or a live radio does. Returns whether the queue changed.
   @discardableResult
   func playNext(_ songs: [Song], context: String, isFromPlaylist: Bool = false) -> Bool {
-    guard !songs.isEmpty else { return false }
-    guard isEditable else { return start(songs, context: context, isFromPlaylist: isFromPlaylist) }
-    let entries = makeEntries(songs, context: context, isFromPlaylist: isFromPlaylist)
-    return editQueue { $0.insertAfterCurrent(entries) } && playOnIfEnded()
+    enqueue(songs, context: context, isFromPlaylist: isFromPlaylist) { $0.insertAfterCurrent($1) }
   }
 
   /// Puts `songs` at the end of the queue. Starts them instead when nothing
   /// plays or a live radio does. Returns whether the queue changed.
   @discardableResult
   func appendToQueue(_ songs: [Song], context: String, isFromPlaylist: Bool = false) -> Bool {
-    guard !songs.isEmpty else { return false }
-    guard isEditable else { return start(songs, context: context, isFromPlaylist: isFromPlaylist) }
-    let entries = makeEntries(songs, context: context, isFromPlaylist: isFromPlaylist)
-    return editQueue { $0.append(entries) } && playOnIfEnded()
+    enqueue(songs, context: context, isFromPlaylist: isFromPlaylist) { $0.append($1) }
   }
 
   /// Takes the row at `index` (play order) out of the queue. Nil for the
@@ -155,15 +149,22 @@ extension WatchPlayerViewModel {
     return true
   }
 
-  private func start(_ songs: [Song], context: String, isFromPlaylist: Bool) -> Bool {
-    let item = SongCollection(id: context, name: context, songs: songs, isPlaylist: isFromPlaylist)
-    return playItem(item: item)
-  }
-
-  private func makeEntries(_ songs: [Song], context: String, isFromPlaylist: Bool) -> [QueueEntity] {
-    songs.map {
+  /// Adds `songs` to the queue by `edit`, or starts them when the queue is
+  /// not editable.
+  private func enqueue(
+    _ songs: [Song], context: String, isFromPlaylist: Bool,
+    edit: (inout QueueOrders<QueueEntity>, [QueueEntity]) -> Void
+  ) -> Bool {
+    guard !songs.isEmpty else { return false }
+    guard isEditable else {
+      let item = SongCollection(
+        id: context, name: context, songs: songs, isPlaylist: isFromPlaylist)
+      return playItem(item: item)
+    }
+    let entries = songs.map {
       PlaybackService.shared.makeEntry(song: $0, context: context, isFromPlaylist: isFromPlaylist)
     }
+    return editQueue { edit(&$0, entries) } && playOnIfEnded()
   }
 
   /// Applies `edit` to copies of both orders, stores the order that is saved
