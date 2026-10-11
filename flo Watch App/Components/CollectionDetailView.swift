@@ -118,12 +118,7 @@ struct CollectionDetailView<Artwork: View>: View {
     }
     .itemMenu($menu)
     .onAppear { refreshDownloadState() }
-    .onReceive(downloadViewModel.$downloadWatcher) { newValue in
-      if newValue {
-        refreshDownloadState()
-        downloadViewModel.downloadWatcher = false
-      }
-    }
+    .onReceive(downloadViewModel.downloadFinished) { refreshDownloadState() }
   }
 
   private func refreshDownloadState() {
