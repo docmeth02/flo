@@ -45,10 +45,7 @@ class AlbumViewModel: ObservableObject {
   private var artistAlbumsId = ""
   private var artistAlbumsLoadedAt: Date?
 
-  init(album: Album = Album(), albums: [Album] = []) {
-    self.album = album
-    self.albums = albums
-
+  init() {
     NotificationCenter.default.addObserver(
       self, selector: #selector(handleLogout), name: .didLogout, object: nil)
   }
@@ -78,7 +75,9 @@ class AlbumViewModel: ObservableObject {
 
     if !album.id.isEmpty {
       if AlbumService.shared.isPlaylistDownload(id: album.id) {
-        self.fetchPlaylistSongsIntoAlbum(id: album.id)
+        fetchPlaylistSongs(id: album.id, isShown: { self.album.id == album.id }) {
+          self.album.songs = $0
+        }
       } else {
         self.fetchSongs(id: album.id)
       }
@@ -87,7 +86,9 @@ class AlbumViewModel: ObservableObject {
 
   func setActivePlaylist(playlist: Playlist) {
     self.playlist = playlist
-    self.fetchSongsByPlaylist(id: playlist.id)
+    fetchPlaylistSongs(id: playlist.id, isShown: { self.playlist.id == playlist.id }) {
+      self.playlist.songs = $0
+    }
   }
 
   func fetchSongs(id: String) {
@@ -120,10 +121,15 @@ class AlbumViewModel: ObservableObject {
     }
   }
 
-  func fetchPlaylistSongsIntoAlbum(id: String) {
+  /// The playlist's downloaded songs at once, then the server's order with
+  /// the downloads in place. `assign` is skipped for a late answer once
+  /// `isShown` says the playlist was left, so it never replaces the tracks
+  /// of the one now shown.
+  private func fetchPlaylistSongs(
+    id: String, isShown: @escaping () -> Bool, assign: @escaping ([Song]) -> Void
+  ) {
     let localSongs = AlbumService.shared.getPlaylistSongs(playlistId: id)
-
-    self.album.songs = localSongs
+    assign(localSongs)
 
     AlbumService.shared.getSongsByPlaylist(id: id) { result in
       DispatchQueue.main.async {
@@ -131,10 +137,8 @@ class AlbumViewModel: ObservableObject {
         case .success(let remoteSongs):
           let merged = Self.mergePlaylistSongs(local: localSongs, remote: remoteSongs)
           AlbumService.shared.updatePlaylistPositions(playlistId: id, songs: merged)
-          // A late response for a playlist the user already left must not
-          // replace the tracks of the one now shown.
-          guard self.album.id == id else { return }
-          self.album.songs = merged
+          guard isShown() else { return }
+          assign(merged)
 
         case .failure(let error):
           debugLog("playlist songs failed: \(error)")
@@ -333,27 +337,6 @@ class AlbumViewModel: ObservableObject {
     }
   }
 
-  func fetchSongsByPlaylist(id: String) {
-    let localSongs = AlbumService.shared.getPlaylistSongs(playlistId: id)
-
-    self.playlist.songs = localSongs
-
-    AlbumService.shared.getSongsByPlaylist(id: id) { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let remoteSongs):
-          let merged = Self.mergePlaylistSongs(local: localSongs, remote: remoteSongs)
-          AlbumService.shared.updatePlaylistPositions(playlistId: id, songs: merged)
-          guard self.playlist.id == id else { return }
-          self.playlist.songs = merged
-
-        case .failure(let error):
-          debugLog("playlist songs failed: \(error)")
-        }
-      }
-    }
-  }
-
   /// Preserves the server-defined playlist order, substituting locally downloaded
   /// versions in place so the download indicator/offline playback still work.
   static func mergePlaylistSongs(local: [Song], remote: [Song]) -> [Song] {
@@ -473,21 +456,11 @@ class AlbumViewModel: ObservableObject {
   }
 
   func fetchDownloadedAlbums() {
-    AlbumService.shared.getDownloadedAlbum { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let albums):
-          // One row per album is enough to tell it still has songs.
-          self.downloadedAlbums = albums.filter { album in
-            !CoreDataManager.shared.getRecordByKey(
-              entity: SongEntity.self, key: \SongEntity.albumId, value: album.id, limit: 1
-            ).isEmpty
-          }
-
-        case .failure(let error):
-          debugLog("downloaded albums failed: \(error)")
-        }
-      }
+    // One row per album is enough to tell it still has songs.
+    downloadedAlbums = AlbumService.shared.downloadedAlbums().filter { album in
+      !CoreDataManager.shared.getRecordByKey(
+        entity: SongEntity.self, key: \SongEntity.albumId, value: album.id, limit: 1
+      ).isEmpty
     }
   }
 }

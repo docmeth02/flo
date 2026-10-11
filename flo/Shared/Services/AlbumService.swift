@@ -318,22 +318,12 @@ class AlbumService {
 
   /// Every song the account rated, with its rating.
   func getRatedSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
-    let params: [String: Any] = ["has_rating": "true", "_start": 0, "_end": 0]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
-      (response: DataResponse<[Song], AFError>) in
-      completion(response.result.mapError { $0 })
-    }
+    ndList(API.NDEndpoint.getSong, ["has_rating": "true", "_start": 0, "_end": 0], completion)
   }
 
   /// Every album the account rated, with its rating.
   func getRatedAlbums(completion: @escaping (Result<[Album], Error>) -> Void) {
-    let params: [String: Any] = ["has_rating": "true", "_start": 0, "_end": 0]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getAlbum, parameters: params) {
-      (response: DataResponse<[Album], AFError>) in
-      completion(response.result.mapError { $0 })
-    }
+    ndList(API.NDEndpoint.getAlbum, ["has_rating": "true", "_start": 0, "_end": 0], completion)
   }
 
   func getStarredSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
@@ -341,116 +331,61 @@ class AlbumService {
       endpoint: API.SubsonicEndpoint.getStarred2, parameters: nil
     ) {
       (response: DataResponse<Starred2Response, AFError>) in
-      switch response.result {
-      case .success(let starred):
-        completion(.success(starred.songs))
-      case .failure(let error):
-        completion(.failure(error))
-      }
+      completion(response.result.map(\.songs).mapError { $0 })
     }
   }
 
   func getSongFromAlbum(id: String, completion: @escaping (Result<[Song], Error>) -> Void) {
-    // FIXME: get all songs for now
-    let params: [String: Any] = [
-      "_start": 0, "_end": 0, "_order": "ASC", "_sort": "album", "album_id": id,
-    ]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
-      (response: DataResponse<[Song], AFError>) in
-      switch response.result {
-      case .success(let song):
-        completion(.success(song))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(
+      API.NDEndpoint.getSong,
+      ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "album", "album_id": id], completion)
   }
 
-  func getDownloadedAlbum(completion: @escaping (Result<[Album], Error>) -> Void) {
-    completion(
-      .success(
-        CoreDataManager.shared.getRecordsByEntity(entity: PlaylistEntity.self).map(Album.init)))
+  func downloadedAlbums() -> [Album] {
+    CoreDataManager.shared.getRecordsByEntity(entity: PlaylistEntity.self).map(Album.init)
   }
 
   func getAlbum(completion: @escaping (Result<[Album], Error>) -> Void) {
-    // FIXME: now we fetch all albums. let's see if this will affect performance
-    let params: [String: Any] = ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getAlbum, parameters: params) {
-      (response: DataResponse<[Album], AFError>) in
-      switch response.result {
-      case .success(let albums):
-        completion(.success(albums))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(
+      API.NDEndpoint.getAlbum, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"],
+      completion)
   }
 
   func getArtists(completion: @escaping (Result<[Artist], Error>) -> Void) {
-    let params: [String: Any] = ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getArtists, parameters: params) {
-      (response: DataResponse<[Artist], AFError>) in
-      switch response.result {
-      case .success(let artists):
-        completion(.success(artists))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(
+      API.NDEndpoint.getArtists, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"],
+      completion)
   }
 
   func getAlbumsByArtist(id: String, completion: @escaping (Result<[Album], Error>) -> Void) {
-    // TODO: now we fetch all albums. let's see if this will affect performance
-    let params: [String: Any] = [
-      "_start": 0, "_end": 0, "_order": "ASC", "_sort": "max_year desc,date desc", "artist_id": id,
-    ]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getAlbum, parameters: params) {
-      (response: DataResponse<[Album], AFError>) in
-      switch response.result {
-      case .success(let albums):
-        completion(.success(albums))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(
+      API.NDEndpoint.getAlbum,
+      [
+        "_start": 0, "_end": 0, "_order": "ASC", "_sort": "max_year desc,date desc",
+        "artist_id": id,
+      ], completion)
   }
 
   func getPlaylists(completion: @escaping (Result<[Playlist], Error>) -> Void) {
-    let params: [String: Any] = ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"]
-
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getPlaylists, parameters: params) {
-      (response: DataResponse<[Playlist], AFError>) in
-      switch response.result {
-      case .success(let playlists):
-        completion(.success(playlists))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(
+      API.NDEndpoint.getPlaylists, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"],
+      completion)
   }
 
-  // FIXME: currently we can't stream from the local (offline) one :)
   func getSongsByPlaylist(id: String, completion: @escaping (Result<[Song], Error>) -> Void) {
-    let params: [String: Any] = [
-      "playlist_id": id, "_start": 0, "_end": 0, "_order": "ASC", "_sort": "id",
-    ]
+    ndList(
+      "\(API.NDEndpoint.getPlaylists)/\(id)/tracks",
+      ["playlist_id": id, "_start": 0, "_end": 0, "_order": "ASC", "_sort": "id"], completion)
+  }
 
-    let endpoint = "\(API.NDEndpoint.getPlaylists)/\(id)/tracks"
-
-    APIManager.shared.NDEndpointRequest(
-      endpoint: endpoint, parameters: params
-    ) {
-      (response: DataResponse<[Song], AFError>) in
-      switch response.result {
-      case .success(let songs):
-        completion(.success(songs))
-      case .failure(let error):
-        completion(.failure(error))
-      }
+  /// A whole list from Navidrome's own API.
+  private func ndList<T: Decodable>(
+    _ endpoint: String, _ parameters: [String: Any],
+    _ completion: @escaping (Result<[T], Error>) -> Void
+  ) {
+    APIManager.shared.NDEndpointRequest(endpoint: endpoint, parameters: parameters) {
+      (response: DataResponse<[T], AFError>) in
+      completion(response.result.mapError { $0 })
     }
   }
 
@@ -482,15 +417,7 @@ class AlbumService {
       "_start": start, "_end": end, "_sort": "updated_at", "_order": "DESC",
     ]
 
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
-      (response: DataResponse<[SongPageItem], AFError>) in
-      switch response.result {
-      case .success(let items):
-        completion(.success(items))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    ndList(API.NDEndpoint.getSong, params, completion)
   }
 
   /// One page of the server's play log, highest id first, with the log's size.
@@ -513,7 +440,7 @@ class AlbumService {
     }
   }
 
-  func getSongsByAlbumId(albumId: String, limit: Int = 0) -> [Song] {
+  func getSongsByAlbumId(albumId: String) -> [Song] {
     let sortByTrackNumber = NSSortDescriptor(key: "trackNumber", ascending: true)
 
     return CoreDataManager.shared.getRecordByKey(
