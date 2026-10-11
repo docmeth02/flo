@@ -105,7 +105,7 @@ class WatchPlayerViewModel: ObservableObject {
   // seeking cannot inflate or erase it.
   private(set) var secondsListened: Double = 0
   private(set) var lastObservedTime: Double = 0
-  var playGeneration: Int = 0
+  private(set) var playGeneration: Int = 0
   var consecutiveFailures: Int = 0
   static let maxConsecutiveFailures = 3
   // Long enough for a slow cellular start, short enough not to feel stuck.

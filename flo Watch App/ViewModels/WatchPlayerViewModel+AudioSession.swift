@@ -4,6 +4,7 @@
 //
 
 import AVFoundation
+import Combine
 
 // Interruptions, route changes and the start the output setup may interrupt.
 extension WatchPlayerViewModel {

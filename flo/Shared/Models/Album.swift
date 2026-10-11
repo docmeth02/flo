@@ -8,14 +8,6 @@
 import Foundation
 
 struct Album: Codable, Hashable, Identifiable, Playable {
-  static func == (lhs: Album, rhs: Album) -> Bool {
-    lhs.id == rhs.id
-  }
-
-  func hash(into hasher: inout Hasher) {
-    hasher.combine(id)
-  }
-
   var id: String = ""
   var name: String = ""
   var albumArtist: String = ""
