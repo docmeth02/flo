@@ -31,14 +31,7 @@ struct WatchDownloadsView: View {
 
           ForEach(albumViewModel.downloadedAlbums) { album in
             NavigationLink(destination: WatchAlbumDetailView(album: album)) {
-              CoverRow(
-                tile: .cover(
-                  url: albumViewModel.getAlbumCoverArt(
-                    id: album.id, artistName: album.artist, albumName: album.name),
-                  albumId: album.id),
-                title: album.name,
-                subtitle: album.albumArtist
-              ) {
+              CoverRow(tile: .album(album.id), title: album.name, subtitle: album.albumArtist) {
                 Image(systemName: "checkmark.circle.fill")
                   .font(.system(size: 16))
                   .foregroundStyle(Color.floDownloaded)

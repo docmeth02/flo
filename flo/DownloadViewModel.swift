@@ -183,7 +183,7 @@ class DownloadViewModel: ObservableObject {
         defer { self.finishDownload(item.id) }
 
         switch result {
-        case .success(.some):
+        case .success:
           AlbumService.shared.saveDownload(
             albumId: item.albumId,
             albumName: item.album,
@@ -200,9 +200,6 @@ class DownloadViewModel: ObservableObject {
           }) {
             self.downloadedTrackCount.remove(at: index)
           }
-
-        case .success(.none):
-          self.updateItemStatus(itemId: item.id, status: .failed)
 
         case .failure(let error):
           if let afError = error.asAFError, case .explicitlyCancelled = afError {

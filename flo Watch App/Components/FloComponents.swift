@@ -35,7 +35,7 @@ struct FloNavRow: View {
 /// trailing mark.
 struct CoverRow<Trailing: View>: View {
   enum Tile {
-    case cover(url: String, albumId: String)
+    case cover(albumId: String)
     /// A lavender glyph, round for an artist or a station.
     case glyph(String, round: Bool = false)
   }
@@ -69,8 +69,8 @@ struct CoverRow<Trailing: View>: View {
   @ViewBuilder
   private var tileView: some View {
     switch tile {
-    case .cover(let url, let albumId):
-      WatchAlbumArtView(url: url, size: FloLayout.thumbnail, albumId: albumId)
+    case .cover(let albumId):
+      WatchAlbumArtView(albumId: albumId, size: FloLayout.thumbnail)
         .clipShape(RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous))
     case .glyph(let systemImage, let round):
       Image(systemName: systemImage)
@@ -88,10 +88,7 @@ struct CoverRow<Trailing: View>: View {
 
 extension CoverRow.Tile {
   /// The album's cover, read from its download when there is one.
-  static func album(_ id: String) -> Self {
-    .cover(
-      url: AlbumService.shared.getAlbumCover(artistName: "", albumName: "", albumId: id), albumId: id)
-  }
+  static func album(_ id: String) -> Self { .cover(albumId: id) }
 
   /// The round glyph standing in for an artist's picture.
   static var artist: Self { .glyph("music.mic", round: true) }

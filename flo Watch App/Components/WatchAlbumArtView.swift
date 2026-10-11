@@ -6,40 +6,36 @@
 import SwiftUI
 
 struct WatchAlbumArtView: View {
-  let url: String
+  let albumId: String
   var size: CGFloat = 36
-  var albumId: String = ""
 
-  // The decoded cover, remembered together with the cover it is for, so a
+  // The decoded cover, remembered together with the album it is for, so a
   // view reused for another album never shows the previous cover.
-  @State private var loaded: (key: String, image: UIImage?)?
-
-  private var isLocal: Bool { url.hasPrefix("/") }
-  private var key: String { isLocal ? url : albumId }
+  @State private var loaded: (albumId: String, image: UIImage?)?
 
   private var image: UIImage? {
-    loaded?.key == key ? loaded?.image : nil
+    loaded?.albumId == albumId ? loaded?.image : nil
   }
 
   private var loadFailed: Bool {
-    loaded?.key == key && loaded?.image == nil
+    loaded?.albumId == albumId && loaded?.image == nil
   }
 
   var body: some View {
     content
-      .task(id: key) {
-        guard isLocal || !albumId.isEmpty, loaded?.key != key else { return }
-        // One download through the cover cache serves this view, every other
-        // view of the album and the Now Playing artwork.
-        let path: String? =
-          isLocal ? url : await CoverArtCacheManager.shared.coverPath(albumId: albumId)
+      .task(id: albumId) {
+        guard !albumId.isEmpty, loaded?.albumId != albumId else { return }
+        // The download's cover, else one download through the cover cache
+        // that serves this view, every other view of the album and the Now
+        // Playing artwork.
+        let path = await CoverTint.coverFile(albumId: albumId)
         // Decoding in body would stall the main thread on every redraw.
         let decoded = await Task.detached(priority: .userInitiated) {
           path.flatMap(UIImage.init(contentsOfFile:)).flatMap(CoverTint.decoded)
         }.value
         // The view may have moved on to another album while this loaded.
         guard !Task.isCancelled else { return }
-        loaded = (key, decoded)
+        loaded = (albumId, decoded)
       }
   }
 
@@ -50,7 +46,7 @@ struct WatchAlbumArtView: View {
         .resizable()
         .aspectRatio(contentMode: .fill)
         .frame(width: size, height: size)
-    } else if isLocal || !albumId.isEmpty, !loadFailed {
+    } else if !albumId.isEmpty, !loadFailed {
       ProgressView()
         .frame(width: size, height: size)
     } else {

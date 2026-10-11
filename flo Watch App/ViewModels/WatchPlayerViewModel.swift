@@ -1016,9 +1016,7 @@ class WatchPlayerViewModel: ObservableObject {
   }
 
   func getAlbumCoverArt() -> String {
-    return AlbumService.shared.getAlbumCover(
-      artistName: self.nowPlaying.artistName ?? "", albumName: self.nowPlaying.albumName ?? "",
-      albumId: self.nowPlaying.albumId ?? "", trackId: self.nowPlaying.id ?? "")
+    return AlbumService.shared.coverURL(albumId: self.nowPlaying.albumId ?? "")
   }
 
   func hasNowPlaying() -> Bool {

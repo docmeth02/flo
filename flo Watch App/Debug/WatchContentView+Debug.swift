@@ -310,7 +310,7 @@
     }
 
     private func logMediaFiles(_ label: String) {
-      guard let media = LocalFileManager.shared.fileURL(for: "Media") else { return }
+      let media = LocalFileManager.shared.fileURL(for: "Media")
       let files = FileManager.default.enumerator(atPath: media.path)?
         .compactMap { $0 as? String } ?? []
       let songs = CoreDataManager.shared.countRecords(entity: SongEntity.self)

@@ -40,15 +40,8 @@ struct WatchAlbumDetailView: View {
     ) {
       Spacer().frame(height: 58)
     }
-    .background(alignment: .top) {
-      CoverBackdrop(
-        albumId: album.id, url: albumViewModel.getAlbumCoverArt(id: album.id), height: 220)
-    }
-    .task(id: album.id) {
-      tint =
-        await CoverTint.color(
-          albumId: album.id, url: albumViewModel.getAlbumCoverArt(id: album.id)) ?? .floLavender
-    }
+    .background(alignment: .top) { CoverBackdrop(albumId: album.id, height: 220) }
+    .task(id: album.id) { tint = await CoverTint.color(albumId: album.id) ?? .floLavender }
     .onAppear { albumViewModel.setActiveAlbum(album: album) }
     .onReceive(albumViewModel.$album) { updated in
       if updated.id == album.id {

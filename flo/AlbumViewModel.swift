@@ -75,7 +75,6 @@ class AlbumViewModel: ObservableObject {
 
   func setActiveAlbum(album: Album) {
     self.album = album
-    self.album.albumCover = self.getAlbumCoverArt(id: album.id, albumCover: album.albumCover)
 
     if !album.id.isEmpty {
       if AlbumService.shared.isPlaylistDownload(id: album.id) {
@@ -243,60 +242,43 @@ class AlbumViewModel: ObservableObject {
 
   // MARK: - Fetch methods
 
-  func getAlbumCoverArt(
-    id: String, artistName: String = "", albumName: String = "", albumCover: String = ""
-  ) -> String {
-    return AlbumService.shared.getAlbumCover(
-      artistName: artistName, albumName: albumName, albumId: id, albumCover: albumCover)
-  }
-
   func downloadAlbum(_ albumToDownload: Album) {
     // The album record must exist even when its cover cannot be fetched,
     // otherwise its downloaded songs never show up in Downloads.
     AlbumService.shared.saveAlbum(albumToDownload)
 
-    AlbumService.shared.downloadAlbumCover(albumId: albumToDownload.id) { result in
+    AlbumService.shared.downloadCover(
+      artId: "al-\(albumToDownload.id)", as: albumToDownload.id
+    ) { result in
       if case .failure(let error) = result {
         debugLog("Failed to save album cover: \(error.localizedDescription)")
       }
     }
   }
 
-  func downloadPlaylist(_ playlistToDownload: Playlist, targetIdx: Int = -1) {
-    let maxConcurrentDownloads = ProcessInfo.processInfo.activeProcessorCount / 2
-    let downloadSemaphore = DispatchSemaphore(value: maxConcurrentDownloads)
-
-    let songs = targetIdx == -1 ? playlistToDownload.songs : [playlistToDownload.songs[targetIdx]]
-
-    // Core Data work stays on the main thread with the view context; only the
-    // cover downloads below go to a background queue.
+  func downloadPlaylist(_ playlistToDownload: Playlist) {
+    let id = playlistToDownload.id
     AlbumService.shared.savePlaylist(playlistToDownload)
 
     // The playlist's own cover lives next to its tracks so the Downloads tab
     // can pick it up; failure must not affect the song downloads.
-    AlbumService.shared.downloadPlaylistCover(
-      playlistId: playlistToDownload.id, coverArtId: playlistToDownload.coverArtId
+    AlbumService.shared.downloadCover(
+      artId: playlistToDownload.coverArtId ?? (id.hasPrefix("pl-") ? id : "pl-\(id)"), as: id
     ) { result in
       if case .failure(let error) = result {
         debugLog("Failed to save playlist cover: \(error.localizedDescription)")
       }
     }
 
-    songs.forEach { song in
-      DispatchQueue.global(qos: .background).async {
-        downloadSemaphore.wait()
-
-        AlbumService.shared.downloadAlbumCoverForPlaylist(albumId: song.albumId) { _ in
-          downloadSemaphore.signal()
-        }
-      }
+    // The tracks' album covers, once per album; a stored one stays.
+    for albumId in Set(playlistToDownload.songs.map(\.albumId))
+    where !albumId.isEmpty && AlbumService.shared.downloadedCoverPath(albumId: albumId) == nil {
+      AlbumService.shared.downloadCover(artId: "al-\(albumId)", as: albumId, overwrite: false) { _ in }
     }
   }
 
   func removeDownloadedAlbum(album: Album) {
-    AlbumService.shared.removeDownloadedCollection(
-      id: album.id, legacyDirectory: "Media/\(album.artist)/\(album.name)"
-    ) { result in
+    AlbumService.shared.removeDownloadedCollection(id: album.id) { result in
       DispatchQueue.main.async {
         switch result {
         case .success:
@@ -309,9 +291,7 @@ class AlbumViewModel: ObservableObject {
   }
 
   func removeDownloadedPlaylist(playlist: Playlist) {
-    AlbumService.shared.removeDownloadedCollection(
-      id: playlist.id, legacyDirectory: "Media/Various Artists/\(playlist.name)"
-    ) { result in
+    AlbumService.shared.removeDownloadedCollection(id: playlist.id) { result in
       DispatchQueue.main.async {
         switch result {
         case .success:
