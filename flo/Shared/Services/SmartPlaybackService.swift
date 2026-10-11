@@ -217,7 +217,7 @@ final class SmartPlaybackService {
   // MARK: - Data loading
 
   private static func isSongCacheStale() -> Bool {
-    guard let written = LibraryCacheManager.shared.modificationDate(forKey: "songs.stamp") else {
+    guard let written = LibraryCacheManager.shared.modificationDate(forKey: .songsStamp) else {
       return true
     }
     return Date().timeIntervalSince(written) > songCacheMaxAge
@@ -228,8 +228,8 @@ final class SmartPlaybackService {
   func loadCachedLibrary() async -> (songs: [Song], starredIds: Set<String>) {
     await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .userInitiated).async {
-        let songs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
-        let starred = LibraryCacheManager.shared.load([Song].self, forKey: "starredSongs") ?? []
+        let songs = LibraryCacheManager.shared.load([Song].self, forKey: .songs) ?? []
+        let starred = LibraryCacheManager.shared.load([Song].self, forKey: .starredSongs) ?? []
         continuation.resume(returning: (songs, Set(starred.map { $0.playbackID })))
       }
     }
@@ -242,9 +242,8 @@ final class SmartPlaybackService {
   func libraryIndex(allowSync: Bool = true) async -> LibraryIndex {
     // Decoding the whole cache is the expensive part; the dates say whether
     // the caches changed since the last index was built.
-    let artistsKey = AlbumViewModel.Library.artists.rawValue
-    let stampDate = LibraryCacheManager.shared.modificationDate(forKey: "songs.stamp")
-    let artistsDate = LibraryCacheManager.shared.modificationDate(forKey: artistsKey)
+    let stampDate = LibraryCacheManager.shared.modificationDate(forKey: .songsStamp)
+    let artistsDate = LibraryCacheManager.shared.modificationDate(forKey: .artists)
     if let cached = indexLock.withLock({ indexCache }), cached.stampDate == stampDate,
       cached.artistsDate == artistsDate, stampDate != nil
     {
@@ -252,9 +251,9 @@ final class SmartPlaybackService {
     }
     let (cached, format, artistKeys) = await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .utility).async {
-        let songs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
-        let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: "songs.stamp")
-        let artists = LibraryCacheManager.shared.load([Artist].self, forKey: artistsKey) ?? []
+        let songs = LibraryCacheManager.shared.load([Song].self, forKey: .songs) ?? []
+        let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: .songsStamp)
+        let artists = LibraryCacheManager.shared.load([Artist].self, forKey: .artists) ?? []
         continuation.resume(returning: (songs, stamp?.format, ArtistIdentity.keys(of: artists)))
       }
     }
@@ -271,14 +270,14 @@ final class SmartPlaybackService {
       // keep missing genres and artist ids for good, so the import waits.
       let synced = await withCheckedContinuation { continuation in
         DispatchQueue.global(qos: .utility).async {
-          let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: "songs.stamp")
+          let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: .songsStamp)
           continuation.resume(returning: stamp?.format == LibraryStamp.currentFormat)
         }
       }
       // A stamp can outlive an evicted song cache; an empty library is never
       // remembered as the index.
       guard synced, !songs.isEmpty else { return LibraryIndex(songs: [:]) }
-      builtFrom = LibraryCacheManager.shared.modificationDate(forKey: "songs.stamp")
+      builtFrom = LibraryCacheManager.shared.modificationDate(forKey: .songsStamp)
     }
 
     var entries: [String: LibraryIndex.Entry] = [:]
@@ -294,8 +293,8 @@ final class SmartPlaybackService {
   private func performSongSync(force: Bool, generation: Int) async -> [Song] {
     let (cached, cachedStamp) = await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .userInitiated).async {
-        let songs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
-        let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: "songs.stamp")
+        let songs = LibraryCacheManager.shared.load([Song].self, forKey: .songs) ?? []
+        let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: .songsStamp)
         continuation.resume(returning: (songs, stamp))
       }
     }
@@ -319,9 +318,9 @@ final class SmartPlaybackService {
       await withCheckedContinuation { continuation in
         DispatchQueue.global(qos: .utility).async {
           // The Liked Songs screen may have saved a newer list meanwhile.
-          let saved = LibraryCacheManager.shared.modificationDate(forKey: "starredSongs")
+          let saved = LibraryCacheManager.shared.modificationDate(forKey: .starredSongs)
           if saved.map({ $0 < starredRequestedAt }) ?? true {
-            LibraryCacheManager.shared.save(starred, forKey: "starredSongs", generation: generation)
+            LibraryCacheManager.shared.save(starred, forKey: .starredSongs, generation: generation)
           }
           continuation.resume()
         }
@@ -382,9 +381,9 @@ final class SmartPlaybackService {
     await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .utility).async {
         if let library {
-          LibraryCacheManager.shared.save(library, forKey: "songs", generation: generation)
+          LibraryCacheManager.shared.save(library, forKey: .songs, generation: generation)
         }
-        LibraryCacheManager.shared.save(stamp, forKey: "songs.stamp", generation: generation)
+        LibraryCacheManager.shared.save(stamp, forKey: .songsStamp, generation: generation)
         continuation.resume()
       }
     }

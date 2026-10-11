@@ -26,6 +26,15 @@ class AlbumViewModel: ObservableObject {
     /// popping back from a detail screen does not reload the whole list.
     /// Liked songs change from Now Playing and always reload.
     var maxAge: TimeInterval { self == .starredSongs ? 0 : AlbumViewModel.reloadAfter }
+
+    var cacheKey: LibraryCacheManager.Key {
+      switch self {
+      case .albums: .albums
+      case .artists: .artists
+      case .playlists: .playlists
+      case .starredSongs: .starredSongs
+      }
+    }
   }
 
   private static let reloadAfter: TimeInterval = 5 * 60
@@ -173,7 +182,7 @@ class AlbumViewModel: ObservableObject {
           self.listStates[library] = ListState(loadedAt: Date())
           DispatchQueue.global(qos: .utility).async {
             LibraryCacheManager.shared.save(
-              items, forKey: library.rawValue, generation: cacheGeneration)
+              items, forKey: library.cacheKey, generation: cacheGeneration)
             // Siri reads the artist names for "Play <artist>" from this cache.
             if library == .artists { FloShortcuts.updateAppShortcutParameters() }
           }
@@ -199,7 +208,7 @@ class AlbumViewModel: ObservableObject {
       return
     }
     if current.isEmpty,
-      let cached = LibraryCacheManager.shared.load([T].self, forKey: library.rawValue)
+      let cached = LibraryCacheManager.shared.load([T].self, forKey: library.cacheKey)
     {
       assign(cached)
     }
@@ -467,7 +476,7 @@ class AlbumViewModel: ObservableObject {
   /// without a view model (the App Intents).
   static func cached<T: Codable>(_ library: Library) async -> [T] {
     await Task.detached {
-      LibraryCacheManager.shared.load([T].self, forKey: library.rawValue) ?? []
+      LibraryCacheManager.shared.load([T].self, forKey: library.cacheKey) ?? []
     }.value
   }
 

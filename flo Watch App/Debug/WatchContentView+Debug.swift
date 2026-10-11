@@ -105,7 +105,7 @@
       let songs = await SmartPlaybackService.shared.syncSongLibrary(force: value == "force")
       // The cache is written in the background.
       try? await Task.sleep(nanoseconds: 1_000_000_000)
-      let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: "songs.stamp")
+      let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: .songsStamp)
       debugLog("sync hook: \(songs.count) songs, stamp=\(String(describing: stamp))")
       debugLog("ratings: \(RatingStore.shared.ratings.count) \(RatingStore.shared.ratings)")
     }
@@ -156,7 +156,7 @@
       guard let mode = ProcessInfo.processInfo.environment["FLO_DEBUG_KEEP_PLAYING"] else { return }
       try? await Task.sleep(nanoseconds: 6_000_000_000)
       UserDefaultsManager.keepPlaying = true
-      let songs = LibraryCacheManager.shared.load([Song].self, forKey: "songs") ?? []
+      let songs = LibraryCacheManager.shared.load([Song].self, forKey: .songs) ?? []
       let song =
         mode == "short"
         ? songs.filter { $0.duration > 0 }.min { $0.duration < $1.duration } : songs.first

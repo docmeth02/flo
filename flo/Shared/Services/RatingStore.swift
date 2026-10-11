@@ -111,13 +111,13 @@ import WatchKit
   /// past it the caller goes on with the ones known.
   func refreshIfStale(waitingAtMost limit: Duration) async {
     guard let refresh = refreshIfStale() else { return }
-    let (done, finish) = AsyncStream<Void>.makeStream()
-    Task { await refresh.value; finish.yield() }
-    Task {
-      try? await Task.sleep(for: limit)
-      finish.yield()
+    // Cancelling the group stops the wait, never the refresh itself.
+    await withTaskGroup(of: Void.self) { group in
+      group.addTask { await refresh.value }
+      group.addTask { try? await Task.sleep(for: limit) }
+      await group.next()
+      group.cancelAll()
     }
-    for await _ in done { break }
   }
 
   /// The server's ratings, newer than the cache and than every edit it took
@@ -172,8 +172,8 @@ import WatchKit
       "ratings refreshed: \(server.count) songs, \(albumRatings.count) albums, "
         + "\(edits.values.count) pending")
     await Task.detached(priority: .utility) {
-      LibraryCacheManager.shared.save(songs, forKey: "ratedSongs", generation: cacheGeneration)
-      LibraryCacheManager.shared.save(albums, forKey: "ratedAlbums", generation: cacheGeneration)
+      LibraryCacheManager.shared.save(songs, forKey: .ratedSongs, generation: cacheGeneration)
+      LibraryCacheManager.shared.save(albums, forKey: .ratedAlbums, generation: cacheGeneration)
     }.value
   }
 
@@ -199,8 +199,8 @@ import WatchKit
   private func loadCache() {
     let generation = account
     Task.detached(priority: .utility) {
-      let songs = LibraryCacheManager.shared.load([Song].self, forKey: "ratedSongs")
-      let albums = LibraryCacheManager.shared.load([Album].self, forKey: "ratedAlbums")
+      let songs = LibraryCacheManager.shared.load([Song].self, forKey: .ratedSongs)
+      let albums = LibraryCacheManager.shared.load([Album].self, forKey: .ratedAlbums)
       await self.adoptCached(
         songs: Self.ratings(of: songs ?? []), albums: Self.ratings(of: albums ?? []),
         account: generation)
