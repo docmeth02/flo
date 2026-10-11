@@ -663,8 +663,12 @@ class WatchPlayerViewModel: ObservableObject {
   private func reloadRadioItem() {
     guard let radioURL = radioURL else { return }
     tearDownItemObservers()
+    attachRadioItem(radioURL)
+  }
+
+  private func attachRadioItem(_ url: URL) {
     replacePlayerIfFailed()
-    playerItem = AVPlayerItem(url: radioURL)
+    playerItem = AVPlayerItem(url: url)
     player?.replaceCurrentItem(with: playerItem)
     observeItemStatus(trackId: hasNowPlaying() ? nowPlaying.id : nil)
     addPeriodicTimeObserver()
@@ -1713,13 +1717,9 @@ class WatchPlayerViewModel: ObservableObject {
     // A queued end notification from the previous track must not advance the
     // radio queue; live streams have no track end.
     detachItem()
-    replacePlayerIfFailed()
 
     self.radioURL = radioUrl
-    self.playerItem = AVPlayerItem(url: radioUrl)
-    self.player?.replaceCurrentItem(with: self.playerItem)
-
-    self.observeItemStatus(trackId: self.nowPlaying.id)
+    attachRadioItem(radioUrl)
 
     self.isMediaLoading = true
     self.isMediaFailed = false
@@ -1727,45 +1727,27 @@ class WatchPlayerViewModel: ObservableObject {
     self.progress = 0.0
     self.currentTimeString = "00:00"
 
-    self.addPeriodicTimeObserver()
     self.play()
 
     self.initNowPlayingInfo(
       title: item.name,
-      artist: item.artist,
+      artist: nowPlaying.artistName ?? "",
       playbackDuration: 0)
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
     return true
   }
 
+  /// The station's URL as given, else percent-encoded, else either with https
+  /// in front; a stream needs a scheme and a host.
   private static func normalizedRadioURL(from streamUrl: String) -> URL? {
-    let trimmedUrl = streamUrl.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmedUrl.isEmpty else { return nil }
-
-    if let url = URL(string: trimmedUrl), url.scheme != nil {
-      return url
+    let trimmed = streamUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+    for base in [trimmed, "https://\(trimmed)"] {
+      let encoded = base.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed)
+      for text in [base, encoded].compactMap({ $0 }) {
+        if let url = URL(string: text), url.scheme != nil, url.host != nil { return url }
+      }
     }
-
-    if let encoded = trimmedUrl.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed),
-      let url = URL(string: encoded),
-      url.scheme != nil
-    {
-      return url
-    }
-
-    let withScheme = "https://\(trimmedUrl)"
-
-    if let url = URL(string: withScheme), url.host != nil {
-      return url
-    }
-
-    if let encoded = withScheme.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed),
-      let url = URL(string: encoded),
-      url.host != nil
-    {
-      return url
-    }
-
     return nil
   }
 

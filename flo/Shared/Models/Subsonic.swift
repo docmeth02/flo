@@ -5,7 +5,7 @@
 //  Created by rizaldy on 11/01/25.
 //
 
-protocol SubsonicResponseData: Codable {
+protocol SubsonicResponseData: Decodable {
   static var key: String { get }
 }
 
@@ -19,21 +19,13 @@ struct SubsonicError: Codable, Error {
   let message: String?
 }
 
-struct SubsonicResponse<T: SubsonicResponseData>: Codable {
+struct SubsonicResponse<T: SubsonicResponseData>: Decodable {
   let status: String
-  let version: String
-  let type: String
-  let serverVersion: String
-  let openSubsonic: Bool
   let error: SubsonicError?
   let data: T?
 
   enum CodingKeys: String, CodingKey {
     case status
-    case version
-    case type
-    case serverVersion
-    case openSubsonic
     case error
   }
 
@@ -41,29 +33,10 @@ struct SubsonicResponse<T: SubsonicResponseData>: Codable {
     let container = try decoder.container(keyedBy: CodingKeys.self)
 
     status = try container.decode(String.self, forKey: .status)
-    version = try container.decode(String.self, forKey: .version)
-    type = try container.decode(String.self, forKey: .type)
-    serverVersion = try container.decode(String.self, forKey: .serverVersion)
-    openSubsonic = try container.decode(Bool.self, forKey: .openSubsonic)
     error = try container.decodeIfPresent(SubsonicError.self, forKey: .error)
 
     let rootContainer = try decoder.container(keyedBy: ExtraField.self)
     data = try rootContainer.decodeIfPresent(T.self, forKey: ExtraField(stringValue: T.key))
-  }
-
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.container(keyedBy: CodingKeys.self)
-
-    try container.encode(status, forKey: .status)
-    try container.encode(version, forKey: .version)
-    try container.encode(type, forKey: .type)
-    try container.encode(serverVersion, forKey: .serverVersion)
-    try container.encode(openSubsonic, forKey: .openSubsonic)
-    try container.encodeIfPresent(error, forKey: .error)
-
-    if let data = data, let dynamicKey = CodingKeys(rawValue: T.key) {
-      try container.encode(data, forKey: dynamicKey)
-    }
   }
 }
 
@@ -86,7 +59,7 @@ extension SubsonicResponse {
 
 /// A Subsonic response without payload, unwrapped from its
 /// `subsonic-response` envelope.
-struct BasicSubsonicResponse: Codable {
+struct BasicSubsonicResponse: Decodable {
   let subsonicResponse: SubsonicResponse<BasicResponse>
 
   enum CodingKeys: String, CodingKey {
@@ -169,7 +142,7 @@ struct TranscodeDecision: SubsonicResponseData {
   let errorReason: String?
 }
 
-struct TranscodeDecisionResponse: Codable {
+struct TranscodeDecisionResponse: Decodable {
   let subsonicResponse: SubsonicResponse<TranscodeDecision>
 
   enum CodingKeys: String, CodingKey {
