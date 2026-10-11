@@ -17,7 +17,7 @@ struct WatchSearchView: View {
   @State private var library: Library?
   /// Nil while there is nothing to search.
   @State private var results: LibrarySearch.Results?
-  @State private var openedAlbumId: String?
+  @State private var openedAlbum: Album?
   @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
 
@@ -49,12 +49,7 @@ struct WatchSearchView: View {
     .navigationTitle("Search")
     .searchable(text: $query)
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
-    .navigationDestination(item: $openedAlbumId) { id in
-      // From the library, not the results, which change with the query.
-      if let album = library?.albums.first(where: { $0.id == id }) {
-        WatchAlbumDetailView(album: album)
-      }
-    }
+    .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .itemMenu($menu)
     .task {
       // Once: the view reappears after every pushed album or artist.
@@ -110,7 +105,7 @@ struct WatchSearchView: View {
     if !results.albums.isEmpty {
       Section {
         ForEach(results.albums) { album in
-          AlbumRow(album: album, menu: $menu) { openedAlbumId = album.id }
+          AlbumRow(album: album, menu: $menu) { openedAlbum = album }
         }
       } header: {
         FloSectionHeader("Albums")

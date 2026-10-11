@@ -13,7 +13,7 @@ struct WatchArtistDetailView: View {
   @StateObject var artistDetailViewModel = ArtistDetailViewModel()
 
   @State private var displayAlert: Bool = false
-  @State private var openedAlbumId: String?
+  @State private var openedAlbum: Album?
   @State private var menu: MenuTarget?
 
   let artist: Artist
@@ -51,7 +51,7 @@ struct WatchArtistDetailView: View {
             tile: .album(album.id),
             title: album.name,
             subtitle: album.minYear > 0 ? String(album.minYear) : "")
-          .holdable(onTap: { openedAlbumId = album.id }, onHold: { menu = .album(album) })
+          .holdable(onTap: { openedAlbum = album }, onHold: { menu = .album(album) })
           .floRow()
         }
       } header: {
@@ -59,11 +59,7 @@ struct WatchArtistDetailView: View {
       }
     }
     .navigationTitle(artist.name)
-    .navigationDestination(item: $openedAlbumId) { id in
-      if let album = albumViewModel.albums(byArtist: artist.id).first(where: { $0.id == id }) {
-        WatchAlbumDetailView(album: album)
-      }
-    }
+    .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .itemMenu($menu)
     .onAppear {
       albumViewModel.fetchAlbumsByArtist(id: artist.id)

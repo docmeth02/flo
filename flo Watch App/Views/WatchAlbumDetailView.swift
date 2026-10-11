@@ -11,11 +11,10 @@ struct WatchAlbumDetailView: View {
 
   let album: Album
 
-  @State private var localAlbum: Album?
   @State private var tint: Color = .floLavender
 
   private var displayAlbum: Album {
-    localAlbum ?? album
+    albumViewModel.album.id == album.id ? albumViewModel.album : album
   }
 
   private var meta: String {
@@ -43,11 +42,6 @@ struct WatchAlbumDetailView: View {
     .background(alignment: .top) { CoverBackdrop(albumId: album.id, height: 220) }
     .task(id: album.id) { tint = await CoverTint.color(albumId: album.id) ?? .floLavender }
     .onAppear { albumViewModel.setActiveAlbum(album: album) }
-    .onReceive(albumViewModel.$album) { updated in
-      if updated.id == album.id {
-        localAlbum = updated
-      }
-    }
   }
 
   /// Downloaded playlists open here from Downloads; they keep playlist

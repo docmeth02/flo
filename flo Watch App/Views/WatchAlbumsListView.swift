@@ -8,7 +8,7 @@ import SwiftUI
 struct WatchAlbumsListView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
 
-  @State private var openedAlbumId: String?
+  @State private var openedAlbum: Album?
   @State private var menu: MenuTarget?
 
   var body: some View {
@@ -22,14 +22,10 @@ struct WatchAlbumsListView: View {
     ) {
       PinnedList(items: albumViewModel.albums, kind: .album, allLabel: "All Albums") {
         album, isPinned in
-        AlbumRow(album: album, isPinned: isPinned, menu: $menu) { openedAlbumId = album.id }
+        AlbumRow(album: album, isPinned: isPinned, menu: $menu) { openedAlbum = album }
       }
     }
-    .navigationDestination(item: $openedAlbumId) { id in
-      if let album = albumViewModel.albums.first(where: { $0.id == id }) {
-        WatchAlbumDetailView(album: album)
-      }
-    }
+    .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .itemMenu($menu)
     .onAppear {
       albumViewModel.fetchAlbums()
