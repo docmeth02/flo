@@ -106,8 +106,7 @@
               bitRate: 0, sampleRate: 0, suffix: first.suffix, duration: first.duration,
               mediaFileId: "broken-\(first.id)")
             self.playItem(
-              item: SongCollection(id: "debug", name: "Debug", songs: [broken] + songs),
-              isFromLocal: false)
+              item: SongCollection(id: "debug", name: "Debug", songs: [broken] + songs))
           } else {
             let played = await self.playSomething()
             debugLog("play something: \(played) queue=\(self.queue.count)")

@@ -65,16 +65,14 @@ struct CollectionDetailView<Artwork: View>: View {
 
         HStack(spacing: 6) {
           Button(action: {
-            if playerViewModel.playItem(item: playable(), isFromLocal: downloaded) { showPlayer() }
+            if playerViewModel.playItem(item: playable()) { showPlayer() }
           }) {
             Label("Play", systemImage: "play.fill")
           }
           .buttonStyle(FloPrimaryButtonStyle())
 
           Button(action: {
-            if playerViewModel.shuffleItem(item: playable(), isFromLocal: downloaded) {
-              showPlayer()
-            }
+            if playerViewModel.shuffleItem(item: playable()) { showPlayer() }
           }) {
             Label("Shuffle", systemImage: "shuffle")
           }
@@ -107,9 +105,7 @@ struct CollectionDetailView<Artwork: View>: View {
                 song, context: title, isFromPlaylist: PlaybackService.isPlaylist(playable()))
             }
           ) {
-            if playerViewModel.playBySong(idx: index, item: playable(), isFromLocal: downloaded) {
-              showPlayer()
-            }
+            if playerViewModel.playItem(item: playable(), startingAt: index) { showPlayer() }
           }
         }
       }

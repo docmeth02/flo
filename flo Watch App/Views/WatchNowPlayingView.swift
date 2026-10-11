@@ -63,12 +63,12 @@ struct WatchNowPlayingView: View {
       isPresented: $showRating, titleVisibility: .visible
     ) {
       // The song the dialog was opened for, even if playback moved on.
-      Button("Boost") { playerViewModel.rate(5, playbackID: ratingTarget) }
+      Button("Boost") { ratings.set(5, playbackID: ratingTarget) }
       Button("Avoid in Smart Shuffle", role: .destructive) {
-        playerViewModel.rate(1, playbackID: ratingTarget)
+        ratings.set(1, playbackID: ratingTarget)
       }
       if ratingTargetRating > 0 {
-        Button("Clear rating") { playerViewModel.rate(0, playbackID: ratingTarget) }
+        Button("Clear rating") { ratings.set(0, playbackID: ratingTarget) }
       }
       Button("Cancel", role: .cancel) {}
     }
@@ -119,14 +119,20 @@ struct WatchNowPlayingView: View {
           .padding(.top, 8)
       } else {
         HStack(spacing: Self.compact ? 0 : 4) {
-          Button(action: { playerViewModel.prevSong() }) {
+          Button(action: {
+            playerViewModel.prevSong()
+            WKInterfaceDevice.current().play(.click)
+          }) {
             transportGlyph("backward.fill")
           }
           .buttonStyle(.plain)
 
           playPauseButton
 
-          Button(action: { playerViewModel.nextSong(userInitiated: true) }) {
+          Button(action: {
+            playerViewModel.nextSong(userInitiated: true)
+            WKInterfaceDevice.current().play(.click)
+          }) {
             transportGlyph("forward.fill")
           }
           .buttonStyle(.plain)
@@ -166,7 +172,8 @@ struct WatchNowPlayingView: View {
               WKInterfaceDevice.current().play(.click)
             }
             .onLongPressGesture(minimumDuration: FloLayout.holdDuration) {
-              ratingTarget = playerViewModel.nowPlaying.id ?? ""
+              guard let id = playerViewModel.nowPlaying.id, !id.isEmpty else { return }
+              ratingTarget = id
               showRating = true
               WKInterfaceDevice.current().play(.click)
             }
@@ -174,7 +181,7 @@ struct WatchNowPlayingView: View {
           Spacer(minLength: 0)
 
           Button(action: {
-            playerViewModel.setPlaybackMode()
+            playerViewModel.cyclePlaybackMode()
             WKInterfaceDevice.current().play(.click)
           }) {
             Image(

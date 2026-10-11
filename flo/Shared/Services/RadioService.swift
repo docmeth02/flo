@@ -7,15 +7,9 @@ class RadioService {
   static let shared = RadioService()
   
   func getAllRadios(completion: @escaping (Result<[Radio], Error>) -> Void) {
-
     APIManager.shared.SubsonicEndpointRequest(endpoint: API.SubsonicEndpoint.radios, parameters: nil) {
       (response: DataResponse<RadioListResponse, AFError>) in
-      switch response.result {
-      case .success(let radios):
-        completion(.success(radios.radioStations))
-      case .failure(let error):
-        completion(.failure(error))
-      }
+      completion(response.result.map(\.radioStations).mapError { $0 })
     }
   }
 
@@ -24,12 +18,7 @@ class RadioService {
 
     APIManager.shared.SubsonicEndpointRequest(endpoint: API.SubsonicEndpoint.similarSongs, parameters: params) {
       (response: DataResponse<SimilarSongsResponse, AFError>) in
-      switch response.result {
-      case .success(let result):
-        completion(.success(result.songs))
-      case .failure(let error):
-        completion(.failure(error))
-      }
+      completion(response.result.map(\.songs).mapError { $0 })
     }
   }
   
@@ -40,12 +29,7 @@ class RadioService {
     
     APIManager.shared.SubsonicEndpointRequest(endpoint: API.SubsonicEndpoint.topSongs, parameters: params) {
       (response: DataResponse<TopSongsResponse, AFError>) in
-      switch response.result {
-      case .success(let result):
-        completion(.success(result.songs))
-      case .failure(let error):
-        completion(.failure(error))
-      }
+      completion(response.result.map(\.songs).mapError { $0 })
     }
   }
 }

@@ -9,14 +9,12 @@ protocol Playable {
   var id: String { get }
   var name: String { get }
   var songs: [Song] { get set }
-  var artist: String { get }
 }
 
 struct SongCollection: Playable {
   let id: String
   let name: String
   var songs: [Song]
-  let artist: String = ""
   /// Songs taken from a playlist keep it as their origin.
   var isPlaylist = false
 }

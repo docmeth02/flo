@@ -72,13 +72,8 @@ struct WatchArtistDetailView: View {
       if songs.isEmpty {
         displayAlert = true
       } else {
-        let playable = RadioEntity(
-          id: artist.id,
-          name: "\(artist.name) Radio",
-          songs: songs,
-          artist: artist.name
-        )
-        if playerViewModel.playItem(item: playable, isFromLocal: false) { showPlayer() }
+        let playable = SongCollection(id: artist.id, name: "\(artist.name) Radio", songs: songs)
+        if playerViewModel.playItem(item: playable) { showPlayer() }
       }
     }
     .alert(artist.name, isPresented: $displayAlert) {

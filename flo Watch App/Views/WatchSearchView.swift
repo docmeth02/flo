@@ -128,7 +128,7 @@ struct WatchSearchView: View {
             onHold: { menu = .song(song, context: "Search", isFromPlaylist: false) }
           ) {
             let search = SongCollection(id: "search", name: "Search", songs: [song])
-            if playerViewModel.playItem(item: search, isFromLocal: false) { showPlayer() }
+            if playerViewModel.playItem(item: search) { showPlayer() }
           }
           .listRowBackground(Color.clear)
         }

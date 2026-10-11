@@ -24,7 +24,7 @@ struct WatchCachedSongsView: View {
           onHold: { menu = .song(song, context: "Cached", isFromPlaylist: false) }
         ) {
           let cached = SongCollection(id: "cached-songs", name: "Cached", songs: songs)
-          if playerViewModel.playBySong(idx: idx, item: cached, isFromLocal: true) { showPlayer() }
+          if playerViewModel.playItem(item: cached, startingAt: idx) { showPlayer() }
         }
         .listRowBackground(Color.clear)
       }
