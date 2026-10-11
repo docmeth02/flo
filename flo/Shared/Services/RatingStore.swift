@@ -111,13 +111,15 @@ import WatchKit
   /// past it the caller goes on with the ones known.
   func refreshIfStale(waitingAtMost limit: Duration) async {
     guard let refresh = refreshIfStale() else { return }
-    // Cancelling the group stops the wait, never the refresh itself.
-    await withTaskGroup(of: Void.self) { group in
-      group.addTask { await refresh.value }
-      group.addTask { try? await Task.sleep(for: limit) }
-      await group.next()
-      group.cancelAll()
+    // A task group would wait for the refresh too; the stream ends the wait
+    // at whichever finishes first.
+    let (done, finish) = AsyncStream<Void>.makeStream()
+    Task { await refresh.value; finish.yield() }
+    Task {
+      try? await Task.sleep(for: limit)
+      finish.yield()
     }
+    for await _ in done { break }
   }
 
   /// The server's ratings, newer than the cache and than every edit it took

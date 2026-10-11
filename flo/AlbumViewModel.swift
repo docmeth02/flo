@@ -283,10 +283,20 @@ class AlbumViewModel: ObservableObject {
       }
     }
 
-    // The tracks' album covers, once per album; a stored one stays.
-    for albumId in Set(playlistToDownload.songs.map(\.albumId))
-    where !albumId.isEmpty && AlbumService.shared.downloadedCoverPath(albumId: albumId) == nil {
-      AlbumService.shared.downloadCover(artId: "al-\(albumId)", as: albumId, overwrite: false) { _ in }
+    // The tracks' album covers, once per album and one at a time, so they
+    // neither time out queued behind each other nor crowd the songs; a
+    // stored one stays.
+    let albumIds = Set(playlistToDownload.songs.map(\.albumId)).filter {
+      !$0.isEmpty && AlbumService.shared.downloadedCoverPath(albumId: $0) == nil
+    }
+    Task {
+      for albumId in albumIds {
+        await withCheckedContinuation { done in
+          AlbumService.shared.downloadCover(artId: "al-\(albumId)", as: albumId, overwrite: false) {
+            _ in done.resume()
+          }
+        }
+      }
     }
   }
 
