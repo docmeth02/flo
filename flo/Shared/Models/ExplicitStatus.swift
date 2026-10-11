@@ -24,5 +24,4 @@ enum ExplicitStatus: String, Codable, Hashable {
       self = .unknown
     }
   }
-
 }

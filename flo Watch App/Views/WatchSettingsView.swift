@@ -54,7 +54,7 @@ struct WatchSettingsView: View {
         }
         .tint(.floLavender)
         .floRow()
-        .onChange(of: selectedBitRate) { newValue in
+        .onChange(of: selectedBitRate) { _, newValue in
           UserDefaultsManager.maxBitRate = newValue
         }
       } header: {
@@ -70,7 +70,7 @@ struct WatchSettingsView: View {
         }
         .tint(.floLavender)
         .floRow()
-        .onChange(of: selectedCacheSize) { newValue in
+        .onChange(of: selectedCacheSize) { _, newValue in
           UserDefaultsManager.streamCacheMaxSize = newValue
           // Eviction only trims an enabled cache; turning it off frees it all.
           if newValue == 0 {

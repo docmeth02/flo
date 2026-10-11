@@ -12,11 +12,7 @@ enum API {
 
   // Watch cover tiles are 36 to 100 points at 2x, so 200 px is the largest
   // the watch shows.
-  #if os(watchOS)
-    static let coverArtSize = 200
-  #else
-    static let coverArtSize = 300
-  #endif
+  static let coverArtSize = 200
 
   enum NDEndpoint {
     static let login = "/auth/login"
@@ -53,7 +49,7 @@ enum PlaybackMode {
 enum AppMeta {
   static let name = "flo"
   static let identifier = "net.faultables.flo"
-  static let subsonicApiVersion = "1.16.1"  // FIXME: should we respect the subsonic-response?
+  static let subsonicApiVersion = "1.16.1"
 }
 
 enum UserDefaultsKeys {

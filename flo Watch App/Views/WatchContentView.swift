@@ -21,7 +21,7 @@ struct WatchContentView: View {
   @StateObject var albumViewModel = AlbumViewModel()
   // Playback and scrobbling use the shared instance; Settings must show the
   // same state.
-  @StateObject private var floooViewModel = FloooViewModel.shared
+  @ObservedObject private var floooViewModel = FloooViewModel.shared
   @StateObject var downloadViewModel = DownloadViewModel()
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @Environment(\.scenePhase) private var scenePhase

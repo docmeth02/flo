@@ -81,7 +81,7 @@ struct WatchArtistDetailView: View {
         if playerViewModel.playItem(item: playable, isFromLocal: false) { showPlayer() }
       }
     }
-    .alert("Artist Radio", isPresented: $displayAlert) {
+    .alert(artist.name, isPresented: $displayAlert) {
       Button("OK") {
         artistDetailViewModel.errorMessage = nil
       }
