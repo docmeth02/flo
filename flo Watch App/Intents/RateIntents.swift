@@ -152,7 +152,11 @@ struct AvoidIntent: AppIntent {
     }
     switch item {
     case .song: return (target.playbackID, target.title, target.artistName)
-    case .album: return (target.albumId, target.albumName, target.artistName)
+    case .album:
+      guard !target.albumId.isEmpty else {
+        throw Refusal(sentence: "I don't know this album.")
+      }
+      return (target.albumId, target.albumName, target.artistName)
     case .artist:
       let artistId: String?
       if let known = target.artistId {

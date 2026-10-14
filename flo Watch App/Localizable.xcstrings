@@ -31,6 +31,16 @@
         }
       }
     },
+    "I don't know this album.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Album kenne ich nicht."
+          }
+        }
+      }
+    },
     "I don't know this artist yet.": {
       "localizations": {
         "de": {

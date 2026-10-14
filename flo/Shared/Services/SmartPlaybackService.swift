@@ -45,6 +45,8 @@ final class SmartPlaybackService {
       /// The artist history is stored under: the server's artist id, else
       /// the artist key.
       let historyArtistKey: String
+      /// The server's artist id; nil for a song without one.
+      let artistId: String?
       /// One artist for recommendations across spellings (ArtistIdentity),
       /// else the server's artist id; "" for neither.
       let artistKey: String
@@ -58,6 +60,7 @@ final class SmartPlaybackService {
       /// server id: the song's own artist tag may name guests as well.
       init(_ song: Song, artistKeys: [String: String] = [:]) {
         let artistId = song.artistId ?? ""
+        self.artistId = artistId.isEmpty ? nil : artistId
         var genres = song.genres ?? []
         if genres.isEmpty, let genre = song.genre { genres = [genre] }
         if artistId.isEmpty {

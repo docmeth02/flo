@@ -279,6 +279,21 @@ final class MixRankerTests: XCTestCase {
     XCTAssertEqual(b / (a + b), 0.5, accuracy: 0.12, "\(picks)")
   }
 
+  /// Without any history every artist is equally likely, whatever its size.
+  func testBootstrapTreatsCatalogueSizesAlike() {
+    let songs =
+      (0..<20).map { song("a\($0)", artist: "A", album: "al-A\($0)") }
+      + (0..<2).map { song("b\($0)", artist: "B", album: "al-B\($0)") }
+    var firsts: [String: Int] = [:]
+    for seed in 1...1000 {
+      let record = rank(songs, count: 1, seed: UInt64(seed)).record
+      XCTAssertTrue(record.notes.contains("bootstrap"))
+      if let artist = record.picks.first?.artist { firsts[artist, default: 0] += 1 }
+    }
+    let b = Double(firsts["B"] ?? 0)
+    XCTAssertEqual(b / Double(firsts.values.reduce(0, +)), 0.5, accuracy: 0.08, "\(firsts)")
+  }
+
   func testSkipsLowerExplorePicks() throws {
     let songs =
       (0..<3).map { song("a\($0)", artist: "A", album: "al-A\($0)") }

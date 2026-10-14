@@ -49,11 +49,7 @@ import Foundation
   /// time found nothing, since the caches may have filled in meanwhile.
   nonisolated static func artistId(of playbackID: String, named name: String) async -> String? {
     let index = await SmartPlaybackService.shared.libraryIndex(allowSync: false)
-    // The index keeps a song's artist id as its history key, and the song's
-    // artist name for a song without one.
-    if let key = index.songs[playbackID]?.historyArtistKey, !key.isEmpty, key != name {
-      return key
-    }
+    if let id = index.songs[playbackID]?.artistId { return id }
     let artists: [Artist] = await AlbumViewModel.cached(.artists)
     guard let spoken = ArtistIdentity.key(name: name, mbid: nil) else { return nil }
     let named = artists.filter { ArtistIdentity.key(name: $0.name, mbid: nil) == spoken }
