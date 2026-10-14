@@ -85,6 +85,21 @@ import WatchKit
     ratings[songId] ?? albumId.flatMap { albumRatings[$0] } ?? 0
   }
 
+  /// An artist's own rating 1...5, else 0. Main thread.
+  func artistRating(_ artistId: String) -> Int {
+    0  // interface stub, implemented on the ratings branch
+  }
+
+  /// Rates the artist 1 to 5; 0 clears its rating.
+  func setArtist(_ rating: Int, artistId: String) {
+    // interface stub, implemented on the ratings branch
+  }
+
+  /// Whether a rating edit for this song or artist waits for the server.
+  func isPending(_ id: String) -> Bool {
+    edits[id] != nil
+  }
+
   /// Rates the song 1 to 5; 0 clears its rating.
   func set(_ rating: Int, for song: QueueEntity) {
     guard let id = song.id, !id.isEmpty else { return }
