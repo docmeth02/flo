@@ -36,7 +36,8 @@ struct PlayArtistIntent: AppIntent {
 }
 
 /// The phrases are English; AppShortcuts.xcstrings holds their German
-/// versions, since Siri on the watch only runs a phrase spoken exactly.
+/// versions, since Siri on the watch only runs a phrase spoken exactly. The
+/// targets' German names are in Localizable.xcstrings.
 struct FloShortcuts: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
     AppShortcut(
@@ -49,6 +50,26 @@ struct FloShortcuts: AppShortcutsProvider {
       phrases: ["Play \(\.$artist) in \(.applicationName)"],
       shortTitle: "Play Artist",
       systemImageName: "music.mic")
+    AppShortcut(
+      intent: LikeIntent(),
+      phrases: ["Like \(\.$target) in \(.applicationName)"],
+      shortTitle: "Like",
+      systemImageName: "heart")
+    AppShortcut(
+      intent: UnlikeIntent(),
+      phrases: ["Unlike \(\.$target) in \(.applicationName)"],
+      shortTitle: "Unlike",
+      systemImageName: "heart.slash")
+    AppShortcut(
+      intent: BoostIntent(),
+      phrases: ["Boost \(\.$target) in \(.applicationName)"],
+      shortTitle: "Boost",
+      systemImageName: "hand.thumbsup")
+    AppShortcut(
+      intent: AvoidIntent(),
+      phrases: ["Avoid \(\.$target) in \(.applicationName)"],
+      shortTitle: "Avoid",
+      systemImageName: "hand.thumbsdown")
   }
 }
 

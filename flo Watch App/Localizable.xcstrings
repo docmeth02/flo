@@ -1,7 +1,166 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-
+  "sourceLanguage": "en",
+  "strings": {
+    "A radio station can't be liked or rated.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Radiosender kannst du nicht liken oder bewerten."
+          }
+        }
+      }
+    },
+    "Avoiding %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ wird vermieden."
+          }
+        }
+      }
+    },
+    "Boosted %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ wird bevorzugt."
+          }
+        }
+      }
+    },
+    "I don't know this artist yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Künstler kenne ich noch nicht."
+          }
+        }
+      }
+    },
+    "It syncs when your server is reachable.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird synchronisiert, sobald der Server erreichbar ist."
+          }
+        }
+      }
+    },
+    "Liked %@ by %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ von %2$@ gefällt dir."
+          }
+        }
+      }
+    },
+    "Liked %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ gefällt dir."
+          }
+        }
+      }
+    },
+    "Nothing is playing in flo watch.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In flo watch läuft gerade nichts."
+          }
+        }
+      }
+    },
+    "Removed %@ from your likes.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ gefällt dir nicht mehr."
+          }
+        }
+      }
+    },
+    "this album": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dieses Album"
+          }
+        }
+      }
+    },
+    "this artist": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diesen Künstler"
+          }
+        }
+      }
+    },
+    "this band": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diese Band"
+          }
+        }
+      }
+    },
+    "this musician": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diese Künstlerin"
+          }
+        }
+      }
+    },
+    "this song": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diesen Song"
+          }
+        }
+      }
+    },
+    "this track": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dieses Lied"
+          }
+        }
+      }
+    },
+    "this tune": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diesen Titel"
+          }
+        }
+      }
+    }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

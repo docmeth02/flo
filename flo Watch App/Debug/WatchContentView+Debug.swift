@@ -218,7 +218,8 @@
 
     // FLO_DEBUG_INTENT=1 asks for Play Something the way the App Intent does,
     // three seconds after launch; FLO_DEBUG_INTENT=artist:<name> asks for the
-    // artist Siri would resolve that name to.
+    // artist Siri would resolve that name to; FLO_DEBUG_INTENT=like:song and
+    // the like logs the answer to an edit of what is playing.
     private func runDebugIntent() async {
       guard let value = ProcessInfo.processInfo.environment["FLO_DEBUG_INTENT"] else { return }
       try? await Task.sleep(nanoseconds: 3_000_000_000)
@@ -234,6 +235,36 @@
         }
         debugLog("intent hook: requesting artist \(artist.name) (\(artist.id))")
         PlayRequest.post(.artist(id: artist.id, name: artist.name))
+      } else {
+        let reply = await Self.debugEditReply(value)
+        debugLog("intent hook: \(value) says \(reply ?? "nothing, unknown command")")
+      }
+    }
+
+    // like:|unlike:song|album|artist and boost:|avoid:song|artist answer the
+    // way Siri would for what is playing.
+    @MainActor private static func debugEditReply(_ value: String) async -> String? {
+      let parts = value.split(separator: ":").map(String.init)
+      guard parts.count == 2 else { return nil }
+      switch (parts[0], LikeTarget(rawValue: parts[1]), RateTarget(rawValue: parts[1])) {
+      case ("like", let target?, _):
+        var intent = LikeIntent()
+        intent.target = target
+        return await intent.reply()
+      case ("unlike", let target?, _):
+        var intent = UnlikeIntent()
+        intent.target = target
+        return await intent.reply()
+      case ("boost", _, let target?):
+        var intent = BoostIntent()
+        intent.target = target
+        return await intent.reply()
+      case ("avoid", _, let target?):
+        var intent = AvoidIntent()
+        intent.target = target
+        return await intent.reply()
+      default:
+        return nil
       }
     }
 

@@ -55,7 +55,11 @@ extension WatchPlayerViewModel {
     nowPlayingInfo[MPMediaItemPropertyArtist] = artist
     nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-    MainActor.assumeIsolated { updateRatingCommands() }
+    MainActor.assumeIsolated {
+      updateRatingCommands()
+      // A song change after something played; play() sets the first one.
+      if NowPlayingTarget.current != nil { publishSiriTarget() }
+    }
 
     coverArt = AlbumService.shared.coverURL(albumId: nowPlaying.albumId ?? "")
     if coverArt.hasPrefix("/") {
@@ -71,6 +75,11 @@ extension WatchPlayerViewModel {
         Self.setArtwork(image)
       }
     }
+  }
+
+  /// What "this song" means to Siri: the song in the player, nil for none.
+  @MainActor func publishSiriTarget() {
+    NowPlayingTarget.publish(hasNowPlaying() ? nowPlaying : nil, isLiveRadio: isLiveRadio)
   }
 
   private static func setArtwork(_ image: UIImage) {

@@ -1,6 +1,43 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Avoid ${target} in ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Vermeide ${target} in ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Boost ${target} in ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Bevorzuge ${target} in ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Like ${target} in ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Ich mag ${target} in ${applicationName}",
+              "Favorisiere ${target} in ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
     "Play ${artist} in ${applicationName}": {
       "localizations": {
         "de": {
@@ -22,6 +59,18 @@
             "values": [
               "Spiele etwas in ${applicationName}",
               "Spiel etwas in ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Unlike ${target} in ${applicationName}": {
+      "localizations": {
+        "de": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Ich mag ${target} nicht mehr in ${applicationName}"
             ]
           }
         }

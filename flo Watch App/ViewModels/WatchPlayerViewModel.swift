@@ -292,7 +292,10 @@ class WatchPlayerViewModel: ObservableObject {
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.queueActiveIdx)
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-    MainActor.assumeIsolated { updateRatingCommands() }
+    MainActor.assumeIsolated {
+      updateRatingCommands()
+      NowPlayingTarget.current = nil
+    }
   }
 
   func addToQueue(idx: Int, item: [QueueEntity], playAudio: Bool = true) {
@@ -495,6 +498,7 @@ class WatchPlayerViewModel: ObservableObject {
     let gen = playGeneration
     cancelSettle()
     pendingStart = PendingStart()
+    MainActor.assumeIsolated { publishSiriTarget() }
     RequestLog.shared.note(
       "audio activate \(gen) playing=\(isPlaying) item=\(playerItem != nil)")
     AVAudioSession.sharedInstance().activate(options: []) { [weak self] success, error in
@@ -633,6 +637,7 @@ class WatchPlayerViewModel: ObservableObject {
 
     self.isFinished = true
     self.isPlaying = false
+    MainActor.assumeIsolated { NowPlayingTarget.current = nil }
   }
 
   func seek(to progress: Double) {
