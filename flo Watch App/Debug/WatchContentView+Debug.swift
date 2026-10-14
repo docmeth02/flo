@@ -236,8 +236,14 @@
         debugLog("intent hook: requesting artist \(artist.name) (\(artist.id))")
         PlayRequest.post(.artist(id: artist.id, name: artist.name))
       } else {
-        let reply = await Self.debugEditReply(value)
-        debugLog("intent hook: \(value) says \(reply ?? "nothing, unknown command")")
+        // Commands separated by commas, once something plays (at most 30 s).
+        for _ in 0..<30 where NowPlayingTarget.current == nil {
+          try? await Task.sleep(for: .seconds(1))
+        }
+        for command in value.split(separator: ",").map(String.init) {
+          let reply = await Self.debugEditReply(command)
+          debugLog("intent hook: \(command) says \(reply ?? "nothing, unknown command")")
+        }
       }
     }
 

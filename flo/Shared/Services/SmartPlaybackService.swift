@@ -116,6 +116,10 @@ final class SmartPlaybackService {
     let canStream = await ConnectivityMonitor.shared.canStream()
 
     if canStream {
+      // Likes made elsewhere, or by Siri in an earlier session, reach the
+      // next mix; the song sync below refreshes them too.
+      let generation = LibraryCacheManager.shared.generation
+      Task(priority: .utility) { await self.refreshStarred(generation: generation) }
       if songs.isEmpty {
         songs = await syncSongLibrary()
         starredIds = await loadCachedLibrary().starredIds
@@ -192,25 +196,24 @@ final class SmartPlaybackService {
     return ratings
   }
 
-  /// Liked album ids and liked artist keys: the cached lists' stars overlaid
-  /// with StarStore's. A liked album does not like its album artist, who
-  /// on a compilation is not the artist of its songs.
+  /// Liked album ids and liked artist keys: the liked lists the song sync
+  /// keeps, overlaid with StarStore's. A liked album does not like its album
+  /// artist, who on a compilation is not the artist of its songs.
   func likedCollections(index: LibraryIndex) async -> (albums: Set<String>, artists: Set<String>) {
-    let (albums, artists) = await withCheckedContinuation { continuation in
+    let liked = await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .userInitiated).async {
-        let albums = LibraryCacheManager.shared.load([Album].self, forKey: .albums) ?? []
-        let artists = LibraryCacheManager.shared.load([Artist].self, forKey: .artists) ?? []
-        continuation.resume(returning: (albums, artists))
+        continuation.resume(
+          returning: LibraryCacheManager.shared.load(
+            StarredCollections.self, forKey: .starredCollections))
       }
     }
-    // StarStore also knows songs; only the library's albums and artists
-    // count, whether or not their list was cached since the like.
+    // StarStore also knows songs; only the library's albums and artists count.
     let albumIds = Set(index.songs.values.map(\.albumId))
     let artistIds = Set(index.songs.values.compactMap(\.artistId))
     return await MainActor.run {
-      let likedAlbums = StarStore.shared.starred(listed: Set(albums.filter(\.starred).map(\.id)))
+      let likedAlbums = StarStore.shared.starred(listed: Set(liked?.albums ?? []))
         .intersection(albumIds)
-      let likedArtists = StarStore.shared.starred(listed: Set(artists.filter(\.starred).map(\.id)))
+      let likedArtists = StarStore.shared.starred(listed: Set(liked?.artists ?? []))
         .intersection(artistIds)
       return (likedAlbums, Set(likedArtists.map { index.artistKeys[$0] ?? $0 }))
     }
@@ -336,6 +339,33 @@ final class SmartPlaybackService {
     return index
   }
 
+  /// The account's liked songs, albums and artists, for StarStore and the
+  /// next mix.
+  private func refreshStarred(generation: Int) async {
+    let requestedAt = Date()
+    let since = await MainActor.run { StarStore.shared.listRevision }
+    guard
+      let (songs, collections) = try? await withCheckedThrowingContinuation({ continuation in
+        AlbumService.shared.getStarred { continuation.resume(with: $0) }
+      })
+    else { return }
+    await MainActor.run {
+      StarStore.shared.adoptServerStars(songs.map(\.playbackID), since: since)
+    }
+    await withCheckedContinuation { continuation in
+      DispatchQueue.global(qos: .utility).async {
+        // The Liked Songs screen may have saved a newer list meanwhile.
+        let saved = LibraryCacheManager.shared.modificationDate(forKey: .starredSongs)
+        if saved.map({ $0 < requestedAt }) ?? true {
+          LibraryCacheManager.shared.save(songs, forKey: .starredSongs, generation: generation)
+        }
+        LibraryCacheManager.shared.save(
+          collections, forKey: .starredCollections, generation: generation)
+        continuation.resume()
+      }
+    }
+  }
+
   private func performSongSync(force: Bool, generation: Int) async -> [Song] {
     let (cached, cachedStamp) = await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .userInitiated).async {
@@ -353,25 +383,7 @@ final class SmartPlaybackService {
 
     // Stars leave updatedAt alone, so the starred list is refreshed on every
     // run that reaches the server; the cached library's own flags go stale.
-    let starredRequestedAt = Date()
-    let starsSince = await MainActor.run { StarStore.shared.listRevision }
-    if let starred = try? await withCheckedThrowingContinuation({ continuation in
-      AlbumService.shared.getStarredSongs { continuation.resume(with: $0) }
-    }) {
-      await MainActor.run {
-        StarStore.shared.adoptServerStars(starred.map(\.playbackID), since: starsSince)
-      }
-      await withCheckedContinuation { continuation in
-        DispatchQueue.global(qos: .utility).async {
-          // The Liked Songs screen may have saved a newer list meanwhile.
-          let saved = LibraryCacheManager.shared.modificationDate(forKey: .starredSongs)
-          if saved.map({ $0 < starredRequestedAt }) ?? true {
-            LibraryCacheManager.shared.save(starred, forKey: .starredSongs, generation: generation)
-          }
-          continuation.resume()
-        }
-      }
-    }
+    await refreshStarred(generation: generation)
     // Ratings leave updatedAt alone as well; activation may have just
     // refreshed them.
     await RatingStore.shared.refreshIfStale()?.value

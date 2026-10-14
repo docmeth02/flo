@@ -71,6 +71,12 @@ struct Starred2Response: Codable {
   struct SubsonicResponseBody: Codable {
     struct Starred2: Codable {
       let song: [SubsonicSong]?
+      let album: [Item]?
+      let artist: [Item]?
+    }
+
+    struct Item: Codable {
+      let id: String
     }
 
     let starred2: Starred2?
@@ -85,6 +91,18 @@ struct Starred2Response: Codable {
   var songs: [Song] {
     return (subsonicResponse.starred2?.song ?? []).map { $0.toSong() }
   }
+
+  var collections: StarredCollections {
+    StarredCollections(
+      albums: (subsonicResponse.starred2?.album ?? []).map(\.id),
+      artists: (subsonicResponse.starred2?.artist ?? []).map(\.id))
+  }
+}
+
+/// The ids of the account's liked albums and artists.
+struct StarredCollections: Codable {
+  let albums: [String]
+  let artists: [String]
 }
 
 struct SubsonicSong: Codable {

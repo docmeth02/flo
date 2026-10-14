@@ -333,11 +333,18 @@ class AlbumService {
   }
 
   func getStarredSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
+    getStarred { completion($0.map(\.songs)) }
+  }
+
+  /// Every liked song, album and artist of the account.
+  func getStarred(
+    completion: @escaping (Result<(songs: [Song], collections: StarredCollections), Error>) -> Void
+  ) {
     APIManager.shared.SubsonicEndpointRequest(
       endpoint: API.SubsonicEndpoint.getStarred2, parameters: nil
     ) {
       (response: DataResponse<Starred2Response, AFError>) in
-      completion(response.result.map(\.songs).mapError { $0 })
+      completion(response.result.map { ($0.songs, $0.collections) }.mapError { $0 })
     }
   }
 
