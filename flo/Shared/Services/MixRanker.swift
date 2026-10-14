@@ -605,12 +605,15 @@ struct MixRanker {
         rest.append(n)
       }
     }
+    // Bootstrap weights are already divided by the artist's song count;
+    // squaring them would favour small catalogues.
+    let exponent = bootstrap ? 1 : cfg.preferredSamplingExponent
     let preferredOrder =
       pool.map { n in
         (
           n,
           log(Double.random(in: .leastNonzeroMagnitude..<1, using: &rng))
-            / pow(candidates[n].preferred, cfg.preferredSamplingExponent)
+            / pow(candidates[n].preferred, exponent)
         )
       }
       .sorted { $0.1 > $1.1 }

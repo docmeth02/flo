@@ -23,11 +23,18 @@ struct WatchLikedView: View {
     albumViewModel.artists.filter { starStore.isStarred($0.id, listed: $0.starred) }
   }
 
+  /// Loading while any of the three lists loads, failed when any failed.
+  private var state: AlbumViewModel.ListState {
+    let states = [AlbumViewModel.Library.starredSongs, .albums, .artists].map(albumViewModel.state)
+    return AlbumViewModel.ListState(
+      isLoading: states.contains(where: \.isLoading), failed: states.contains(where: \.failed))
+  }
+
   var body: some View {
     let albums = albums
     let artists = artists
     LibraryList(
-      title: "Liked", state: albumViewModel.state(.starredSongs),
+      title: "Liked", state: state,
       isEmpty: albumViewModel.starredSongs.isEmpty && albums.isEmpty && artists.isEmpty,
       empty: .empty(
         systemImage: "heart.fill", tint: .floLiked, title: "Nothing liked yet",

@@ -45,17 +45,16 @@ import Foundation
   }
 
   /// The song's artist id from the cached library, else the one cached artist
-  /// of the song's artist name.
-  private nonisolated static func artistId(of playbackID: String, named name: String) async
-    -> String?
-  {
+  /// of the song's artist name. Intents ask again when the lookup at play
+  /// time found nothing, since the caches may have filled in meanwhile.
+  nonisolated static func artistId(of playbackID: String, named name: String) async -> String? {
     let index = await SmartPlaybackService.shared.libraryIndex(allowSync: false)
-    let artists: [Artist] = await AlbumViewModel.cached(.artists)
-    // The index keeps a song's artist id as its history key, and the folded
+    // The index keeps a song's artist id as its history key, and the song's
     // artist name for a song without one.
-    if let key = index.songs[playbackID]?.historyArtistKey, artists.contains(where: { $0.id == key }) {
+    if let key = index.songs[playbackID]?.historyArtistKey, !key.isEmpty, key != name {
       return key
     }
+    let artists: [Artist] = await AlbumViewModel.cached(.artists)
     guard let spoken = ArtistIdentity.key(name: name, mbid: nil) else { return nil }
     let named = artists.filter { ArtistIdentity.key(name: $0.name, mbid: nil) == spoken }
     return named.count == 1 ? named[0].id : nil

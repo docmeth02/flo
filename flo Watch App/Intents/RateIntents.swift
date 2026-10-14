@@ -103,7 +103,7 @@ struct AvoidIntent: AppIntent {
 
   static func star(_ starred: Bool, _ item: LikeTarget) async -> String {
     do {
-      let (id, name, artist) = try playing(item)
+      let (id, name, artist) = try await playing(item)
       if item == .song {
         StarStore.shared.setSong(starred, id: id)
       } else {
@@ -113,7 +113,9 @@ struct AvoidIntent: AppIntent {
         if !starred { "Removed \(name) from your likes." }
         else if item == .song { "Liked \(name) by \(artist)." }
         else { "Liked \(name)." }
-      return await answer(sentence) { StarStore.shared.isPending(id) }
+      return await answer(
+        sentence, isPending: { StarStore.shared.isPending(id) },
+        isApplied: { StarStore.shared.stars[id] == starred })
     } catch {
       return String(localized: error.sentence)
     }
@@ -121,14 +123,17 @@ struct AvoidIntent: AppIntent {
 
   static func rate(_ rating: Int, _ item: RateTarget) async -> String {
     do {
-      let (id, name, _) = try playing(item == .song ? .song : .artist)
+      let (id, name, _) = try await playing(item == .song ? .song : .artist)
       if item == .song {
         RatingStore.shared.set(rating, playbackID: id)
       } else {
         RatingStore.shared.setArtist(rating, artistId: id)
       }
       let sentence: LocalizedStringResource = rating >= 4 ? "Boosted \(name)." : "Avoiding \(name)."
-      return await answer(sentence) { RatingStore.shared.isPending(id) }
+      let store = RatingStore.shared
+      return await answer(
+        sentence, isPending: { store.isPending(id) },
+        isApplied: { (item == .song ? store.ratings[id] : store.artistRatings[id]) == rating })
     } catch {
       return String(localized: error.sentence)
     }
@@ -136,7 +141,7 @@ struct AvoidIntent: AppIntent {
 
   /// The id and name of the item playing, with the song's artist. Read
   /// before anything waits, so the edit cannot move to the next song.
-  private static func playing(_ item: LikeTarget) throws(Refusal)
+  private static func playing(_ item: LikeTarget) async throws(Refusal)
     -> (id: String, name: String, artist: String)
   {
     guard let target = NowPlayingTarget.current else {
@@ -149,23 +154,32 @@ struct AvoidIntent: AppIntent {
     case .song: return (target.playbackID, target.title, target.artistName)
     case .album: return (target.albumId, target.albumName, target.artistName)
     case .artist:
-      guard let artistId = target.artistId else {
+      let artistId: String?
+      if let known = target.artistId {
+        artistId = known
+      } else {
+        artistId = await NowPlayingTarget.artistId(of: target.playbackID, named: target.artistName)
+      }
+      guard let artistId else {
         throw Refusal(sentence: "I don't know this artist yet.")
       }
       return (artistId, target.artistName, target.artistName)
     }
   }
 
-  /// The sentence, and a note when the server has not taken the edit: it is
-  /// sent at once while the server answers and gets two seconds to confirm.
-  private static func answer(_ sentence: LocalizedStringResource, isPending: () -> Bool) async
-    -> String
-  {
+  /// The sentence, with a note when the server has not taken the edit yet:
+  /// it is sent at once while the server answers and gets two seconds to
+  /// confirm. An edit the server refused is said as such.
+  private static func answer(
+    _ sentence: LocalizedStringResource, isPending: () -> Bool, isApplied: () -> Bool
+  ) async -> String {
     if ConnectivityMonitor.shared.canReachServer {
       for _ in 0..<8 where isPending() { try? await Task.sleep(for: .milliseconds(250)) }
     }
-    let text = String(localized: sentence)
-    guard isPending() else { return text }
-    return text + " " + String(localized: "It syncs when your server is reachable.")
+    if isPending() {
+      return String(localized: sentence) + " "
+        + String(localized: "It syncs when your server is reachable.")
+    }
+    return isApplied() ? String(localized: sentence) : String(localized: "The server didn't take that.")
   }
 }

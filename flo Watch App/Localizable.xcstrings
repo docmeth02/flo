@@ -91,6 +91,16 @@
         }
       }
     },
+    "The server didn't take that.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Server hat das nicht angenommen."
+          }
+        }
+      }
+    },
     "this album": {
       "localizations": {
         "de": {
