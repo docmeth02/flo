@@ -69,8 +69,12 @@
               + String(format: "%.3f", MixRanker().skipPenalty(events, now: Date())))
         }
         let pendingPlays = Self.latestListens(ScrobbleQueueManager.shared.pendingListens())
+        let liked = await likedCollections(index: index)
         let (ratings, starred) = await MainActor.run { [songs = library.songs] in
-          (Self.effectiveRatings(of: songs), StarStore.shared.starred(listed: library.starredIds))
+          (
+            Self.effectiveRatings(of: songs, index: index),
+            StarStore.shared.starred(listed: library.starredIds)
+          )
         }
 
         // The scores of one song, ranked alone: priors differ from a full
@@ -81,8 +85,9 @@
           var rng = SplitMix64(seed: 1)
           let alone = MixRanker().rank(
             library: [song], index: index, affinity: affinity, journal: journal,
-            pendingPlays: pendingPlays, ratings: ratings, starred: starred, mode: mode,
-            count: 1, now: Date(), rng: &rng)
+            pendingPlays: pendingPlays, ratings: ratings, starred: starred,
+            likedAlbums: liked.albums, likedArtists: liked.artists, mode: mode, count: 1,
+            now: Date(), rng: &rng)
           debugLog(
             "song \(id) \(song.title): "
               + (alone.record.picks.first.map { "\($0.slot) \($0.scores)" } ?? "excluded"))
@@ -117,8 +122,9 @@
           let started = DispatchTime.now().uptimeNanoseconds
           let result = MixRanker().rank(
             library: inflated, index: inflatedIndex, affinity: affinity, journal: journal,
-            pendingPlays: pendingPlays, ratings: ratings, starred: starred, mode: mode,
-            count: 15, now: Date(), rng: &rng)
+            pendingPlays: pendingPlays, ratings: ratings, starred: starred,
+            likedAlbums: liked.albums, likedArtists: liked.artists, mode: mode, count: 15,
+            now: Date(), rng: &rng)
           debugLog(
             "mix timing: \(inflated.count) songs, \(result.songs.count) picked in "
               + String(

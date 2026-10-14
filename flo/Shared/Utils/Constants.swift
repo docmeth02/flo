@@ -65,10 +65,12 @@ enum UserDefaultsKeys {
   // Edits the server has not confirmed yet, by id (PendingEdits): ratings
   // 1 to 5 or 0 to clear, and stars.
   static let pendingRatings = "pendingRatings"
+  static let pendingArtistRatings = "pendingArtistRatings"
   static let pendingStars = "pendingStars"
   // The songs among pendingStars (StarStore).
   static let pendingStarSongs = "pendingStarSongs"
   static let confirmedRatings = "confirmedRatings"
+  static let confirmedArtistRatings = "confirmedArtistRatings"
 }
 
 enum KeychainKeys {
