@@ -63,11 +63,18 @@ extension WatchPlayerViewModel {
     let length = totalDuration - offset
     item.preferredForwardBufferDuration = length
     let attachedAt = Date()
+    bufferGrewAt = attachedAt
+    var loadedEnd = 0.0
     loadedRangesObservation = item.publisher(for: \.loadedTimeRanges)
       .receive(on: DispatchQueue.main)
-      .sink { [weak self, weak item] _ in
-        guard let self, let item, item === self.playerItem,
-          let ahead = Self.bufferedAhead(of: item),
+      .sink { [weak self, weak item] ranges in
+        guard let self, let item, item === self.playerItem else { return }
+        let end = ranges.map { CMTimeRangeGetEnd($0.timeRangeValue).seconds }.max() ?? 0
+        if end > loadedEnd {
+          loadedEnd = end
+          self.bufferGrewAt = Date()
+        }
+        guard let ahead = Self.bufferedAhead(of: item),
           item.currentTime().seconds + ahead >= length * 0.9
         else { return }
         RequestLog.shared.note(
@@ -95,8 +102,12 @@ extension WatchPlayerViewModel {
     else { return }
     let trackId = nowPlayingId
     let ahead = Self.bufferedAhead(of: item).map { String(format: "%.1f s", $0) } ?? "-"
+    // A transcode still loading: how long ago its data last grew.
+    let dataAge =
+      loadedRangesObservation != nil ? bufferGrewAt.map { Date().timeIntervalSince($0) } : nil
     RequestLog.shared.note(
       "stall armed at \(Int(lastObservedTime)) s ahead=\(ahead)"
+        + (dataAge.map { String(format: " data=%.0f s", $0) } ?? "")
         + " reason=" + (player?.reasonForWaitingToPlay?.rawValue ?? "-"))
     let deadline = DispatchWorkItem { [weak self, weak item] in
       guard let self, let item, item === self.playerItem else { return }
@@ -112,6 +123,34 @@ extension WatchPlayerViewModel {
     }
     stallDeadline = deadline
     DispatchQueue.main.asyncAfter(deadline: .now() + Self.stallTimeout, execute: deadline)
+    if let dataAge, let grewAt = bufferGrewAt {
+      reloadCutTranscode(
+        item, trackId: trackId, grewAt: grewAt, after: max(0, Self.stallTimeout - dataAge))
+    }
+  }
+
+  /// A transcode short of its end whose data stopped coming in lost its
+  /// connection, so its deadline counts from the last data: `stallTimeout`
+  /// after it, the song reloads if the server answers. Without an answer, or
+  /// with new data meanwhile, the stall deadline stays, so a dead spot is
+  /// waited out as before.
+  private func reloadCutTranscode(
+    _ item: AVPlayerItem, trackId: String?, grewAt: Date, after delay: TimeInterval
+  ) {
+    let check = noProgressCheck
+    Task { @MainActor [weak self, weak item] in
+      try? await Task.sleep(for: .seconds(delay))
+      guard self?.noProgressCheck == check, self?.bufferGrewAt == grewAt else { return }
+      let reachable = await ConnectivityMonitor.shared.canStream(maxAge: 0)
+      guard reachable, let self, let item, item === self.playerItem, self.isPlaying,
+        self.noProgressCheck == check, self.settleWork == nil,
+        self.loadedRangesObservation != nil, self.bufferGrewAt == grewAt,
+        self.player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
+      else { return }
+      RequestLog.shared.note("stall cut at \(Int(self.lastObservedTime)) s")
+      self.cancelStall()
+      self.handleStreamFailure(trackId: trackId, item: item)
+    }
   }
 
   /// A stalled song reloads where it stopped, or waits while the server is

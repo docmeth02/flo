@@ -86,6 +86,8 @@ class WatchPlayerViewModel: ObservableObject {
   static let startHeardAfter: Double = 3
   var accessLogObservation: AnyCancellable?
   var loadedRangesObservation: AnyCancellable?
+  // When the current transcode last received data.
+  var bufferGrewAt: Date?
 
   var hasQualified: Bool = false
   private(set) var isFinished: Bool = false
