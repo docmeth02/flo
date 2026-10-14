@@ -309,7 +309,8 @@ class AlbumService {
       endpoint: API.SubsonicEndpoint.unstar, parameters: ["id": id], completion: completion)
   }
 
-  /// Rates a song 1 to 5; 0 removes its rating.
+  /// Rates a song, album or artist 1 to 5; 0 removes its rating. Navidrome
+  /// takes all three as `id`.
   func setRating(id: String, rating: Int, completion: @escaping (Result<Void, Error>) -> Void) {
     APIManager.shared.SubsonicActionRequest(
       endpoint: API.SubsonicEndpoint.setRating, parameters: ["id": id, "rating": rating],
@@ -324,6 +325,11 @@ class AlbumService {
   /// Every album the account rated, with its rating.
   func getRatedAlbums(completion: @escaping (Result<[Album], Error>) -> Void) {
     ndList(API.NDEndpoint.getAlbum, ["has_rating": "true", "_start": 0, "_end": 0], completion)
+  }
+
+  /// Every artist the account rated, with its rating.
+  func getRatedArtists(completion: @escaping (Result<[Artist], Error>) -> Void) {
+    ndList(API.NDEndpoint.getArtists, ["has_rating": "true", "_start": 0, "_end": 0], completion)
   }
 
   func getStarredSongs(completion: @escaping (Result<[Song], Error>) -> Void) {

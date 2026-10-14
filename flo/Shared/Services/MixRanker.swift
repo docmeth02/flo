@@ -39,6 +39,11 @@ struct MixRanker {
     var boostBonus = 0.35
     var ratedFourBonus = 0.20
     var ratedTwoMultiplier = 0.02
+    /// Added for a song on a liked album or by a liked artist, together at
+    /// most `collectionBonusCap`.
+    var likedAlbumBonus = 0.10
+    var likedArtistBonus = 0.08
+    var collectionBonusCap = 0.15
 
     var skipHalfLife: TimeInterval = 14 * 86400
     var skipPenalty = 0.15
@@ -67,6 +72,9 @@ struct MixRanker {
 
     /// Preferred songs are sampled from this many candidates per wanted song.
     var preferredPoolFactor = 5
+    /// Sampling weighs a preferred song by its weight to this power, so
+    /// favourites stand out of a long tail of weak songs.
+    var preferredSamplingExponent = 2.0
     var poolPerArtist = 4
 
     var perArtistCap = 2
@@ -82,10 +90,15 @@ struct MixRanker {
 
   var config = Config()
 
-  /// A song's rating for the mix and whether it is its album's.
+  /// A song's rating for the mix and whose it is: the song's own, else its
+  /// album's, else its artist's.
   struct Rating: Sendable, Equatable {
+    enum Source: String, Sendable {
+      case song, album, artist
+    }
+
     let stars: Int
-    let fromAlbum: Bool
+    let source: Source
   }
 
   private struct Candidate {
@@ -96,8 +109,11 @@ struct MixRanker {
     var era = 0.0
     var song = 0.0
     var rating = 0
-    var ratingFromAlbum = false
+    var ratingSource = Rating.Source.song
     var starred = false
+    var likedAlbum = false
+    var likedArtist = false
+    var collection = 0.0
     var skip = 0.0
     var pressure = 0.0
     var cool = 1.0
@@ -139,11 +155,13 @@ struct MixRanker {
 
   /// `pendingPlays` are the latest listens per song still in the outbox: the
   /// server's log has not counted them yet, so they only cool their songs
-  /// down, like the journal's.
+  /// down, like the journal's. `likedAlbums` are album ids, `likedArtists`
+  /// artist keys.
   func rank(
     library: [Song], index: SmartPlaybackService.LibraryIndex, affinity: AffinitySnapshot,
     journal: JournalSnapshot, pendingPlays: [String: Date], ratings: [String: Rating],
-    starred: Set<String>, mode: SmartPlaybackService.MixMode, count: Int, now: Date,
+    starred: Set<String>, likedAlbums: Set<String>, likedArtists: Set<String>,
+    mode: SmartPlaybackService.MixMode, count: Int, now: Date,
     rng: inout some RandomNumberGenerator
   ) -> (songs: [Song], record: MixRecord) {
     let cfg = config
@@ -187,7 +205,7 @@ struct MixRanker {
     var artistIds: [String: String] = [:]
     var foldedNames: [String: String] = [:]
     var genreArtists: [String: Set<String>] = [:]
-    var favouredArtists = Set<String>()
+    var favouredArtists = likedArtists
     var recentTitles: [String: Date] = [:]
     var recentTitleArtists = Set<String>()
     var recentTitleStarts = Set<String>()
@@ -297,8 +315,8 @@ struct MixRanker {
     let albumFeature = features(albumAgg, albumPrior, cfg.albumK)
     let eraFeature = features(eraAgg, eraPrior, cfg.eraK)
 
-    // Clusters: artists played a fair amount or with a favoured song, and
-    // genres played a fair amount across several artists.
+    // Clusters: artists played a fair amount, liked or with a favoured song,
+    // and genres played a fair amount across several artists.
     for (key, var artist) in artists {
       let weight = artistAgg[key]?.weight
       artist.feature = feature(weight, artist.prior, cfg.artistK)
@@ -339,7 +357,8 @@ struct MixRanker {
 
       var c = Candidate(index: i)
       let artist = artists[entry.artistKey] ?? ArtistStats()
-      var inCluster = artist.cluster
+      // A liked album's own songs count as a cluster.
+      var inCluster = artist.cluster || likedAlbums.contains(entry.albumId)
       c.artist = artist.feature
       c.album = albumFeature[entry.albumId] ?? 0
       for genre in entry.genres {
@@ -351,8 +370,13 @@ struct MixRanker {
       c.song = feature(
         songWeights[i], Double(min(song.playCount ?? 0, cfg.priorPlayCap)), cfg.songK)
       c.rating = rating
-      c.ratingFromAlbum = rated?.fromAlbum ?? false
+      c.ratingSource = rated?.source ?? .song
       c.starred = !starred.isEmpty && starred.contains(id)
+      c.likedAlbum = !likedAlbums.isEmpty && likedAlbums.contains(entry.albumId)
+      c.likedArtist = !likedArtists.isEmpty && likedArtists.contains(entry.artistKey)
+      c.collection = min(
+        cfg.collectionBonusCap,
+        (c.likedAlbum ? cfg.likedAlbumBonus : 0) + (c.likedArtist ? cfg.likedArtistBonus : 0))
       c.skip = songSkip.isEmpty ? 0 : cfg.skipPenalty * min(cfg.skipLoadCap, songSkip[id] ?? 0)
       c.pressure = artist.pressure
 
@@ -380,16 +404,18 @@ struct MixRanker {
       let base =
         cfg.baseWeight + cfg.artistWeight * c.artist + cfg.albumWeight * c.album
         + cfg.genreWeight * c.genre + cfg.eraWeight * c.era + cfg.songWeight * c.song
-        + (c.starred ? cfg.starWeight : 0) + ratingBonus(rating) - c.skip - c.pressure
-        + c.context
+        + (c.starred ? cfg.starWeight : 0) + c.collection + ratingBonus(rating) - c.skip
+        - c.pressure + c.context
       c.preferred = c.cool * ratingMultiplier(rating) * max(0.01, base)
 
-      // Lesser-played songs from the listener's own clusters, never one rated down.
+      // Lesser-played songs from the listener's own clusters, never one rated
+      // down; skips hold them back as they do preferred songs.
       let plays = lifetimePlays[i]
       let lessPlayed = plays <= cfg.exploreMaxPlays || artist.lowerHalf.map { plays <= $0 } ?? false
       if inCluster, lessPlayed, rating == 0 || rating >= 3 {
         c.explore =
-          c.cool * (cfg.exploreBase + c.artist + c.genre + max(0, c.context))
+          c.cool
+          * max(0, cfg.exploreBase + c.artist + c.genre + max(0, c.context) - c.skip - c.pressure)
           / (1 + Double(plays)).squareRoot()
       }
       candidates.append(c)
@@ -418,7 +444,7 @@ struct MixRanker {
     // artist is equally likely.
     var bootstrap = false
     if totalWeight < cfg.coldStartWeight {
-      let favoured = candidates.filter { $0.rating >= 4 || $0.starred }
+      let favoured = candidates.filter { $0.rating >= 4 || $0.starred || $0.collection > 0 }
       let counted = candidates.filter { lifetimePlays[$0.index] > 0 }
       let seeds = favoured.isEmpty ? counted : favoured
       if seeds.isEmpty {
@@ -492,7 +518,8 @@ struct MixRanker {
     }
 
     // Exploration goes first, so its share survives the caps: an artist by
-    // its summed weight, then one of the artist's songs.
+    // the mean weight of its songs left, so a large catalogue does not
+    // crowd out a small one, then one of the artist's songs.
     var exploreSongs: [[Int]] = []
     var exploreTotals: [Double] = []
     var exploreSlot: [String: Int] = [:]
@@ -524,7 +551,10 @@ struct MixRanker {
         }
       }
       while explorePicks.count < exploreQuota, exploreTotals.contains(where: { $0 > 0 }) {
-        let a = pickWeighted(exploreTotals, rng: &rng)
+        let means = exploreTotals.indices.map {
+          exploreSongs[$0].isEmpty ? 0 : exploreTotals[$0] / Double(exploreSongs[$0].count)
+        }
+        let a = pickWeighted(means, rng: &rng)
         // Rounding can land the draw on a drained artist.
         guard !exploreSongs[a].isEmpty else {
           exploreTotals[a] = 0
@@ -553,10 +583,11 @@ struct MixRanker {
     }
 
     // Preferred songs: weighted sampling without replacement (Efraimidis–
-    // Spirakis: one random key per candidate, then key order) over the best
-    // few per wanted song, a few per artist so the caps rarely drain it; over
-    // the whole library its long tail would outweigh the favourites. The rest
-    // follows by weight, and then the caps give way.
+    // Spirakis: one random key per candidate, then key order; the weight
+    // raised to the sampling exponent) over the best few per wanted song, a
+    // few per artist so the caps rarely drain it; over the whole library its
+    // long tail would outweigh the favourites. The rest follows by weight,
+    // and then the caps give way.
     let ranked = candidates.indices.filter { candidates[$0].preferred > 0 }
       .sorted { candidates[$0].preferred > candidates[$1].preferred }
     var pool: [Int] = []
@@ -578,7 +609,8 @@ struct MixRanker {
       pool.map { n in
         (
           n,
-          log(Double.random(in: .leastNonzeroMagnitude..<1, using: &rng)) / candidates[n].preferred
+          log(Double.random(in: .leastNonzeroMagnitude..<1, using: &rng))
+            / pow(candidates[n].preferred, cfg.preferredSamplingExponent)
         )
       }
       .sorted { $0.1 > $1.1 }
@@ -702,8 +734,15 @@ struct MixRanker {
     }
     var parts: [String] = []
     let rated = c.rating == 5 ? "boosted" : c.rating == 4 ? "rated 4" : nil
-    if let rated { parts.append(c.ratingFromAlbum ? "album \(rated)" : rated) }
+    if let rated {
+      parts.append(c.ratingSource == .song ? rated : "\(c.ratingSource.rawValue) \(rated)")
+    }
     if c.starred { parts.append("liked") }
+    if c.likedAlbum {
+      parts.append("liked album")
+    } else if c.likedArtist {
+      parts.append("liked artist")
+    }
     if c.song >= 0.5 { parts.append("favourite") }
     if c.seedArtist {
       parts.append("same artist as before")
@@ -729,7 +768,8 @@ struct MixRanker {
 
   /// The terms of the pick's weight. A preferred song's are its weighted
   /// contributions (`final` = cool × rating multiplier × their sum with the
-  /// base weight); an explore song's are the features its weight grows with.
+  /// base weight); an explore song's are the features its weight grows and
+  /// shrinks with.
   private func scores(_ c: Candidate, source: Source, plays: Int, keepPlaying: Bool) -> String {
     func f(_ x: Double) -> String {
       let text = String(format: "%.2f", x)
@@ -738,10 +778,13 @@ struct MixRanker {
       return text
     }
     let cfg = config
-    let rating = "rating=\(c.rating)" + (c.ratingFromAlbum ? "(album)" : "")
+    let rating =
+      "rating=\(c.rating)" + (c.ratingSource == .song ? "" : "(\(c.ratingSource.rawValue))")
     var text = "src=\(source.rawValue) "
     if source == .explore {
-      text += "artist=\(f(c.artist)) genre=\(f(c.genre)) plays=\(plays) \(rating)"
+      text +=
+        "artist=\(f(c.artist)) genre=\(f(c.genre)) plays=\(plays) \(rating) "
+        + "skip=\(f(-c.skip)) press=\(f(-c.pressure))"
     } else {
       let ratingTerm =
         c.rating == 2 ? "x" + f(ratingMultiplier(c.rating)) : "+" + f(ratingBonus(c.rating))
@@ -749,7 +792,8 @@ struct MixRanker {
         "artist=\(f(cfg.artistWeight * c.artist)) album=\(f(cfg.albumWeight * c.album)) "
         + "genre=\(f(cfg.genreWeight * c.genre)) era=\(f(cfg.eraWeight * c.era)) "
         + "song=\(f(cfg.songWeight * c.song)) star=\(f(c.starred ? cfg.starWeight : 0)) "
-        + "\(rating)\(ratingTerm) skip=\(f(-c.skip)) press=\(f(-c.pressure))"
+        + "coll=\(f(c.collection)) \(rating)\(ratingTerm) skip=\(f(-c.skip)) "
+        + "press=\(f(-c.pressure))"
     }
     if keepPlaying { text += " ctx=\(f(c.context))" }
     return text + " cool=\(f(c.cool)) final=\(f(source == .explore ? c.explore : c.preferred))"

@@ -136,16 +136,17 @@ final class SmartPlaybackService {
     }
     let index = await libraryIndex(allowSync: canStream)
     let pendingPlays = Self.latestListens(ScrobbleQueueManager.shared.pendingListens())
+    let liked = await likedCollections(index: index)
     let (ratings, starred) = await MainActor.run { [songs, starredIds] in
-      (Self.effectiveRatings(of: songs), StarStore.shared.starred(listed: starredIds))
+      (Self.effectiveRatings(of: songs, index: index), StarStore.shared.starred(listed: starredIds))
     }
     var rng = SplitMix64(seed: Self.debugSeed ?? .random(in: .min ... .max))
 
     let started = DispatchTime.now().uptimeNanoseconds
     let (picked, record) = MixRanker().rank(
       library: songs, index: index, affinity: await affinity, journal: await journal,
-      pendingPlays: pendingPlays, ratings: ratings, starred: starred, mode: mode, count: count,
-      now: Date(), rng: &rng)
+      pendingPlays: pendingPlays, ratings: ratings, starred: starred, likedAlbums: liked.albums,
+      likedArtists: liked.artists, mode: mode, count: count, now: Date(), rng: &rng)
     let elapsed = Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
 
     await MainActor.run { RecommendationLog.shared.record(record) }
@@ -156,18 +157,57 @@ final class SmartPlaybackService {
     return (picked, record)
   }
 
-  /// The rating each song brings into a mix (RatingStore.effectiveRating)
-  /// and whether it is its album's; unrated songs are absent.
-  @MainActor static func effectiveRatings(of songs: [Song]) -> [String: MixRanker.Rating] {
-    let store = RatingStore.shared
+  /// The rating each song brings into a mix: its own (pending or
+  /// confirmed), else its album's, else its artist's, where any spelling of
+  /// the artist (ArtistIdentity) speaks for all; unrated songs are absent.
+  /// `store` is for tests.
+  @MainActor static func effectiveRatings(
+    of songs: [Song], index: LibraryIndex, store: RatingStore = .shared
+  ) -> [String: MixRanker.Rating] {
+    // Spellings rated differently: the lowest wins, so a boosted spelling
+    // never brings back an avoided artist.
+    let artistRatings = store.artistRatings.reduce(into: [String: Int]()) { result, rating in
+      let key = index.artistKeys[rating.key] ?? rating.key
+      result[key] = min(result[key] ?? rating.value, rating.value)
+    }
     var ratings: [String: MixRanker.Rating] = [:]
     for song in songs {
       let id = song.playbackID
-      let stars = store.effectiveRating(songId: id, albumId: song.albumId)
-      guard stars > 0 else { continue }
-      ratings[id] = MixRanker.Rating(stars: stars, fromAlbum: store.rating(for: id) == 0)
+      if let stars = store.ratings[id] {
+        ratings[id] = MixRanker.Rating(stars: stars, source: .song)
+      } else if let stars = store.albumRatings[song.albumId] {
+        ratings[id] = MixRanker.Rating(stars: stars, source: .album)
+      } else if !artistRatings.isEmpty {
+        let key =
+          index.songs[id]?.artistKey
+          ?? LibraryIndex.Entry(song, artistKeys: index.artistKeys).artistKey
+        if let stars = artistRatings[key] {
+          ratings[id] = MixRanker.Rating(stars: stars, source: .artist)
+        }
+      }
     }
     return ratings
+  }
+
+  /// Liked album ids and liked artist keys: the cached lists' stars overlaid
+  /// with StarStore's. A liked album does not like its album artist, who
+  /// on a compilation is not the artist of its songs.
+  func likedCollections(index: LibraryIndex) async -> (albums: Set<String>, artists: Set<String>) {
+    let (albums, artists) = await withCheckedContinuation { continuation in
+      DispatchQueue.global(qos: .userInitiated).async {
+        let albums = LibraryCacheManager.shared.load([Album].self, forKey: .albums) ?? []
+        let artists = LibraryCacheManager.shared.load([Artist].self, forKey: .artists) ?? []
+        continuation.resume(returning: (albums, artists))
+      }
+    }
+    // StarStore also knows songs; only the listed albums and artists count.
+    return await MainActor.run {
+      let likedAlbums = StarStore.shared.starred(listed: Set(albums.filter(\.starred).map(\.id)))
+        .intersection(albums.map(\.id))
+      let likedArtists = StarStore.shared.starred(listed: Set(artists.filter(\.starred).map(\.id)))
+        .intersection(artists.map(\.id))
+      return (likedAlbums, Set(likedArtists.map { index.artistKeys[$0] ?? $0 }))
+    }
   }
 
   /// The latest listen per song of plays not delivered yet.

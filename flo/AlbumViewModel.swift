@@ -253,6 +253,33 @@ class AlbumViewModel: ObservableObject {
     }
   }
 
+  private static let albumsRequest = adoptingStars(AlbumService.shared.getAlbum) {
+    ($0.id, $0.starred)
+  }
+  private static let artistsRequest = adoptingStars(AlbumService.shared.getArtists) {
+    ($0.id, $0.starred)
+  }
+
+  /// A full list of albums or artists, which also tells StarStore which of
+  /// them are starred now.
+  private static func adoptingStars<T>(
+    _ request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void,
+    star: @escaping (T) -> (id: String, starred: Bool)
+  ) -> (@escaping (Result<[T], Error>) -> Void) -> Void {
+    { completion in
+      let since = MainActor.assumeIsolated { StarStore.shared.listRevision }
+      request { result in
+        if case .success(let items) = result {
+          let stars = items.map(star)
+          DispatchQueue.main.async {
+            MainActor.assumeIsolated { StarStore.shared.adoptServerList(stars, since: since) }
+          }
+        }
+        completion(result)
+      }
+    }
+  }
+
   // MARK: - Fetch methods
 
   func downloadAlbum(_ albumToDownload: Album) {
@@ -329,7 +356,7 @@ class AlbumViewModel: ObservableObject {
   func fetchAlbums() {
     fetchCached(
       .albums, current: albums,
-      assign: { self.albums = $0 }, request: AlbumService.shared.getAlbum)
+      assign: { self.albums = $0 }, request: Self.albumsRequest)
   }
 
   func fetchAlbumsByArtist(id: String) {
@@ -396,7 +423,7 @@ class AlbumViewModel: ObservableObject {
   func getArtists() {
     fetchCached(
       .artists, current: artists,
-      assign: { self.artists = $0 }, request: AlbumService.shared.getArtists)
+      assign: { self.artists = $0 }, request: Self.artistsRequest)
   }
 
   /// Siri and Shortcuts know only the cached artists. After a login nothing
@@ -418,13 +445,13 @@ class AlbumViewModel: ObservableObject {
   @MainActor func refreshAlbums() async {
     await refreshCached(
       .albums, assign: { self.albums = $0 },
-      request: AlbumService.shared.getAlbum)
+      request: Self.albumsRequest)
   }
 
   @MainActor func refreshArtists() async {
     await refreshCached(
       .artists, assign: { self.artists = $0 },
-      request: AlbumService.shared.getArtists)
+      request: Self.artistsRequest)
   }
 
   @MainActor func refreshPlaylists() async {

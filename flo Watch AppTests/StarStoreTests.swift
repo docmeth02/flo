@@ -131,4 +131,44 @@ final class StarStoreTests: XCTestCase {
     // An item no song list had keeps its state.
     XCTAssertTrue(store.isStarred("al1", listed: true))
   }
+
+  /// An album liked here and unliked elsewhere shows unliked once a fresh
+  /// full list says so; an artist liked elsewhere shows liked.
+  func testAFreshAlbumOrArtistListReplacesEarlierConfirmations() async {
+    let store = makeStore()
+    store.set(true, id: "al1")
+    store.set(false, id: "ar1")
+    answers[0](.success(()))
+    answers[1](.success(()))
+    for _ in 0..<5 { await Task.yield() }
+
+    store.adoptServerList([("al1", false), ("al2", true)], since: store.listRevision)
+    store.adoptServerList([("ar1", true)], since: store.listRevision)
+    XCTAssertFalse(store.isStarred("al1", listed: true))
+    XCTAssertTrue(store.isStarred("ar1", listed: false))
+    // An item edited nowhere keeps the state it is listed with.
+    XCTAssertFalse(store.isStarred("al2", listed: false))
+  }
+
+  /// A waiting like stays on top of a fresh list, and a list asked for
+  /// before an edit is dropped.
+  func testAPendingAlbumOrArtistLikeWinsOverAFreshList() async {
+    reachable = false
+    let store = makeStore()
+    store.set(true, id: "al1")
+    store.set(false, id: "ar1")
+    store.adoptServerList([("al1", false), ("ar1", true)], since: store.listRevision)
+    XCTAssertTrue(store.isStarred("al1", listed: false))
+    XCTAssertFalse(store.isStarred("ar1", listed: true))
+    XCTAssertEqual(store.starred(listed: ["ar1"]), ["al1"])
+
+    reachable = true
+    let taken = makeStore()
+    let before = taken.listRevision
+    taken.set(true, id: "ar1")
+    answers[0](.success(()))
+    for _ in 0..<5 { await Task.yield() }
+    taken.adoptServerList([("ar1", false)], since: before)
+    XCTAssertTrue(taken.isStarred("ar1", listed: false))
+  }
 }

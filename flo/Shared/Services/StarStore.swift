@@ -116,6 +116,17 @@ import WatchKit
     publish()
   }
 
+  /// The server's full list of albums or artists with their stars, asked
+  /// for when `listRevision` was `since`: newer than what it took earlier
+  /// this session, so an item unstarred elsewhere since shows unstarred.
+  /// Ignored when an edit was made or taken meanwhile; edits still waiting
+  /// stay on top.
+  func adoptServerList(_ items: [(id: String, starred: Bool)], since: Int) {
+    guard since == listRevision else { return }
+    for item in items where confirmed[item.id] != nil { confirmed[item.id] = item.starred }
+    publish()
+  }
+
   /// An edit made here that the server has not taken yet.
   func isPending(_ id: String) -> Bool {
     edits[id] != nil
