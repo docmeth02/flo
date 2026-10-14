@@ -98,6 +98,8 @@ final class SmartPlaybackService {
 
   private let syncLock = NSLock()
   private let indexLock = NSLock()
+  private let starredLock = NSLock()
+  private var starredRefresh: Task<Void, Never>?
   private var indexCache: (stampDate: Date?, artistsDate: Date?, index: LibraryIndex)?
   private var syncRun: (id: UUID, task: Task<[Song], Never>, forced: Bool)?
 
@@ -340,8 +342,21 @@ final class SmartPlaybackService {
   }
 
   /// The account's liked songs, albums and artists, for StarStore and the
-  /// next mix.
+  /// next mix. One request at a time; a caller joins the one under way.
   private func refreshStarred(generation: Int) async {
+    let refresh = starredLock.withLock {
+      if let starredRefresh { return starredRefresh }
+      let refresh = Task {
+        await self.fetchStarred(generation: generation)
+        self.starredLock.withLock { self.starredRefresh = nil }
+      }
+      starredRefresh = refresh
+      return refresh
+    }
+    await refresh.value
+  }
+
+  private func fetchStarred(generation: Int) async {
     let requestedAt = Date()
     let since = await MainActor.run { StarStore.shared.listRevision }
     guard
@@ -349,20 +364,21 @@ final class SmartPlaybackService {
         AlbumService.shared.getStarred { continuation.resume(with: $0) }
       })
     else { return }
-    await MainActor.run {
-      StarStore.shared.adoptServerStars(songs.map(\.playbackID), since: since)
-    }
-    await withCheckedContinuation { continuation in
+    // The Liked Songs screen may have taken a newer list meanwhile.
+    let songsAreNewest = await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .utility).async {
-        // The Liked Songs screen may have saved a newer list meanwhile.
         let saved = LibraryCacheManager.shared.modificationDate(forKey: .starredSongs)
         if saved.map({ $0 < requestedAt }) ?? true {
           LibraryCacheManager.shared.save(songs, forKey: .starredSongs, generation: generation)
         }
         LibraryCacheManager.shared.save(
           collections, forKey: .starredCollections, generation: generation)
-        continuation.resume()
+        continuation.resume(returning: saved.map { $0 < requestedAt } ?? true)
       }
+    }
+    guard songsAreNewest else { return }
+    await MainActor.run {
+      StarStore.shared.adoptServerStars(songs.map(\.playbackID), since: since)
     }
   }
 
