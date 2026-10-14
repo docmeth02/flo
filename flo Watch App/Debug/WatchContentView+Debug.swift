@@ -303,7 +303,7 @@
           return debugLog("screen hook: no artists")
         }
         view = AnyView(WatchArtistDetailView(artist: artist))
-      case "liked": view = AnyView(WatchStarredSongsView())
+      case "liked": view = AnyView(WatchLikedView())
       case "radios": view = AnyView(WatchRadiosView())
       case "downloads": view = AnyView(WatchDownloadsView())
       case "settings": view = AnyView(WatchSettingsView())
