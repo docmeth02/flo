@@ -203,12 +203,15 @@ final class SmartPlaybackService {
         continuation.resume(returning: (albums, artists))
       }
     }
-    // StarStore also knows songs; only the listed albums and artists count.
+    // StarStore also knows songs; only the library's albums and artists
+    // count, whether or not their list was cached since the like.
+    let albumIds = Set(index.songs.values.map(\.albumId))
+    let artistIds = Set(index.songs.values.compactMap(\.artistId))
     return await MainActor.run {
       let likedAlbums = StarStore.shared.starred(listed: Set(albums.filter(\.starred).map(\.id)))
-        .intersection(albums.map(\.id))
+        .intersection(albumIds)
       let likedArtists = StarStore.shared.starred(listed: Set(artists.filter(\.starred).map(\.id)))
-        .intersection(artists.map(\.id))
+        .intersection(artistIds)
       return (likedAlbums, Set(likedArtists.map { index.artistKeys[$0] ?? $0 }))
     }
   }
