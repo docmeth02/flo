@@ -114,7 +114,9 @@ struct CollectionDetailView<Artwork: View>: View {
     }
     .itemMenu($menu)
     .onAppear { refreshDownloadState() }
-    .onReceive(downloadViewModel.downloadFinished) { refreshDownloadState() }
+    .onReceive(downloadViewModel.downloadFinished) { id in
+      if id == collectionId { refreshDownloadState() }
+    }
   }
 
   private func refreshDownloadState() {

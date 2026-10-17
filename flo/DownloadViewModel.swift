@@ -31,7 +31,6 @@ struct DownloadItem: Identifiable {
   /// The file as fetched: the original, or an MP3 at `kbps` when that is > 0.
   let suffix: String
   let kbps: Int
-  var progress: Double = 0
   var status: DownloadStatus = .queued
 }
 
@@ -47,8 +46,8 @@ class DownloadViewModel: ObservableObject {
   @Published internal(set) var currentDownloads: Set<String> = []
   @Published var downloadedTrackCount: [DownloadTrackCount] = []
 
-  /// Sent when a song finished downloading.
-  let downloadFinished = PassthroughSubject<Void, Never>()
+  /// Sent with the collection's id when one of its songs finished downloading.
+  let downloadFinished = PassthroughSubject<String, Never>()
 
   private var activeDownloads: [String: DownloadRequest] = [:]
 
@@ -98,10 +97,11 @@ class DownloadViewModel: ObservableObject {
       let albumId = album.id
       let itemId = "\(albumId):\(songId)"
 
-      guard !downloadItems.contains(where: { $0.id == itemId }) else {
-        retryDownload(itemId)
-
-        continue
+      // A job that ended is built anew, so a retry takes the current bitrate.
+      if let existing = downloadItems.firstIndex(where: { $0.id == itemId }) {
+        let status = downloadItems[existing].status
+        guard status != .queued && status != .downloading else { continue }
+        downloadItems.remove(at: existing)
       }
 
       let queue = DownloadItem(
@@ -160,18 +160,12 @@ class DownloadViewModel: ObservableObject {
     let progressUpdate: (Double) -> Void = { progress in
       guard Int(progress) != lastPercent else { return }
       lastPercent = Int(progress)
-      self.updateItemProgress(itemId: item.id, progress: progress)
-
+      // An album counts finished songs (see the success case); only a single
+      // song shows its bytes, which a converted download has no length for.
       if let index = self.downloadedTrackCount.firstIndex(where: {
-        $0.id == item.albumId
+        $0.id == item.albumId && $0.total == 1
       }) {
-        let totalTracks = self.downloadedTrackCount[index].total
-
-        // An album counts finished songs (see the success case); a
-        // converted download has no length, so its bytes cannot be counted.
-        if totalTracks == 1 {
-          self.downloadedTrackCount[index].elapsed = progress / 100
-        }
+        self.downloadedTrackCount[index].elapsed = progress / 100
       }
     }
 
@@ -202,7 +196,7 @@ class DownloadViewModel: ObservableObject {
             playlistIndex: item.playlistIndex
           )
           self.updateItemStatus(itemId: item.id, status: DownloadStatus.completed)
-          self.downloadFinished.send()
+          self.downloadFinished.send(item.albumId)
 
           if let index = self.downloadedTrackCount.firstIndex(where: { $0.id == item.albumId }) {
             if self.downloadedTrackCount[index].total == 1 {
@@ -258,19 +252,11 @@ class DownloadViewModel: ObservableObject {
 
       if let index = downloadItems.firstIndex(where: { $0.id == itemId }) {
         downloadItems[index].status = .cancelled
-        downloadItems[index].progress = .zero
 
         currentDownloads.remove(itemId)
       }
 
       activeDownloads.removeValue(forKey: itemId)
-      self.processQueue()
-    }
-  }
-
-  func retryDownload(_ itemId: String) {
-    if let index = downloadItems.firstIndex(where: { $0.id == itemId }) {
-      downloadItems[index].status = .queued
       self.processQueue()
     }
   }
@@ -281,12 +267,6 @@ class DownloadViewModel: ObservableObject {
     }
 
     downloadItems = newDownloadItems
-  }
-
-  private func updateItemProgress(itemId: String, progress: Double) {
-    if let index = downloadItems.firstIndex(where: { $0.id == itemId }) {
-      downloadItems[index].progress = progress
-    }
   }
 
   private func updateItemStatus(itemId: String, status: DownloadStatus) {

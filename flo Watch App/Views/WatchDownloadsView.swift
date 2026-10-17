@@ -60,7 +60,11 @@ struct WatchDownloadsView: View {
       albumViewModel.fetchDownloadedAlbums()
       cachedSongs = StreamCacheManager.shared.getCachedSongs()
     }
-    // A download started from here shows up with its first song.
-    .onReceive(downloadViewModel.downloadFinished) { albumViewModel.fetchDownloadedAlbums() }
+    // An album being downloaded shows up here with its first song.
+    .onReceive(downloadViewModel.downloadFinished) { id in
+      if !albumViewModel.downloadedAlbums.contains(where: { $0.id == id }) {
+        albumViewModel.fetchDownloadedAlbums()
+      }
+    }
   }
 }

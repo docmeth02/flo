@@ -558,7 +558,10 @@ class AlbumService {
 
     let resolvedAlbumName = !song.albumName.isEmpty ? song.albumName : (albumName ?? "")
 
+    // A download at another bitrate has another suffix; the old file goes.
+    var replacedFile: String?
     if let existingSong = checkExistingSong.first {
+      if let old = existingSong.fileURL, !old.isEmpty, old != fileURL { replacedFile = old }
       existingSong.fileURL = fileURL
       existingSong.albumName = resolvedAlbumName
       existingSong.status = status
@@ -587,7 +590,9 @@ class AlbumService {
       downloadedSong.explicitStatus = song.explicitStatus.rawValue
     }
 
-    CoreDataManager.shared.saveRecord()
+    if CoreDataManager.shared.saveRecord(), let replacedFile {
+      try? FileManager.default.removeItem(at: LocalFileManager.shared.fileURL(for: replacedFile))
+    }
   }
 
   /// The downloaded collection record for `id`, reused when it exists so a
