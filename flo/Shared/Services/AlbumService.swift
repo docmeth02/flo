@@ -540,9 +540,11 @@ class AlbumService {
     }
   }
 
+  /// `suffix` and `bitRate` describe the file as downloaded, which may be
+  /// converted from the song's original.
   func saveDownload(
-    albumId: String, albumName: String?, song: Song, status: String, isFromPlaylist: Bool = false,
-    playlistIndex: Int = -1
+    albumId: String, albumName: String?, song: Song, suffix: String, bitRate: Int, status: String,
+    isFromPlaylist: Bool = false, playlistIndex: Int = -1
   ) {
     let songId = isFromPlaylist ? "pl:\(albumId):\(song.mediaFileId)" : song.id
     let position = isFromPlaylist ? Int32(playlistIndex) : Int32(-1)
@@ -552,7 +554,7 @@ class AlbumService {
 
     let fileURL = Self.downloadPath(
       collectionId: albumId, mediaFileId: isFromPlaylist ? song.mediaFileId : song.id,
-      suffix: song.suffix)
+      suffix: suffix)
 
     let resolvedAlbumName = !song.albumName.isEmpty ? song.albumName : (albumName ?? "")
 
@@ -560,6 +562,8 @@ class AlbumService {
       existingSong.fileURL = fileURL
       existingSong.albumName = resolvedAlbumName
       existingSong.status = status
+      existingSong.suffix = suffix
+      existingSong.bitRate = Int64(bitRate)
       existingSong.position = position
       existingSong.explicitStatus = song.explicitStatus.rawValue
     } else {
@@ -570,11 +574,11 @@ class AlbumService {
       downloadedSong.id = songId
       downloadedSong.title = song.title
       downloadedSong.artistName = song.artist
-      downloadedSong.bitRate = Int64(song.bitRate)
+      downloadedSong.bitRate = Int64(bitRate)
       downloadedSong.sampleRate = Int32(song.sampleRate)
       downloadedSong.discNumber = Int16(song.discNumber)
       downloadedSong.trackNumber = Int16(song.trackNumber)
-      downloadedSong.suffix = song.suffix
+      downloadedSong.suffix = suffix
       downloadedSong.duration = song.duration
       downloadedSong.fileURL = fileURL
       downloadedSong.status = status
@@ -642,12 +646,15 @@ class AlbumService {
     }
   }
 
+  /// `kbps` 0 fetches the original file, else an MP3 the server converts,
+  /// which has no length to show progress by.
   func downloadNew(
-    collectionId: String, mediaFileId: String, suffix: String,
+    collectionId: String, mediaFileId: String, suffix: String, kbps: Int,
     progressUpdate: ((Double) -> Void)?,
     completion: @escaping (Result<URL, Error>) -> Void
   ) -> DownloadRequest {
-    let params: [String: Any] = ["id": mediaFileId, "format": "raw", "bitrate": 0]
+    let format = kbps > 0 ? TranscodingSettings.targetFormat : TranscodingSettings.sourceFormat
+    let params: [String: Any] = ["id": mediaFileId, "format": format, "bitrate": kbps]
     let path = Self.downloadPath(
       collectionId: collectionId, mediaFileId: mediaFileId, suffix: suffix)
 

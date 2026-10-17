@@ -87,6 +87,17 @@ class UserDefaultsManager {
     }
   }
 
+  /// The limit for downloads, from the same choices as streaming.
+  static var downloadBitRate: String {
+    get {
+      TranscodingSettings.offeredBitRate(
+        UserDefaults.standard.string(forKey: UserDefaultsKeys.downloadBitRate))
+    }
+    set {
+      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.downloadBitRate)
+    }
+  }
+
   static var streamCacheMaxSize: Int64 {
     get {
       let stored = UserDefaults.standard.object(forKey: UserDefaultsKeys.streamCacheMaxSize)

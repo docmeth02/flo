@@ -60,6 +60,7 @@ enum UserDefaultsKeys {
   static let nowPlayingListened = "nowPlayingListened"
   static let playbackMode = "playbackMode"
   static let enableMaxBitRate = "enableMaxBitRate"
+  static let downloadBitRate = "downloadBitRate"
   static let streamCacheMaxSize = "streamCacheMaxSize"
   static let keepPlaying = "keepPlaying"
   // Edits the server has not confirmed yet, by id (PendingEdits): ratings
@@ -83,11 +84,11 @@ enum KeychainKeys {
 enum TranscodingSettings {
   static let sourceBitRate = "0"
   /// The limits Settings offers, in kbps; the server transcodes to MP3 only.
-  static let bitRates = [sourceBitRate, "128", "192", "256", "320"]
+  static let bitRates = [sourceBitRate, "160", "192", "256", "320"]
   static let defaultBitRate = "192"
 
   /// The stored limit, or the default when none is stored or it is one
-  /// earlier builds offered (32, 64, 96) and Settings no longer lists.
+  /// earlier builds offered (32, 64, 96, 128) and Settings no longer lists.
   static func offeredBitRate(_ stored: String?) -> String {
     stored.flatMap { bitRates.contains($0) ? $0 : nil } ?? defaultBitRate
   }

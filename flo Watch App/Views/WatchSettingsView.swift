@@ -10,6 +10,7 @@ struct WatchSettingsView: View {
   @EnvironmentObject var floooViewModel: FloooViewModel
 
   @State private var selectedBitRate: String = UserDefaultsManager.maxBitRate
+  @State private var selectedDownloadBitRate: String = UserDefaultsManager.downloadBitRate
   @State private var showLogoutAlert = false
   @State private var showClearAlert = false
   @State private var showClearCacheAlert = false
@@ -46,19 +47,16 @@ struct WatchSettingsView: View {
       }
 
       Section {
-        Picker("Bitrate", selection: $selectedBitRate) {
-          ForEach(TranscodingSettings.bitRates, id: \.self) { rate in
-            Text(rate == TranscodingSettings.sourceBitRate ? "Source" : "\(rate) kbps")
-              .tag(rate)
+        bitRatePicker("Streaming", selection: $selectedBitRate)
+          .onChange(of: selectedBitRate) { _, newValue in
+            UserDefaultsManager.maxBitRate = newValue
           }
-        }
-        .tint(.floLavender)
-        .floRow()
-        .onChange(of: selectedBitRate) { _, newValue in
-          UserDefaultsManager.maxBitRate = newValue
-        }
+        bitRatePicker("Downloads", selection: $selectedDownloadBitRate)
+          .onChange(of: selectedDownloadBitRate) { _, newValue in
+            UserDefaultsManager.downloadBitRate = newValue
+          }
       } header: {
-        FloSectionHeader("Streaming")
+        FloSectionHeader("Bitrate")
       }
 
       Section {
@@ -167,6 +165,17 @@ struct WatchSettingsView: View {
     } message: {
       Text("All downloaded music will be removed.")
     }
+  }
+
+  private func bitRatePicker(_ title: String, selection: Binding<String>) -> some View {
+    Picker(title, selection: selection) {
+      ForEach(TranscodingSettings.bitRates, id: \.self) { rate in
+        Text(rate == TranscodingSettings.sourceBitRate ? "Original" : "\(rate) kbps")
+          .tag(rate)
+      }
+    }
+    .tint(.floLavender)
+    .floRow()
   }
 
   private func infoRow(_ label: String, _ value: String) -> some View {

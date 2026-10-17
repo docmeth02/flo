@@ -28,6 +28,9 @@ struct DownloadItem: Identifiable {
   let title: String
   let song: Song
   let playlistIndex: Int
+  /// The file as fetched: the original, or an MP3 at `kbps` when that is > 0.
+  let suffix: String
+  let kbps: Int
   var progress: Double = 0
   var status: DownloadStatus = .queued
 }
@@ -72,6 +75,11 @@ class DownloadViewModel: ObservableObject {
     }
   }
 
+  /// A song of the collection failed this session and was not tried again.
+  func hasFailed(collectionId: String) -> Bool {
+    downloadItems.contains { $0.albumId == collectionId && $0.status == .failed }
+  }
+
   func addItem(_ album: Album, forceAll: Bool = false, isFromPlaylist: Bool = false) {
     let songsToDownload: [(index: Int, song: Song)] = album.songs.enumerated().compactMap {
       index, song in
@@ -82,6 +90,7 @@ class DownloadViewModel: ObservableObject {
       id: album.id, name: album.name, elapsed: 0, total: songsToDownload.count)
     downloadedTrackCount.removeAll { $0.id == album.id }
     downloadedTrackCount.append(downloadingAlbum)
+    let kbps = Int(UserDefaultsManager.downloadBitRate) ?? 0
 
     for (index, song) in songsToDownload {
       let songId = isFromPlaylist ? song.mediaFileId : song.id
@@ -99,7 +108,8 @@ class DownloadViewModel: ObservableObject {
         id: itemId, mediaFileId: songId, albumId: albumId, album: album.name,
         isPlaylist: isFromPlaylist,
         title: "\(song.artist) - \(song.title)", song: song,
-        playlistIndex: isFromPlaylist ? index : -1)
+        playlistIndex: isFromPlaylist ? index : -1,
+        suffix: kbps > 0 ? TranscodingSettings.targetFormat : song.suffix, kbps: kbps)
       downloadItems.append(queue)
     }
 
@@ -138,7 +148,6 @@ class DownloadViewModel: ObservableObject {
   }
 
   private func startDownload(index: Int) {
-    var hasPassedThreshold = false
     // Every write republishes the view model; whole percents are enough.
     var lastPercent = -1
 
@@ -158,13 +167,10 @@ class DownloadViewModel: ObservableObject {
       }) {
         let totalTracks = self.downloadedTrackCount[index].total
 
+        // An album counts finished songs (see the success case); a
+        // converted download has no length, so its bytes cannot be counted.
         if totalTracks == 1 {
           self.downloadedTrackCount[index].elapsed = progress / 100
-        } else {
-          if progress >= 100.0 && !hasPassedThreshold {
-            hasPassedThreshold = true
-            self.downloadedTrackCount[index].elapsed += 1.0 / Double(totalTracks)
-          }
         }
       }
     }
@@ -174,8 +180,8 @@ class DownloadViewModel: ObservableObject {
     // The request is created and registered on the main thread before any
     // completion can run, so a fast failure never leaves a stale entry.
     activeDownloads[item.id] = AlbumService.shared.downloadNew(
-      collectionId: item.albumId, mediaFileId: item.mediaFileId, suffix: item.song.suffix,
-      progressUpdate: progressUpdate
+      collectionId: item.albumId, mediaFileId: item.mediaFileId, suffix: item.suffix,
+      kbps: item.kbps, progressUpdate: progressUpdate
     ) { [weak self] result in
       Task { @MainActor in
         guard let self = self else { return }
@@ -189,6 +195,8 @@ class DownloadViewModel: ObservableObject {
             albumId: item.albumId,
             albumName: item.album,
             song: item.song,
+            suffix: item.suffix,
+            bitRate: item.kbps > 0 ? item.kbps : item.song.bitRate,
             status: "Downloaded",
             isFromPlaylist: item.isPlaylist,
             playlistIndex: item.playlistIndex
@@ -196,10 +204,13 @@ class DownloadViewModel: ObservableObject {
           self.updateItemStatus(itemId: item.id, status: DownloadStatus.completed)
           self.downloadFinished.send()
 
-          if let index = self.downloadedTrackCount.firstIndex(where: {
-            $0.id == item.albumId && $0.total == 1
-          }) {
-            self.downloadedTrackCount.remove(at: index)
+          if let index = self.downloadedTrackCount.firstIndex(where: { $0.id == item.albumId }) {
+            if self.downloadedTrackCount[index].total == 1 {
+              self.downloadedTrackCount.remove(at: index)
+            } else {
+              self.downloadedTrackCount[index].elapsed +=
+                1.0 / Double(self.downloadedTrackCount[index].total)
+            }
           }
 
         case .failure(let error):

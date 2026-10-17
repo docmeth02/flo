@@ -7,6 +7,7 @@ import SwiftUI
 
 struct WatchDownloadsView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
+  @EnvironmentObject var downloadViewModel: DownloadViewModel
 
   @State private var cachedSongs: [Song] = []
 
@@ -32,9 +33,21 @@ struct WatchDownloadsView: View {
           ForEach(albumViewModel.downloadedAlbums) { album in
             NavigationLink(destination: WatchAlbumDetailView(album: album)) {
               CoverRow(tile: .album(album.id), title: album.name, subtitle: album.albumArtist) {
-                Image(systemName: "checkmark.circle.fill")
-                  .font(.system(size: 16))
-                  .foregroundStyle(Color.floDownloaded)
+                // An album shows up here with its first song, so the check
+                // waits until its download has finished without a failure.
+                if downloadViewModel.isDownloading(collectionId: album.id) {
+                  Text("\(Int(downloadViewModel.getDownloadedTrackProgress(collectionId: album.id)))%")
+                    .font(.system(.footnote, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(Color.floLavender)
+                } else if downloadViewModel.hasFailed(collectionId: album.id) {
+                  Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.floDestructive)
+                } else {
+                  Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.floDownloaded)
+                }
               }
             }
             .floRow()
@@ -47,5 +60,7 @@ struct WatchDownloadsView: View {
       albumViewModel.fetchDownloadedAlbums()
       cachedSongs = StreamCacheManager.shared.getCachedSongs()
     }
+    // A download started from here shows up with its first song.
+    .onReceive(downloadViewModel.downloadFinished) { albumViewModel.fetchDownloadedAlbums() }
   }
 }
