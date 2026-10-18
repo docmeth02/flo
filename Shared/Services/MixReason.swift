@@ -41,11 +41,13 @@ struct MixReason: Codable, Sendable, Equatable {
   /// then ratings, likes and plays.
   static func make(_ facts: Facts) -> MixReason {
     if facts.explore {
-      if let heard = facts.lastHeard {
+      if let heard = facts.lastHeard, facts.now.timeIntervalSince(heard) >= 86400 {
         return MixReason(.explore, "Explore pick · not heard in \(since(heard, facts.now))")
       }
       return MixReason(
-        .explore, facts.lifetimePlays == 0 ? "Explore pick · new to you" : "Explore pick · rarely played")
+        .explore,
+        facts.lifetimePlays == 0 && facts.lastHeard == nil
+          ? "Explore pick · new to you" : "Explore pick · rarely played")
     }
     if facts.rating >= 4 {
       switch facts.ratingSource {
@@ -64,8 +66,9 @@ struct MixReason: Codable, Sendable, Equatable {
     if facts.artistPlays >= 5 {
       return MixReason(.history, "You play \(facts.artist) often · \(facts.artistPlays) plays in 60 days")
     }
-    if facts.seedArtist { return MixReason(.history, "Same artist as the last song") }
-    if facts.anchored { return MixReason(.history, "Fits what just played") }
+    // Keep Playing's seed is the last song heard through, its genres the session's.
+    if facts.seedArtist { return MixReason(.history, "Same artist as a song you just heard") }
+    if facts.anchored { return MixReason(.history, "Fits this listening session") }
     return MixReason(.history, "Fits what you play")
   }
 
@@ -74,9 +77,9 @@ struct MixReason: Codable, Sendable, Equatable {
     self.note = note
   }
 
-  /// "3 days", "5 weeks", "4 months".
+  /// "3 days", "5 weeks", "4 months"; at least a day ago.
   private static func since(_ date: Date, _ now: Date) -> String {
-    let days = max(1, Int(now.timeIntervalSince(date) / 86400))
+    let days = Int(now.timeIntervalSince(date) / 86400)
     if days < 14 { return counted(days, "day") }
     if days < 63 { return counted(days / 7, "week") }
     return counted(days / 30, "month")

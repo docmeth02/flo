@@ -39,7 +39,7 @@ struct TasteSummary: Sendable {
     let albumId: String
   }
 
-  /// The latest mix's picks per kind; nil before the first mix.
+  /// The latest played mix's picks per kind; nil before the first one.
   var recipe: [MixReason.Kind: Int]?
   var recipeSize = 0
   var top: [TopArtist] = []
@@ -63,21 +63,19 @@ struct TasteSummary: Sendable {
     let songs = Dictionary(library.map { ($0.playbackID, $0) }) { first, _ in first }
     let artistsById = Dictionary(artists.map { ($0.id, $0) }) { first, _ in first }
 
-    var groups: [String: (plays: Int, artist: Artist?, name: String, best: Int, albumId: String)] =
-      [:]
-    for (id, count) in plays {
+    // Most-played songs first: an artist takes the spelling, the listed
+    // artist and the album of its most-played song that has them.
+    var groups: [String: (plays: Int, artist: Artist?, name: String, albumId: String)] = [:]
+    let byPlays = plays.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+    for (id, count) in byPlays {
       guard let entry = index.songs[id], !entry.artistKey.isEmpty, let song = songs[id] else {
         continue
       }
-      var group = groups[entry.artistKey] ?? (0, nil, song.artist, 0, song.albumId)
+      var group = groups[entry.artistKey] ?? (0, nil, song.artist, song.albumId)
       group.plays += count
       if group.artist == nil, let artistId = entry.artistId, let artist = artistsById[artistId] {
         group.artist = artist
         group.name = artist.name
-      }
-      if count > group.best {
-        group.best = count
-        group.albumId = song.albumId
       }
       groups[entry.artistKey] = group
     }
@@ -146,7 +144,7 @@ struct TasteSummary: Sendable {
     async let skipped = PlaybackJournal.shared.recentSkips()
     async let library = SmartPlaybackService.shared.loadCachedLibrary()
     async let index = SmartPlaybackService.shared.libraryIndex(allowSync: false)
-    let latest = RecommendationLog.shared.mixes.first
+    let latest = RecommendationLog.shared.played.first
     let ratings = RatingStore.shared
     let (songRatings, artistRatings) = (ratings.ratings, ratings.artistRatings)
     let inputs = (await plays, await skipped, await library.songs, await index)

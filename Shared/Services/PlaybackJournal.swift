@@ -125,7 +125,8 @@ final class PlaybackJournal {
   }
 
   /// Takes back the song's skips: its rows count as heard, so the song keeps
-  /// its cooldown and loses its penalty. Returns the rows for `restoreSkips`.
+  /// its cooldown and loses its penalty. Returns the rows for `restoreSkips`,
+  /// none when the change could not be saved.
   @MainActor func forgetSkips(songId: String) -> [NSManagedObjectID] {
     guard let key = AuthService.shared.accountKey else { return [] }
     let request = NSFetchRequest<HistoryEntity>(entityName: "HistoryEntity")
@@ -133,7 +134,7 @@ final class PlaybackJournal {
       format: "accountKey == %@ AND songId == %@ AND skipped == YES", key, songId)
     let rows = (try? CoreDataManager.shared.viewContext.fetch(request)) ?? []
     rows.forEach { $0.skipped = false }
-    CoreDataManager.shared.saveRecord()
+    guard CoreDataManager.shared.saveRecord() else { return [] }
     return rows.map(\.objectID)
   }
 

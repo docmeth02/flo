@@ -9,7 +9,7 @@ import Foundation
 /// Generates personalized song recommendations from on-device listening data.
 ///
 /// All heavy work (library cache decode, history aggregation, scoring) runs off
-/// the main thread; callers `await generateMix` and receive plain `Song` values.
+/// the main thread; callers `await mix` and receive plain `Song` values.
 final class SmartPlaybackService {
   static let shared = SmartPlaybackService()
 
@@ -34,10 +34,6 @@ final class SmartPlaybackService {
   }
 
   /// Build a fresh mix of `count` songs for a listening mode.
-  func generateMix(count: Int, mode: MixMode) async -> [Song] {
-    await mix(count: count, mode: mode).songs
-  }
-
   /// The cached library keyed by playback id, with the keys listening history
   /// is aggregated under: plays mirrored from the server join songs through it.
   struct LibraryIndex: Sendable {

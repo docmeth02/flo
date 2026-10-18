@@ -215,7 +215,6 @@ struct MixRanker {
     var lifetimePlays = [Int](repeating: 0, count: library.count)
     var songWeights = [Double](repeating: 0, count: library.count)
     var heardAt = [Date?](repeating: nil, count: library.count)
-    var artistRecentPlays: [String: Int] = [:]
 
     func titleKey(_ i: Int) -> String {
       if let key = titleKeys[i] { return key }
@@ -254,7 +253,6 @@ struct MixRanker {
       artists[entry.artistKey, default: ArtistStats()].prior += prior
       artists[entry.artistKey, default: ArtistStats()].songs += 1
       artists[entry.artistKey, default: ArtistStats()].plays.append(plays)
-      artistRecentPlays[entry.artistKey, default: 0] += recentPlays[ids[i]] ?? 0
 
       let rating = ratings[ids[i]]?.stars ?? 0
       if rating >= 4 || starred.contains(ids[i]) { favouredArtists.insert(entry.artistKey) }
@@ -669,7 +667,12 @@ struct MixRanker {
       entries[candidates[$0.n].index].artistKey
     }
 
-    // Ties go to the lower key, so the same inputs word the same reasons.
+    // Over the whole index: offline the candidates are only the songs on the
+    // device. Ties go to the lower key, so the same inputs word the same reasons.
+    var artistRecentPlays: [String: Int] = [:]
+    for (id, plays) in recentPlays {
+      if let key = index.songs[id]?.artistKey { artistRecentPlays[key, default: 0] += plays }
+    }
     let topArtist = artistRecentPlays.filter { !$0.key.isEmpty && $0.value > 0 }
       .max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }?.key
     let picks = order.map { item -> MixRecord.Pick in

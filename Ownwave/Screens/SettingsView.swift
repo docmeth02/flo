@@ -44,7 +44,7 @@ struct SettingsView: View {
           toggle(
             "Keep Playing", "Smart Shuffle continues when the queue ends", isOn: $keepPlaying)
           toggle(
-            "Why this song", "Show the reason under each song in Up Next", isOn: $showMixReasons)
+            "Why this song", "Show the reason in Now Playing and Up Next", isOn: $showMixReasons)
           toggle(
             "Stream on cellular", "Uses the cellular bitrate below", isOn: $streamOnCellular)
         }

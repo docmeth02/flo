@@ -22,6 +22,7 @@ struct TasteView: View {
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @Environment(\.palette) private var palette
   @Environment(\.openLibrary) private var openLibrary
+  @ObservedObject private var mixes = RecommendationLog.shared
 
   // Not private: the debug launch hook picks the segment.
   @SceneStorage("tasteSegment") var segment = TasteSegment.profile
@@ -43,7 +44,8 @@ struct TasteView: View {
       .padding(.bottom, 24)
     }
     .toolbar(.hidden, for: .navigationBar)
-    .task {
+    // A mix played while the tab is open changes the recipe.
+    .task(id: mixes.played.first?.at) {
       albumViewModel.fetchStarredSongsIfStale()
       await reload()
     }
@@ -96,13 +98,13 @@ struct TasteView: View {
     case .boosted:
       list(isEmpty: summary.boosted.isEmpty, empty: "Nothing boosted yet.") {
         ForEach(summary.boosted) { row in
-          ratedRow(row, action: "Unboost") { unrate(row, was: 5, toast: "Boost removed") }
+          ratedRow(row, action: "Unboost") { unrate(row, toast: "Boost removed") }
         }
       }
     case .avoided:
       list(isEmpty: summary.avoided.isEmpty, empty: "Nothing avoided.") {
         ForEach(summary.avoided) { row in
-          ratedRow(row, action: "Allow") { unrate(row, was: 1, toast: "Allowed again") }
+          ratedRow(row, action: "Allow") { unrate(row, toast: "Allowed again") }
         }
       }
     case .skips:
@@ -163,7 +165,10 @@ struct TasteView: View {
 
   /// Clears the boost or the avoid; the row leaves at once, Undo rates it
   /// as before and brings it back.
-  private func unrate(_ row: TasteSummary.Rated, was stars: Int, toast: String) {
+  private func unrate(_ row: TasteSummary.Rated, toast: String) {
+    let ratings = RatingStore.shared
+    let stars =
+      row.kind == .song ? ratings.rating(for: row.id) : ratings.artistRating(row.id)
     rate(row, 0)
     summary?.boosted.removeAll { $0.kind == row.kind && $0.id == row.id }
     summary?.avoided.removeAll { $0.kind == row.kind && $0.id == row.id }
@@ -183,6 +188,7 @@ struct TasteView: View {
   /// Skips live in this iPhone's journal only, so the toast says so.
   private func forget(_ skip: TasteSummary.Skip) {
     let rows = PlaybackJournal.shared.forgetSkips(songId: skip.songId)
+    guard !rows.isEmpty else { return app.show("Could not undo the skip") }
     summary?.skips.removeAll { $0.id == skip.id }
     app.show("Skip undone on this iPhone · \(skip.title)") {
       PlaybackJournal.shared.restoreSkips(rows)
@@ -353,7 +359,9 @@ private struct RecipeCard: View {
 
   private func label(_ kind: MixReason.Kind) -> String {
     switch kind {
-    case .history: "Often played"
+    // The design's "Often played" would claim too much of picks that only
+    // fit the listening.
+    case .history: "Your listening"
     case .liked: "Liked"
     case .rated: "Rated high"
     case .explore: "Explore"

@@ -26,9 +26,9 @@ final class TasteTests: XCTestCase {
     XCTAssertEqual(MixReason.make(facts), MixReason.make(facts))
     XCTAssertEqual(note(facts), "Fits what you play")
     facts.anchored = true
-    XCTAssertEqual(note(facts), "Fits what just played")
+    XCTAssertEqual(note(facts), "Fits this listening session")
     facts.seedArtist = true
-    XCTAssertEqual(note(facts), "Same artist as the last song")
+    XCTAssertEqual(note(facts), "Same artist as a song you just heard")
     facts.artistPlays = 31
     XCTAssertEqual(note(facts), "You play BABYMETAL often · 31 plays in 60 days")
     facts.songPlays = 9
@@ -65,6 +65,10 @@ final class TasteTests: XCTestCase {
       facts.lastHeard = now.addingTimeInterval(-days * 86400)
       XCTAssertEqual(note(facts), "Explore pick · not heard in \(text)")
     }
+    // Heard within the day is no news; cooldowns do not rule it out.
+    facts.lastHeard = now.addingTimeInterval(-3600)
+    facts.lifetimePlays = 0
+    XCTAssertEqual(note(facts), "Explore pick · rarely played")
   }
 
   /// Each pick carries its song id and a reason worded from the 60-day plays.
