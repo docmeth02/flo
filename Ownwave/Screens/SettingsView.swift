@@ -13,6 +13,7 @@ struct SettingsView: View {
 
   @AppStorage("appearance") private var appearance = Appearance.system
   @State private var keepPlaying = UserDefaultsManager.keepPlaying
+  @State private var showMixReasons = UserDefaultsManager.showMixReasons
   @State private var streamOnCellular = UserDefaultsManager.streamOnCellular
   @State private var wifiBitRate = UserDefaultsManager.maxBitRate
   @State private var cellularBitRate = UserDefaultsManager.cellularBitRate
@@ -42,6 +43,8 @@ struct SettingsView: View {
         section("Playback") {
           toggle(
             "Keep Playing", "Smart Shuffle continues when the queue ends", isOn: $keepPlaying)
+          toggle(
+            "Why this song", "Show the reason under each song in Up Next", isOn: $showMixReasons)
           toggle(
             "Stream on cellular", "Uses the cellular bitrate below", isOn: $streamOnCellular)
         }
@@ -78,6 +81,7 @@ struct SettingsView: View {
     }
     .navigationBarTitleDisplayMode(.inline)
     .onChange(of: keepPlaying) { UserDefaultsManager.keepPlaying = $1 }
+    .onChange(of: showMixReasons) { UserDefaultsManager.showMixReasons = $1 }
     .onChange(of: streamOnCellular) { UserDefaultsManager.streamOnCellular = $1 }
     .onChange(of: wifiBitRate) { UserDefaultsManager.maxBitRate = $1 }
     .onChange(of: cellularBitRate) { UserDefaultsManager.cellularBitRate = $1 }
