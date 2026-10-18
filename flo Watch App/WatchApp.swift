@@ -16,7 +16,9 @@ final class AppDelegate: NSObject, WKApplicationDelegate {
     for task in backgroundTasks {
       switch task {
       case let refresh as WKURLSessionRefreshBackgroundTask:
-        DownloadSession.shared.handle(refresh)
+        DownloadSession.shared.handleBackgroundEvents {
+          refresh.setTaskCompletedWithSnapshot(false)
+        }
       case let snapshot as WKSnapshotRefreshBackgroundTask:
         snapshot.setTaskCompleted(
           restoredDefaultState: false, estimatedSnapshotExpiration: .distantFuture, userInfo: nil)

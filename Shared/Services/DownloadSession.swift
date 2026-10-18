@@ -5,7 +5,6 @@
 
 import Combine
 import Foundation
-import WatchKit
 
 /// One song to download into the folder of an album or playlist.
 struct DownloadJob: Codable, Equatable {
@@ -139,8 +138,8 @@ struct DownloadJobStore {
 }
 
 /// Downloads songs through a background URLSession, which transfers while
-/// the app is suspended or was ended by the system; watchOS relaunches the
-/// app with a WKURLSessionRefreshBackgroundTask to hand the files over. The
+/// the app is suspended or was ended by the system; the system relaunches the
+/// app in the background to hand the files over. The
 /// audio background mode would only keep a foreground download alive while
 /// music plays. A force-quit cancels the tasks; the next activation submits
 /// the jobs again. Resume data is not kept: a transcode has no byte ranges.
@@ -171,7 +170,7 @@ final class DownloadSession: NSObject, ObservableObject {
   private var retries: [String: DispatchWorkItem] = [:]
   /// Job ids queued together per collection, for its progress.
   private var batches: [String: Set<String>]
-  private var refreshTasks: [WKURLSessionRefreshBackgroundTask] = []
+  private var backgroundCompletions: [UUID: () -> Void] = [:]
   /// Nothing is submitted before the session's tasks are known, or a song
   /// still downloading from before the launch would get a second task.
   private var hasReconciled = false
@@ -190,7 +189,7 @@ final class DownloadSession: NSObject, ObservableObject {
     reconcile()
 
     let center = NotificationCenter.default
-    for name: Notification.Name in [WKApplication.didBecomeActiveNotification, .networkBecameOnline]
+    for name: Notification.Name in [AppPlatform.didBecomeActive, .networkBecameOnline]
     {
       center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
         self?.reconcile()
@@ -270,26 +269,25 @@ final class DownloadSession: NSObject, ObservableObject {
   /// Keeps the system's wake-up for this session until the session has
   /// delivered its events. They may also have come before the wake-up (the
   /// session exists from launch), so a deadline completes it in any case.
-  func handle(_ task: WKURLSessionRefreshBackgroundTask) {
-    refreshTasks.append(task)
-    DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak task] in
-      guard let task, let index = self.refreshTasks.firstIndex(where: { $0 === task }) else {
-        return
-      }
-      self.refreshTasks.remove(at: index).setTaskCompletedWithSnapshot(false)
+  func handleBackgroundEvents(completion: @escaping () -> Void) {
+    let id = UUID()
+    backgroundCompletions[id] = completion
+    DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+      self.backgroundCompletions.removeValue(forKey: id)?()
     }
   }
 
-  private func completeRefreshTasks() {
-    refreshTasks.forEach { $0.setTaskCompletedWithSnapshot(false) }
-    refreshTasks = []
+  private func completeBackgroundEvents() {
+    let completions = backgroundCompletions.values
+    backgroundCompletions = [:]
+    completions.forEach { $0() }
   }
 
   /// Tasks created in the background are discretionary for good, so they are
   /// only created while the app is in front; a background launch only hands
   /// over finished files, and activation submits the rest.
   private var canSubmit: Bool {
-    WKApplication.shared().applicationState != .background
+    !AppPlatform.isInBackground
   }
 
   // The request carries the Subsonic credentials, which wait with the task in
@@ -523,6 +521,6 @@ extension DownloadSession: URLSessionDownloadDelegate {
   }
 
   func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-    completeRefreshTasks()
+    completeBackgroundEvents()
   }
 }

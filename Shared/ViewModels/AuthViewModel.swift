@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import WatchKit
 
 class AuthViewModel: ObservableObject {
   @Published var serverUrl: String = ""
@@ -38,7 +37,7 @@ class AuthViewModel: ObservableObject {
       object: nil)
     NotificationCenter.default.addObserver(
       self, selector: #selector(handleDidBecomeActive),
-      name: WKApplication.didBecomeActiveNotification, object: nil)
+      name: AppPlatform.didBecomeActive, object: nil)
 
     // AuthService read the stored login when it was created.
     adopt(AuthService.shared.launchLogin)

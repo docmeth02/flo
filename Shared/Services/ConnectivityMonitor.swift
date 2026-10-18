@@ -5,7 +5,6 @@
 
 import Combine
 import Foundation
-import WatchKit
 
 /// watchOS only allows low-level networking (NWPathMonitor, NWConnection)
 /// while audio is streaming; outside of that a path monitor stays unsatisfied
@@ -40,7 +39,7 @@ final class ConnectivityMonitor: ObservableObject {
 
   private init() {
     NotificationCenter.default.addObserver(
-      forName: WKApplication.didBecomeActiveNotification, object: nil, queue: .main
+      forName: AppPlatform.didBecomeActive, object: nil, queue: .main
     ) { [weak self] _ in
       // Every wrist raise activates the app. A recent good verdict stands;
       // a bad one is rechecked right away instead of waiting for the backoff.

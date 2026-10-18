@@ -1,7 +1,6 @@
 import Combine
 import CoreData
 import Foundation
-import WatchKit
 
 /// What a scrobble needs, copied from the queue entry when the listen
 /// happens: the entry itself can be deleted by the time a failed submission
@@ -97,7 +96,7 @@ final class ScrobbleQueueManager {
   /// Every return to the app, and every successful probe: ConnectivityMonitor
   /// probes the server on launch, when the network comes back and on demand.
   static func appAndServerTriggers() -> AnyPublisher<Void, Never> {
-    NotificationCenter.default.publisher(for: WKApplication.didBecomeActiveNotification)
+    NotificationCenter.default.publisher(for: AppPlatform.didBecomeActive)
       .map { _ in }
       .merge(
         with: ConnectivityMonitor.shared.$isServerReachable

@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import WatchKit
 
 /// Liked songs, albums and artists as the watch knows them: a like made here
 /// shows at once and waits, across launches and offline spells, until the
@@ -65,7 +64,7 @@ import WatchKit
     }
 
     let center = NotificationCenter.default
-    for name: Notification.Name in [.networkBecameOnline, WKApplication.didBecomeActiveNotification] {
+    for name: Notification.Name in [.networkBecameOnline, AppPlatform.didBecomeActive] {
       center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
         Task { @MainActor in self?.edits.flush() }
       }

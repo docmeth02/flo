@@ -4,7 +4,7 @@
 //
 
 import MediaPlayer
-import WatchKit
+import UIKit
 
 // The heart, the system's Now Playing info and the remote commands.
 extension PlayerViewModel {

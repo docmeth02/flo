@@ -6,7 +6,6 @@
 import AVFoundation
 import Combine
 import MediaPlayer
-import WatchKit
 
 /// The values that change every second while playing, apart from the view
 /// model so that only the views showing them redraw that often.
@@ -504,7 +503,7 @@ class PlayerViewModel: ObservableObject {
     MainActor.assumeIsolated { publishSiriTarget() }
     RequestLog.shared.note(
       "audio activate \(gen) playing=\(isPlaying) item=\(playerItem != nil)")
-    AVAudioSession.sharedInstance().activate(options: []) { [weak self] success, error in
+    AppPlatform.activateAudio { [weak self] success, error in
       // The callback arrives off-main; playGeneration is only read or written
       // on the main queue.
       DispatchQueue.main.async {

@@ -6,7 +6,6 @@
 import Alamofire
 import CoreData
 import Foundation
-import WatchKit
 
 /// Where the history import of the logged-in account stands, for the
 /// diagnostics screen and the share log.
@@ -94,7 +93,7 @@ actor ListeningHistoryStore {
   private init() {
     let center = NotificationCenter.default
     center.addObserver(
-      forName: WKApplication.didBecomeActiveNotification, object: nil, queue: nil
+      forName: AppPlatform.didBecomeActive, object: nil, queue: nil
     ) { _ in
       Task { await ListeningHistoryStore.shared.refreshIfStale(reason: .activation) }
     }

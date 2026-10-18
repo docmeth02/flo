@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import WatchKit
 
 /// The account's song ratings by playback id: the server's, overlaid with
 /// edits made here that it has not confirmed yet. An edit is shown at once
@@ -74,7 +73,7 @@ import WatchKit
     }
 
     let center = NotificationCenter.default
-    for name: Notification.Name in [.networkBecameOnline, WKApplication.didBecomeActiveNotification] {
+    for name: Notification.Name in [.networkBecameOnline, AppPlatform.didBecomeActive] {
       center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
         Task { @MainActor in
           guard let self else { return }

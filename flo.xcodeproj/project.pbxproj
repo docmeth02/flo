@@ -72,6 +72,7 @@
 		930A994888EC25EFC75B5B8D /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 77166ADDD3DA46B0C53E18D5 /* Localizable.xcstrings */; };
 		937DBDB438F8A8C386E0C7A4 /* UserAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = C446A6B62C08DE8800CC9787 /* UserAuth.swift */; };
 		93C4EDA5F5007DA82FE113B5 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 638B2D1AECAA38268427598A /* WatchApp.swift */; };
+		9551E36F6EC59C328D053D51 /* AppPlatform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26163837D2FCC0CB8BFD57A8 /* AppPlatform.swift */; };
 		96050F51647EC912B5E2854A /* LibrarySearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA6E4B95E86671912ADCC03D /* LibrarySearch.swift */; };
 		983F57A9E194FBCAF8E44F09 /* WatchCachedSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DFCE00EB3D08D69E35F8A68 /* WatchCachedSongsView.swift */; };
 		9A5C1F8746EC3424630445C2 /* PlayerViewModel+QueueEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CA1E05BC293CD0606FB46EC /* PlayerViewModel+QueueEditing.swift */; };
@@ -172,6 +173,7 @@
 		1BDA0AFDF99572D783F7433F /* WatchQueueView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchQueueView.swift; sourceTree = "<group>"; };
 		1C00FCB7A37E884BAAC284C9 /* WatchDownloadsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDownloadsView.swift; sourceTree = "<group>"; };
 		23D3B96B083E2837F57F165F /* WatchContentView+MenuDebug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WatchContentView+MenuDebug.swift"; sourceTree = "<group>"; };
+		26163837D2FCC0CB8BFD57A8 /* AppPlatform.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppPlatform.swift; sourceTree = "<group>"; };
 		267F2A01FFC103AFBE22C7B9 /* AppShortcuts.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = AppShortcuts.xcstrings; sourceTree = "<group>"; };
 		29E53048E3A319C3B7EA7D87 /* ScrobbleReceipts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrobbleReceipts.swift; sourceTree = "<group>"; };
 		2C69EE166F61D61C8CC0A1D4 /* PinnedList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PinnedList.swift; sourceTree = "<group>"; };
@@ -341,6 +343,15 @@
 			);
 			name = Debug;
 			path = Debug;
+			sourceTree = "<group>";
+		};
+		383131F7BA06DAB2C1646135 /* Platform */ = {
+			isa = PBXGroup;
+			children = (
+				26163837D2FCC0CB8BFD57A8 /* AppPlatform.swift */,
+			);
+			name = Platform;
+			path = Platform;
 			sourceTree = "<group>";
 		};
 		618CC93703E8877FFCDE4789 /* Intents */ = {
@@ -549,6 +560,7 @@
 				C4875DFE2C149CD500D9BAEB /* Services */,
 				C4289F4D2C1253EB00C3A4FD /* Utils */,
 				86FC5F7B79165EF7E4D67042 /* ViewModels */,
+				383131F7BA06DAB2C1646135 /* Platform */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -804,6 +816,7 @@
 				69E3C1DECC174A473A67508A /* NowPlayingTarget.swift in Sources */,
 				AC55BF9DA8F03D696B917C74 /* RateIntents.swift in Sources */,
 				12705B34222920EC8561E98E /* WatchLikedView.swift in Sources */,
+				9551E36F6EC59C328D053D51 /* AppPlatform.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
