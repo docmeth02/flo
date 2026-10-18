@@ -55,7 +55,7 @@ struct WatchDownloadsView: View {
         }
       }
     }
-    .navigationTitle("Downloads")
+    .floNavigationTitle("Downloads")
     .onAppear {
       albumViewModel.fetchDownloadedAlbums()
       cachedSongs = StreamCacheManager.shared.getCachedSongs()

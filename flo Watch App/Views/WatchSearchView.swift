@@ -46,7 +46,7 @@ struct WatchSearchView: View {
           message: "Artists, albums and songs on your server.")
       }
     }
-    .navigationTitle("Search")
+    .floNavigationTitle("Search")
     .searchable(text: $query)
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }

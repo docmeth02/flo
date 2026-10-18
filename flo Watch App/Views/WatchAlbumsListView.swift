@@ -57,7 +57,7 @@ struct LibraryList<Rows: View>: View {
         List { rows }
       }
     }
-    .navigationTitle(title)
+    .floNavigationTitle(title)
     .refreshable {
       await refresh()
     }

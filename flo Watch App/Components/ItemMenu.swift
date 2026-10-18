@@ -143,7 +143,7 @@ struct ItemMenu: View {
       }
       .padding(.horizontal, 16)
     }
-    .buttonStyle(FloTintedButtonStyle(tint: .white))
+    .buttonStyle(FloTintedButtonStyle(tint: .white, isMenuRow: true))
   }
 }
 

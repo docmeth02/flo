@@ -64,6 +64,7 @@ extension Font {
   static let floCaption = Font.system(.caption2, weight: .semibold)
   static let floTime = familjen(14, .caption2).monospacedDigit()
   static let floButton = familjen(16, .subheadline)
+  static let floNavTitle = familjen(15, .headline)
   /// Button labels are set 0.02 em tighter, as in the design.
   static let floButtonTracking: CGFloat = -0.02 * 16
 }
@@ -90,11 +91,13 @@ struct FloTintedButtonStyle: ButtonStyle {
   var tint: Color = .floLilac
   var platter: Color = .floSurface
   var height: CGFloat = 44
+  /// Menu rows are SF; buttons use the title face.
+  var isMenuRow = false
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.floButton)
-      .tracking(Font.floButtonTracking)
+      .font(isMenuRow ? .floRowTitle : .floButton)
+      .tracking(isMenuRow ? 0 : Font.floButtonTracking)
       .foregroundStyle(tint)
       .frame(maxWidth: .infinity, minHeight: height)
       .background(Capsule().fill(platter))
@@ -103,6 +106,14 @@ struct FloTintedButtonStyle: ButtonStyle {
 }
 
 extension View {
+  /// The navigation title in the title face and lilac; the string form of
+  /// `navigationTitle` always uses the system font.
+  func floNavigationTitle(_ title: String) -> some View {
+    navigationTitle {
+      Text(title).font(.floNavTitle).tracking(-0.01 * 15).foregroundStyle(Color.floLilac)
+    }
+  }
+
   /// A list row on the rounded surface platter.
   func floRow(_ background: Color = .floSurface) -> some View {
     listRowBackground(

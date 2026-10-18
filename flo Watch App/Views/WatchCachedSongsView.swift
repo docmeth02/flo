@@ -29,7 +29,7 @@ struct WatchCachedSongsView: View {
         .listRowBackground(Color.clear)
       }
     }
-    .navigationTitle("Cached")
+    .floNavigationTitle("Cached")
     .itemMenu($menu)
   }
 }

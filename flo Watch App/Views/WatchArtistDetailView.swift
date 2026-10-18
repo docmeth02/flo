@@ -58,7 +58,7 @@ struct WatchArtistDetailView: View {
         FloSectionHeader("Albums")
       }
     }
-    .navigationTitle(artist.name)
+    .floNavigationTitle(artist.name)
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .itemMenu($menu)
     .onAppear {

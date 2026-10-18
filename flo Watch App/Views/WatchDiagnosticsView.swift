@@ -73,7 +73,7 @@ struct WatchDiagnosticsView: View {
         FloSectionHeader("Requests")
       }
     }
-    .navigationTitle("Diagnostics")
+    .floNavigationTitle("Diagnostics")
     .task { await ListeningHistoryStore.shared.publishStoredState() }
   }
 

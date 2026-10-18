@@ -69,7 +69,7 @@ struct WatchQueueView: View {
     .floToast($toast)
     .containerBackground(for: .navigation) { CoverBackdrop(albumId: albumId, url: coverURL) }
     .task(id: albumId) { tint = await CoverTint.color(albumId: albumId, url: coverURL) }
-    .navigationTitle("Queue")
+    .floNavigationTitle("Queue")
     .onAppear { setQueueShown(true) }
     .onDisappear { setQueueShown(false) }
   }

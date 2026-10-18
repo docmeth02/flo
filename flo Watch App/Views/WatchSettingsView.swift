@@ -147,7 +147,7 @@ struct WatchSettingsView: View {
         }
       }
     }
-    .navigationTitle("Settings")
+    .floNavigationTitle("Settings")
     .onAppear {
       floooViewModel.getLocalStorageInformation()
     }
