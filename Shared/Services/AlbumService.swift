@@ -336,6 +336,14 @@ class AlbumService {
     ndList(API.NDEndpoint.getArtists, ["has_rating": "true", "_start": 0, "_end": 0], completion)
   }
 
+  /// The server's version, nil when it does not say or does not answer.
+  func serverVersion(completion: @escaping (String?) -> Void) {
+    APIManager.shared.SubsonicEndpointRequest(endpoint: API.SubsonicEndpoint.ping, parameters: nil) {
+      (response: DataResponse<PingResponse, AFError>) in
+      completion(response.value?.subsonicResponse.serverVersion)
+    }
+  }
+
   func getStarredSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
     getStarred { completion($0.map(\.songs)) }
   }

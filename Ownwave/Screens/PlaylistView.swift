@@ -74,7 +74,6 @@ struct PlaylistView: View {
       .padding(.horizontal, 16)
       .padding(.bottom, 24)
     }
-    .background(palette.background)
     .navigationBarTitleDisplayMode(.inline)
     .onAppear { albumViewModel.setActivePlaylist(playlist: playlist) }
   }

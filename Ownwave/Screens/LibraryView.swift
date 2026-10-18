@@ -23,8 +23,9 @@ struct LibraryView: View {
   @Environment(\.palette) private var palette
 
   @StateObject private var radios = RadiosViewModel()
-  // Not private: the debug launch hook picks the chip.
-  @SceneStorage("libraryChip") var chip = LibraryChip.albums
+  // Kept by the tabs, so Home can open a chip. Not private: the debug launch
+  // hook picks the chip.
+  @Binding var chip: LibraryChip
   @State private var cachedSongs: [Song] = []
 
   var body: some View {
@@ -38,7 +39,6 @@ struct LibraryView: View {
       .padding(.top, 8)
       .padding(.bottom, 24)
     }
-    .background(palette.background)
     .toolbar(.hidden, for: .navigationBar)
     .refreshable { await refresh() }
     .task(id: chip) { load() }
@@ -428,7 +428,7 @@ private struct CachedSongsView: View {
       }
       .padding(16)
     }
-    .background(palette.background)
+    .containerBackground(palette.background, for: .navigation)
     .navigationTitle("Cached")
   }
 }

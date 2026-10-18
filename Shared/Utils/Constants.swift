@@ -33,6 +33,7 @@ enum API {
     static let getStarred2 = "/rest/getStarred2"
     static let getTranscodeDecision = "/rest/getTranscodeDecision"
     static let getTranscodeStream = "/rest/getTranscodeStream"
+    static let ping = "/rest/ping"
   }
 }
 

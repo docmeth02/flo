@@ -57,6 +57,19 @@ extension SubsonicResponse {
   }
 }
 
+/// The answer to `/rest/ping`; OpenSubsonic servers name their version.
+struct PingResponse: Decodable {
+  struct Body: Decodable {
+    let serverVersion: String?
+  }
+
+  let subsonicResponse: Body
+
+  enum CodingKeys: String, CodingKey {
+    case subsonicResponse = "subsonic-response"
+  }
+}
+
 /// A Subsonic response without payload, unwrapped from its
 /// `subsonic-response` envelope.
 struct BasicSubsonicResponse: Decodable {

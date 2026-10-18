@@ -13,6 +13,11 @@ enum Route: Hashable {
   case settings
 }
 
+extension EnvironmentValues {
+  /// Switches to the Library tab on one of its chips (Home's See all).
+  @Entry var openLibrary: (LibraryChip) -> Void = { _ in }
+}
+
 /// The app's look: follows the system, or stays dark or light (Settings).
 enum Appearance: String, CaseIterable {
   case system, dark, light
@@ -81,6 +86,7 @@ struct AppTabs: View {
   // Not private: the debug launch hook selects a tab and pushes onto it.
   @State var tab = TabID.home
   @State var paths: [TabID: NavigationPath] = [:]
+  @SceneStorage("libraryChip") private var libraryChip = LibraryChip.albums
 
   var body: some View {
     TabView(selection: $tab) {
@@ -88,11 +94,16 @@ struct AppTabs: View {
         stack(.home) { HomeView() }
       }
       Tab("Library", systemImage: "books.vertical", value: .library) {
-        stack(.library) { LibraryView() }
+        stack(.library) { LibraryView(chip: $libraryChip) }
       }
-      Tab(value: .search, role: .search) {
+      Tab("Search", systemImage: "magnifyingglass", value: .search, role: Self.searchRole) {
         stack(.search) { SearchView() }
       }
+    }
+    .environment(\.openLibrary) { chip in
+      libraryChip = chip
+      paths[.library] = nil
+      tab = .library
     }
     .tabBarMinimizeBehavior(.onScrollDown)
     .tabViewBottomAccessory { MiniPlayer() }
@@ -112,18 +123,27 @@ struct AppTabs: View {
     #endif
   }
 
+  /// iOS 27 draws a search role tab inside the bar; the prominent role keeps
+  /// the design's round button beside it, and SearchView brings its own field.
+  private static var searchRole: TabRole {
+    if #available(iOS 27, *) { .prominent } else { .search }
+  }
+
   private func stack(_ id: TabID, @ViewBuilder _ root: () -> some View) -> some View {
     NavigationStack(path: Binding { paths[id] ?? NavigationPath() } set: { paths[id] = $0 }) {
       root()
+        .containerBackground(palette.background, for: .navigation)
         .navigationDestination(for: Route.self) { route in
-          switch route {
-          case .album(let album): AlbumView(album: album)
-          case .artist(let artist): ArtistView(artist: artist)
-          case .playlist(let playlist): PlaylistView(playlist: playlist)
-          case .settings: SettingsView()
+          Group {
+            switch route {
+            case .album(let album): AlbumView(album: album)
+            case .artist(let artist): ArtistView(artist: artist)
+            case .playlist(let playlist): PlaylistView(playlist: playlist)
+            case .settings: SettingsView()
+            }
           }
+          .containerBackground(palette.background, for: .navigation)
         }
     }
-    .background(palette.background)
   }
 }

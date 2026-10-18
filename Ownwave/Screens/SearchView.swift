@@ -66,7 +66,6 @@ struct SearchView: View {
       .padding(.bottom, 24)
     }
     .scrollDismissesKeyboard(.immediately)
-    .containerBackground(palette.background, for: .navigation)
     // The system search field stands in for the design's own; shown all
     // the time, it leaves the bar only an inline title.
     .navigationTitle("Search")

@@ -18,6 +18,7 @@ struct SettingsView: View {
   @State private var cellularBitRate = UserDefaultsManager.cellularBitRate
   @State private var downloadBitRate = UserDefaultsManager.downloadBitRate
   @State private var username = ""
+  @State private var serverVersion: String?
   @State private var cachedSongs = 0
   @State private var confirmsLogout = false
   @State private var confirmsClear = false
@@ -71,7 +72,6 @@ struct SettingsView: View {
       .padding(.bottom, 24)
     }
     .navigationBarTitleDisplayMode(.inline)
-    .containerBackground(palette.background, for: .navigation)
     .onChange(of: keepPlaying) { UserDefaultsManager.keepPlaying = $1 }
     .onChange(of: streamOnCellular) { UserDefaultsManager.streamOnCellular = $1 }
     .onChange(of: wifiBitRate) { UserDefaultsManager.maxBitRate = $1 }
@@ -79,6 +79,7 @@ struct SettingsView: View {
     .onChange(of: downloadBitRate) { UserDefaultsManager.downloadBitRate = $1 }
     .onAppear {
       if case .found(let login) = KeychainManager.loadAuth() { username = login.username }
+      AlbumService.shared.serverVersion { serverVersion = $0 }
       refreshStorage()
     }
     .alert("Change Server?", isPresented: $confirmsLogout) {
@@ -114,7 +115,7 @@ struct SettingsView: View {
           Circle()
             .fill(connectivity.isServerReachable ? Color.floDownloaded : palette.secondary)
             .frame(width: 7, height: 7)
-          Text(username.isEmpty ? "Navidrome" : "Navidrome · \(username)")
+          Text(serverLine)
         }
         .font(.rowSubtitle)
         .foregroundStyle(palette.secondary)
@@ -125,6 +126,14 @@ struct SettingsView: View {
         .foregroundStyle(palette.accent)
     }
     .card(palette)
+  }
+
+  /// "Navidrome 0.64.2 · anna"
+  private var serverLine: String {
+    // Navidrome appends its build, "0.64.2 (10114574)".
+    let version = serverVersion?.split(separator: " ").first
+    let name = version.map { "Navidrome \($0)" } ?? "Navidrome"
+    return username.isEmpty ? name : "\(name) · \(username)"
   }
 
   /// The server without its scheme, e.g. "music.home.lan" or

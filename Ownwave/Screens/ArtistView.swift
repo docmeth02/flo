@@ -60,7 +60,6 @@ struct ArtistView: View {
         }
       }
     }
-    .background(palette.background)
     .navigationBarTitleDisplayMode(.inline)
     .onAppear { albumViewModel.fetchAlbumsByArtist(id: artist.id) }
     .task(id: artist.id) { await loadTopSongs() }

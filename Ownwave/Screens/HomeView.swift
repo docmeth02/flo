@@ -12,6 +12,7 @@ struct HomeView: View {
   @EnvironmentObject private var pins: PinStore
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
+  @Environment(\.openLibrary) private var openLibrary
 
   @StateObject private var radios = RadiosViewModel()
   // The lists pins are looked up in, loaded or cached, read again on every
@@ -50,7 +51,6 @@ struct HomeView: View {
       .padding(.top, 8)
       .padding(.bottom, 24)
     }
-    .background(palette.background)
     .toolbar(.hidden, for: .navigationBar)
     .task {
       albumViewModel.fetchStarredSongs()
@@ -118,6 +118,9 @@ struct HomeView: View {
       VStack(spacing: 10) {
         HStack(spacing: 14) {
           SectionTitle("Liked")
+          Button("See all") { openLibrary(.liked) }
+            .font(.rowSubtitle)
+            .foregroundStyle(palette.accent)
           Button {
             if player.shuffleItem(item: SongCollection.liked(songs)) {
               app.isNowPlayingPresented = true

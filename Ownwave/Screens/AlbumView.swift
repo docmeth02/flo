@@ -60,7 +60,6 @@ struct AlbumView: View {
       .padding(.bottom, 24)
       .background(alignment: .top) { BlurredBackdrop(albumId: album.id, height: 430) }
     }
-    .background(palette.background)
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
