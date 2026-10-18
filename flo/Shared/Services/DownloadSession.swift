@@ -172,7 +172,9 @@ final class DownloadSession: NSObject, ObservableObject {
   /// Job ids queued together per collection, for its progress.
   private var batches: [String: Set<String>]
   private var refreshTasks: [WKURLSessionRefreshBackgroundTask] = []
-  private var eventsFinished = false
+  /// Nothing is submitted before the session's tasks are known, or a song
+  /// still downloading from before the launch would get a second task.
+  private var hasReconciled = false
 
   private init(store: DownloadJobStore = DownloadJobStore()) {
     self.store = store
@@ -182,7 +184,7 @@ final class DownloadSession: NSObject, ObservableObject {
       .mapValues { Set($0.map(\.id)) }
     super.init()
     // Created at launch, so the events of a relaunch find their delegate.
-    _ = session
+    reconcile()
 
     let center = NotificationCenter.default
     for name: Notification.Name in [WKApplication.didBecomeActiveNotification, .networkBecameOnline]
@@ -223,6 +225,11 @@ final class DownloadSession: NSObject, ObservableObject {
 
     jobs.removeAll { $0.collectionId == collection.id && $0.failed }
     jobs += wanted.filter { job in !jobs.contains { $0.id == job.id } }
+    // A tap does not wait out a retry.
+    for index in jobs.indices where jobs[index].collectionId == collection.id {
+      retries.removeValue(forKey: jobs[index].id)?.cancel()
+      jobs[index].retryAt = nil
+    }
     batches[collection.id] =
       (continuing ? batches[collection.id] ?? [] : []).union(wanted.map(\.id))
     store.save(jobs)
@@ -258,17 +265,16 @@ final class DownloadSession: NSObject, ObservableObject {
   }
 
   /// Keeps the system's wake-up for this session until the session has
-  /// delivered its events; either may come first.
+  /// delivered its events. They may also have come before the wake-up (the
+  /// session exists from launch), so a deadline completes it in any case.
   func handle(_ task: WKURLSessionRefreshBackgroundTask) {
     refreshTasks.append(task)
-    completeRefreshTasks()
+    DispatchQueue.main.asyncAfter(deadline: .now() + 10) { self.completeRefreshTasks() }
   }
 
   private func completeRefreshTasks() {
-    guard eventsFinished, !refreshTasks.isEmpty else { return }
     refreshTasks.forEach { $0.setTaskCompletedWithSnapshot(false) }
     refreshTasks = []
-    eventsFinished = false
   }
 
   /// Tasks created in the background are discretionary for good, so they are
@@ -282,8 +288,12 @@ final class DownloadSession: NSObject, ObservableObject {
   // the system's transfer store; they stay valid until the password changes
   // or a logout cancels the tasks.
   private func submit(_ job: DownloadJob) {
-    guard canSubmit, tasks[job.id] == nil, !job.failed, (job.retryAt ?? .distantPast) <= Date()
+    guard hasReconciled, tasks[job.id] == nil, !job.failed,
+      (job.retryAt ?? .distantPast) <= Date()
     else { return }
+    guard canSubmit else {
+      return RequestLog.shared.note("download \(job.song.title) waits for the app")
+    }
     guard
       var request = AlbumService.shared.downloadRequest(
         mediaFileId: job.mediaFileId, kbps: job.kbps)
@@ -329,6 +339,7 @@ final class DownloadSession: NSObject, ObservableObject {
         tasks[id] = task
       }
     }
+    hasReconciled = true
     for job in jobs where tasks[job.id] == nil && !job.failed && !finishing.contains(job.id) {
       if let retryAt = job.retryAt, retryAt > Date() {
         scheduleRetry(job.id, at: retryAt)
@@ -373,17 +384,14 @@ final class DownloadSession: NSObject, ObservableObject {
     case .connection:
       // The session waits for a network itself, so a task submitted a while
       // ago goes again at once; one that failed right away waits, or an
-      // unreachable host would be asked in a loop. In the background nothing
-      // is submitted, and the next activation picks the job up.
+      // unreachable host would be asked in a loop.
       let sinceSubmit = job.startedAt.map { Date().timeIntervalSince($0) } ?? .infinity
       if sinceSubmit < DownloadRetry.delays[0] {
         let retryAt = Date().addingTimeInterval(DownloadRetry.delays[0])
         update(job.id) { $0.retryAt = retryAt }
         scheduleRetry(job.id, at: retryAt)
-      } else if canSubmit {
-        submit(job)
       } else {
-        RequestLog.shared.note("download \(job.song.title) waits for the app")
+        submit(job)
       }
     case .counted:
       guard let delay = DownloadRetry.delay(afterAttempts: job.attempts) else {
@@ -501,7 +509,6 @@ extension DownloadSession: URLSessionDownloadDelegate {
   }
 
   func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-    eventsFinished = true
     completeRefreshTasks()
   }
 }
