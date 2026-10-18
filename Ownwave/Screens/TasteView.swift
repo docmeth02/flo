@@ -361,7 +361,7 @@ private struct RecipeCard: View {
     switch kind {
     // The design's "Often played" would claim too much of picks that only
     // fit the listening.
-    case .history: "Your listening"
+    case .history: "Your plays"
     case .liked: "Liked"
     case .rated: "Rated high"
     case .explore: "Explore"

@@ -51,10 +51,7 @@ struct MixRecord: Codable, Sendable {
   /// Every mix built, for diagnostics.
   @Published private(set) var mixes: [MixRecord] = []
   /// The mixes that were queued, newest first.
-  @Published private(set) var played: [MixRecord] = [] {
-    didSet { reasons = Self.reasons(of: played) }
-  }
-  private var reasons: [String: MixReason] = [:]
+  @Published private(set) var played: [MixRecord] = []
 
   private init() {
     if let account = AuthService.shared.accountKey, let data = try? Data(contentsOf: Self.fileURL) {
@@ -92,7 +89,10 @@ struct MixRecord: Codable, Sendable {
 
   /// Why the newest played mix holding the song picked it.
   func reason(for songId: String) -> MixReason? {
-    reasons[songId]
+    for mix in played {
+      if let pick = mix.picks.first(where: { $0.songId == songId }) { return pick.why }
+    }
+    return nil
   }
 
   /// The saved mixes, if they are the account's.
@@ -100,11 +100,5 @@ struct MixRecord: Codable, Sendable {
     guard let saved = try? JSONDecoder().decode(Saved.self, from: data), saved.account == account
     else { return [] }
     return saved.mixes
-  }
-
-  private static func reasons(of mixes: [MixRecord]) -> [String: MixReason] {
-    var reasons: [String: MixReason] = [:]
-    for pick in mixes.reversed().flatMap(\.picks) { reasons[pick.songId] = pick.why }
-    return reasons
   }
 }

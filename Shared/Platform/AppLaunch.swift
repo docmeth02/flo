@@ -7,7 +7,7 @@ import AVFoundation
 
 /// What both apps do once at launch, before the first screen.
 enum AppLaunch {
-  static func warmUp() {
+  @MainActor static func warmUp() {
     do {
       try AVAudioSession.sharedInstance().setCategory(
         .playback, mode: .default, policy: .longFormAudio)
@@ -33,6 +33,8 @@ enum AppLaunch {
     PlaybackJournal.shared.pruneOld()
     // Sends rating edits the server has not confirmed yet.
     _ = RatingStore.shared
+    // Restores the played mixes, and is there to forget them on a logout.
+    _ = RecommendationLog.shared
     // A relaunch for finished downloads delivers them to this session.
     _ = DownloadSession.shared
 
