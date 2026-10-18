@@ -175,6 +175,9 @@ final class DownloadSession: NSObject, ObservableObject {
   /// Nothing is submitted before the session's tasks are known, or a song
   /// still downloading from before the launch would get a second task.
   private var hasReconciled = false
+  /// Tasks whose delegate calls have run, so a reconcile knows which
+  /// finished tasks still have their delivery queued.
+  private var delivered = Set<Int>()
 
   private init(store: DownloadJobStore = DownloadJobStore()) {
     self.store = store
@@ -269,7 +272,12 @@ final class DownloadSession: NSObject, ObservableObject {
   /// session exists from launch), so a deadline completes it in any case.
   func handle(_ task: WKURLSessionRefreshBackgroundTask) {
     refreshTasks.append(task)
-    DispatchQueue.main.asyncAfter(deadline: .now() + 10) { self.completeRefreshTasks() }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak task] in
+      guard let task, let index = self.refreshTasks.firstIndex(where: { $0 === task }) else {
+        return
+      }
+      self.refreshTasks.remove(at: index).setTaskCompletedWithSnapshot(false)
+    }
   }
 
   private func completeRefreshTasks() {
@@ -334,12 +342,13 @@ final class DownloadSession: NSObject, ObservableObject {
         continue
       }
       if task.state == .completed {
-        finishing.insert(id)
+        if !delivered.contains(task.taskIdentifier) { finishing.insert(id) }
       } else {
         tasks[id] = task
       }
     }
     hasReconciled = true
+    delivered = []
     for job in jobs where tasks[job.id] == nil && !job.failed && !finishing.contains(job.id) {
       if let retryAt = job.retryAt, retryAt > Date() {
         scheduleRetry(job.id, at: retryAt)
@@ -371,6 +380,9 @@ final class DownloadSession: NSObject, ObservableObject {
         suffix: job.suffix, bitRate: job.kbps > 0 ? job.kbps : job.song.bitRate,
         status: "Downloaded", isFromPlaylist: job.isPlaylist, playlistIndex: job.playlistIndex)
     else { return RequestLog.shared.note("download \(job.song.title) not saved") }
+    // A record in the stand-in memory store is gone after a relaunch, and the
+    // job with it would be too.
+    guard !CoreDataManager.shared.isUsingVolatileStore else { return }
     jobs.removeAll { $0.id == job.id }
     if !jobs.contains(where: { $0.collectionId == job.collectionId }) {
       batches[job.collectionId] = nil
@@ -468,6 +480,7 @@ extension DownloadSession: URLSessionDownloadDelegate {
     _ session: URLSession, downloadTask: URLSessionDownloadTask,
     didFinishDownloadingTo location: URL
   ) {
+    delivered.insert(downloadTask.taskIdentifier)
     guard let job = job(of: downloadTask) else { return }
     tasks[job.id] = nil
 
@@ -502,6 +515,7 @@ extension DownloadSession: URLSessionDownloadDelegate {
 
   // A delivered file was handled when it arrived.
   func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+    delivered.insert(task.taskIdentifier)
     guard let error, let job = job(of: task) else { return }
     tasks[job.id] = nil
     log(job, "error=\(error.localizedDescription)")
