@@ -15,6 +15,7 @@ import AVFoundation
 /// code goes through these and imports neither WatchKit nor UIKit for them.
 enum AppPlatform {
   #if os(watchOS)
+    static let name = "watchOS"
     static let didBecomeActive = WKApplication.didBecomeActiveNotification
 
     static var isInBackground: Bool {
@@ -28,6 +29,7 @@ enum AppPlatform {
       AVAudioSession.sharedInstance().activate(options: [], completionHandler: done)
     }
   #else
+    static let name = "iOS"
     static let didBecomeActive = UIApplication.didBecomeActiveNotification
 
     static var isInBackground: Bool {

@@ -126,7 +126,7 @@ class APIManager {
 /// One retry for transient connection failures. Time-outs are not retried,
 /// since the watch already waited the full request timeout, and scrobbles
 /// never are: a lost response would submit the same listen again.
-final class WatchRetryPolicy: RetryPolicy {
+final class ConnectionRetryPolicy: RetryPolicy {
   init() {
     var codes = RetryPolicy.defaultRetryableURLErrorCodes
     codes.remove(.timedOut)
@@ -144,10 +144,10 @@ final class WatchRetryPolicy: RetryPolicy {
 /// Renews Navidrome sessions in place: a 401/403 on an /api request is
 /// retried once after the re-login triggered by .sessionExpired, and requests
 /// created meanwhile wait for the new token. Connection failures fall back to
-/// WatchRetryPolicy. Subsonic requests, downloads and the login call carry no
-/// X-ND-Authorization header and pass through untouched.
+/// ConnectionRetryPolicy. Subsonic requests, downloads and the login call
+/// carry no X-ND-Authorization header and pass through untouched.
 final class NDSessionInterceptor: RequestInterceptor {
-  private let fallback = WatchRetryPolicy()
+  private let fallback = ConnectionRetryPolicy()
   private let renewalTimeout: TimeInterval = 15
   private let lock = NSLock()
   // The token a server rejected; requests carrying it wait for its successor.

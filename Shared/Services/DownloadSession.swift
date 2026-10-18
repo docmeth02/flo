@@ -139,10 +139,10 @@ struct DownloadJobStore {
 
 /// Downloads songs through a background URLSession, which transfers while
 /// the app is suspended or was ended by the system; the system relaunches the
-/// app in the background to hand the files over. The
-/// audio background mode would only keep a foreground download alive while
-/// music plays. A force-quit cancels the tasks; the next activation submits
-/// the jobs again. Resume data is not kept: a transcode has no byte ranges.
+/// app in the background to hand the files over. The audio background mode
+/// would only keep a foreground download alive while music plays. A
+/// force-quit cancels the tasks; the next activation submits the jobs again.
+/// Resume data is not kept: a transcode has no byte ranges.
 /// Main thread only; the session delegates on the main queue.
 final class DownloadSession: NSObject, ObservableObject {
   static let shared = DownloadSession()

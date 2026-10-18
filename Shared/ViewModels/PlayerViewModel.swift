@@ -504,7 +504,7 @@ class PlayerViewModel: ObservableObject {
     RequestLog.shared.note(
       "audio activate \(gen) playing=\(isPlaying) item=\(playerItem != nil)")
     AppPlatform.activateAudio { [weak self] success, error in
-      // The callback arrives off-main; playGeneration is only read or written
+      // The callback may arrive off-main; playGeneration is only read or written
       // on the main queue.
       DispatchQueue.main.async {
         guard let self = self else { return }

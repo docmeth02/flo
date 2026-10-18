@@ -185,7 +185,7 @@ struct TranscodeClientInfo: Encodable {
   }
 
   let name = AppMeta.name
-  let platform = "watchOS"
+  let platform = AppPlatform.name
   // Bits per second; left out when there is no limit.
   let maxAudioBitrate: Int?
   let maxTranscodingAudioBitrate: Int?
