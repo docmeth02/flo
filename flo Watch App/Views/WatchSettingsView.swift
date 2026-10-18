@@ -55,8 +55,27 @@ struct WatchSettingsView: View {
           .onChange(of: selectedDownloadBitRate) { _, newValue in
             UserDefaultsManager.downloadBitRate = newValue
           }
+        Toggle(
+          isOn: Binding(
+            get: { UserDefaultsManager.downloadOverCellular },
+            set: {
+              UserDefaultsManager.downloadOverCellular = $0
+              DownloadSession.shared.cellularAccessChanged()
+            }
+          )
+        ) {
+          VStack(alignment: .leading, spacing: 1) {
+            Text("Cellular Downloads")
+              .font(.floRow)
+            Text("Wi-Fi and iPhone are used first")
+              .font(.caption2)
+              .foregroundStyle(Color.floSecondary)
+          }
+        }
+        .tint(.floToggle)
+        .floRow()
       } header: {
-        FloSectionHeader("Bitrate")
+        FloSectionHeader("Bitrate & Data")
       }
 
       Section {
