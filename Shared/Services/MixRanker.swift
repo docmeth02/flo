@@ -156,10 +156,12 @@ struct MixRanker {
   /// `pendingPlays` are the latest listens per song still in the outbox: the
   /// server's log has not counted them yet, so they only cool their songs
   /// down, like the journal's. `likedAlbums` are album ids, `likedArtists`
-  /// artist keys.
+  /// artist keys. `recentPlays` are the mirrored plays per song of the last
+  /// 60 days; they only word the picks' reasons.
   func rank(
     library: [Song], index: SmartPlaybackService.LibraryIndex, affinity: AffinitySnapshot,
-    journal: JournalSnapshot, pendingPlays: [String: Date], ratings: [String: Rating],
+    journal: JournalSnapshot, pendingPlays: [String: Date], recentPlays: [String: Int] = [:],
+    ratings: [String: Rating],
     starred: Set<String>, likedAlbums: Set<String>, likedArtists: Set<String>,
     mode: SmartPlaybackService.MixMode, count: Int, now: Date,
     rng: inout some RandomNumberGenerator
@@ -213,6 +215,7 @@ struct MixRanker {
     var lifetimePlays = [Int](repeating: 0, count: library.count)
     var songWeights = [Double](repeating: 0, count: library.count)
     var heardAt = [Date?](repeating: nil, count: library.count)
+    var artistRecentPlays: [String: Int] = [:]
 
     func titleKey(_ i: Int) -> String {
       if let key = titleKeys[i] { return key }
@@ -251,6 +254,7 @@ struct MixRanker {
       artists[entry.artistKey, default: ArtistStats()].prior += prior
       artists[entry.artistKey, default: ArtistStats()].songs += 1
       artists[entry.artistKey, default: ArtistStats()].plays.append(plays)
+      artistRecentPlays[entry.artistKey, default: 0] += recentPlays[ids[i]] ?? 0
 
       let rating = ratings[ids[i]]?.stars ?? 0
       if rating >= 4 || starred.contains(ids[i]) { favouredArtists.insert(entry.artistKey) }
@@ -665,12 +669,24 @@ struct MixRanker {
       entries[candidates[$0.n].index].artistKey
     }
 
+    // Ties go to the lower key, so the same inputs word the same reasons.
+    let topArtist = artistRecentPlays.filter { !$0.key.isEmpty && $0.value > 0 }
+      .max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }?.key
     let picks = order.map { item -> MixRecord.Pick in
       let c = candidates[item.n]
       let song = library[c.index]
+      let artistKey = entries[c.index].artistKey
+      let why = MixReason.make(
+        MixReason.Facts(
+          explore: item.slot == .explore, rating: c.rating, ratingSource: c.ratingSource,
+          starred: c.starred, likedAlbum: c.likedAlbum, likedArtist: c.likedArtist,
+          seedArtist: c.seedArtist, anchored: c.anchored, songPlays: recentPlays[ids[c.index]] ?? 0,
+          artistPlays: artistRecentPlays[artistKey] ?? 0, topArtist: artistKey == topArtist,
+          lifetimePlays: lifetimePlays[c.index], artist: song.artist, album: song.albumName,
+          lastHeard: heardAt[c.index], now: now))
       return MixRecord.Pick(
-        slot: item.slot == .explore ? "explore" : "preferred", title: song.title,
-        artist: song.artist,
+        slot: item.slot == .explore ? "explore" : "preferred", songId: ids[c.index],
+        title: song.title, artist: song.artist, why: why,
         reason: reason(
           c, slot: item.slot, frequentArtist: artists[entries[c.index].artistKey]?.cluster ?? false,
           bootstrap: bootstrap),

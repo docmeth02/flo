@@ -64,6 +64,7 @@ enum UserDefaultsKeys {
   static let downloadOverCellular = "downloadOverCellular"
   static let streamCacheMaxSize = "streamCacheMaxSize"
   static let keepPlaying = "keepPlaying"
+  static let showMixReasons = "showMixReasons"
   // Edits the server has not confirmed yet, by id (PendingEdits): ratings
   // 1 to 5 or 0 to clear, and stars.
   static let pendingRatings = "pendingRatings"

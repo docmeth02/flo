@@ -583,6 +583,31 @@ actor ListeningHistoryStore {
     }
   }
 
+  /// The account's mirrored plays per song id since `date`.
+  func playCounts(since date: Date) async -> [String: Int] {
+    guard let key = AuthService.shared.accountKey else { return [:] }
+
+    return await CoreDataManager.shared.performBackground { context in
+      let count = NSExpressionDescription()
+      count.name = "plays"
+      count.expression = NSExpression(
+        forFunction: "count:", arguments: [NSExpression(forKeyPath: "mediaFileId")])
+      count.expressionResultType = .integer64AttributeType
+      let request = NSFetchRequest<NSDictionary>(entityName: "PlayEntity")
+      request.predicate = NSPredicate(
+        format: "accountKey == %@ AND submissionTime >= %@", key, date as NSDate)
+      request.resultType = .dictionaryResultType
+      request.propertiesToFetch = ["mediaFileId", count]
+      request.propertiesToGroupBy = ["mediaFileId"]
+      return ((try? context.fetch(request)) ?? []).reduce(into: [:]) { counts, row in
+        guard let id = row["mediaFileId"] as? String, !id.isEmpty,
+          let plays = row["plays"] as? Int
+        else { return }
+        counts[id] = plays
+      }
+    }
+  }
+
   /// The aggregates of the newest generation that has any, decayed to now.
   func snapshot() async -> AffinitySnapshot {
     guard let key = AuthService.shared.accountKey else { return AffinitySnapshot() }
