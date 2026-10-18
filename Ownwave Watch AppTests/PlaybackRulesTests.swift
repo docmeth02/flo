@@ -118,6 +118,29 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertEqual(origin("Some Album"), .album)
   }
 
+  /// The watch keeps a start through its output setup's interruptions, a
+  /// bounded number of times; the phone pauses on every interruption.
+  func testInterruptionKeepsOnlyAWatchStartUnderWay() {
+    typealias Player = PlayerViewModel
+    let activating = Player.PendingStart()
+    var settled = Player.PendingStart()
+    settled.isActivating = false
+    var exhausted = Player.PendingStart()
+    exhausted.resumes = Player.maxSettleResumes
+
+    XCTAssertTrue(Player.keepsStart(activating, isPlaying: false, platformKeeps: true))
+    XCTAssertTrue(Player.keepsStart(settled, isPlaying: true, platformKeeps: true))
+    XCTAssertFalse(Player.keepsStart(settled, isPlaying: false, platformKeeps: true))
+    XCTAssertFalse(Player.keepsStart(exhausted, isPlaying: true, platformKeeps: true))
+    XCTAssertFalse(Player.keepsStart(nil, isPlaying: true, platformKeeps: true))
+    XCTAssertFalse(Player.keepsStart(activating, isPlaying: true, platformKeeps: false))
+    #if os(watchOS)
+      XCTAssertTrue(AppPlatform.keepsStartThroughInterruptions)
+    #else
+      XCTAssertFalse(AppPlatform.keepsStartThroughInterruptions)
+    #endif
+  }
+
   func testBitRatesNoLongerOfferedReadAsTheDefault() {
     XCTAssertEqual(TranscodingSettings.offeredBitRate(nil), "192")
     for rate in ["32", "64", "96", "", "abc"] {
