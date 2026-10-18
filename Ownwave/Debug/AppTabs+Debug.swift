@@ -6,7 +6,7 @@
 #if DEBUG
   import SwiftUI
 
-  // Simulator verification only. FLO_DEBUG_SCREEN=home|library|search|
+  // Simulator verification only. FLO_DEBUG_SCREEN=home|library|taste|search|
   // settings|album|artist|playlist|nowplaying opens that screen once the
   // library answered (album, artist and playlist: the first of each, or the
   // one named by FLO_DEBUG_SCREEN_ID), for screenshots.
@@ -21,6 +21,7 @@
       }
       switch screen {
       case "library": tab = .library
+      case "taste": tab = .taste
       case "search": tab = .search
       case "settings": paths[.home, default: NavigationPath()].append(Route.settings)
       case "album":
