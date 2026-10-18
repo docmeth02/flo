@@ -39,10 +39,13 @@ struct NowPlayingView: View {
             .padding(.top, insets.top)
             .padding(.bottom, max(insets.bottom, 20))
             .frame(height: page)
-            UpNextPage(tint: shades?.tint ?? palette.accent, showPlayer: { scroll(to: 0) })
-              .padding(.top, insets.top)
-              .padding(.bottom, insets.bottom + 24)
-              .frame(minHeight: page, alignment: .top)
+            // A station has no queue to show.
+            if !player.isLiveRadio {
+              UpNextPage(tint: shades?.tint ?? palette.accent, showPlayer: { scroll(to: 0) })
+                .padding(.top, insets.top)
+                .padding(.bottom, insets.bottom + 24)
+                .frame(minHeight: page, alignment: .top)
+            }
           }
         }
       }
@@ -110,24 +113,6 @@ private struct PagerSnap: ScrollTargetBehavior {
     let toQueue =
       if fromPlayer { y > Self.threshold } else { start > page + 1 || y > page - Self.threshold }
     target.rect.origin.y = toQueue ? page : 0
-  }
-}
-
-extension PlayerViewModel {
-  func togglePlayback() {
-    if isPlaying { pause() } else { play() }
-  }
-
-  /// A mix or its Keep Playing continuation.
-  var isSmartMix: Bool {
-    guard hasNowPlaying() else { return false }
-    return [.smartShuffle, .keepPlaying].contains(nowPlaying.playbackOrigin)
-  }
-
-  /// "Smart Mix", else the album or playlist the queue came from.
-  var sourceName: String {
-    guard hasNowPlaying() else { return "" }
-    return isSmartMix ? "Smart Mix" : nowPlaying.contextName ?? ""
   }
 }
 
@@ -400,6 +385,8 @@ private struct Scrubber: View {
   @Environment(\.palette) private var palette
   // The position under the finger while dragging.
   @State private var dragged: Double?
+  // Decided when a drag starts: sideways seeks, up or down is the pager's.
+  @State private var seeks: Bool?
 
   var body: some View {
     let shown = dragged ?? clock.clampedProgress
@@ -414,18 +401,17 @@ private struct Scrubber: View {
         .frame(maxHeight: .infinity)
         .contentShape(Rectangle())
         .onTapGesture { seek(min(max($0.x / width, 0), 1)) }
-        // A drag that starts sideways seeks; one that starts up or down is
-        // left to the pager.
         .gesture(
           DragGesture(minimumDistance: 6)
             .onChanged {
-              guard dragged != nil || abs($0.translation.width) > abs($0.translation.height)
-              else { return }
+              if seeks == nil { seeks = abs($0.translation.width) > abs($0.translation.height) }
+              guard seeks == true else { return }
               dragged = min(max($0.location.x / width, 0), 1)
             }
             .onEnded { _ in
               if let dragged { seek(dragged) }
               dragged = nil
+              seeks = nil
             }
         )
       }

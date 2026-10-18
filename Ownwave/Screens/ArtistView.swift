@@ -151,7 +151,9 @@ struct ArtistView: View {
   }
 
   /// The five the design lists; Top Songs plays the server's full list.
+  /// Once per screen: it reappears after every pushed album.
   private func loadTopSongs() async {
+    guard topSongs.isEmpty else { return }
     let result = await withCheckedContinuation { continuation in
       RadioService.shared.getTopSongs(artistId: artist.id, count: 5) {
         continuation.resume(returning: $0)

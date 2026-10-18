@@ -3,10 +3,13 @@
 //  Ownwave
 //
 
+import ImageIO
 import SwiftUI
 
 /// An album's cover from the download or the cover cache, decoded off the
-/// main thread; a note glyph while it loads or when there is none.
+/// main thread at the size it is shown; a note glyph while it loads or when
+/// there is none. A row lets go of its bitmap when it scrolls away, and
+/// `CoverArt.thumbnails` keeps the recent ones within a memory budget.
 struct CoverArt: View {
   let albumId: String
   /// A local path for a downloaded album, else empty.
@@ -14,14 +17,29 @@ struct CoverArt: View {
   var radius: CGFloat = 8
 
   @Environment(\.palette) private var palette
+  @Environment(\.displayScale) private var scale
+  @State private var side: CGFloat = 0
   // Remembered with the album it is for, so a reused view never shows the
   // previous album's cover.
-  @State private var loaded: (albumId: String, image: UIImage?)?
+  @State private var loaded: (key: String, image: UIImage?)?
+
+  private static let thumbnails: NSCache<NSString, UIImage> = {
+    let cache = NSCache<NSString, UIImage>()
+    cache.totalCostLimit = 64 << 20
+    return cache
+  }()
+
+  /// The album and the pixel size, rounded up so a few points of layout do
+  /// not decode it again.
+  private var key: String {
+    let pixels = Int((side * scale / 64).rounded(.up)) * 64
+    return "\(albumId)@\(pixels)"
+  }
 
   var body: some View {
     Color.clear
       .overlay {
-        if let image = loaded?.albumId == albumId ? loaded?.image : nil {
+        if let image = loaded?.key == key ? loaded?.image : nil {
           Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
         } else {
           palette.surface2
@@ -33,15 +51,43 @@ struct CoverArt: View {
         }
       }
       .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-      .task(id: albumId) {
-        guard !albumId.isEmpty, loaded?.albumId != albumId else { return }
+      .onGeometryChange(for: CGFloat.self) { max($0.size.width, $0.size.height) } action: {
+        side = $0
+      }
+      .task(id: key) {
+        guard !albumId.isEmpty, side > 0, loaded?.key != key else { return }
+        let key = key
+        if let cached = Self.thumbnails.object(forKey: key as NSString) {
+          loaded = (key, cached)
+          return
+        }
+        let pixels = Int(side * scale)
         let path = await CoverTint.coverFile(albumId: albumId, url: url)
-        let decoded = await Task.detached(priority: .userInitiated) {
-          path.flatMap(UIImage.init(contentsOfFile:)).flatMap(CoverTint.decoded)
+        let image = await Task.detached(priority: .userInitiated) {
+          path.flatMap { Self.thumbnail(path: $0, pixels: pixels) }
         }.value
         guard !Task.isCancelled else { return }
-        loaded = (albumId, decoded)
+        if let image, let cgImage = image.cgImage {
+          Self.thumbnails.setObject(
+            image, forKey: key as NSString, cost: cgImage.bytesPerRow * cgImage.height)
+        }
+        loaded = (key, image)
       }
+      .onDisappear { loaded = nil }
+  }
+
+  /// The file decoded at `pixels` on its longer side.
+  nonisolated private static func thumbnail(path: String, pixels: Int) -> UIImage? {
+    guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil)
+    else { return nil }
+    let options: [CFString: Any] = [
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceThumbnailMaxPixelSize: pixels,
+      kCGImageSourceCreateThumbnailWithTransform: true,
+      kCGImageSourceShouldCacheImmediately: true,
+    ]
+    return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+      .map(UIImage.init(cgImage:))
   }
 }
 

@@ -62,12 +62,20 @@ final class AppModel: ObservableObject {
         }
       }
       guard !album.songs.isEmpty else { return show("Not available offline") }
+      let onPhone = AlbumService.shared.downloadedMediaFileIds(collectionId: album.id)
+      guard album.songs.contains(where: { !onPhone.contains($0.playbackID) }) else {
+        return show("Already on this iPhone")
+      }
       albums.downloadAlbum(album)
       downloads.addItem(album)
       let bitRate = UserDefaultsManager.downloadBitRate
-      show(
-        bitRate == TranscodingSettings.sourceBitRate
-          ? "Downloading in original quality" : "Downloading at \(bitRate) kbps")
+      if AppPlatform.isOnCellular, !UserDefaultsManager.downloadOverCellular {
+        show("Downloads when on Wi-Fi")
+      } else {
+        show(
+          bitRate == TranscodingSettings.sourceBitRate
+            ? "Downloading in original quality" : "Downloading at \(bitRate) kbps")
+      }
     }
   }
 

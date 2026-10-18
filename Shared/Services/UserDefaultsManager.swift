@@ -115,8 +115,8 @@ class UserDefaultsManager {
     set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.streamOnCellular) }
   }
 
-  /// Downloads may use the watch's own cellular link; Wi-Fi and the iPhone
-  /// always can. Off by default.
+  /// Downloads may use cellular data: the watch's own link (Wi-Fi and the
+  /// paired iPhone always can), or the iPhone's. Off by default.
   static var downloadOverCellular: Bool {
     get { UserDefaults.standard.bool(forKey: UserDefaultsKeys.downloadOverCellular) }
     set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.downloadOverCellular) }

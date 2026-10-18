@@ -204,9 +204,7 @@ struct AlbumView: View {
       .font(.rowSubtitle)
       ProgressView(value: progress, total: 100).tint(color)
     }
-    .padding(.horizontal, 14)
-    .padding(.vertical, 12)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    .card(horizontal: 14, vertical: 12)
   }
 
   private func download() {
@@ -223,12 +221,11 @@ struct AlbumView: View {
   @ViewBuilder private var tracks: some View {
     let songs = displayAlbum.songs
     if !songs.isEmpty {
-      let isPlaylist = PlaybackService.isPlaylist(displayAlbum)
       Platter {
         ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
           TrackRow(
-            number: isPlaylist ? index + 1 : song.trackNumber, song: song, tint: tint,
-            menu: .song(song, context: album.name, isFromPlaylist: isPlaylist)
+            number: song.trackNumber, song: song, tint: tint,
+            menu: .song(song, context: album.name, isFromPlaylist: false)
           ) {
             if player.playItem(item: displayAlbum, startingAt: index) {
               app.isNowPlayingPresented = true

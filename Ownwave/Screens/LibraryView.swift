@@ -264,8 +264,9 @@ struct LibraryView: View {
       }
       let rate = UserDefaultsManager.downloadBitRate
       Text(
+        // The setting, not the files: earlier downloads keep their bitrate.
         (rate == TranscodingSettings.sourceBitRate
-          ? "Downloaded in original quality." : "Downloaded at \(rate) kbps.")
+          ? "Downloads in original quality." : "Downloads at \(rate) kbps.")
           + " \(storage.localDirectorySize) on this iPhone."
       )
       .font(.meta)
@@ -329,7 +330,7 @@ struct LibraryView: View {
   }
 }
 
-/// A downloaded album or playlist: its songs when done, the progress while
+/// A downloaded album: its songs when done, the progress while
 /// it downloads, and a failure a tap retries.
 private struct DownloadRow: View {
   let album: Album

@@ -9,7 +9,6 @@ import SwiftUI
 enum RowArt {
   case cover(albumId: String, url: String = "")
   case glyph(GlyphTile)
-  case none
 }
 
 /// A list row: art, title and subtitle, and an optional trailing view. The
@@ -31,8 +30,6 @@ struct ItemRow<Trailing: View>: View {
         CoverArt(albumId: albumId, url: url, radius: 7).frame(width: artSize, height: artSize)
       case .glyph(let tile):
         tile.frame(width: artSize, height: artSize)
-      case .none:
-        EmptyView()
       }
       VStack(alignment: .leading, spacing: 2) {
         Text(title)

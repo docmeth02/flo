@@ -78,10 +78,9 @@ struct SearchView: View {
       albums.getArtists()
       albums.fetchAlbums()
       albums.getPlaylists()
-      // Once it has songs: the view reappears after every pushed album or
-      // artist. A new phone has no song library before its first mix, so
-      // Search syncs it then.
-      guard songs?.isEmpty ?? true else { return }
+      // Read on every return, so a library synced meanwhile is searched. A
+      // new phone has no song library before its first mix, so Search syncs
+      // it then.
       var library = await SmartPlaybackService.shared.loadCachedLibrary().songs
       if library.isEmpty, ConnectivityMonitor.shared.canReachServer {
         library = await SmartPlaybackService.shared.syncSongLibrary()

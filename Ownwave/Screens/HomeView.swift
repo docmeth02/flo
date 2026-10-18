@@ -235,7 +235,6 @@ private struct PinLink: View {
   let target: MenuTarget
 
   @EnvironmentObject private var app: AppModel
-  @EnvironmentObject private var player: PlayerViewModel
   @Environment(\.palette) private var palette
 
   var body: some View {

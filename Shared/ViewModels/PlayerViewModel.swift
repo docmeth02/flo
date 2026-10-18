@@ -912,3 +912,22 @@ class PlayerViewModel: ObservableObject {
     player?.pause()
   }
 }
+
+// What the player screens show about the queue.
+extension PlayerViewModel {
+  func togglePlayback() {
+    if isPlaying { pause() } else { play() }
+  }
+
+  /// A mix or its Keep Playing continuation.
+  var isSmartMix: Bool {
+    guard hasNowPlaying() else { return false }
+    return [.smartShuffle, .keepPlaying].contains(nowPlaying.playbackOrigin)
+  }
+
+  /// "Smart Mix", else the album or playlist the queue came from.
+  var sourceName: String {
+    guard hasNowPlaying() else { return "" }
+    return isSmartMix ? "Smart Mix" : nowPlaying.contextName ?? ""
+  }
+}

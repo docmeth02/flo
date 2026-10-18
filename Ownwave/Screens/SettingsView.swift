@@ -17,6 +17,7 @@ struct SettingsView: View {
   @State private var wifiBitRate = UserDefaultsManager.maxBitRate
   @State private var cellularBitRate = UserDefaultsManager.cellularBitRate
   @State private var downloadBitRate = UserDefaultsManager.downloadBitRate
+  @State private var downloadOverCellular = UserDefaultsManager.downloadOverCellular
   @State private var username = ""
   @State private var serverVersion: String?
   @State private var cachedSongs = 0
@@ -53,6 +54,9 @@ struct SettingsView: View {
         section("Downloads (kbps)") {
           // Original as on the watch: the phone has room for lossless files.
           Segmented(options: Self.limitsWithOriginal, selection: $downloadBitRate)
+          toggle(
+            "Download on cellular", "Downloads wait for Wi-Fi when this is off",
+            isOn: $downloadOverCellular)
         }
         storage
         NavigationLink {
@@ -78,6 +82,10 @@ struct SettingsView: View {
     .onChange(of: wifiBitRate) { UserDefaultsManager.maxBitRate = $1 }
     .onChange(of: cellularBitRate) { UserDefaultsManager.cellularBitRate = $1 }
     .onChange(of: downloadBitRate) { UserDefaultsManager.downloadBitRate = $1 }
+    .onChange(of: downloadOverCellular) {
+      UserDefaultsManager.downloadOverCellular = $1
+      DownloadSession.shared.cellularAccessChanged()
+    }
     .onAppear {
       if case .found(let login) = KeychainManager.loadAuth() { username = login.username }
       AlbumService.shared.serverVersion { serverVersion = $0 }
