@@ -7,10 +7,12 @@
   import Foundation
 
   // Simulator verification only. FLO_DEBUG_WATCH=signin signs the watch in a
-  // few seconds after launch; FLO_DEBUG_WATCH=send:<albumId> sends that album.
+  // few seconds after launch; FLO_DEBUG_WATCH=send:<albumId> sends that album;
+  // FLO_DEBUG_WATCH=demo|demo-signedout shows a made-up watch for screenshots.
   extension WatchLink {
     func runDebugLaunchActions() {
       guard let action = ProcessInfo.processInfo.environment["FLO_DEBUG_WATCH"] else { return }
+      if action.hasPrefix("demo") { return showDemo(signedIn: action == "demo") }
       Task { @MainActor in
         try? await Task.sleep(for: .seconds(5))
         debugLog(
@@ -31,6 +33,27 @@
               + "watch collections=\(watch?.collections.count ?? -1) "
               + "incoming=\(watch?.incoming ?? [:])")
         }
+      }
+    }
+
+    /// Two albums on the watch and one on its way, from the cached library.
+    private func showDemo(signedIn: Bool) {
+      Task { @MainActor in
+        try? await Task.sleep(for: .seconds(3))
+        let albums = AppModel.shared.albums.albums
+        var state = Link.WatchState()
+        if signedIn, let key = AuthService.shared.accountKey {
+          state.account = .init(
+            user: "demo", host: URL(string: UserDefaultsManager.serverBaseURL)?.host ?? "", key: key)
+        }
+        state.followsPhone = true
+        state.collections = albums.prefix(2).map {
+          .init(id: $0.id, name: $0.name, artist: $0.albumArtist, songs: 11, kbps: 192)
+        }
+        state.musicBytes = 1_400_000_000
+        state.freeBytes = 18_300_000_000
+        let sends = albums.dropFirst(2).prefix(1).map { Send(album: $0, songs: 9, progress: 0.4) }
+        showDemo(state, sends: Array(sends))
       }
     }
   }

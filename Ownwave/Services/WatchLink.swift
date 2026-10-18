@@ -231,6 +231,20 @@ import WatchConnectivity
   }
 }
 
+#if DEBUG
+  extension WatchLink {
+    /// Stands in for a paired watch in screenshots (FLO_DEBUG_WATCH=demo);
+    /// the setters are this file's.
+    func showDemo(_ state: Link.WatchState?, sends: [Send]) {
+      isPaired = true
+      isAppInstalled = true
+      isReachable = true
+      watch = state
+      self.sends = sends
+    }
+  }
+#endif
+
 /// WatchConnectivity calls in on its own queue; this forwards to the main
 /// actor.
 private final class Receiver: NSObject, WCSessionDelegate {
