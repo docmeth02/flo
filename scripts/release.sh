@@ -36,8 +36,10 @@ auth=(-allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH"
 
 current=$(grep -m1 -o 'CURRENT_PROJECT_VERSION = [0-9]*' "$project" | grep -o '[0-9]*$')
 build=$((current + 1))
-[[ $(grep -c "CURRENT_PROJECT_VERSION = $current;" "$project") -eq 4 ]] \
-  || fail "expected CURRENT_PROJECT_VERSION = $current four times"
+# Every target carries the same build number.
+[[ $(grep -c "CURRENT_PROJECT_VERSION = $current;" "$project") \
+  -eq $(grep -c "CURRENT_PROJECT_VERSION = " "$project") ]] \
+  || fail "expected every CURRENT_PROJECT_VERSION to be $current"
 
 work=$(mktemp -d)
 log="$work/xcodebuild.log"
@@ -67,11 +69,13 @@ xcodebuild archive -project Ownwave.xcodeproj -scheme "Ownwave" -configuration R
   -destination "generic/platform=iOS" -archivePath "$work/ownwave.xcarchive" "${auth[@]}" \
   >"$log" 2>&1 || fail "archive failed, see $log"
 
-binary=$(find "$work/ownwave.xcarchive" -type f -path "*Ownwave Watch App.app/Ownwave Watch App" | head -1)
-[[ -n "$binary" ]] || fail "no watch binary in the archive"
-# Through a file: grep -q ending a pipe early could fail the check open.
-strings "$binary" >"$work/strings.txt" || fail "cannot read the release binary"
-if grep -q FLO_DEBUG "$work/strings.txt"; then fail "the release binary contains FLO_DEBUG"; fi
+for path in "Ownwave.app/Ownwave" "Ownwave Watch App.app/Ownwave Watch App"; do
+  binary=$(find "$work/ownwave.xcarchive" -type f -path "*/$path" | head -1)
+  [[ -n "$binary" ]] || fail "no $path in the archive"
+  # Through a file: grep -q ending a pipe early could fail the check open.
+  strings "$binary" >"$work/strings.txt" || fail "cannot read $path"
+  if grep -q FLO_DEBUG "$work/strings.txt"; then fail "$path contains FLO_DEBUG"; fi
+done
 
 if $dry_run; then
   echo "release: dry run done, build $build archived in $work, nothing uploaded"
