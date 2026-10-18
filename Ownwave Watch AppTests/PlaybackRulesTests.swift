@@ -24,6 +24,29 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertFalse(service.isPermanentFailure(URLError(.notConnectedToInternet)))
   }
 
+  /// The streaming limit follows the network: the Wi-Fi limit off cellular,
+  /// the cellular one on it, none when streaming on cellular is off.
+  func testStreamingBitRateFollowsTheNetwork() {
+    let defaults = UserDefaults.standard
+    let keys = [
+      UserDefaultsKeys.enableMaxBitRate, UserDefaultsKeys.cellularBitRate,
+      UserDefaultsKeys.streamOnCellular,
+    ]
+    let saved = keys.map { defaults.object(forKey: $0) }
+    defer { for (key, value) in zip(keys, saved) { defaults.set(value, forKey: key) } }
+
+    UserDefaultsManager.maxBitRate = "320"
+    UserDefaultsManager.cellularBitRate = "160"
+    defaults.removeObject(forKey: UserDefaultsKeys.streamOnCellular)
+    XCTAssertEqual(TranscodingSettings.streamingBitRate(onCellular: false), "320")
+    XCTAssertEqual(TranscodingSettings.streamingBitRate(onCellular: true), "160")
+    XCTAssertTrue(TranscodingSettings.streamsOverCellular)
+    UserDefaultsManager.streamOnCellular = false
+    XCTAssertNil(TranscodingSettings.streamingBitRate(onCellular: true))
+    XCTAssertEqual(TranscodingSettings.streamingBitRate(onCellular: false), "320")
+    XCTAssertFalse(TranscodingSettings.streamsOverCellular)
+  }
+
   /// Only Navidrome's own answer to a login logs out; a bare 401 from a proxy
   /// and a lost connection keep the session.
   func testLoginErrors() {
@@ -95,6 +118,29 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertEqual(origin("Cached"), .cached)
     XCTAssertEqual(origin("Road Trip", playlist: true), .playlist)
     XCTAssertEqual(origin("Some Album"), .album)
+  }
+
+  /// The watch keeps a start through its output setup's interruptions, a
+  /// bounded number of times; the phone pauses on every interruption.
+  func testInterruptionKeepsOnlyAWatchStartUnderWay() {
+    typealias Player = PlayerViewModel
+    let activating = Player.PendingStart()
+    var settled = Player.PendingStart()
+    settled.isActivating = false
+    var exhausted = Player.PendingStart()
+    exhausted.resumes = Player.maxSettleResumes
+
+    XCTAssertTrue(Player.keepsStart(activating, isPlaying: false, platformKeeps: true))
+    XCTAssertTrue(Player.keepsStart(settled, isPlaying: true, platformKeeps: true))
+    XCTAssertFalse(Player.keepsStart(settled, isPlaying: false, platformKeeps: true))
+    XCTAssertFalse(Player.keepsStart(exhausted, isPlaying: true, platformKeeps: true))
+    XCTAssertFalse(Player.keepsStart(nil, isPlaying: true, platformKeeps: true))
+    XCTAssertFalse(Player.keepsStart(activating, isPlaying: true, platformKeeps: false))
+    #if os(watchOS)
+      XCTAssertTrue(AppPlatform.keepsStartThroughInterruptions)
+    #else
+      XCTAssertFalse(AppPlatform.keepsStartThroughInterruptions)
+    #endif
   }
 
   func testBitRatesNoLongerOfferedReadAsTheDefault() {

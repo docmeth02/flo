@@ -20,6 +20,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 struct OwnwaveApp: App {
   @UIApplicationDelegateAdaptor private var appDelegate: AppDelegate
 
+  init() {
+    AppLaunch.warmUp()
+  }
+
   var body: some Scene {
     WindowGroup {
       RootView()

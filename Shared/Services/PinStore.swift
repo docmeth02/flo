@@ -5,12 +5,13 @@
 
 import Foundation
 
-/// Albums and artists the user pinned to the top of their lists, stored per
-/// account so another login sees its own pins and a logout loses nothing.
+/// Albums, artists, playlists and radios the user pinned to the top, stored
+/// per account so another login sees its own pins and a logout loses nothing.
+/// The watch lists pinned albums and artists; the phone all four.
 @MainActor
 final class PinStore: ObservableObject {
   enum Kind: String {
-    case album, artist
+    case album, artist, playlist, radio
   }
 
   static let shared = PinStore()

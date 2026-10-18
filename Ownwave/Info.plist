@@ -12,6 +12,7 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>FamiljenGrotesk[wght].ttf</string>
+		<string>JetBrainsMono-Medium.ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

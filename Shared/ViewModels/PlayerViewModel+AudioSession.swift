@@ -128,6 +128,18 @@ extension PlayerViewModel {
     pendingStart = nil
   }
 
+  /// Whether an interruption leaves a start under way alone. On the watch the
+  /// output setup interrupts a start that plays or is still activating, and
+  /// the settle resumes it a bounded number of times; the phone pauses on
+  /// every interruption.
+  static func keepsStart(
+    _ start: PendingStart?, isPlaying: Bool,
+    platformKeeps: Bool = AppPlatform.keepsStartThroughInterruptions
+  ) -> Bool {
+    guard platformKeeps, let start else { return false }
+    return (isPlaying || start.isActivating) && start.resumes < maxSettleResumes
+  }
+
   private func handleInterruptionNotification(_ notification: Notification) {
     guard let userInfo = notification.userInfo,
       let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? Int,
@@ -147,9 +159,7 @@ extension PlayerViewModel {
           + " otherAudio=\(session.isOtherAudioPlaying)"
           + " silenceHint=\(session.secondaryAudioShouldBeSilencedHint)")
       // The system already paused the player; the start stays wanted.
-      if let start = pendingStart, isPlaying || start.isActivating,
-        start.resumes < Self.maxSettleResumes
-      {
+      if Self.keepsStart(pendingStart, isPlaying: isPlaying) {
         if !isPlaying { pendingStart?.interruptedWhileActivating = true }
         loadWatchdog?.cancel()
         resumeAfterInterruption = true

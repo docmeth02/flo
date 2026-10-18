@@ -37,6 +37,9 @@ class PlayerViewModel: ObservableObject {
   /// The server is out of reach: the song keeps its position and stays
   /// wanted (isPlaying) until it can load again.
   @Published private(set) var isWaitingForConnection = false
+  /// The song is not on the device and streaming is switched off on this
+  /// network (the phone on cellular); it waits paused.
+  @Published var isStreamingBlocked = false
   @Published var isShuffling: Bool = false
   @Published var isPlaying: Bool = false
 
@@ -907,5 +910,24 @@ class PlayerViewModel: ObservableObject {
       player?.removeTimeObserver(timeObserverToken)
     }
     player?.pause()
+  }
+}
+
+// What the player screens show about the queue.
+extension PlayerViewModel {
+  func togglePlayback() {
+    if isPlaying { pause() } else { play() }
+  }
+
+  /// A mix or its Keep Playing continuation.
+  var isSmartMix: Bool {
+    guard hasNowPlaying() else { return false }
+    return [.smartShuffle, .keepPlaying].contains(nowPlaying.playbackOrigin)
+  }
+
+  /// "Smart Mix", else the album or playlist the queue came from.
+  var sourceName: String {
+    guard hasNowPlaying() else { return "" }
+    return isSmartMix ? "Smart Mix" : nowPlaying.contextName ?? ""
   }
 }

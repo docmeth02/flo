@@ -65,6 +65,8 @@ enum StreamSourceFailure: Error, Equatable {
   case unavailable
   /// The server says this song cannot be streamed.
   case unplayable
+  /// Streaming is switched off on this network.
+  case blocked
 }
 
 /// How a failed transcode decision request is handled.
@@ -156,7 +158,8 @@ class AlbumService {
   @MainActor func resolveStreamSource(songId: String, originalSuffix: String?, offset: Int) async
     -> Result<StreamSource, StreamSourceFailure>
   {
-    let kbps = Int(UserDefaultsManager.maxBitRate) ?? 0
+    guard let bitRate = TranscodingSettings.streamingBitRate else { return .failure(.blocked) }
+    let kbps = Int(bitRate) ?? 0
     // Asked even while the monitor says the server is away: its verdict can
     // be stale, and the request is bounded.
     switch await transcodeDecision(songId: songId, kbps: kbps) {
@@ -173,9 +176,10 @@ class AlbumService {
 
   /// Asks for the next song's decision ahead of time. Main thread.
   func prefetchTranscodeDecision(songId: String) {
-    guard ConnectivityMonitor.shared.isServerReachable, localFileURL(mediaFileId: songId) == nil
+    guard ConnectivityMonitor.shared.isServerReachable, localFileURL(mediaFileId: songId) == nil,
+      let bitRate = TranscodingSettings.streamingBitRate
     else { return }
-    let kbps = Int(UserDefaultsManager.maxBitRate) ?? 0
+    let kbps = Int(bitRate) ?? 0
     Task { @MainActor in _ = await transcodeDecision(songId: songId, kbps: kbps) }
   }
 
@@ -330,6 +334,14 @@ class AlbumService {
   /// Every artist the account rated, with its rating.
   func getRatedArtists(completion: @escaping (Result<[Artist], Error>) -> Void) {
     ndList(API.NDEndpoint.getArtists, ["has_rating": "true", "_start": 0, "_end": 0], completion)
+  }
+
+  /// The server's version, nil when it does not say or does not answer.
+  func serverVersion(completion: @escaping (String?) -> Void) {
+    APIManager.shared.SubsonicEndpointRequest(endpoint: API.SubsonicEndpoint.ping, parameters: nil) {
+      (response: DataResponse<PingResponse, AFError>) in
+      completion(response.value?.subsonicResponse.serverVersion)
+    }
   }
 
   func getStarredSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
@@ -515,7 +527,7 @@ class AlbumService {
       ?? CoverArtCacheManager.shared.cachedFilePath(albumId: albumId)
       ?? subsonicURL(
         endpoint: API.SubsonicEndpoint.coverArt,
-        parameters: ["id": "al-\(albumId)", "size": API.coverArtSize])
+        parameters: ["id": "al-\(albumId)", "size": AppPlatform.coverArtSize])
   }
 
   /// Downloads the cover art `artId` as the stored cover of `id`; without
@@ -524,7 +536,7 @@ class AlbumService {
     artId: String, as id: String, overwrite: Bool = true,
     completion: @escaping (Result<URL, Error>) -> Void
   ) {
-    let params: [String: Any] = ["id": artId, "size": API.coverArtSize]
+    let params: [String: Any] = ["id": artId, "size": AppPlatform.coverArtSize]
 
     APIManager.shared.SubsonicEndpointDownload(
       endpoint: API.SubsonicEndpoint.coverArt, parameters: params

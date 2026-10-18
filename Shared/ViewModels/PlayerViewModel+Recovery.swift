@@ -301,6 +301,7 @@ extension PlayerViewModel {
     pendingStartPosition = position
     isMediaLoading = true
     isMediaFailed = false
+    isStreamingBlocked = false
     connectionWait?.isReloading = true
 
     let generation = loadGeneration
@@ -319,6 +320,12 @@ extension PlayerViewModel {
       let result = await AlbumService.shared.resolveStreamSource(
         songId: songId, originalSuffix: suffix, offset: Int(position))
       guard let self, self.loadGeneration == generation, self.isCurrentTrack(trackId) else { return }
+      if case .failure(.blocked) = result {
+        self.isMediaLoading = false
+        self.isStreamingBlocked = true
+        self.pause()
+        return
+      }
       // Paused, Play asks again.
       if case .failure(.unavailable) = result {
         self.isMediaLoading = false
@@ -339,11 +346,18 @@ extension PlayerViewModel {
     }
   }
 
+  /// An item for a stream or a file, kept off cellular while streaming there
+  /// is off (`streamsOverCellular`).
+  static func streamItem(_ url: URL) -> AVPlayerItem {
+    let options = [AVURLAssetAllowsCellularAccessKey: TranscodingSettings.streamsOverCellular]
+    return AVPlayerItem(asset: AVURLAsset(url: url, options: options))
+  }
+
   private func attachItem(
     url: URL, trackId: String?, isRemote: Bool, isTranscoded: Bool, offset: Double,
     seekTo position: Double?
   ) {
-    let item = AVPlayerItem(url: url)
+    let item = Self.streamItem(url)
     if isTranscoded { bufferWholeSong(of: item, from: offset) }
     playerItem = item
     player?.replaceCurrentItem(with: item)

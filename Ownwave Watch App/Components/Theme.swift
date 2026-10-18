@@ -5,28 +5,25 @@
 
 import SwiftUI
 
+/// The watch's colors: the dark palette plus a few the phone does not use.
 extension Color {
-  static let floSurface = Color(red: 0x15 / 255, green: 0x14 / 255, blue: 0x23 / 255)
+  static let floSurface = Palette.dark.surface
   /// Loading rows and the stand-in for a missing cover.
   static let floSkeleton = Color(red: 0x23 / 255, green: 0x23 / 255, blue: 0x2E / 255)
-  static let floLilac = Color(red: 0xC4 / 255, green: 0xA4 / 255, blue: 0xFE / 255)
+  static let floLilac = Palette.dark.fill
   /// Labels on a lilac or cover tinted fill, dark enough for both.
-  static let floInk = Color(red: 0x12 / 255, green: 0x0E / 255, blue: 0x22 / 255)
+  static let floInk = Palette.dark.ink
   /// Behind white labels the system draws itself (swipe actions), where the
   /// light lilac would be unreadable; the brand's deep lilac.
-  static let floLilacDeep = Color(red: 0x5E / 255, green: 0x4B / 255, blue: 0xC3 / 255)
-  static let floText = Color(red: 0xF1 / 255, green: 0xF0 / 255, blue: 0xFC / 255)
+  static let floLilacDeep = Palette.light.accent
+  static let floText = Palette.dark.text
   /// The "wave" of the wordmark, a lighter lilac than the accent.
-  static let floWave = Color(red: 0xCA / 255, green: 0xAC / 255, blue: 0xFF / 255)
-  static let floSecondary = Color(red: 0xA4 / 255, green: 0xA2 / 255, blue: 0xB7 / 255)
+  static let floWave = Palette.dark.accent
+  static let floSecondary = Palette.dark.secondary
   /// Meta text on top of a cover.
   static let floOnCover = Color(red: 0xD6 / 255, green: 0xD5 / 255, blue: 0xDE / 255)
-  static let floLiked = Color(red: 0xFF / 255, green: 0x45 / 255, blue: 0x3A / 255)
-  static let floWarning = Color(red: 0xFF / 255, green: 0x9F / 255, blue: 0x0A / 255)
   static let floWarningText = Color(red: 0xFF / 255, green: 0xB3 / 255, blue: 0x40 / 255)
-  static let floDownloaded = Color(red: 0x32 / 255, green: 0xD7 / 255, blue: 0x4B / 255)
   static let floDownloadedText = Color(red: 0x5E / 255, green: 0xE0 / 255, blue: 0x7A / 255)
-  static let floDestructive = Color(red: 0xFF / 255, green: 0x69 / 255, blue: 0x61 / 255)
   /// Elapsed and remaining time on Now Playing.
   static let floTimeText = Color(red: 0xC4 / 255, green: 0xC3 / 255, blue: 0xCF / 255)
   /// Behind a lilac glyph tile.
@@ -49,15 +46,11 @@ enum FloLayout {
 }
 
 extension Font {
-  private static func familjen(_ size: CGFloat, _ style: Font.TextStyle) -> Font {
-    .custom("Familjen Grotesk", size: size, relativeTo: style).weight(.semibold)
-  }
-
-  static let floWordmark = familjen(18, .title3)
+  static let floWordmark = familjen(18, relativeTo: .title3)
   /// The playing song on the home screen.
-  static let floTitle = familjen(17, .headline)
-  static let floSong = familjen(15, .headline)
-  static let floHero = familjen(18, .headline)
+  static let floTitle = familjen(17, relativeTo: .headline)
+  static let floSong = familjen(15, relativeTo: .headline)
+  static let floHero = familjen(18, relativeTo: .headline)
   // Text styles rather than point sizes, so the watch's text size applies.
   static let floRow = Font.system(.subheadline, weight: .medium)
   static let floRowTitle = Font.system(.subheadline, weight: .semibold)
@@ -65,11 +58,10 @@ extension Font {
   static let floSection = Font.system(.footnote, weight: .semibold)
   /// Badges and small labels.
   static let floCaption = Font.system(.caption2, weight: .semibold)
-  static let floTime = familjen(14, .caption2).monospacedDigit()
-  static let floButton = familjen(16, .subheadline)
-  static let floNavTitle = familjen(15, .headline)
-  /// Button labels are set 0.02 em tighter, as in the design.
-  static let floButtonTracking: CGFloat = -0.02 * 16
+  static let floTime = familjen(14, relativeTo: .caption2).monospacedDigit()
+  static let floButton = familjen(16, relativeTo: .subheadline)
+  static let floNavTitle = familjen(15, relativeTo: .headline)
+  static let floButtonTracking = buttonTracking(16)
 }
 
 /// Filled capsule with an ink label: Play, Play Something, Login. Lilac,
