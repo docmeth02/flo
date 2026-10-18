@@ -5,7 +5,7 @@
 
 import Foundation
 
-/// Searches the library the watch already has, so it works offline.
+/// Searches the library already on the device, so it works offline.
 enum LibrarySearch {
   struct Results {
     let artists: [Artist]
@@ -15,21 +15,29 @@ enum LibrarySearch {
     var isEmpty: Bool { artists.isEmpty && albums.isEmpty && songs.isEmpty }
   }
 
-  static let artistLimit = 5
-  static let albumLimit = 5
-  static let songLimit = 15
+  /// How many results of each kind a screen lists.
+  struct Limits {
+    let artists: Int
+    let albums: Int
+    let songs: Int
+
+    static let watch = Limits(artists: 5, albums: 5, songs: 15)
+    static let phone = Limits(artists: 20, albums: 20, songs: 50)
+  }
 
   /// Artists by name, albums by name and album artist, songs by title,
   /// artist and album, ignoring case and accents. Nil for a blank query,
   /// which searches nothing.
-  static func search(_ query: String, artists: [Artist], albums: [Album], songs: [Song]) -> Results?
-  {
+  static func search(
+    _ query: String, artists: [Artist], albums: [Album], songs: [Song], limits: Limits
+  ) -> Results? {
     let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !query.isEmpty else { return nil }
     return Results(
-      artists: matches(query, in: artists, limit: artistLimit, fields: [\.name]),
-      albums: matches(query, in: albums, limit: albumLimit, fields: [\.name, \.albumArtist]),
-      songs: matches(query, in: songs, limit: songLimit, fields: [\.title, \.artist, \.albumName]))
+      artists: matches(query, in: artists, limit: limits.artists, fields: [\.name]),
+      albums: matches(query, in: albums, limit: limits.albums, fields: [\.name, \.albumArtist]),
+      songs: matches(
+        query, in: songs, limit: limits.songs, fields: [\.title, \.artist, \.albumName]))
   }
 
   /// Up to `limit` items with a field containing `query`. Those whose first

@@ -147,8 +147,8 @@ extension PlayerViewModel {
           + " otherAudio=\(session.isOtherAudioPlaying)"
           + " silenceHint=\(session.secondaryAudioShouldBeSilencedHint)")
       // The system already paused the player; the start stays wanted.
-      if let start = pendingStart, isPlaying || start.isActivating,
-        start.resumes < Self.maxSettleResumes
+      if AppPlatform.keepsStartThroughInterruptions, let start = pendingStart,
+        isPlaying || start.isActivating, start.resumes < Self.maxSettleResumes
       {
         if !isPlaying { pendingStart?.interruptedWhileActivating = true }
         loadWatchdog?.cancel()

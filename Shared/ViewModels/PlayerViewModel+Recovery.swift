@@ -301,6 +301,7 @@ extension PlayerViewModel {
     pendingStartPosition = position
     isMediaLoading = true
     isMediaFailed = false
+    isStreamingBlocked = false
     connectionWait?.isReloading = true
 
     let generation = loadGeneration
@@ -319,6 +320,12 @@ extension PlayerViewModel {
       let result = await AlbumService.shared.resolveStreamSource(
         songId: songId, originalSuffix: suffix, offset: Int(position))
       guard let self, self.loadGeneration == generation, self.isCurrentTrack(trackId) else { return }
+      if case .failure(.blocked) = result {
+        self.isMediaLoading = false
+        self.isStreamingBlocked = true
+        self.pause()
+        return
+      }
       // Paused, Play asks again.
       if case .failure(.unavailable) = result {
         self.isMediaLoading = false

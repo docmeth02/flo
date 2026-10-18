@@ -24,6 +24,27 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertFalse(service.isPermanentFailure(URLError(.notConnectedToInternet)))
   }
 
+  /// The streaming limit follows the network: the Wi-Fi limit off cellular,
+  /// the cellular one on it, none when streaming on cellular is off.
+  func testStreamingBitRateFollowsTheNetwork() {
+    let defaults = UserDefaults.standard
+    let keys = [
+      UserDefaultsKeys.enableMaxBitRate, UserDefaultsKeys.cellularBitRate,
+      UserDefaultsKeys.streamOnCellular,
+    ]
+    let saved = keys.map { defaults.object(forKey: $0) }
+    defer { for (key, value) in zip(keys, saved) { defaults.set(value, forKey: key) } }
+
+    UserDefaultsManager.maxBitRate = "320"
+    UserDefaultsManager.cellularBitRate = "160"
+    defaults.removeObject(forKey: UserDefaultsKeys.streamOnCellular)
+    XCTAssertEqual(TranscodingSettings.streamingBitRate(onCellular: false), "320")
+    XCTAssertEqual(TranscodingSettings.streamingBitRate(onCellular: true), "160")
+    UserDefaultsManager.streamOnCellular = false
+    XCTAssertNil(TranscodingSettings.streamingBitRate(onCellular: true))
+    XCTAssertEqual(TranscodingSettings.streamingBitRate(onCellular: false), "320")
+  }
+
   /// Only Navidrome's own answer to a login logs out; a bare 401 from a proxy
   /// and a lost connection keep the session.
   func testLoginErrors() {

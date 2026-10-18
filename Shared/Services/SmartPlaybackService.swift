@@ -140,7 +140,9 @@ final class SmartPlaybackService {
         Task(priority: .utility) { _ = await self.syncSongLibrary() }
       }
     }
-    if !canStream || songs.isEmpty {
+    // Streaming switched off on this network (the phone on cellular) leaves
+    // the songs on the device as well.
+    if !canStream || songs.isEmpty || TranscodingSettings.streamingBitRate == nil {
       songs = await offlinePlayableSongs()
     }
     guard !songs.isEmpty else { return ([], nil) }

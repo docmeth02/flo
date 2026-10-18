@@ -6,11 +6,6 @@
 import SwiftUI
 import WatchKit
 
-/// "1 song", "3 songs".
-func counted(_ count: Int, _ noun: String) -> String {
-  "\(count) \(noun)\(count == 1 ? "" : "s")"
-}
-
 /// The app's name, "Own" in the text color and "wave" in light lilac, on
 /// Home and the login screen.
 struct Wordmark: View {

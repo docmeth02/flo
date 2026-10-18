@@ -70,7 +70,8 @@ struct WatchSearchView: View {
       let query = query
       let found = await Task.detached {
         LibrarySearch.search(
-          query, artists: library.artists, albums: library.albums, songs: library.songs)
+          query, artists: library.artists, albums: library.albums, songs: library.songs,
+          limits: .watch)
       }.value
       guard !Task.isCancelled else { return }
       results = found

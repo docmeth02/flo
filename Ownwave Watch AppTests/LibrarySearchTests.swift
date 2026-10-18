@@ -23,7 +23,7 @@ final class LibrarySearchTests: XCTestCase {
   private func search(
     _ query: String, artists: [Artist] = [], albums: [Album] = [], songs: [Song] = []
   ) -> LibrarySearch.Results? {
-    LibrarySearch.search(query, artists: artists, albums: albums, songs: songs)
+    LibrarySearch.search(query, artists: artists, albums: albums, songs: songs, limits: .watch)
   }
 
   func testIgnoresCaseAndAccents() throws {
@@ -60,9 +60,9 @@ final class LibrarySearchTests: XCTestCase {
     let albums = (0..<20).map { album("al\($0)", "Record \($0)", by: "Band") }
     let songs = (0..<40).map { song("s\($0)", "Tune \($0)", by: "Band", on: "Record") }
     let results = search("band", artists: artists, albums: albums, songs: songs)
-    XCTAssertEqual(results?.artists.count, LibrarySearch.artistLimit)
-    XCTAssertEqual(results?.albums.count, LibrarySearch.albumLimit)
-    XCTAssertEqual(results?.songs.count, LibrarySearch.songLimit)
+    XCTAssertEqual(results?.artists.count, LibrarySearch.Limits.watch.artists)
+    XCTAssertEqual(results?.albums.count, LibrarySearch.Limits.watch.albums)
+    XCTAssertEqual(results?.songs.count, LibrarySearch.Limits.watch.songs)
     // Within a rank the list's order is kept.
     XCTAssertEqual(results?.songs.first?.id, "s0")
   }

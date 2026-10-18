@@ -98,6 +98,23 @@ class UserDefaultsManager {
     }
   }
 
+  /// The phone's streaming limit on cellular, from the same choices.
+  static var cellularBitRate: String {
+    get {
+      TranscodingSettings.offeredBitRate(
+        UserDefaults.standard.string(forKey: UserDefaultsKeys.cellularBitRate))
+    }
+    set {
+      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.cellularBitRate)
+    }
+  }
+
+  /// Whether the phone streams on cellular at all. On by default.
+  static var streamOnCellular: Bool {
+    get { UserDefaults.standard.object(forKey: UserDefaultsKeys.streamOnCellular) as? Bool ?? true }
+    set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.streamOnCellular) }
+  }
+
   /// Downloads may use the watch's own cellular link; Wi-Fi and the iPhone
   /// always can. Off by default.
   static var downloadOverCellular: Bool {

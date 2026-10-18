@@ -1,16 +1,17 @@
 //
 //  CoverTint.swift
-//  Ownwave Watch App
+//  flo
 //
 
 import SwiftUI
 import UIKit
 
-/// The cover's hue as a light glyph color: the average color of the cover,
-/// moved to OKLCH lightness 0.86 and chroma 0.1, so it reads on black at any
-/// hue. Gray covers have no hue worth keeping and get nil (use lilac).
+/// The cover's hue (OKLCH, from its average color) and the colors built on
+/// it. The watch's tint is that hue at lightness 0.86 and chroma 0.1, so it
+/// reads on black at any hue. Gray covers have no hue worth keeping and get
+/// nil (use lilac).
 enum CoverTint {
-  @MainActor private static var memo: [String: Color?] = [:]
+  @MainActor private static var memo: [String: Double?] = [:]
 
   /// A local `url` or the album's downloaded cover first, the cover cache
   /// otherwise, so offline playback keeps its artwork.
@@ -25,16 +26,22 @@ enum CoverTint {
 
   @MainActor
   static func color(albumId: String, url: String = "") async -> Color? {
+    await hue(albumId: albumId, url: url).map { color(hue: $0, lightness: 0.86, chroma: 0.1) }
+  }
+
+  /// The cover's OKLCH hue in radians, memoized per album.
+  @MainActor
+  static func hue(albumId: String, url: String = "") async -> Double? {
     guard !albumId.isEmpty else { return nil }
     if let known = memo[albumId] { return known }
     guard let path = await coverFile(albumId: albumId, url: url) else { return nil }
-    let tint = await Task.detached(priority: .utility) { () -> Color? in
+    let found = await Task.detached(priority: .utility) { () -> Double? in
       guard let image = UIImage(contentsOfFile: path), let rgb = averageColor(of: image)
       else { return nil }
-      return tint(from: rgb)
+      return hue(of: rgb)
     }.value
-    memo[albumId] = tint
-    return tint
+    memo[albumId] = found
+    return found
   }
 
   /// The image drawn once into a bitmap, so it is not decoded while drawing.
@@ -76,13 +83,9 @@ enum CoverTint {
     return (sum.0 / count, sum.1 / count, sum.2 / count)
   }
 
-  private static func tint(from rgb: (Double, Double, Double)) -> Color? {
+  private static func hue(of rgb: (Double, Double, Double)) -> Double? {
     func linear(_ c: Double) -> Double {
       c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
-    }
-    func gamma(_ c: Double) -> Double {
-      let c = min(max(c, 0), 1)
-      return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1 / 2.4) - 0.055
     }
 
     let (r, g, b) = (linear(rgb.0), linear(rgb.1), linear(rgb.2))
@@ -92,9 +95,16 @@ enum CoverTint {
     let labA = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
     let labB = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
     guard (labA * labA + labB * labB).squareRoot() >= 0.03 else { return nil }
+    return atan2(labB, labA)
+  }
 
-    let hue = atan2(labB, labA)
-    let (lightness, chroma) = (0.86, 0.1)
+  /// The sRGB color of an OKLCH lightness, chroma and hue (radians).
+  static func color(hue: Double, lightness: Double, chroma: Double) -> Color {
+    func gamma(_ c: Double) -> Double {
+      let c = min(max(c, 0), 1)
+      return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1 / 2.4) - 0.055
+    }
+
     let a = chroma * cos(hue)
     let bb = chroma * sin(hue)
     let l2 = pow(lightness + 0.3963377774 * a + 0.2158037573 * bb, 3)
@@ -104,51 +114,5 @@ enum CoverTint {
       red: gamma(4.0767416621 * l2 - 3.3077115913 * m2 + 0.2309699292 * s2),
       green: gamma(-1.2684380046 * l2 + 2.6097574011 * m2 - 0.3413193965 * s2),
       blue: gamma(-0.0041960863 * l2 - 0.7034186147 * m2 + 1.7076147010 * s2))
-  }
-}
-
-/// The cover filling the top of a screen, fading to black below.
-struct CoverBackdrop: View {
-  let albumId: String
-  /// The resolved cover, a local path for downloaded albums.
-  var url: String = ""
-  /// Nil fills the whole screen.
-  var height: CGFloat?
-
-  @State private var image: (albumId: String, image: UIImage?)?
-
-  var body: some View {
-    ZStack(alignment: .top) {
-      Color.black
-      if let uiImage = image?.albumId == albumId ? image?.image : nil {
-        Image(uiImage: uiImage)
-          .resizable()
-          .aspectRatio(contentMode: .fill)
-          .frame(maxWidth: .infinity)
-          .frame(height: height)
-          .frame(maxHeight: height == nil ? .infinity : nil)
-          .clipped()
-          .overlay(
-            LinearGradient(
-              stops: [
-                .init(color: .black.opacity(0.45), location: 0),
-                .init(color: .black.opacity(0.62), location: 0.38),
-                .init(color: .black.opacity(0.92), location: 0.70),
-                .init(color: .black, location: 0.88),
-              ], startPoint: .top, endPoint: .bottom)
-          )
-      }
-    }
-    .ignoresSafeArea()
-    .task(id: albumId) {
-      guard image?.albumId != albumId else { return }
-      let path = await CoverTint.coverFile(albumId: albumId, url: url)
-      // Decoding a full cover would stall the main thread mid-transition.
-      let decoded = await Task.detached(priority: .userInitiated) {
-        path.flatMap(UIImage.init(contentsOfFile:)).flatMap(CoverTint.decoded)
-      }.value
-      guard !Task.isCancelled else { return }
-      image = (albumId, decoded)
-    }
   }
 }

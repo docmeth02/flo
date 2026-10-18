@@ -30,18 +30,20 @@ class StreamCacheManager {
   // MARK: - Public API
 
   func cachedFileURL(mediaFileId: String) -> URL? {
-    let bitrate = UserDefaultsManager.maxBitRate
-    let key = cacheKey(mediaFileId: mediaFileId, bitrate: bitrate)
-
-    let exact = CoreDataManager.shared.getRecordByKey(
-      entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1
-    ).first
-    if let exact, let url = readyFileURL(for: exact) {
-      return url
+    let bitrate = TranscodingSettings.streamingBitRate
+    if let bitrate {
+      let key = cacheKey(mediaFileId: mediaFileId, bitrate: bitrate)
+      let exact = CoreDataManager.shared.getRecordByKey(
+        entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1
+      ).first
+      if let exact, let url = readyFileURL(for: exact) {
+        return url
+      }
     }
 
-    // Without the server, a copy cached at another bitrate beats no playback.
-    guard !ConnectivityMonitor.shared.canReachServer else { return nil }
+    // Without the server, or without streaming on this network, a copy cached
+    // at another bitrate beats no playback.
+    guard !ConnectivityMonitor.shared.canReachServer || bitrate == nil else { return nil }
 
     return CoreDataManager.shared.getRecordByKey(
       entity: CacheEntity.self, key: \CacheEntity.mediaFileId, value: mediaFileId
@@ -77,7 +79,7 @@ class StreamCacheManager {
     // storage and radio time on a second copy.
     guard AlbumService.shared.downloadedFileURL(mediaFileId: mediaFileId) == nil else { return }
 
-    let bitrate = UserDefaultsManager.maxBitRate
+    guard let bitrate = TranscodingSettings.streamingBitRate else { return }
     let key = cacheKey(mediaFileId: mediaFileId, bitrate: bitrate)
 
     // Register in-flight atomically — prevents duplicate downloads
@@ -227,8 +229,10 @@ class StreamCacheManager {
 
   /// Cancels the cache downloads in flight, except those of the given songs.
   func cancelAllInFlight(keeping mediaFileIds: Set<String> = []) {
-    let bitrate = UserDefaultsManager.maxBitRate
-    let kept = Set(mediaFileIds.map { cacheKey(mediaFileId: $0, bitrate: bitrate) })
+    // Without streaming on this network none of them is kept.
+    let kept = TranscodingSettings.streamingBitRate.map { bitrate in
+      Set(mediaFileIds.map { cacheKey(mediaFileId: $0, bitrate: bitrate) })
+    } ?? []
     for key in cancelDownloads(keeping: kept) {
       removeCacheRecord(key: key)
     }

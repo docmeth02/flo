@@ -53,7 +53,7 @@ class CoverArtCacheManager {
     if let cached { return completion(cached) }
     guard shouldDownload else { return }
 
-    let params: [String: Any] = ["id": "al-\(albumId)", "size": API.coverArtSize]
+    let params: [String: Any] = ["id": "al-\(albumId)", "size": AppPlatform.coverArtSize]
     APIManager.shared.SubsonicEndpointDownload(
       endpoint: API.SubsonicEndpoint.coverArt, parameters: params
     ) { [weak self] result in

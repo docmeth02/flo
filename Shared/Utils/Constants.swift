@@ -10,10 +10,6 @@ import Foundation
 enum API {
   static let NDAuthHeader = "X-ND-Authorization"
 
-  // Watch cover tiles are 36 to 100 points at 2x, so 200 px is the largest
-  // the watch shows.
-  static let coverArtSize = 200
-
   enum NDEndpoint {
     static let login = "/auth/login"
     static let getAlbum = "/api/album"
@@ -61,6 +57,9 @@ enum UserDefaultsKeys {
   static let playbackMode = "playbackMode"
   static let enableMaxBitRate = "enableMaxBitRate"
   static let downloadBitRate = "downloadBitRate"
+  // The phone's limits on cellular; enableMaxBitRate is its Wi-Fi limit.
+  static let cellularBitRate = "cellularBitRate"
+  static let streamOnCellular = "streamOnCellular"
   static let downloadOverCellular = "downloadOverCellular"
   static let streamCacheMaxSize = "streamCacheMaxSize"
   static let keepPlaying = "keepPlaying"
@@ -93,8 +92,21 @@ enum TranscodingSettings {
   static func offeredBitRate(_ stored: String?) -> String {
     stored.flatMap { bitRates.contains($0) ? $0 : nil } ?? defaultBitRate
   }
+  /// The limit streams and the stream cache use on the network at hand; nil
+  /// while streaming is off there. Only the phone tells cellular apart.
+  static var streamingBitRate: String? { streamingBitRate(onCellular: AppPlatform.isOnCellular) }
+
+  static func streamingBitRate(onCellular: Bool) -> String? {
+    guard onCellular else { return UserDefaultsManager.maxBitRate }
+    return UserDefaultsManager.streamOnCellular ? UserDefaultsManager.cellularBitRate : nil
+  }
   static let sourceFormat = "raw"
   static let targetFormat = "mp3"
+}
+
+/// "1 song", "3 songs".
+func counted(_ count: Int, _ noun: String) -> String {
+  "\(count) \(noun)\(count == 1 ? "" : "s")"
 }
 
 /// Prints verification traces in debug builds only.

@@ -30,7 +30,8 @@ struct ArtistAppEntity: AppEntity {
     /// An artist named exactly as spoken wins, so "Air" does not make Siri
     /// ask between Air, Air Supply and Airbourne.
     func entities(matching string: String) async throws -> [ArtistAppEntity] {
-      let found = LibrarySearch.search(string, artists: await Self.artists(), albums: [], songs: [])?
+      let found = LibrarySearch.search(
+        string, artists: await Self.artists(), albums: [], songs: [], limits: .watch)?
         .artists ?? []
       let spoken = string.trimmingCharacters(in: .whitespacesAndNewlines)
       let exact = found.filter {

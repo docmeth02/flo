@@ -5,7 +5,6 @@
 //  Created for watchOS target
 //
 
-import AVFoundation
 import SwiftUI
 import WatchKit
 
@@ -34,34 +33,7 @@ struct FloWatchApp: App {
   @WKApplicationDelegateAdaptor private var appDelegate: AppDelegate
 
   init() {
-    do {
-      try AVAudioSession.sharedInstance().setCategory(
-        .playback, mode: .default, policy: .longFormAudio)
-    } catch {
-      debugLog("Failed to set audio session category: \(error)")
-    }
-
-    StreamCacheManager.shared.reconcile()
-    // Earlier builds cached API requests with credentials in Cache.db.
-    URLCache.shared.removeAllCachedResponses()
-
-    // Deliver scrobbles queued in an earlier session; the outbox otherwise only
-    // wakes up when the next listen fails.
-    _ = ScrobbleQueueManager.shared
-    // Request times count from here.
-    _ = RequestLog.shared
-    // Imports the server's play log when the app becomes active.
-    _ = ListeningHistoryStore.shared
-    // Journal rows older than its windows only take space.
-    PlaybackJournal.shared.pruneOld()
-    // Sends rating edits the server has not confirmed yet.
-    _ = RatingStore.shared
-    // A relaunch for finished downloads delivers them to this session.
-    _ = DownloadSession.shared
-
-    #if DEBUG
-      SmartPlaybackService.shared.runDebugLaunchActions()
-    #endif
+    AppLaunch.warmUp()
   }
 
   var body: some Scene {
