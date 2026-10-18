@@ -79,7 +79,8 @@ extension [Song] {
   /// "12 songs · 48 min", empty while no song is loaded.
   var countAndLength: String {
     guard !isEmpty else { return "" }
-    let minutes = Int((reduce(0) { $0 + $1.duration } / 60).rounded())
+    let seconds = reduce(0) { $0 + ($1.duration.isFinite ? $1.duration : 0) }
+    let minutes = Int((seconds / 60).rounded())
     return "\(counted(count, "song")) · \(minutes) min"
   }
 }

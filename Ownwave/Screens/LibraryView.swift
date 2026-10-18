@@ -430,5 +430,6 @@ private struct CachedSongsView: View {
     }
     .containerBackground(palette.background, for: .navigation)
     .navigationTitle("Cached")
+    .navigationBarTitleDisplayMode(.inline)
   }
 }
