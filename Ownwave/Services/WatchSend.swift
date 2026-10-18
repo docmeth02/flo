@@ -171,18 +171,26 @@ final class WatchSend: NSObject {
   private func resume() {
     session.getAllTasks { running in
       DispatchQueue.main.async {
-        // Finished and cancelled tasks are left to their delegate calls.
-        for task in running where task.state == .running || task.state == .suspended {
+        // Finished and cancelled tasks are left to their delegate calls; a
+        // finished one's delivery may still be queued behind this, so its
+        // job waits for it rather than downloading again.
+        var finishing = Set<String>()
+        for task in running {
           guard let id = task.taskDescription,
             self.jobs.contains(where: { $0.id == id && !$0.downloaded })
           else {
             task.cancel()
             continue
           }
-          if self.tasks[id] == nil { self.tasks[id] = task }
+          switch task.state {
+          case .running, .suspended: if self.tasks[id] == nil { self.tasks[id] = task }
+          case .completed: finishing.insert(id)
+          default: break
+          }
         }
         guard !AppPlatform.isInBackground else { return }
-        for job in self.jobs where !job.downloaded && self.tasks[job.id] == nil {
+        for job in self.jobs
+        where !job.downloaded && self.tasks[job.id] == nil && !finishing.contains(job.id) {
           if let retryAt = job.retryAt, retryAt > Date() {
             self.retry(job, after: retryAt.timeIntervalSinceNow)
           } else {
