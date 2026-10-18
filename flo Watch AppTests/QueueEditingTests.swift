@@ -1,7 +1,9 @@
 import CoreData
 import XCTest
 
-@testable import flo_Watch_App
+#if canImport(flo_Watch_App)
+  @testable import flo_Watch_App
+#endif
 
 final class QueueEditingTests: XCTestCase {
   private var service: PlaybackService!

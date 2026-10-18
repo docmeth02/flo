@@ -1,6 +1,8 @@
 import XCTest
 
-@testable import flo_Watch_App
+#if canImport(flo_Watch_App)
+  @testable import flo_Watch_App
+#endif
 
 final class MixRankerTests: XCTestCase {
   private let now = Date(timeIntervalSince1970: 1_790_000_000)

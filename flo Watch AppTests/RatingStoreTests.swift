@@ -1,6 +1,8 @@
 import XCTest
 
-@testable import flo_Watch_App
+#if canImport(flo_Watch_App)
+  @testable import flo_Watch_App
+#endif
 
 @MainActor
 final class RatingStoreTests: XCTestCase {

@@ -1,6 +1,8 @@
 import XCTest
 
-@testable import flo_Watch_App
+#if canImport(flo_Watch_App)
+  @testable import flo_Watch_App
+#endif
 
 final class ArtistIdentityTests: XCTestCase {
   private func key(_ name: String?, _ mbid: String? = nil) -> String? {

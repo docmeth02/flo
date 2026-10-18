@@ -16,6 +16,8 @@ dry_run=false
 cd "$(dirname "$0")/.."
 project=flo.xcodeproj/project.pbxproj
 simulator=0B3254A5-34F8-4FC6-8C75-641D7EBA8331
+# The engine tests compile the shared sources for iOS.
+iphone_simulator=FCC76D75-A677-4993-944A-98777D8A0A67
 
 fail() { echo "release: $*" >&2; exit 1; }
 
@@ -44,6 +46,7 @@ bumped=false
 finish() {
   if $bumped; then git checkout -q -- "$project"; fi
   xcrun simctl terminate "$simulator" de.m2-entertainment.ownwave.watchkitapp 2>/dev/null || true
+  xcrun simctl shutdown "$iphone_simulator" 2>/dev/null || true
 }
 trap finish EXIT
 
@@ -55,6 +58,9 @@ echo "release: testing"
 xcodebuild test -project flo.xcodeproj -scheme "flo Watch App" \
   -destination "platform=watchOS Simulator,id=$simulator" >"$log" 2>&1 \
   || fail "tests failed, see $log"
+xcodebuild test -project flo.xcodeproj -scheme "flo EngineTests" \
+  -destination "platform=iOS Simulator,id=$iphone_simulator" >"$log" 2>&1 \
+  || fail "engine tests failed, see $log"
 
 echo "release: archiving"
 xcodebuild archive -project flo.xcodeproj -scheme "flo watch" -configuration Release \
