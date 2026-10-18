@@ -19,7 +19,7 @@ struct WatchRadiosView: View {
         isLoading: viewModel.isLoading, failed: viewModel.error != nil),
       isEmpty: viewModel.radios.isEmpty,
       empty: .empty(
-        systemImage: "dot.radiowaves.up.forward", tint: .floLavender, title: "No radios",
+        systemImage: "dot.radiowaves.up.forward", tint: .floLilac, title: "No radios",
         message: "Add internet radio stations on your Navidrome server."),
       refresh: viewModel.refresh
     ) {

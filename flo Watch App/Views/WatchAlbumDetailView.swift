@@ -13,7 +13,7 @@ struct WatchAlbumDetailView: View {
 
   // The loaded album stays with this screen when another one opens on top.
   @State private var localAlbum: Album?
-  @State private var tint: Color = .floLavender
+  @State private var tint: Color = .floLilac
 
   private var displayAlbum: Album {
     localAlbum ?? album
@@ -34,6 +34,7 @@ struct WatchAlbumDetailView: View {
       meta: meta,
       songs: displayAlbum.songs,
       tint: tint,
+      onCover: true,
       trackNumber: { _, song in song.trackNumber },
       playable: { displayAlbum },
       onDownload: { downloadCollection() },
@@ -42,7 +43,7 @@ struct WatchAlbumDetailView: View {
       Spacer().frame(height: 58)
     }
     .background(alignment: .top) { CoverBackdrop(albumId: album.id, height: 220) }
-    .task(id: album.id) { tint = await CoverTint.color(albumId: album.id) ?? .floLavender }
+    .task(id: album.id) { tint = await CoverTint.color(albumId: album.id) ?? .floLilac }
     .onAppear { albumViewModel.setActiveAlbum(album: album) }
     .onReceive(albumViewModel.$album) { updated in
       if updated.id == album.id { localAlbum = updated }

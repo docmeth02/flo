@@ -11,7 +11,7 @@ struct WatchQueueView: View {
   @State private var tint: Color?
   @State private var toast: FloToast.Message?
 
-  private var accent: Color { tint ?? .floLavender }
+  private var accent: Color { tint ?? .floLilac }
   // nowPlaying indexes the queue, which can be empty here.
   private var albumId: String {
     playerViewModel.hasNowPlaying() ? playerViewModel.nowPlaying.albumId ?? "" : ""
@@ -45,7 +45,7 @@ struct WatchQueueView: View {
                 } label: {
                   Label("Next", systemImage: "text.line.first.and.arrowtriangle.forward")
                 }
-                .tint(.floIndigo)
+                .tint(.floLilac)
               }
           }
 

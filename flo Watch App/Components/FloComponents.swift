@@ -11,11 +11,22 @@ func counted(_ count: Int, _ noun: String) -> String {
   "\(count) \(noun)\(count == 1 ? "" : "s")"
 }
 
+/// The app's name, "Own" in the text color and "wave" in light lilac, on
+/// Home and the login screen.
+struct Wordmark: View {
+  var body: some View {
+    (Text("Own").foregroundStyle(Color.floText) + Text("wave").foregroundStyle(Color.floWave))
+      .font(.floWordmark)
+      // 0.035 em tighter at 18 pt, as in the design.
+      .tracking(-0.035 * 18)
+  }
+}
+
 /// A navigation row on the home screen: tinted glyph and a label.
 struct FloNavRow: View {
   let title: String
   let systemImage: String
-  var tint: Color = .floLavender
+  var tint: Color = .floLilac
 
   var body: some View {
     HStack(spacing: 10) {
@@ -36,7 +47,7 @@ struct FloNavRow: View {
 struct CoverRow<Trailing: View>: View {
   enum Tile {
     case cover(albumId: String)
-    /// A lavender glyph, round for an artist or a station.
+    /// A lilac glyph, round for an artist or a station.
     case glyph(String, round: Bool = false)
   }
 
@@ -75,7 +86,7 @@ struct CoverRow<Trailing: View>: View {
     case .glyph(let systemImage, let round):
       Image(systemName: systemImage)
         .font(.system(size: 16))
-        .foregroundStyle(Color.floLavender)
+        .foregroundStyle(Color.floLilac)
         .frame(width: FloLayout.thumbnail, height: FloLayout.thumbnail)
         .background(
           (round
@@ -318,7 +329,7 @@ struct DownloadControl: View {
     VStack(spacing: 6) {
       switch state {
       case .none:
-        row("Download", systemImage: "arrow.down.circle", tint: .floLavender, action: onDownload)
+        row("Download", systemImage: "arrow.down.circle", tint: .floLilac, action: onDownload)
       case .downloading(let percent):
         VStack(spacing: 6) {
           HStack(alignment: .firstTextBaseline) {
@@ -326,10 +337,10 @@ struct DownloadControl: View {
             Spacer()
             Text("\(percent)%")
               .font(.system(.footnote, weight: .semibold).monospacedDigit())
-              .foregroundStyle(Color.floLavender)
+              .foregroundStyle(Color.floLilac)
           }
           ProgressView(value: Double(percent), total: 100)
-            .tint(.floLavender)
+            .tint(.floLilac)
           Button("Cancel", action: onCancel)
             .buttonStyle(
               FloTintedButtonStyle(tint: .floDestructive, height: 36))
@@ -344,7 +355,7 @@ struct DownloadControl: View {
           "\(counted(missing, "song")) missing", systemImage: "exclamationmark.circle.fill",
           tint: .floWarning, text: .floWarningText)
         row(
-          "Download \(missing) missing", systemImage: "arrow.down.circle", tint: .floLavender,
+          "Download \(missing) missing", systemImage: "arrow.down.circle", tint: .floLilac,
           action: onDownload)
         row(
           "Remove Download", systemImage: "trash", tint: .floDestructive, label: .floDestructive,
@@ -445,7 +456,7 @@ struct FloToast: View {
             message = nil
           }
           .font(.floMeta.weight(.semibold))
-          .foregroundStyle(Color.floLavender)
+          .foregroundStyle(Color.floLilac)
           .buttonStyle(.plain)
         }
       }

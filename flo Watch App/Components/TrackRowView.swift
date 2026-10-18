@@ -13,7 +13,7 @@ struct TrackRowView: View {
   let title: String
   let artist: String
   var isPlaying: Bool = false
-  var tint: Color = .floLavender
+  var tint: Color = .floLilac
   /// Over a cover backdrop the opaque surface would hide the cover.
   var idleBackground: Color = .floSurface
   var onHold: (() -> Void)?

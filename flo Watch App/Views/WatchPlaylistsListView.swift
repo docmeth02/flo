@@ -13,7 +13,7 @@ struct WatchPlaylistsListView: View {
       title: "Playlists", state: albumViewModel.state(.playlists),
       isEmpty: albumViewModel.playlists.isEmpty,
       empty: .empty(
-        systemImage: "music.note.list", tint: .floLavender, title: "No playlists",
+        systemImage: "music.note.list", tint: .floLilac, title: "No playlists",
         message: "Playlists on your Navidrome server show up here."),
       refresh: albumViewModel.refreshPlaylists
     ) {

@@ -36,7 +36,7 @@ struct WatchHomeView: View {
           playerViewModel.isGeneratingMix ? "Building mix…" : "Play Something",
           systemImage: "sparkles"
         )
-        .font(.headline)
+        .font(.floTitle)
       }
       .buttonStyle(FloPrimaryButtonStyle(height: 52))
       .opacity(playerViewModel.isGeneratingMix ? 0.6 : 1)
@@ -119,9 +119,7 @@ struct WatchHomeView: View {
     }
     .toolbar {
       ToolbarItem(placement: .topBarLeading) {
-        Text("flo")
-          .font(.floWordmark)
-          .foregroundStyle(Color.floLavender)
+        Wordmark()
       }
     }
     #if DEBUG

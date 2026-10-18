@@ -42,7 +42,7 @@ struct WatchSearchView: View {
         sections(results)
       } else {
         placeholder(
-          tint: .floLavender, title: "Search your library",
+          tint: .floLilac, title: "Search your library",
           message: "Artists, albums and songs on your server.")
       }
     }

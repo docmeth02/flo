@@ -17,23 +17,14 @@ struct WatchLoginView: View {
     NavigationStack {
       ScrollView {
         VStack(spacing: 6) {
-          HStack(spacing: 10) {
-            Image("FloLogo")
-              .resizable()
-              .frame(width: 40, height: 40)
-              .clipShape(Circle())
-
-            VStack(alignment: .leading, spacing: 3) {
-              Text("flo")
-                .font(.floWordmark)
-                .foregroundStyle(Color.floLavender)
-              Text("Sign in to your Navidrome server")
-                .font(.floMeta)
-                .foregroundStyle(Color.floSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
+          VStack(alignment: .leading, spacing: 3) {
+            Wordmark()
+            Text("Sign in to your Navidrome server")
+              .font(.floMeta)
+              .foregroundStyle(Color.floSecondary)
+              .fixedSize(horizontal: false, vertical: true)
           }
+          .frame(maxWidth: .infinity, alignment: .leading)
           .padding(.horizontal, 6)
           .padding(.bottom, 6)
 
@@ -70,10 +61,10 @@ struct WatchLoginView: View {
         HStack(spacing: 6) {
           if viewModel.isSubmitting {
             ProgressView()
+              .tint(Color.floInk)
               .frame(width: 18, height: 18)
           }
           Text(viewModel.isSubmitting ? "Signing in…" : "Login")
-            .fontWeight(.bold)
         }
       }
       .buttonStyle(FloPrimaryButtonStyle())

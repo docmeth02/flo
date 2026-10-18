@@ -47,8 +47,8 @@ enum PlaybackMode {
 }
 
 enum AppMeta {
-  static let name = "flo"
-  static let identifier = "net.faultables.flo"
+  static let name = "Ownwave"
+  static let identifier = "de.m2-entertainment.ownwave"
   static let subsonicApiVersion = "1.16.1"
 }
 

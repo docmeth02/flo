@@ -120,7 +120,8 @@
 		F4BA80DE5D3F471701EABF9A /* WatchSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89CB0839D0A2902036399ED6 /* WatchSearchView.swift */; };
 		F603ADBA32F245B193DE927F /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E012C149DDD00D9BAEB /* AuthService.swift */; };
 		FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
-		FB66DABB7F1FED68A499E009 /* PlusJakartaSans-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C415F55E2C11A34C00E3E1D2 /* PlusJakartaSans-VariableFont_wght.ttf */; };
+		7A3C1E5D9B2F4A6C8E0D1F23 /* FamiljenGrotesk[wght].ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7A3C1E5D9B2F4A6C8E0D1F24 /* FamiljenGrotesk[wght].ttf */; };
+		7A3C1E5D9B2F4A6C8E0D1F25 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 7A3C1E5D9B2F4A6C8E0D1F26 /* OFL.txt */; };
 		FE84EAF37C9E7F4D5488B658 /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */; };
 		3D7A0E5B9C14F2A86B01C2D1 /* DownloadSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */; };
 		3D7A0E5B9C14F2A86B01C2D3 /* DownloadSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D7A0E5B9C14F2A86B01C2D2 /* DownloadSessionTests.swift */; };
@@ -236,7 +237,8 @@
 		C41470BA2CE65808008BDCE8 /* Artist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artist.swift; sourceTree = "<group>"; };
 		C415F54D2C11908100E3E1D2 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		C415F5592C11953000E3E1D2 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
-		C415F55E2C11A34C00E3E1D2 /* PlusJakartaSans-VariableFont_wght.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-VariableFont_wght.ttf"; sourceTree = "<group>"; };
+		7A3C1E5D9B2F4A6C8E0D1F24 /* FamiljenGrotesk[wght].ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FamiljenGrotesk[wght].ttf"; sourceTree = "<group>"; };
+		7A3C1E5D9B2F4A6C8E0D1F26 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
 		C4289F472C12391300C3A4FD /* AlbumViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumViewModel.swift; sourceTree = "<group>"; };
 		C4289F492C12392B00C3A4FD /* Album.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Album.swift; sourceTree = "<group>"; };
 		C446A6B62C08DE8800CC9787 /* UserAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAuth.swift; sourceTree = "<group>"; };
@@ -468,7 +470,8 @@
 		C4289F4F2C12553E00C3A4FD /* Fonts */ = {
 			isa = PBXGroup;
 			children = (
-				C415F55E2C11A34C00E3E1D2 /* PlusJakartaSans-VariableFont_wght.ttf */,
+				7A3C1E5D9B2F4A6C8E0D1F24 /* FamiljenGrotesk[wght].ttf */,
+				7A3C1E5D9B2F4A6C8E0D1F26 /* OFL.txt */,
 			);
 			path = Fonts;
 			sourceTree = "<group>";
@@ -700,7 +703,8 @@
 			files = (
 				AF8F4066A6464664404ECF80 /* Assets.xcassets in Resources */,
 				272DD56C4031EFA3687ADF4D /* AppShortcuts.xcstrings in Resources */,
-				FB66DABB7F1FED68A499E009 /* PlusJakartaSans-VariableFont_wght.ttf in Resources */,
+				7A3C1E5D9B2F4A6C8E0D1F23 /* FamiljenGrotesk[wght].ttf in Resources */,
+				7A3C1E5D9B2F4A6C8E0D1F25 /* OFL.txt in Resources */,
 				930A994888EC25EFC75B5B8D /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -863,7 +867,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 7K3G973VGB;
 				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch.watchkitapp.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave.watchkitapp.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_VERSION = 5.0;
@@ -886,7 +890,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "flo Watch App/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "flo watch";
+				INFOPLIST_KEY_CFBundleDisplayName = Ownwave;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -894,7 +898,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -916,11 +920,11 @@
 				CURRENT_PROJECT_VERSION = 33;
 				DEVELOPMENT_TEAM = 7K3G973VGB;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "flo watch";
+				INFOPLIST_KEY_CFBundleDisplayName = Ownwave;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch;
+				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
@@ -936,11 +940,11 @@
 				CURRENT_PROJECT_VERSION = 33;
 				DEVELOPMENT_TEAM = 7K3G973VGB;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "flo watch";
+				INFOPLIST_KEY_CFBundleDisplayName = Ownwave;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch;
+				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
@@ -1085,7 +1089,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "flo Watch App/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "flo watch";
+				INFOPLIST_KEY_CFBundleDisplayName = Ownwave;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1093,7 +1097,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1114,7 +1118,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 7K3G973VGB;
 				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = host.docmeth02.flowatch.watchkitapp.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave.watchkitapp.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_VERSION = 5.0;

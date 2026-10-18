@@ -40,7 +40,7 @@ struct WatchSettingsView: View {
               .foregroundStyle(Color.floSecondary)
           }
         }
-        .tint(.floToggle)
+        .tint(.floLilac)
         .floRow()
       } header: {
         FloSectionHeader("Playback")
@@ -72,7 +72,7 @@ struct WatchSettingsView: View {
               .foregroundStyle(Color.floSecondary)
           }
         }
-        .tint(.floToggle)
+        .tint(.floLilac)
         .floRow()
       } header: {
         FloSectionHeader("Bitrate & Data")
@@ -85,7 +85,7 @@ struct WatchSettingsView: View {
           Text("500 MB").tag(Int64(524_288_000))
           Text("1 GB").tag(Int64(1_073_741_824))
         }
-        .tint(.floLavender)
+        .tint(.floLilac)
         .floRow()
         .onChange(of: selectedCacheSize) { _, newValue in
           UserDefaultsManager.streamCacheMaxSize = newValue
@@ -193,7 +193,7 @@ struct WatchSettingsView: View {
           .tag(rate)
       }
     }
-    .tint(.floLavender)
+    .tint(.floLilac)
     .floRow()
   }
 

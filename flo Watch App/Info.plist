@@ -6,16 +6,12 @@
 	<array>
 		<dict>
 			<key>INAlternativeAppName</key>
-			<string>flo</string>
-		</dict>
-		<dict>
-			<key>INAlternativeAppName</key>
-			<string>flow watch</string>
+			<string>Own Wave</string>
 		</dict>
 	</array>
 	<key>UIAppFonts</key>
 	<array>
-		<string>PlusJakartaSans-VariableFont_wght.ttf</string>
+		<string>FamiljenGrotesk[wght].ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

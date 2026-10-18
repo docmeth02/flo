@@ -19,10 +19,10 @@ struct WatchDiagnosticsView: View {
   var body: some View {
     List {
       Section {
-        ShareLink(item: Self.exportText(), subject: Text("flo watch log")) {
+        ShareLink(item: Self.exportText(), subject: Text("Ownwave log")) {
           Label("Share log", systemImage: "square.and.arrow.up")
             .font(.floRow)
-            .foregroundStyle(Color.floLavender)
+            .foregroundStyle(Color.floLilac)
         }
         .floRow()
       }
@@ -144,7 +144,7 @@ struct WatchDiagnosticsView: View {
     let build = info?["CFBundleVersion"] as? String ?? "?"
     let device = WKInterfaceDevice.current()
     var lines = [
-      "flo watch \(version) (\(build)), \(Date().formatted(.iso8601))",
+      "Ownwave \(version) (\(build)), \(Date().formatted(.iso8601))",
       "\(device.systemName) \(device.systemVersion), \(Self.hardwareModel)",
     ]
     lines += connectionLines().map { "\($0.0): \($0.1)" }

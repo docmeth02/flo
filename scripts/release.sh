@@ -1,5 +1,5 @@
 #!/bin/bash
-# Bumps the build number, tests, archives and uploads flo watch to TestFlight,
+# Bumps the build number, tests, archives and uploads Ownwave to TestFlight,
 # then commits the bump and moves the testflight branch. Pushing stays manual.
 #
 #   scripts/release.sh            release from watchos
@@ -43,7 +43,7 @@ log="$work/xcodebuild.log"
 bumped=false
 finish() {
   if $bumped; then git checkout -q -- "$project"; fi
-  xcrun simctl terminate "$simulator" host.docmeth02.flowatch.watchkitapp 2>/dev/null || true
+  xcrun simctl terminate "$simulator" de.m2-entertainment.ownwave.watchkitapp 2>/dev/null || true
 }
 trap finish EXIT
 
@@ -58,10 +58,10 @@ xcodebuild test -project flo.xcodeproj -scheme "flo Watch App" \
 
 echo "release: archiving"
 xcodebuild archive -project flo.xcodeproj -scheme "flo watch" -configuration Release \
-  -destination "generic/platform=iOS" -archivePath "$work/flowatch.xcarchive" "${auth[@]}" \
+  -destination "generic/platform=iOS" -archivePath "$work/ownwave.xcarchive" "${auth[@]}" \
   >"$log" 2>&1 || fail "archive failed, see $log"
 
-binary=$(find "$work/flowatch.xcarchive" -type f -path "*flo Watch App.app/flo Watch App" | head -1)
+binary=$(find "$work/ownwave.xcarchive" -type f -path "*flo Watch App.app/flo Watch App" | head -1)
 [[ -n "$binary" ]] || fail "no watch binary in the archive"
 # Through a file: grep -q ending a pipe early could fail the check open.
 strings "$binary" >"$work/strings.txt" || fail "cannot read the release binary"
@@ -73,7 +73,7 @@ if $dry_run; then
 fi
 
 echo "release: uploading"
-xcodebuild -exportArchive -archivePath "$work/flowatch.xcarchive" \
+xcodebuild -exportArchive -archivePath "$work/ownwave.xcarchive" \
   -exportOptionsPlist scripts/export.plist -exportPath "$work/export" "${auth[@]}" \
   >"$log" 2>&1 || fail "upload failed, see $log"
 # Build $build is on App Store Connect now; its number must stay taken.

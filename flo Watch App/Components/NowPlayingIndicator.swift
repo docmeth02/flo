@@ -9,7 +9,7 @@ import SwiftUI
 struct NowPlayingIndicator: View {
   @EnvironmentObject var playerViewModel: WatchPlayerViewModel
 
-  @State private var tint: Color = .floLavender
+  @State private var tint: Color = .floLilac
 
   var body: some View {
     // The home list drops this row when the queue empties, but this view can
@@ -46,7 +46,7 @@ struct NowPlayingIndicator: View {
       tint =
         await CoverTint.color(
           albumId: playerViewModel.nowPlaying.albumId ?? "",
-          url: playerViewModel.coverArt) ?? .floLavender
+          url: playerViewModel.coverArt) ?? .floLilac
     }
   }
 

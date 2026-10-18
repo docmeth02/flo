@@ -145,7 +145,7 @@ struct AvoidIntent: AppIntent {
     -> (id: String, name: String, artist: String)
   {
     guard let target = NowPlayingTarget.current else {
-      throw Refusal(sentence: "Nothing is playing in flo watch.")
+      throw Refusal(sentence: "Nothing is playing in Ownwave.")
     }
     guard !target.isLiveRadio else {
       throw Refusal(sentence: "A radio station can't be liked or rated.")

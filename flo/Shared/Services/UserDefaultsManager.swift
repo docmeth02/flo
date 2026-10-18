@@ -9,7 +9,7 @@ import Foundation
 
 class UserDefaultsManager {
   private static let sharedDefaults =
-    UserDefaults(suiteName: "group.com.penerbangwalet.flo") ?? UserDefaults.standard
+    UserDefaults(suiteName: "de.m2-entertainment.ownwave.settings") ?? UserDefaults.standard
 
   static func removeObject(key: String) {
     UserDefaults.standard.removeObject(forKey: key)

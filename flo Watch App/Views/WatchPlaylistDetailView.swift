@@ -40,11 +40,11 @@ struct WatchPlaylistDetailView: View {
     ) {
       Image(systemName: "music.note.list")
         .font(.system(size: 34))
-        .foregroundStyle(Color.floLavender)
+        .foregroundStyle(Color.floLilac)
         .frame(width: 80, height: 80)
         .background(
           RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(Color.floTile)
+            .fill(Color.floSurface)
         )
         .padding(.bottom, 6)
     }

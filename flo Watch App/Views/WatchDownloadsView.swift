@@ -16,7 +16,7 @@ struct WatchDownloadsView: View {
       if albumViewModel.downloadedAlbums.isEmpty && cachedSongs.isEmpty {
         LibraryPlaceholder(
           kind: .empty(
-            systemImage: "arrow.down.circle", tint: .floLavender, title: "No downloads yet",
+            systemImage: "arrow.down.circle", tint: .floLilac, title: "No downloads yet",
             message: "Download an album or playlist to play it without a connection."))
       } else {
         List {
@@ -38,7 +38,7 @@ struct WatchDownloadsView: View {
                 if downloadViewModel.isDownloading(collectionId: album.id) {
                   Text("\(Int(downloadViewModel.getDownloadedTrackProgress(collectionId: album.id)))%")
                     .font(.system(.footnote, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(Color.floLavender)
+                    .foregroundStyle(Color.floLilac)
                 } else if downloadViewModel.hasFailed(collectionId: album.id) {
                   Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 16))

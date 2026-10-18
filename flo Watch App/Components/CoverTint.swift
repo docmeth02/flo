@@ -8,7 +8,7 @@ import UIKit
 
 /// The cover's hue as a light glyph color: the average color of the cover,
 /// moved to OKLCH lightness 0.86 and chroma 0.1, so it reads on black at any
-/// hue. Gray covers have no hue worth keeping and get nil (use Lavender).
+/// hue. Gray covers have no hue worth keeping and get nil (use lilac).
 enum CoverTint {
   @MainActor private static var memo: [String: Color?] = [:]
 

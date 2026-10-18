@@ -16,7 +16,10 @@ struct CollectionDetailView<Artwork: View>: View {
   let title: String
   let meta: String
   let songs: [Song]
-  var tint: Color = .floLavender
+  var tint: Color = .floLilac
+  /// The album's cover lies behind the buttons, so Shuffle sits on a
+  /// translucent platter instead of the solid one.
+  var onCover = false
   let trackNumber: (_ index: Int, _ song: Song) -> Int
   /// Built on demand, so a playlist is only converted when it is played.
   let playable: () -> Album
@@ -69,14 +72,15 @@ struct CollectionDetailView<Artwork: View>: View {
           }) {
             Label("Play", systemImage: "play.fill")
           }
-          .buttonStyle(FloPrimaryButtonStyle())
+          .buttonStyle(FloPrimaryButtonStyle(fill: tint))
 
           Button(action: {
             if playerViewModel.shuffleItem(item: playable()) { showPlayer() }
           }) {
             Label("Shuffle", systemImage: "shuffle")
           }
-          .buttonStyle(FloTintedButtonStyle())
+          .buttonStyle(
+            FloTintedButtonStyle(tint: tint, platter: onCover ? .white.opacity(0.14) : .floSurface))
         }
 
         DownloadControl(

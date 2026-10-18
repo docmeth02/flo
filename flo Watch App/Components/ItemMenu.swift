@@ -128,7 +128,7 @@ struct ItemMenu: View {
   }
 
   private func row(
-    _ title: String, systemImage: String, tint: Color = .floLavender, _ action: Action
+    _ title: String, systemImage: String, tint: Color = .floLilac, _ action: Action
   ) -> some View {
     Button {
       onSelect(action)

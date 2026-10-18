@@ -27,7 +27,7 @@ struct WatchNowPlayingView: View {
 
   @State private var tint: Color?
 
-  private var accent: Color { tint ?? .floLavender }
+  private var accent: Color { tint ?? .floLilac }
   // nowPlaying indexes the queue, which can be empty here.
   private var albumId: String {
     playerViewModel.hasNowPlaying() ? playerViewModel.nowPlaying.albumId ?? "" : ""
@@ -265,7 +265,7 @@ struct WatchNowPlayingView: View {
           .frame(width: Self.compact ? 52 : 58, height: Self.compact ? 52 : 58)
         Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
           .font(.system(size: Self.compact ? 28 : 32))
-          .foregroundStyle(.black)
+          .foregroundStyle(Color.floInk)
       }
       .padding(2)
       .frame(width: Self.compact ? 66 : 74, height: Self.compact ? 66 : 74)
@@ -283,7 +283,7 @@ struct WatchNowPlayingView: View {
     if rating >= 4 {
       Image(systemName: "sparkle")
         .font(.system(size: 10, weight: .bold))
-        .foregroundStyle(Color.floLavender)
+        .foregroundStyle(Color.floLilac)
     } else if (1...2).contains(rating) {
       Image(systemName: "hand.thumbsdown.fill")
         .font(.system(size: 10, weight: .bold))
