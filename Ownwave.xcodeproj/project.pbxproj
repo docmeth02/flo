@@ -97,6 +97,7 @@
 		5EABCFCB76DE2EC0F4669A95 /* Album.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4289F492C12392B00C3A4FD /* Album.swift */; };
 		5ECFB04B48D56EBB777C8C8E /* PlayerViewModel+KeepPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DB5FDCA757705B0741AF994 /* PlayerViewModel+KeepPlaying.swift */; };
 		5F1BF78763A464CC378456B6 /* RadioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAC2F321697002A5FBB /* RadioService.swift */; };
+		607E5B629C497AC5466F5A71 /* AppShortcuts.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 267F2A01FFC103AFBE22C7B9 /* AppShortcuts.xcstrings */; };
 		608C822FD3F9566304566469 /* MixRankerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0ED598C9F56E94612957B1 /* MixRankerTests.swift */; };
 		60BDCBE39933C134CCA388E1 /* PlayerViewModel+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10E00000000000000000002 /* PlayerViewModel+Debug.swift */; };
 		61057E1B466A046310171874 /* RateIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA19B96B3927E5638EBB93C1 /* RateIntents.swift */; };
@@ -308,6 +309,7 @@
 		FA198610D686489E5659D3BC /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */; };
 		FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		FB154B9278A75B1D1C585831 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = F89057993E534F475924C7B0 /* Alamofire */; };
+		FD815D3950E6247E14D20FE4 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 77166ADDD3DA46B0C53E18D5 /* Localizable.xcstrings */; };
 		FE84EAF37C9E7F4D5488B658 /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */; };
 /* End PBXBuildFile section */
 
@@ -739,8 +741,6 @@
 				BF0C8310E85E03FC45C8E535 /* Components */,
 				F10E00000000000000000000 /* Debug */,
 				C33E4D7DFB09BB760978CACE /* Assets.xcassets */,
-				267F2A01FFC103AFBE22C7B9 /* AppShortcuts.xcstrings */,
-				77166ADDD3DA46B0C53E18D5 /* Localizable.xcstrings */,
 			);
 			name = "Ownwave Watch App";
 			path = "Ownwave Watch App";
@@ -778,6 +778,8 @@
 			children = (
 				C4289F4F2C12553E00C3A4FD /* Fonts */,
 				C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */,
+				77166ADDD3DA46B0C53E18D5 /* Localizable.xcstrings */,
+				267F2A01FFC103AFBE22C7B9 /* AppShortcuts.xcstrings */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -1059,6 +1061,8 @@
 				EFA482DA52C4F9F921FC9EAE /* Assets.xcassets in Resources */,
 				813C0D874EE795C206E5B9F4 /* FamiljenGrotesk[wght].ttf in Resources */,
 				938A9A71321968CD87F3D161 /* OFL.txt in Resources */,
+				FD815D3950E6247E14D20FE4 /* Localizable.xcstrings in Resources */,
+				607E5B629C497AC5466F5A71 /* AppShortcuts.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
