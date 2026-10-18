@@ -98,6 +98,13 @@ class UserDefaultsManager {
     }
   }
 
+  /// Downloads may use the watch's own cellular link; Wi-Fi and the iPhone
+  /// always can. Off by default.
+  static var downloadOverCellular: Bool {
+    get { UserDefaults.standard.bool(forKey: UserDefaultsKeys.downloadOverCellular) }
+    set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.downloadOverCellular) }
+  }
+
   static var streamCacheMaxSize: Int64 {
     get {
       let stored = UserDefaults.standard.object(forKey: UserDefaultsKeys.streamCacheMaxSize)

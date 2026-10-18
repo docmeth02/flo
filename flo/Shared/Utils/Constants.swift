@@ -61,6 +61,7 @@ enum UserDefaultsKeys {
   static let playbackMode = "playbackMode"
   static let enableMaxBitRate = "enableMaxBitRate"
   static let downloadBitRate = "downloadBitRate"
+  static let downloadOverCellular = "downloadOverCellular"
   static let streamCacheMaxSize = "streamCacheMaxSize"
   static let keepPlaying = "keepPlaying"
   // Edits the server has not confirmed yet, by id (PendingEdits): ratings
