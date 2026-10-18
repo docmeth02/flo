@@ -151,7 +151,8 @@ class StreamCacheManager {
     }
 
     let request = APIManager.shared.SubsonicEndpointDownload(
-      endpoint: source.endpoint, parameters: source.parameters
+      endpoint: source.endpoint, parameters: source.parameters,
+      allowsCellular: TranscodingSettings.streamsOverCellular
     ) { [weak self] result in
       guard let self = self else { return }
 

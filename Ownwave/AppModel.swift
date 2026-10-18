@@ -64,8 +64,20 @@ final class AppModel: ObservableObject {
       guard !album.songs.isEmpty else { return show("Not available offline") }
       albums.downloadAlbum(album)
       downloads.addItem(album)
-      show("Downloading at \(UserDefaultsManager.downloadBitRate) kbps")
+      let bitRate = UserDefaultsManager.downloadBitRate
+      show(
+        bitRate == TranscodingSettings.sourceBitRate
+          ? "Downloading in original quality" : "Downloading at \(bitRate) kbps")
     }
+  }
+
+  /// Plays a station and shows the player; a station is a live stream, so
+  /// nothing plays while streaming is off on cellular.
+  func play(_ radio: Radio) {
+    guard TranscodingSettings.streamingBitRate != nil else {
+      return show("Streaming on cellular is off")
+    }
+    if player.playRadioItem(radio: radio) { isNowPlayingPresented = true }
   }
 
   /// Plays what Siri, Shortcuts or the Action Button asked for and shows the

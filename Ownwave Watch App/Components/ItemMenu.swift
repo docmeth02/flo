@@ -28,11 +28,15 @@ struct ItemMenu: View {
         if let isPinned {
           row(isPinned ? "Unpin" : "Pin to Top", systemImage: isPinned ? "pin.slash" : "pin", .pin)
         }
-        row("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward", .playNext)
-        row("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward", .addToQueue)
-        row(
-          isLiked ? "Unlike" : "Like", systemImage: isLiked ? "heart.fill" : "heart",
-          tint: isLiked ? .floLiked : .floSecondary, .like)
+        if target.canQueue {
+          row("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward", .playNext)
+          row("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward", .addToQueue)
+        }
+        if target.canLike {
+          row(
+            isLiked ? "Unlike" : "Like", systemImage: isLiked ? "heart.fill" : "heart",
+            tint: isLiked ? .floLiked : .floSecondary, .like)
+        }
       }
       .padding(.horizontal, 8)
     }

@@ -28,8 +28,10 @@ struct ArtistView: View {
 
   private var meta: String {
     let albumCount = albums.isEmpty ? artist.albumCount : albums.count
-    var parts = [counted(albumCount, "album")]
-    if !topSongs.isEmpty { parts.append("\(topSongs.count) top songs") }
+    var parts: [String] = []
+    // An artist opened from an album the artist list lacks has no count yet.
+    if albumCount > 0 { parts.append(counted(albumCount, "album")) }
+    if !topSongs.isEmpty { parts.append(counted(topSongs.count, "top song")) }
     return parts.joined(separator: " · ")
   }
 

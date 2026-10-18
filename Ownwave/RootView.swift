@@ -107,14 +107,7 @@ struct AppTabs: View {
     }
     .tabBarMinimizeBehavior(.onScrollDown)
     .tabViewBottomAccessory { MiniPlayer() }
-    .overlay(alignment: .bottom) {
-      if let toast = app.toast {
-        ToastView(toast: toast)
-          .padding(.bottom, 140)
-          .transition(.move(edge: .bottom).combined(with: .opacity))
-      }
-    }
-    .animation(.snappy, value: app.toast)
+    .toastOverlay(app.toast, bottom: 140)
     .fullScreenCover(isPresented: $app.isNowPlayingPresented) {
       NowPlayingView()
     }

@@ -13,9 +13,10 @@ struct PlaylistView: View {
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @Environment(\.palette) private var palette
 
-  private var displayPlaylist: Playlist {
-    albumViewModel.playlist.id == playlist.id ? albumViewModel.playlist : playlist
-  }
+  // The loaded playlist stays with this screen when another one opens on top.
+  @State private var localPlaylist: Playlist?
+
+  private var displayPlaylist: Playlist { localPlaylist ?? playlist }
 
   var body: some View {
     let songs = displayPlaylist.songs
@@ -52,7 +53,8 @@ struct PlaylistView: View {
         }
         if !songs.isEmpty {
           Platter {
-            ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
+            // A playlist can hold a song twice.
+            ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
               let menu = MenuTarget.song(song, context: playlist.name, isFromPlaylist: true)
               ItemRow(
                 art: .cover(albumId: song.albumId), title: song.title, subtitle: song.artist,
@@ -75,6 +77,11 @@ struct PlaylistView: View {
       .padding(.bottom, 24)
     }
     .navigationBarTitleDisplayMode(.inline)
-    .onAppear { albumViewModel.setActivePlaylist(playlist: playlist) }
+    .onAppear {
+      if localPlaylist == nil { albumViewModel.setActivePlaylist(playlist: playlist) }
+    }
+    .onReceive(albumViewModel.$playlist) { updated in
+      if updated.id == playlist.id, !updated.songs.isEmpty { localPlaylist = updated }
+    }
   }
 }

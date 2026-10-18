@@ -79,14 +79,7 @@ struct NowPlayingView: View {
       .ignoresSafeArea()
     }
     // The tabs' toast sits under this cover.
-    .overlay(alignment: .bottom) {
-      if let toast = app.toast {
-        ToastView(toast: toast)
-          .padding(.bottom, 24)
-          .transition(.move(edge: .bottom).combined(with: .opacity))
-      }
-    }
-    .animation(.snappy, value: app.toast)
+    .toastOverlay(app.toast, bottom: 24)
     .task(id: albumId) { hue = await CoverTint.hue(albumId: albumId, url: player.coverArt) }
     .onChange(of: player.hasNowPlaying(), initial: true) { _, playing in
       if !playing { dismiss() }
@@ -196,12 +189,17 @@ private struct PlayerPage: View {
         Text(player.sourceName).font(.playingFrom).lineLimit(1)
       }
       Spacer()
-      Menu {
-        ItemMenuItems(
-          target: .song(
-            Song(from: song), context: song.contextName ?? "", isFromPlaylist: song.isFromPlaylist))
-      } label: {
-        GlassCircle.label("ellipsis")
+      // A station is neither queued nor liked like a song.
+      if player.isLiveRadio {
+        Color.clear.frame(width: 40, height: 40)
+      } else {
+        Menu {
+          ItemMenuItems(
+            target: .song(
+              Song(from: song), context: song.contextName ?? "", isFromPlaylist: song.isFromPlaylist))
+        } label: {
+          GlassCircle.label("ellipsis")
+        }
       }
     }
   }
@@ -216,19 +214,23 @@ private struct PlayerPage: View {
       }
       .lineLimit(1)
       .frame(maxWidth: .infinity, alignment: .leading)
-      Button {
-        let liked = !player.isStarred
-        player.toggleStar()
-        app.show(liked ? "Liked" : "Removed from Liked")
-      } label: {
-        Image(systemName: player.isStarred ? "heart.fill" : "heart")
-          .font(.system(size: 20, weight: .semibold))
-          .foregroundStyle(player.isStarred ? Color.floLiked : palette.text)
-          .frame(width: 46, height: 46)
-          .glassEffect(.regular.interactive(), in: Circle())
-      }
-      .buttonStyle(.plain)
+      if !player.isLiveRadio { heart }
     }
+  }
+
+  private var heart: some View {
+    Button {
+      let liked = !player.isStarred
+      player.toggleStar()
+      app.show(liked ? "Liked" : "Removed from Liked")
+    } label: {
+      Image(systemName: player.isStarred ? "heart.fill" : "heart")
+        .font(.system(size: 20, weight: .semibold))
+        .foregroundStyle(player.isStarred ? Color.floLiked : palette.text)
+        .frame(width: 46, height: 46)
+        .glassEffect(.regular.interactive(), in: Circle())
+    }
+    .buttonStyle(.plain)
   }
 
   /// Why the song is not playing, when it waits on more than its data.
@@ -411,9 +413,16 @@ private struct Scrubber: View {
         .frame(height: 5)
         .frame(maxHeight: .infinity)
         .contentShape(Rectangle())
+        .onTapGesture { seek(min(max($0.x / width, 0), 1)) }
+        // A drag that starts sideways seeks; one that starts up or down is
+        // left to the pager.
         .gesture(
-          DragGesture(minimumDistance: 0)
-            .onChanged { dragged = min(max($0.location.x / width, 0), 1) }
+          DragGesture(minimumDistance: 6)
+            .onChanged {
+              guard dragged != nil || abs($0.translation.width) > abs($0.translation.height)
+              else { return }
+              dragged = min(max($0.location.x / width, 0), 1)
+            }
             .onEnded { _ in
               if let dragged { seek(dragged) }
               dragged = nil
@@ -422,24 +431,18 @@ private struct Scrubber: View {
       }
       .frame(height: 18)
       HStack {
-        Text(Self.time(shown * duration))
+        Text((shown * duration).minuteSecond)
         Spacer()
         if let status {
           Text(status).foregroundStyle(Color.floWarning)
           Spacer()
         }
-        Text("-" + Self.time(duration * (1 - shown)))
+        Text("-" + (duration * (1 - shown)).minuteSecond)
       }
       .font(.meta.weight(.semibold))
       .monospacedDigit()
       .foregroundStyle(palette.secondary)
     }
-  }
-
-  /// "3:02"
-  static func time(_ seconds: Double) -> String {
-    let total = seconds.isFinite ? max(Int(seconds.rounded()), 0) : 0
-    return String(format: "%d:%02d", total / 60, total % 60)
   }
 }
 
@@ -554,24 +557,6 @@ private struct UpNextPage: View {
   private func remove(at index: Int) {
     guard let removed = player.removeFromQueue(at: index) else { return }
     app.show("Removed from Up Next") { player.undoRemove(removed) }
-  }
-}
-
-/// The current row's thin progress bar.
-private struct ProgressLine: View {
-  @ObservedObject var clock: PlayerClock
-  let tint: Color
-
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    GeometryReader { proxy in
-      Capsule().fill(palette.hairline)
-        .overlay(alignment: .leading) {
-          Capsule().fill(tint).frame(width: proxy.size.width * clock.clampedProgress)
-        }
-    }
-    .frame(height: 3)
   }
 }
 

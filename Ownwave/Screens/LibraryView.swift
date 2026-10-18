@@ -138,7 +138,7 @@ struct LibraryView: View {
         LazyVStack(spacing: 8) {
           ForEach(radios.radios) { radio in
             Button {
-              if player.playRadioItem(radio: radio) { app.isNowPlayingPresented = true }
+              app.play(radio)
             } label: {
               ItemRow(
                 art: .glyph(.radio), title: radio.name, subtitle: "Internet radio", artSize: 46
@@ -342,9 +342,8 @@ private struct DownloadRow: View {
     let downloading = downloadViewModel.isDownloading(collectionId: album.id)
     let failed = !downloading && downloadViewModel.hasFailed(collectionId: album.id)
     Group {
-      // A failed album retries in place; a playlist keeps its playlist
-      // semantics through its own screen's download button.
-      if failed && !AlbumService.shared.isPlaylistDownload(id: album.id) {
+      // A failed album retries in place.
+      if failed {
         Button {
           app.download(album)
         } label: {

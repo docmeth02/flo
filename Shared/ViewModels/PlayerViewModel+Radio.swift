@@ -17,7 +17,7 @@ extension PlayerViewModel {
 
   private func attachRadioItem(_ url: URL) {
     replacePlayerIfFailed()
-    playerItem = AVPlayerItem(url: url)
+    playerItem = Self.streamItem(url)
     player?.replaceCurrentItem(with: playerItem)
     observeItemStatus(trackId: nowPlayingId)
     addPeriodicTimeObserver()

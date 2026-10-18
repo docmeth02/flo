@@ -237,6 +237,17 @@ class AlbumViewModel: ObservableObject {
       assign: { self.starredSongs = $0 }, request: Self.starredSongsRequest)
   }
 
+  /// Liked Songs at most every few minutes, for the iPhone's Home, which
+  /// shows them on every return; the Liked screens always reload.
+  func fetchStarredSongsIfStale() {
+    if let loadedAt = state(.starredSongs).loadedAt,
+      Date().timeIntervalSince(loadedAt) < Self.reloadAfter
+    {
+      return
+    }
+    fetchStarredSongs()
+  }
+
   /// The server's Liked Songs, which also tell StarStore what is starred now
   /// (the cached copy shown meanwhile does not).
   private static func starredSongsRequest(_ completion: @escaping (Result<[Song], Error>) -> Void) {

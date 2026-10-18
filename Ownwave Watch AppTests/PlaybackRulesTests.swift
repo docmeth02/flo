@@ -40,9 +40,11 @@ final class PlaybackRulesTests: XCTestCase {
     defaults.removeObject(forKey: UserDefaultsKeys.streamOnCellular)
     XCTAssertEqual(TranscodingSettings.streamingBitRate(onCellular: false), "320")
     XCTAssertEqual(TranscodingSettings.streamingBitRate(onCellular: true), "160")
+    XCTAssertTrue(TranscodingSettings.streamsOverCellular)
     UserDefaultsManager.streamOnCellular = false
     XCTAssertNil(TranscodingSettings.streamingBitRate(onCellular: true))
     XCTAssertEqual(TranscodingSettings.streamingBitRate(onCellular: false), "320")
+    XCTAssertFalse(TranscodingSettings.streamsOverCellular)
   }
 
   /// Only Navidrome's own answer to a login logs out; a bare 401 from a proxy

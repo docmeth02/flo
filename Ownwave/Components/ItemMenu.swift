@@ -68,6 +68,18 @@ extension View {
   func itemMenu(_ target: MenuTarget) -> some View {
     contextMenu { ItemMenuItems(target: target) }
   }
+
+  /// The toast, `bottom` points above the bottom edge.
+  func toastOverlay(_ toast: AppModel.Toast?, bottom: CGFloat) -> some View {
+    overlay(alignment: .bottom) {
+      if let toast {
+        ToastView(toast: toast)
+          .padding(.bottom, bottom)
+          .transition(.move(edge: .bottom).combined(with: .opacity))
+      }
+    }
+    .animation(.snappy, value: toast)
+  }
 }
 
 /// The toast at the bottom, with Undo when the action can be taken back.

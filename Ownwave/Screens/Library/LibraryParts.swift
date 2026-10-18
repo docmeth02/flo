@@ -68,24 +68,6 @@ struct BlurredBackdrop: View {
   }
 }
 
-extension View {
-  /// One row on its own platter, as the design's library lists set them.
-  func card() -> some View {
-    modifier(Card())
-  }
-}
-
-private struct Card: ViewModifier {
-  @Environment(\.palette) private var palette
-
-  func body(content: Content) -> some View {
-    content
-      .padding(.horizontal, 12)
-      .padding(.vertical, 2)
-      .background(palette.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-  }
-}
-
 extension SongCollection {
   /// Liked Songs as Home and Library play them, under the watch's id and name.
   static func liked(_ songs: [Song]) -> SongCollection {
@@ -99,12 +81,5 @@ extension [Song] {
     guard !isEmpty else { return "" }
     let minutes = Int((reduce(0) { $0 + $1.duration } / 60).rounded())
     return "\(counted(count, "song")) · \(minutes) min"
-  }
-}
-
-extension Song {
-  /// "3:45", as the track lists show it.
-  var durationText: String {
-    Duration.seconds(duration.isFinite ? duration : 0).formatted(.time(pattern: .minuteSecond))
   }
 }

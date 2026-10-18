@@ -346,11 +346,18 @@ extension PlayerViewModel {
     }
   }
 
+  /// An item for a stream or a file, kept off cellular while streaming there
+  /// is off (`streamsOverCellular`).
+  static func streamItem(_ url: URL) -> AVPlayerItem {
+    let options = [AVURLAssetAllowsCellularAccessKey: TranscodingSettings.streamsOverCellular]
+    return AVPlayerItem(asset: AVURLAsset(url: url, options: options))
+  }
+
   private func attachItem(
     url: URL, trackId: String?, isRemote: Bool, isTranscoded: Bool, offset: Double,
     seekTo position: Double?
   ) {
-    let item = AVPlayerItem(url: url)
+    let item = Self.streamItem(url)
     if isTranscoded { bufferWholeSong(of: item, from: offset) }
     playerItem = item
     player?.replaceCurrentItem(with: item)

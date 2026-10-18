@@ -23,7 +23,10 @@ struct SettingsView: View {
   @State private var confirmsLogout = false
   @State private var confirmsClear = false
 
-  private static let bitRates = ["320", "256", "192", "160"]
+  /// The offered limits, highest first as the design lists them.
+  private static let limits: [(value: String, label: String)] = TranscodingSettings.bitRates
+    .filter { $0 != TranscodingSettings.sourceBitRate }.reversed().map { ($0, $0) }
+  private static let limitsWithOriginal = [(TranscodingSettings.sourceBitRate, "Original")] + limits
 
   var body: some View {
     ScrollView {
@@ -42,16 +45,14 @@ struct SettingsView: View {
             "Stream on cellular", "Uses the cellular bitrate below", isOn: $streamOnCellular)
         }
         section("Streaming on Wi-Fi (kbps)") {
-          Segmented(
-            options: [(TranscodingSettings.sourceBitRate, "Original")]
-              + Self.bitRates.map { ($0, $0) },
-            selection: $wifiBitRate)
+          Segmented(options: Self.limitsWithOriginal, selection: $wifiBitRate)
         }
         section("Streaming on cellular (kbps)") {
-          Segmented(options: Self.bitRates.map { ($0, $0) }, selection: $cellularBitRate)
+          Segmented(options: Self.limits, selection: $cellularBitRate)
         }
         section("Downloads (kbps)") {
-          Segmented(options: Self.bitRates.map { ($0, $0) }, selection: $downloadBitRate)
+          // Original as on the watch: the phone has room for lossless files.
+          Segmented(options: Self.limitsWithOriginal, selection: $downloadBitRate)
         }
         storage
         NavigationLink {
@@ -64,7 +65,7 @@ struct SettingsView: View {
               .font(.system(size: 14, weight: .semibold))
               .foregroundStyle(palette.secondary)
           }
-          .card(palette)
+          .card(horizontal: 16, vertical: 14)
         }
         .buttonStyle(.plain)
       }
@@ -125,7 +126,7 @@ struct SettingsView: View {
         .font(.rowSubtitle)
         .foregroundStyle(palette.accent)
     }
-    .card(palette)
+    .card(horizontal: 16, vertical: 14)
   }
 
   /// "Navidrome 0.64.2 · anna"
@@ -159,7 +160,7 @@ struct SettingsView: View {
         .font(.rowSubtitle.weight(.semibold))
         .foregroundStyle(Color.floDestructive)
     }
-    .card(palette)
+    .card(horizontal: 16, vertical: 14)
   }
 
   private func refreshStorage() {
@@ -185,7 +186,7 @@ struct SettingsView: View {
       }
     }
     .tint(palette.fill)
-    .card(palette)
+    .card(horizontal: 16, vertical: 14)
   }
 }
 
@@ -233,6 +234,7 @@ private struct Segmented<Value: Hashable>: View {
 struct DiagnosticsView: View {
   @ObservedObject private var log = RequestLog.shared
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
+  @ObservedObject private var history = HistoryStatus.shared
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -241,9 +243,14 @@ struct DiagnosticsView: View {
         ShareLink(item: Self.exportText(), subject: Text("Ownwave log")) {
           Label("Share log", systemImage: "square.and.arrow.up").foregroundStyle(palette.accent)
         }
-        LabeledContent("Online", value: connectivity.isOnline ? "Yes" : "No")
-        LabeledContent("Server reachable", value: connectivity.isServerReachable ? "Yes" : "No")
-        LabeledContent("Pending submissions", value: String(ScrobbleQueueManager.shared.pendingCount))
+        ForEach(DiagnosticsReport.connectionLines(), id: \.0) { LabeledContent($0.0, value: $0.1) }
+      }
+      .listRowBackground(palette.surface)
+
+      Section("History") {
+        ForEach(DiagnosticsReport.historyLines(history.state), id: \.0) {
+          LabeledContent($0.0, value: $0.1)
+        }
       }
       .listRowBackground(palette.surface)
 
@@ -251,7 +258,7 @@ struct DiagnosticsView: View {
         ForEach(log.entries) { entry in
           VStack(alignment: .leading, spacing: 2) {
             Text(entry.text).font(.meta).foregroundStyle(palette.secondary).lineLimit(2)
-            Text(Self.details(of: entry))
+            Text(DiagnosticsReport.details(of: entry))
               .font(.rowSubtitle)
               .foregroundStyle(entry.isFailure ? Color.floDestructive : palette.text)
               .lineLimit(2)
@@ -264,63 +271,11 @@ struct DiagnosticsView: View {
     .containerBackground(palette.background, for: .navigation)
     .navigationTitle("Diagnostics")
     .navigationBarTitleDisplayMode(.inline)
+    .task { await ListeningHistoryStore.shared.publishStoredState() }
   }
 
-  private static func details(of entry: RequestLog.Entry) -> String {
-    var parts: [String] = []
-    if let error = entry.error {
-      parts.append(error)
-    } else if let status = entry.status {
-      parts.append(String(status))
-    }
-    if entry.bytes > 0 {
-      parts.append(ByteCountFormatter.string(fromByteCount: entry.bytes, countStyle: .file))
-    }
-    if let duration = entry.duration { parts.append(String(format: "%.1f s", duration)) }
-    if entry.retries > 0 { parts.append("retry \(entry.retries)") }
-    parts.append(String(format: "+%.1f s", entry.startedAt))
-    return parts.joined(separator: " · ")
-  }
-
-  /// The diagnostics as plain text with the request log newest first.
-  /// Main thread only.
   private static func exportText() -> String {
-    let info = Bundle.main.infoDictionary
-    let version = info?["CFBundleShortVersionString"] as? String ?? "?"
-    let build = info?["CFBundleVersion"] as? String ?? "?"
-    var machine = utsname()
-    uname(&machine)
-    let model = withUnsafeBytes(of: &machine.machine) {
-      String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self)
-    }
     let device = UIDevice.current
-    let connectivity = ConnectivityMonitor.shared
-    var lines = [
-      "Ownwave \(version) (\(build)), \(Date().formatted(.iso8601))",
-      "\(device.systemName) \(device.systemVersion), \(model)",
-      "Online: \(connectivity.isOnline ? "Yes" : "No")",
-      "Server reachable: \(connectivity.isServerReachable ? "Yes" : "No")",
-      "Pending submissions: \(ScrobbleQueueManager.shared.pendingCount)",
-      "",
-      "Requests, newest first",
-    ]
-    for entry in RequestLog.shared.entries {
-      lines.append(
-        "  \(String(format: "%.1f", entry.startedAt)) \(entry.text) "
-          + "status=\(entry.status.map(String.init) ?? "-") error=\(entry.error ?? "-")"
-          + (entry.duration.map { String(format: " %.1fs", $0) } ?? "")
-          + (entry.bytes > 0 ? " \(entry.bytes)B" : "")
-          + (entry.retries > 0 ? " retry=\(entry.retries)" : ""))
-    }
-    return lines.joined(separator: "\n")
-  }
-}
-
-extension View {
-  /// A settings card: a platter with the design's padding.
-  fileprivate func card(_ palette: Palette) -> some View {
-    padding(.horizontal, 16)
-      .padding(.vertical, 14)
-      .background(palette.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    return DiagnosticsReport.text(system: "\(device.systemName) \(device.systemVersion)")
   }
 }

@@ -78,9 +78,15 @@ struct SearchView: View {
       albums.getArtists()
       albums.fetchAlbums()
       albums.getPlaylists()
-      // Once: the view reappears after every pushed album or artist.
-      guard songs == nil else { return }
-      songs = await SmartPlaybackService.shared.loadCachedLibrary().songs
+      // Once it has songs: the view reappears after every pushed album or
+      // artist. A new phone has no song library before its first mix, so
+      // Search syncs it then.
+      guard songs?.isEmpty ?? true else { return }
+      var library = await SmartPlaybackService.shared.loadCachedLibrary().songs
+      if library.isEmpty, ConnectivityMonitor.shared.canReachServer {
+        library = await SmartPlaybackService.shared.syncSongLibrary()
+      }
+      songs = library
     }
     .task(
       id: Input(
@@ -174,9 +180,7 @@ struct SearchView: View {
           .padding(.trailing, 4)
       }
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 2)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    .card()
 
     Group {
       if case .song(let song, _, _) = target {

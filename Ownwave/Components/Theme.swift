@@ -26,9 +26,8 @@ extension Font {
   static let rowTitle = Font.system(.body, weight: .medium)
   static let rowSubtitle = Font.system(.subheadline)
   static let meta = Font.system(.footnote)
-  /// Small counters such as the tour's "1 of 6".
-  static let counter = Font.custom("JetBrains Mono", size: 11, relativeTo: .caption2)
-    .weight(.medium)
+  /// Small counters and labels such as "Playing from" and the tour's "1 of 6".
+  static let counter = Font.custom("JetBrainsMono-Medium", size: 11, relativeTo: .caption2)
 }
 
 /// The app's name, "Own" in the text color and "wave" in the accent.

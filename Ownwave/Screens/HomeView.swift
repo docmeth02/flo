@@ -53,7 +53,7 @@ struct HomeView: View {
     }
     .toolbar(.hidden, for: .navigationBar)
     .task {
-      albumViewModel.fetchStarredSongs()
+      albumViewModel.fetchStarredSongsIfStale()
       await albumViewModel.loadRecentAlbums()
       albums = await albumViewModel.loadedOrCached(albumViewModel.albums, .albums)
       artists = await albumViewModel.loadedOrCached(albumViewModel.artists, .artists)
@@ -213,7 +213,8 @@ private struct NowPlayingCard: View {
             .font(.rowSubtitle)
             .tracking(0.3)
             .foregroundStyle(palette.secondary)
-          ProgressLine(clock: player.clock, tint: tint)
+          ProgressLine(clock: player.clock, tint: tint, track: palette.surface2, height: 4)
+            .frame(width: 150)
             .padding(.top, 8)
         }
         .lineLimit(1)
@@ -225,23 +226,6 @@ private struct NowPlayingCard: View {
     }
     .buttonStyle(.plain)
     .task(id: albumId) { hue = await CoverTint.hue(albumId: albumId, url: player.coverArt) }
-  }
-}
-
-/// Observes the clock itself, so Home does not redraw every second.
-private struct ProgressLine: View {
-  @ObservedObject var clock: PlayerClock
-  let tint: Color
-
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    Capsule()
-      .fill(palette.surface2)
-      .overlay(alignment: .leading) {
-        Capsule().fill(tint).frame(width: 150 * clock.clampedProgress)
-      }
-      .frame(width: 150, height: 4)
   }
 }
 
@@ -262,7 +246,7 @@ private struct PinLink: View {
       case .playlist(let playlist): NavigationLink(value: Route.playlist(playlist)) { tile }
       case .radio(let radio):
         Button {
-          if player.playRadioItem(radio: radio) { app.isNowPlayingPresented = true }
+          app.play(radio)
         } label: {
           tile
         }

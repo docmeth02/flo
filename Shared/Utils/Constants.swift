@@ -101,6 +101,12 @@ enum TranscodingSettings {
     guard onCellular else { return UserDefaultsManager.maxBitRate }
     return UserDefaultsManager.streamOnCellular ? UserDefaultsManager.cellularBitRate : nil
   }
+
+  /// Whether streams and the stream cache may use cellular data at all, so
+  /// one started on Wi-Fi stalls instead of going on over cellular while
+  /// "Stream on cellular" is off. Always true on the watch, which has no
+  /// such setting.
+  static var streamsOverCellular: Bool { streamingBitRate(onCellular: true) != nil }
   static let sourceFormat = "raw"
   static let targetFormat = "mp3"
 }

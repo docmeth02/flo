@@ -98,7 +98,7 @@ class APIManager {
   /// Downloads to a temporary file; progress, when asked for, is in percent.
   @discardableResult
   func SubsonicEndpointDownload(
-    endpoint: String, parameters: Parameters?,
+    endpoint: String, parameters: Parameters?, allowsCellular: Bool = true,
     progressUpdate: ((Double) -> Void)? = nil,
     completion: @escaping (Result<URL, AFError>) -> Void
   ) -> DownloadRequest {
@@ -106,7 +106,11 @@ class APIManager {
       "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(AuthService.shared.sessionSnapshot().subsonicCredentials)"
 
     let request = session.download(
-      url, parameters: parameters, requestModifier: { $0.timeoutInterval = 60 })
+      url, parameters: parameters,
+      requestModifier: {
+        $0.timeoutInterval = 60
+        $0.allowsCellularAccess = allowsCellular
+      })
     if let progressUpdate {
       request.downloadProgress { progressUpdate($0.fractionCompleted * 100) }
     }

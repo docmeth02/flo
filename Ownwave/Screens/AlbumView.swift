@@ -12,6 +12,7 @@ struct AlbumView: View {
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @EnvironmentObject private var downloadViewModel: DownloadViewModel
+  // Redraws the track hearts when a song is liked from its menu.
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
   @Environment(\.colorScheme) private var scheme
@@ -73,11 +74,13 @@ struct AlbumView: View {
     }
     .task(id: album.id) { hue = await CoverTint.hue(albumId: album.id) }
     .onAppear {
-      albumViewModel.setActiveAlbum(album: album)
+      // Once: a return from a screen pushed on top keeps the loaded tracks,
+      // also offline.
+      if localAlbum == nil { albumViewModel.setActiveAlbum(album: album) }
       refreshDownloadState()
     }
     .onReceive(albumViewModel.$album) { updated in
-      if updated.id == album.id { localAlbum = updated }
+      if updated.id == album.id, !updated.songs.isEmpty { localAlbum = updated }
     }
     .onReceive(downloadViewModel.downloadFinished) { id in
       if id == album.id { refreshDownloadState() }
@@ -140,8 +143,10 @@ struct AlbumView: View {
         percent: Int(downloadViewModel.getDownloadedTrackProgress(collectionId: album.id)))
     }
     if downloadViewModel.hasFailed(collectionId: album.id) { return .failed }
+    // Unknown until the tracks are loaded.
+    guard downloaded, !displayAlbum.songs.isEmpty else { return .none }
     let missing = displayAlbum.songs.contains { !downloadedIds.contains($0.playbackID) }
-    return downloaded && !missing ? .done : .none
+    return missing ? .none : .done
   }
 
   @ViewBuilder private var downloadButton: some View {
@@ -204,14 +209,8 @@ struct AlbumView: View {
     .background(palette.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
   }
 
-  /// Downloaded playlists open here from Downloads; they keep playlist
-  /// semantics (playlist folder, media ids) when missing tracks are fetched.
   private func download() {
-    if AlbumService.shared.isPlaylistDownload(id: album.id) {
-      downloadViewModel.addItem(displayAlbum, isFromPlaylist: true)
-    } else {
-      app.download(displayAlbum)
-    }
+    app.download(displayAlbum)
   }
 
   private func refreshDownloadState() {
@@ -277,7 +276,7 @@ private struct TrackRow: View {
           .font(.system(size: 12))
           .foregroundStyle(Color.floLiked)
       }
-      Text(song.durationText)
+      Text(song.duration.minuteSecond)
         .font(.rowSubtitle.monospacedDigit())
         .foregroundStyle(palette.secondary)
       ItemMenuButton(target: menu)
