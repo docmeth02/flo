@@ -20,7 +20,7 @@ import WatchKit
   @Published private(set) var incoming: [String: Int] = [:]
 
   private let session = WCSession.default
-  private let receiver = Receiver()
+  let receiver = PhoneLinkReceiver()
   private var lastState: Link.WatchState?
   private var heldTasks: [WKWatchConnectivityRefreshBackgroundTask] = []
   private var observations: [NSKeyValueObservation] = []
@@ -32,6 +32,9 @@ import WatchKit
     guard WCSession.isSupported() else { return }
     session.delegate = receiver
     session.activate()
+    #if DEBUG
+      runDebugLaunchActions()
+    #endif
     observations = [
       session.observe(\.hasContentPending) { _, _ in
         Task { @MainActor in PhoneLink.shared.completeTasksIfIdle() }
@@ -105,7 +108,7 @@ import WatchKit
     completeTasksIfIdle()
   }
 
-  fileprivate func apply(_ context: [String: Any]) {
+  func apply(_ context: [String: Any]) {
     guard let settings = Link.decode(Link.Settings.self, from: context) else { return }
     // Turned off, the watch keeps the values it followed last.
     if settings.share {
@@ -118,7 +121,7 @@ import WatchKit
     publishState()
   }
 
-  fileprivate func requestSignIn(_ request: Link.SignIn) {
+  func requestSignIn(_ request: Link.SignIn) {
     signInRequest = request
   }
 
@@ -195,7 +198,7 @@ import WatchKit
 /// WatchConnectivity calls in on its own queue; this forwards to the main
 /// actor and does the one thing that cannot wait: a received file is gone
 /// once its callback returns.
-private final class Receiver: NSObject, WCSessionDelegate {
+final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
   private let lock = NSLock()
   private var _account: Link.WatchState.Account?
   private var deliveries = 0
@@ -215,7 +218,9 @@ private final class Receiver: NSObject, WCSessionDelegate {
   func session(
     _ session: WCSession, activationDidCompleteWith state: WCSessionActivationState, error: Error?
   ) {
-    if let error { debugLog("phone link: activation failed: \(error)") }
+    debugLog(
+      "phone link: activated \(state.rawValue) companion=\(session.isCompanionAppInstalled) "
+        + "error=\(String(describing: error))")
     Task { @MainActor in PhoneLink.shared.activated() }
   }
 
@@ -242,7 +247,12 @@ private final class Receiver: NSObject, WCSessionDelegate {
   }
 
   func session(_ session: WCSession, didReceive file: WCSessionFile) {
-    guard let metadata = file.metadata, let info = Link.decode(Link.FileInfo.self, from: metadata),
+    receive(file.fileURL, metadata: file.metadata ?? [:])
+  }
+
+  /// Moves a file from the phone into place, before its callback returns.
+  func receive(_ file: URL, metadata: [String: Any]) {
+    guard let info = Link.decode(Link.FileInfo.self, from: metadata),
       info.accountKey == account?.key
     else { return debugLog("phone link: dropped a file for another account") }
     let path =
@@ -260,7 +270,7 @@ private final class Receiver: NSObject, WCSessionDelegate {
       try FileManager.default.createDirectory(
         at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
       try? FileManager.default.removeItem(at: target)
-      try FileManager.default.moveItem(at: file.fileURL, to: target)
+      try FileManager.default.moveItem(at: file, to: target)
     } catch {
       return debugLog("phone link: file not moved: \(error)")
     }

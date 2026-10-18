@@ -251,7 +251,9 @@ private final class Receiver: NSObject, WCSessionDelegate {
   func session(
     _ session: WCSession, activationDidCompleteWith state: WCSessionActivationState, error: Error?
   ) {
-    if let error { debugLog("watch link: activation failed: \(error)") }
+    debugLog(
+      "watch link: activated \(state.rawValue) paired=\(session.isPaired) "
+        + "installed=\(session.isWatchAppInstalled) error=\(String(describing: error))")
     Task { @MainActor in WatchLink.shared.activated() }
   }
 
