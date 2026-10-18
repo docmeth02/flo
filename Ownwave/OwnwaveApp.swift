@@ -6,13 +6,18 @@
 import SwiftUI
 import UIKit
 
-/// Hands the download session's background events to `DownloadSession`.
+/// Hands each background session's events to its owner: the phone's
+/// downloads or the songs on their way to the watch.
 final class AppDelegate: NSObject, UIApplicationDelegate {
   func application(
     _ application: UIApplication, handleEventsForBackgroundURLSession identifier: String,
     completionHandler: @escaping () -> Void
   ) {
-    DownloadSession.shared.handleBackgroundEvents(completion: completionHandler)
+    if identifier == WatchSend.identifier {
+      WatchSend.shared.handleBackgroundEvents(completion: completionHandler)
+    } else {
+      DownloadSession.shared.handleBackgroundEvents(completion: completionHandler)
+    }
   }
 }
 
@@ -22,6 +27,8 @@ struct OwnwaveApp: App {
 
   init() {
     AppLaunch.warmUp()
+    _ = WatchSend.shared
+    WatchLink.shared.activate()
   }
 
   var body: some Scene {
