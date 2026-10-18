@@ -922,7 +922,7 @@ extension PlayerViewModel {
   /// A mix or its Keep Playing continuation.
   var isSmartMix: Bool {
     guard hasNowPlaying() else { return false }
-    return [.smartShuffle, .keepPlaying].contains(nowPlaying.playbackOrigin)
+    return nowPlaying.playbackOrigin.isMix
   }
 
   /// "Smart Mix", else the album or playlist the queue came from.

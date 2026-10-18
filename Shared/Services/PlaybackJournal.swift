@@ -10,6 +10,9 @@ import Foundation
 /// than about one the user did.
 enum PlaybackOrigin: String {
   case smartShuffle, keepPlaying, album, playlist, starred, cached, manual
+
+  /// A mix or its Keep Playing continuation picked the song.
+  var isMix: Bool { self == .smartShuffle || self == .keepPlaying }
 }
 
 /// The journal's recent events of the logged-in account.

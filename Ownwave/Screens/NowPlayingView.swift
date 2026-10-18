@@ -588,7 +588,7 @@ extension RecommendationLog {
   /// Why a mix queued the entry, while the listener wants to see it.
   fileprivate func shownReason(for entry: QueueEntity) -> MixReason? {
     guard UserDefaultsManager.showMixReasons,
-      [.smartShuffle, .keepPlaying].contains(entry.playbackOrigin), let id = entry.id
+      entry.playbackOrigin.isMix, let id = entry.id
     else { return nil }
     return reason(for: id)
   }
