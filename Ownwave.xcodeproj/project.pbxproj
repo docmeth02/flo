@@ -72,6 +72,7 @@
 		3FED4C4043890696D075FFBC /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
 		4049DD24CBF7DFA414843CF2 /* RatingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17258430B8997B70CB97CC82 /* RatingStore.swift */; };
 		417A146C53E75C74B313D47D /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
+		42DB94B1BA0D3F39BA741C49 /* LibraryParts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1611BCD0864A0BF006A78 /* LibraryParts.swift */; };
 		47C01357AD85942388E58843 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FD82C15D58E00E712BE /* Errors.swift */; };
 		48426E09F42798E3F16C85E2 /* WatchQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BDA0AFDF99572D783F7433F /* WatchQueueView.swift */; };
 		488FFDF625DDAE8093BDF6F0 /* ScrobbleQueueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */; };
@@ -274,6 +275,7 @@
 		E2E72C5A5B52F051011CE438 /* PlayerViewModel+Recovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 753A1F5C3EC0F41E987BAB31 /* PlayerViewModel+Recovery.swift */; };
 		E3FECE7CF7FAC39A76FAA8A7 /* ItemMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E112194EA92A3D3A5A451C /* ItemMenu.swift */; };
 		E499D2521FC7945339389EF4 /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */; };
+		E576FF77CB6110F81E5168A7 /* LibraryView+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26352A8C3FBD5D2B4E9530D2 /* LibraryView+Debug.swift */; };
 		E61DA2334987E78D6A87BD31 /* PlayerViewModel+AudioSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62E9B1C58A38398F40C511E /* PlayerViewModel+AudioSession.swift */; };
 		E630217EDD6F3306103C7C1D /* WatchDownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C00FCB7A37E884BAAC284C9 /* WatchDownloadsView.swift */; };
 		E8AB6CFDF3CCA70D9FD9E2F9 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FD82C15D58E00E712BE /* Errors.swift */; };
@@ -360,6 +362,7 @@
 		24225EFDED10604EAEDC16B0 /* Ownwave EngineTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Ownwave EngineTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		253E8CCD07A19D43DD518977 /* ArtistView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtistView.swift; sourceTree = "<group>"; };
 		26163837D2FCC0CB8BFD57A8 /* AppPlatform.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppPlatform.swift; sourceTree = "<group>"; };
+		26352A8C3FBD5D2B4E9530D2 /* LibraryView+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "LibraryView+Debug.swift"; sourceTree = "<group>"; };
 		267F2A01FFC103AFBE22C7B9 /* AppShortcuts.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = AppShortcuts.xcstrings; sourceTree = "<group>"; };
 		29E53048E3A319C3B7EA7D87 /* ScrobbleReceipts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrobbleReceipts.swift; sourceTree = "<group>"; };
 		2C69EE166F61D61C8CC0A1D4 /* PinnedList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PinnedList.swift; sourceTree = "<group>"; };
@@ -374,6 +377,7 @@
 		41ED1C069984CF677281CBB3 /* ArtistAppEntity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtistAppEntity.swift; sourceTree = "<group>"; };
 		42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RequestLog.swift; sourceTree = "<group>"; };
 		477F38684B1CD3B0BEE039A7 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		49C1611BCD0864A0BF006A78 /* LibraryParts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LibraryParts.swift; sourceTree = "<group>"; };
 		4A0A3A849C5FEAFB7E57BE5C /* Ownwave.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ownwave.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B5BB60F44BF48FF7A25BE73 /* PlayerViewModel+QueueDebug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "PlayerViewModel+QueueDebug.swift"; sourceTree = "<group>"; };
 		4EBE53668B154717D97E0654 /* WatchPlaylistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlaylistDetailView.swift; sourceTree = "<group>"; };
@@ -618,6 +622,15 @@
 			path = Intents;
 			sourceTree = "<group>";
 		};
+		6B4B7FA16E89635DF8A5B400 /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				49C1611BCD0864A0BF006A78 /* LibraryParts.swift */,
+			);
+			name = Library;
+			path = Library;
+			sourceTree = "<group>";
+		};
 		7EF5B822469F22CCE3973A24 /* Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -695,6 +708,7 @@
 				C2002653E7063326C1B10DD9 /* PlaylistView.swift */,
 				6FE42C6B2949C82757B70A06 /* SearchView.swift */,
 				E3B67A5AB0BB9835696DB660 /* SettingsView.swift */,
+				6B4B7FA16E89635DF8A5B400 /* Library */,
 			);
 			name = Screens;
 			path = Screens;
@@ -856,6 +870,7 @@
 			isa = PBXGroup;
 			children = (
 				23779BCA4AD2CD905771DC4F /* AppTabs+Debug.swift */,
+				26352A8C3FBD5D2B4E9530D2 /* LibraryView+Debug.swift */,
 			);
 			name = Debug;
 			path = Debug;
@@ -1339,6 +1354,8 @@
 				71E5AE62700E44A2453DD260 /* SearchView.swift in Sources */,
 				E09F669977950E432ABA0F32 /* SettingsView.swift in Sources */,
 				D897DDB13AB5E4AEB0BADF4F /* AppTabs+Debug.swift in Sources */,
+				E576FF77CB6110F81E5168A7 /* LibraryView+Debug.swift in Sources */,
+				42DB94B1BA0D3F39BA741C49 /* LibraryParts.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
