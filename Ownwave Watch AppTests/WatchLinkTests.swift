@@ -6,7 +6,7 @@ import XCTest
 
 final class WatchLinkTests: XCTestCase {
   func testPayloadsSurviveTheTrip() {
-    let message = Link.Message.signIn(Link.SignIn(server: "https://music.lan", user: "u", password: "p"))
+    let message = Link.Message.signIn(Link.SignIn(server: "https://music.lan", user: "u", password: "p", accountKey: "music.lan|id"))
     XCTAssertEqual(Link.decode(Link.Message.self, from: Link.encode(message)), message)
 
     let reply = Link.Reply.otherAccount(user: "v", host: "music.lan")
@@ -14,7 +14,7 @@ final class WatchLinkTests: XCTestCase {
 
     var state = Link.WatchState()
     state.account = .init(user: "u", host: "music.lan", key: "music.lan|id")
-    state.collections = [.init(id: "a1", name: "Album", artist: "Artist", songs: 9, kbps: 192)]
+    state.collections = [.init(id: "a1", name: "Album", songs: 9, kbps: 192)]
     state.incoming = ["a2": 3]
     XCTAssertEqual(Link.decode(Link.WatchState.self, from: Link.encode(state)), state)
 
@@ -38,10 +38,13 @@ final class WatchLinkTests: XCTestCase {
 
   /// Anything else in a dictionary reads as nothing rather than as a default.
   func testForeignDictionariesDecodeToNothing() {
-    XCTAssertNil(Link.decode(Link.Settings.self, from: [:]))
-    XCTAssertNil(Link.decode(Link.Settings.self, from: ["payload": "text"]))
-    XCTAssertNil(Link.decode(Link.Settings.self, from: ["payload": Data("{}".utf8)]))
-    let settings = Link.Settings(share: true, streamingBitRate: "160", downloadBitRate: "0", keepPlaying: false)
-    XCTAssertNil(Link.decode(Link.FileInfo.self, from: Link.encode(settings)))
+    XCTAssertNil(Link.decode(Link.PhoneState.self, from: [:]))
+    XCTAssertNil(Link.decode(Link.PhoneState.self, from: ["payload": "text"]))
+    XCTAssertNil(Link.decode(Link.PhoneState.self, from: ["payload": Data("{}".utf8)]))
+    let phone = Link.PhoneState(
+      share: true, streamingBitRate: "160", downloadBitRate: "0", keepPlaying: false,
+      sending: ["a1": 9])
+    XCTAssertEqual(Link.decode(Link.PhoneState.self, from: Link.encode(phone)), phone)
+    XCTAssertNil(Link.decode(Link.FileInfo.self, from: Link.encode(phone)))
   }
 }

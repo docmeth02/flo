@@ -16,8 +16,10 @@ import WatchKit
   /// A sign-in the phone asked for; `WatchContentView` runs it with the
   /// watch's own login.
   @Published private(set) var signInRequest: Link.SignIn?
-  /// Songs still expected from the phone, per collection.
+  /// Songs still expected from the phone per collection: what the phone
+  /// says it is sending, less what is here.
   @Published private(set) var incoming: [String: Int] = [:]
+  private var sending: [String: Int] = [:]
 
   private let session = WCSession.default
   let receiver = PhoneLinkReceiver()
@@ -43,16 +45,19 @@ import WatchKit
         Task { @MainActor in PhoneLink.shared.completeTasksIfIdle() }
       },
     ]
+    // An album downloading here finishes song by song; one state for a run.
     downloads = DownloadSession.shared.downloadFinished
-      .receive(on: DispatchQueue.main)
+      .debounce(for: .seconds(2), scheduler: DispatchQueue.main)
       .sink { _ in PhoneLink.shared.publishState() }
+    // Files of the old account are dropped from now on. The login change
+    // itself is published by WatchContentView.
     NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
-      Task { @MainActor in PhoneLink.shared.publishState() }
+      Task { @MainActor in PhoneLink.shared.forgetSends() }
     }
   }
 
   func isReceiving(collectionId: String) -> Bool {
-    (incoming[collectionId] ?? 0) > 0
+    incoming[collectionId] != nil
   }
 
   /// Finished songs of a collection the phone is sending, in percent.
@@ -78,22 +83,16 @@ import WatchKit
     publishState()
   }
 
-  /// Tells the phone what the watch holds, when that changed.
+  /// Tells the phone what the watch holds, when that changed. A watch
+  /// without the iPhone app does none of the work.
   func publishState() {
-    let followsPhone = UserDefaultsManager.settingsFollowPhone
+    guard session.activationState == .activated, session.isCompanionAppInstalled else { return }
     let downloadBitRate = UserDefaultsManager.downloadBitRate
     let incoming = incoming
-    var account: Link.WatchState.Account?
-    if let key = AuthService.shared.accountKey, case .found(let auth) = KeychainManager.loadAuth() {
-      account = .init(
-        user: auth.username, host: URL(string: UserDefaultsManager.serverBaseURL)?.host ?? "",
-        key: key)
-    }
-    receiver.account = account
+    let account = PhoneLinkReceiver.signedInAccount()
     Task {
       var state = await Self.inventory()
       state.account = account
-      state.followsPhone = followsPhone
       state.downloadBitRate = downloadBitRate
       state.incoming = incoming
       self.send(state)
@@ -103,22 +102,47 @@ import WatchKit
   // MARK: - From the receiver
 
   fileprivate func activated() {
-    apply(session.receivedApplicationContext)
-    publishState()
+    companionChanged()
+    if !apply(session.receivedApplicationContext) { publishState() }
     completeTasksIfIdle()
   }
 
-  func apply(_ context: [String: Any]) {
-    guard let settings = Link.decode(Link.Settings.self, from: context) else { return }
+  /// Without the iPhone app nothing can turn sharing off again, so the
+  /// watch's settings are its own once more.
+  fileprivate func companionChanged() {
+    guard !session.isCompanionAppInstalled else { return }
+    UserDefaultsManager.settingsFollowPhone = false
+    forgetSends()
+  }
+
+  /// Applies the phone's settings and sends and publishes; false for a
+  /// context without them.
+  @discardableResult func apply(_ context: [String: Any]) -> Bool {
+    guard let phone = Link.decode(Link.PhoneState.self, from: context) else { return false }
     // Turned off, the watch keeps the values it followed last.
-    if settings.share {
-      UserDefaultsManager.maxBitRate = settings.streamingBitRate
-      UserDefaultsManager.downloadBitRate = settings.downloadBitRate
-      UserDefaultsManager.keepPlaying = settings.keepPlaying
+    if phone.share {
+      UserDefaultsManager.maxBitRate = phone.streamingBitRate
+      UserDefaultsManager.downloadBitRate = phone.downloadBitRate
+      UserDefaultsManager.keepPlaying = phone.keepPlaying
     }
-    UserDefaultsManager.settingsFollowPhone = settings.share
+    UserDefaultsManager.settingsFollowPhone = phone.share
+    sending = phone.sending
+    recountIncoming()
     objectWillChange.send()
     publishState()
+    return true
+  }
+
+  private func forgetSends() {
+    sending = [:]
+    incoming = [:]
+  }
+
+  private func recountIncoming() {
+    incoming = sending.reduce(into: [:]) { left, album in
+      let here = AlbumService.shared.downloadedMediaFileIds(collectionId: album.key).count
+      if album.value > here { left[album.key] = album.value - here }
+    }
   }
 
   func requestSignIn(_ request: Link.SignIn) {
@@ -140,9 +164,7 @@ import WatchKit
           bitRate: info.kbps > 0 ? info.kbps : song.bitRate, status: "Downloaded")
       else { return RequestLog.shared.note("phone song \(song.title) not saved") }
     }
-    let have = service.downloadedMediaFileIds(collectionId: info.collectionId).count
-    incoming[info.collectionId] = max(0, info.songCount - have)
-    if incoming[info.collectionId] == 0 { incoming[info.collectionId] = nil }
+    recountIncoming()
     DownloadSession.shared.downloadFinished.send(info.collectionId)
   }
 
@@ -183,8 +205,7 @@ import WatchKit
         }
         let rates = Set(songs.map(\.bitRate))
         return .init(
-          id: id, name: collection.name ?? "", artist: collection.albumArtist ?? "",
-          songs: songs.count, kbps: rates.count == 1 ? rates.first.map(Int.init) : nil)
+          id: id, name: collection.name ?? "", songs: songs.count, kbps: rates.count == 1 ? rates.first.map(Int.init) : nil)
       }
       return state
     }
@@ -200,13 +221,16 @@ import WatchKit
 /// once its callback returns.
 final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
   private let lock = NSLock()
-  private var _account: Link.WatchState.Account?
   private var deliveries = 0
 
-  /// The signed-in account, kept here for the delegate queue.
-  var account: Link.WatchState.Account? {
-    get { lock.withLock { _account } }
-    set { lock.withLock { _account = newValue } }
+  /// The signed-in account, from the session's own key, which is safe to
+  /// read on any queue and set before the first file can arrive. The name
+  /// comes from the Keychain when it reads.
+  static func signedInAccount() -> Link.WatchState.Account? {
+    guard let key = AuthService.shared.accountKey else { return nil }
+    var user = ""
+    if case .found(let auth) = KeychainManager.loadAuth() { user = auth.username }
+    return .init(user: user, host: URL(string: UserDefaultsManager.serverBaseURL)?.host ?? "", key: key)
   }
 
   var isDelivering: Bool { lock.withLock { deliveries > 0 } }
@@ -224,6 +248,10 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
     Task { @MainActor in PhoneLink.shared.activated() }
   }
 
+  func sessionCompanionAppInstalledDidChange(_ session: WCSession) {
+    Task { @MainActor in PhoneLink.shared.companionChanged() }
+  }
+
   func session(_ session: WCSession, didReceiveApplicationContext context: [String: Any]) {
     Task { @MainActor in PhoneLink.shared.apply(context) }
   }
@@ -236,14 +264,15 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
       return replyHandler([:])
     }
     // A signed-in watch keeps its login; signing in again is its own choice.
-    guard let account else {
+    guard let account = Self.signedInAccount() else {
       replyHandler(Link.encode(Link.Reply.accepted))
       Task { @MainActor in PhoneLink.shared.requestSignIn(request) }
       return
     }
-    let same = account.user == request.user && account.host == URL(string: request.server)?.host
+    let same = account.key == request.accountKey
     replyHandler(
-      Link.encode(same ? .alreadySignedIn : Link.Reply.otherAccount(user: account.user, host: account.host)))
+      Link.encode(
+        same ? .alreadySignedIn : Link.Reply.otherAccount(user: account.user, host: account.host)))
   }
 
   func session(_ session: WCSession, didReceive file: WCSessionFile) {
@@ -253,7 +282,7 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
   /// Moves a file from the phone into place, before its callback returns.
   func receive(_ file: URL, metadata: [String: Any]) {
     guard let info = Link.decode(Link.FileInfo.self, from: metadata),
-      info.accountKey == account?.key
+      info.accountKey == AuthService.shared.accountKey
     else { return debugLog("phone link: dropped a file for another account") }
     let path =
       switch info.kind {
@@ -265,15 +294,12 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
       case .cover: AlbumService.coverPath(id: info.collectionId)
       }
     guard let path else { return }
-    let target = LocalFileManager.shared.fileURL(for: path)
-    do {
-      try FileManager.default.createDirectory(
-        at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-      try? FileManager.default.removeItem(at: target)
-      try FileManager.default.moveItem(at: file, to: target)
-    } catch {
-      return debugLog("phone link: file not moved: \(error)")
+    var moved = false
+    LocalFileManager.shared.moveFile(source: file, target: LocalFileManager.shared.fileURL(for: path)) {
+      if case .failure(let error) = $0 { return debugLog("phone link: file not moved: \(error)") }
+      moved = true
     }
+    guard moved else { return }
     lock.withLock { deliveries += 1 }
     Task { @MainActor in PhoneLink.shared.save(info) }
   }

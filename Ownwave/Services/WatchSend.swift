@@ -4,47 +4,54 @@
 //
 
 import ImageIO
-import UIKit
 import UniformTypeIdentifiers
 
 /// Downloads the songs of albums going to the watch, at the watch's bitrate,
 /// into an outbox of their own, and hands each to `WatchLink` once it is
 /// here. A background URLSession keeps downloading while the app is
-/// suspended; a song that cannot be fetched ends its album's send. Main
-/// thread only; the session delegates on the main queue.
+/// suspended. A job stays until its file was handed over, so a relaunch
+/// hands over what arrived meanwhile. Main thread only; the session
+/// delegates on the main queue.
 final class WatchSend: NSObject {
   static let shared = WatchSend()
   static let identifier = "\(Bundle.main.bundleIdentifier ?? "flo").watch-sends"
 
-  struct Job: Codable, Equatable {
+  struct Job: Codable {
     let album: Album
     let song: Song
     let songCount: Int
     let kbps: Int
     var attempts = 0
+    /// Set once the song is in the outbox.
+    var downloaded = false
 
     var id: String { "\(album.id):\(song.id)" }
     var suffix: String { kbps > 0 ? TranscodingSettings.targetFormat : song.suffix }
+    var file: URL {
+      WatchSend.outbox.appendingPathComponent(album.id).appendingPathComponent("\(song.id).\(suffix)")
+    }
   }
 
-  /// Connection breaks retry this often before the album gives up.
-  private static let maxAttempts = 3
+  /// A connection break waits this long, uncounted, like DownloadSession's.
+  private static let connectionRetry: TimeInterval = 30
   private static let jobsURL = URL.applicationSupportDirectory
     .appendingPathComponent("watch-sends.json")
-  private static let outbox = URL.applicationSupportDirectory
+  fileprivate static let outbox = URL.applicationSupportDirectory
     .appendingPathComponent("watch-outbox", isDirectory: true)
 
   private lazy var session: URLSession = {
     let configuration = URLSessionConfiguration.background(withIdentifier: Self.identifier)
     configuration.sessionSendsLaunchEvents = true
     configuration.isDiscretionary = false
+    // One transcode at a time, so a playing stream is not starved.
+    configuration.httpMaximumConnectionsPerHost = 1
     configuration.timeoutIntervalForResource = 2 * 3600
     return URLSession(configuration: configuration, delegate: self, delegateQueue: .main)
   }()
 
   private var jobs: [Job]
   private var tasks: [String: URLSessionTask] = [:]
-  private var backgroundCompletions: [() -> Void] = []
+  private var backgroundCompletions: [UUID: () -> Void] = [:]
 
   override private init() {
     jobs = (try? JSONDecoder().decode([Job].self, from: Data(contentsOf: Self.jobsURL))) ?? []
@@ -56,12 +63,13 @@ final class WatchSend: NSObject {
     ) { _ in WatchSend.shared.resume() }
   }
 
-  /// The albums still downloading here.
+  /// The albums with songs not handed over yet.
   var albums: [Album] {
     var seen = Set<String>()
     return jobs.map(\.album).filter { seen.insert($0.id).inserted }
   }
 
+  /// Songs of the album not handed over yet.
   func pending(_ collectionId: String) -> Int {
     jobs.filter { $0.album.id == collectionId }.count
   }
@@ -79,6 +87,28 @@ final class WatchSend: NSObject {
     resume()
   }
 
+  /// Hands every song in the outbox to the link; called once it can take
+  /// them.
+  func handOver() {
+    guard MainActor.assumeIsolated({ WatchLink.shared.canTransfer }) else { return }
+    for job in jobs where job.downloaded {
+      guard FileManager.default.fileExists(atPath: job.file.path) else {
+        // Lost between a crash and its save: fetch it again.
+        update(job.id) { $0.downloaded = false }
+        continue
+      }
+      Self.transfer(
+        job.file, .song, album: job.album, song: job.song, songCount: job.songCount,
+        suffix: job.suffix, kbps: job.kbps)
+    }
+    let handed = Set(jobs.filter(\.downloaded).map(\.id))
+    if !handed.isEmpty {
+      jobs.removeAll { handed.contains($0.id) }
+      save()
+    }
+    resume()
+  }
+
   func cancel(_ collectionId: String) {
     for job in jobs where job.album.id == collectionId {
       tasks.removeValue(forKey: job.id)?.cancel()
@@ -88,22 +118,45 @@ final class WatchSend: NSObject {
     try? FileManager.default.removeItem(at: Self.outbox.appendingPathComponent(collectionId))
   }
 
+  /// A logout: the tasks of an earlier launch too, which carry the old
+  /// credentials.
   func cancelAll() {
-    tasks.values.forEach { $0.cancel() }
     tasks = [:]
     jobs = []
     save()
     try? FileManager.default.removeItem(at: Self.outbox)
+    session.getAllTasks { $0.forEach { $0.cancel() } }
   }
 
-  /// The watch has the file, or will never get it: the outbox copy goes.
+  /// "Download on cellular" changed: running tasks start again with it.
+  func cellularAccessChanged() {
+    let running = tasks
+    tasks = [:]
+    running.values.forEach { $0.cancel() }
+    resume()
+  }
+
+  /// The watch has the file, or will never get it: the outbox copy goes, and
+  /// the album's folder once it is empty.
   func delivered(_ file: URL) {
     guard file.path.hasPrefix(Self.outbox.path) else { return }
-    try? FileManager.default.removeItem(at: file)
+    let manager = FileManager.default
+    try? manager.removeItem(at: file)
+    let folder = file.deletingLastPathComponent()
+    if (try? manager.contentsOfDirectory(atPath: folder.path))?.isEmpty == true {
+      try? manager.removeItem(at: folder)
+    }
   }
 
+  /// Keeps the system's wake-up until the session delivered its events; they
+  /// may have come before it (the session exists from launch), so a deadline
+  /// completes it in any case.
   func handleBackgroundEvents(completion: @escaping () -> Void) {
-    backgroundCompletions.append(completion)
+    let id = UUID()
+    backgroundCompletions[id] = completion
+    DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+      self.backgroundCompletions.removeValue(forKey: id)?()
+    }
   }
 
   // MARK: - Private
@@ -115,14 +168,16 @@ final class WatchSend: NSObject {
     session.getAllTasks { running in
       DispatchQueue.main.async {
         for task in running {
-          guard let id = task.taskDescription, self.jobs.contains(where: { $0.id == id }) else {
+          guard let id = task.taskDescription,
+            self.jobs.contains(where: { $0.id == id && !$0.downloaded })
+          else {
             task.cancel()
             continue
           }
           self.tasks[id] = task
         }
         guard !AppPlatform.isInBackground else { return }
-        self.jobs.filter { self.tasks[$0.id] == nil }.forEach(self.submit)
+        self.jobs.filter { !$0.downloaded && self.tasks[$0.id] == nil }.forEach(self.submit)
       }
     }
   }
@@ -136,6 +191,12 @@ final class WatchSend: NSObject {
     task.taskDescription = job.id
     tasks[job.id] = task
     task.resume()
+  }
+
+  private func update(_ id: String, _ change: (inout Job) -> Void) {
+    guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+    change(&jobs[index])
+    save()
   }
 
   private func save() {
@@ -168,40 +229,47 @@ final class WatchSend: NSObject {
     MainActor.assumeIsolated { WatchLink.shared.failSend(collectionId) }
   }
 
-  private func finished(_ job: Job, file: URL) {
-    jobs.removeAll { $0.id == job.id }
-    save()
-    Self.transfer(
-      file, .song, album: job.album, song: job.song, songCount: job.songCount, suffix: job.suffix,
-      kbps: job.kbps)
+  /// Retries the job after `delay` unless it is gone or running by then;
+  /// in the background the next activation does.
+  private func retry(_ job: Job, after delay: TimeInterval) {
+    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+      guard let job = self.jobs.first(where: { $0.id == job.id }), !job.downloaded,
+        self.tasks[job.id] == nil, !AppPlatform.isInBackground
+      else { return }
+      self.submit(job)
+    }
   }
 
+  /// Connection breaks wait and go again uncounted, so a dead zone never
+  /// ends a send; server failures retry like DownloadSession's.
   private func failed(_ job: Job, _ failure: DownloadFailure) {
     tasks[job.id] = nil
-    guard failure == .connection, job.attempts + 1 < Self.maxAttempts,
-      let index = jobs.firstIndex(where: { $0.id == job.id })
-    else { return failSend(job.album.id) }
-    jobs[index].attempts += 1
-    save()
-    if !AppPlatform.isInBackground { submit(jobs[index]) }
+    switch failure {
+    case .connection:
+      retry(job, after: Self.connectionRetry)
+    case .counted:
+      guard let delay = DownloadRetry.delay(afterAttempts: job.attempts) else {
+        return failSend(job.album.id)
+      }
+      update(job.id) { $0.attempts += 1 }
+      retry(job, after: delay)
+    case .final:
+      failSend(job.album.id)
+    }
   }
 
   /// The watch's covers are small; a 200 px PNG goes with the songs.
   private func sendCover(of album: Album, songCount: Int) {
-    let source = AlbumService.shared.coverURL(albumId: album.id)
     let target = Self.outbox.appendingPathComponent(album.id).appendingPathComponent("cover.png")
-    Task.detached(priority: .utility) {
-      var file = URL(fileURLWithPath: source)
-      if source.hasPrefix("http"), let remote = URL(string: source) {
-        guard let (downloaded, _) = try? await URLSession.shared.download(from: remote) else {
-          return
-        }
-        file = downloaded
-      }
-      guard Self.writeThumbnail(of: file, to: target) else { return }
-      await MainActor.run {
-        Self.transfer(target, .cover, album: album, songCount: songCount, suffix: "png", kbps: 0)
-      }
+    Task {
+      var source = AlbumService.shared.downloadedCoverPath(albumId: album.id)
+      if source == nil { source = await CoverArtCacheManager.shared.coverPath(albumId: album.id) }
+      guard let source,
+        await Task.detached(priority: .utility, operation: {
+          Self.writeThumbnail(of: URL(fileURLWithPath: source), to: target)
+        }).value
+      else { return }
+      Self.transfer(target, .cover, album: album, songCount: songCount, suffix: "png", kbps: 0)
     }
   }
 
@@ -241,17 +309,13 @@ extension WatchSend: URLSessionDownloadDelegate {
     {
       return failed(job, failure)
     }
-    let target = Self.outbox.appendingPathComponent(job.album.id)
-      .appendingPathComponent("\(job.song.id).\(job.suffix)")
-    do {
-      try FileManager.default.createDirectory(
-        at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-      try? FileManager.default.removeItem(at: target)
-      try FileManager.default.moveItem(at: location, to: target)
-    } catch {
-      return failSend(job.album.id)
+    var moved = false
+    LocalFileManager.shared.moveFile(source: location, target: job.file) {
+      if case .success = $0 { moved = true }
     }
-    finished(job, file: target)
+    guard moved else { return failSend(job.album.id) }
+    update(job.id) { $0.downloaded = true }
+    handOver()
   }
 
   func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
@@ -260,8 +324,8 @@ extension WatchSend: URLSessionDownloadDelegate {
   }
 
   func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-    let completions = backgroundCompletions
-    backgroundCompletions = []
+    let completions = backgroundCompletions.values
+    backgroundCompletions = [:]
     completions.forEach { $0() }
   }
 }

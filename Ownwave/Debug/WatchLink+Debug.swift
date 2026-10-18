@@ -46,9 +46,8 @@
           state.account = .init(
             user: "demo", host: URL(string: UserDefaultsManager.serverBaseURL)?.host ?? "", key: key)
         }
-        state.followsPhone = true
         state.collections = albums.prefix(2).map {
-          .init(id: $0.id, name: $0.name, artist: $0.albumArtist, songs: 11, kbps: 192)
+          .init(id: $0.id, name: $0.name, songs: 11, kbps: 192)
         }
         state.musicBytes = 1_400_000_000
         state.freeBytes = 18_300_000_000

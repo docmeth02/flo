@@ -20,7 +20,7 @@
         if action.hasPrefix("settings:") {
           apply(
             Link.encode(
-              Link.Settings(
+              Link.PhoneState(
                 share: action == "settings:on", streamingBitRate: "160", downloadBitRate: "256",
                 keepPlaying: true)))
           debugLog(
@@ -30,7 +30,8 @@
         } else if action.hasPrefix("signin:") {
           let parts = action.dropFirst(7).split(separator: "|", maxSplits: 2).map(String.init)
           guard parts.count == 3 else { return }
-          requestSignIn(Link.SignIn(server: parts[0], user: parts[1], password: parts[2]))
+          requestSignIn(
+            Link.SignIn(server: parts[0], user: parts[1], password: parts[2], accountKey: ""))
         } else if action.hasPrefix("file:") {
           await deliverDebugFiles(albumId: String(action.dropFirst(5)))
         }
@@ -46,6 +47,14 @@
       guard let key = AuthService.shared.accountKey, let first = songs.first else {
         return debugLog("phone link: no songs or no account")
       }
+      // The phone announces the send before its first file.
+      apply(
+        Link.encode(
+          Link.PhoneState(
+            share: UserDefaultsManager.settingsFollowPhone,
+            streamingBitRate: UserDefaultsManager.maxBitRate,
+            downloadBitRate: UserDefaultsManager.downloadBitRate,
+            keepPlaying: UserDefaultsManager.keepPlaying, sending: [albumId: songs.count])))
       var album = Album()
       album.id = albumId
       album.name = first.albumName

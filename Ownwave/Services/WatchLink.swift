@@ -29,10 +29,18 @@ import WatchConnectivity
   /// What the watch said last; it outlives a relaunch in the session.
   @Published private(set) var watch: Link.WatchState?
   @Published private(set) var signIn = SignInPhase.idle
-  @Published private(set) var sends: [Send] = []
+  @Published private(set) var sends: [Send] = [] {
+    // The watch counts what is still on its way from this; progress alone
+    // is the phone's business.
+    didSet { if Self.songs(of: sends) != Self.songs(of: oldValue) { updateWatch() } }
+  }
 
   private let session = WCSession.default
   private let receiver = Receiver()
+  private var signInDeadline: Task<Void, Never>?
+
+  /// A watch that fails to sign in after the wrist went down cannot say so.
+  private static let signInTimeout: Duration = .seconds(60)
 
   private init() {}
 
@@ -53,6 +61,12 @@ import WatchConnectivity
     watch?.account?.key != nil && watch?.account?.key == AuthService.shared.accountKey
   }
 
+  /// Files can go to the watch: `transferFile` on an inactive session is a
+  /// programmer error.
+  var canTransfer: Bool {
+    session.activationState == .activated && session.isPaired && session.isWatchAppInstalled
+  }
+
   // MARK: - Sign-in
 
   /// Signs the watch in with this phone's server, user and saved password;
@@ -63,14 +77,22 @@ import WatchConnectivity
       return
     }
     guard case .found(let auth) = KeychainManager.loadAuth(),
-      case .found(let password) = KeychainManager.loadPassword()
+      case .found(let password) = KeychainManager.loadPassword(),
+      let accountKey = AuthService.shared.accountKey
     else {
       signIn = .failed("This iPhone has no saved password to send.")
       return
     }
     signIn = .sending
+    signInDeadline?.cancel()
+    signInDeadline = Task {
+      try? await Task.sleep(for: Self.signInTimeout)
+      guard !Task.isCancelled, signIn == .sending else { return }
+      signIn = .failed("The watch did not finish signing in.")
+    }
     let request = Link.SignIn(
-      server: UserDefaultsManager.serverBaseURL, user: auth.username, password: password)
+      server: UserDefaultsManager.serverBaseURL, user: auth.username, password: password,
+      accountKey: accountKey)
     session.sendMessage(Link.encode(Link.Message.signIn(request))) { reply in
       let reply = Link.decode(Link.Reply.self, from: reply)
       Task { @MainActor in WatchLink.shared.answered(reply) }
@@ -82,7 +104,9 @@ import WatchConnectivity
   private func answered(_ reply: Link.Reply?) {
     switch reply {
     case .accepted: break
-    case .alreadySignedIn: signIn = .idle
+    case .alreadySignedIn:
+      signInDeadline?.cancel()
+      signIn = .idle
     case .otherAccount(let user, let host):
       signIn = .failed("The watch is signed in as \(user) on \(host). Log out there first.")
     case nil: signIn = .failed("The watch did not answer.")
@@ -91,18 +115,20 @@ import WatchConnectivity
 
   // MARK: - Settings
 
-  /// Tells the watch the phone's settings, and whether to follow them.
-  func shareSettings() {
+  /// Tells the watch the phone's settings, whether to follow them, and the
+  /// albums on their way.
+  func updateWatch() {
     guard session.activationState == .activated, session.isWatchAppInstalled else { return }
-    let settings = Link.Settings(
+    let phone = Link.PhoneState(
       share: UserDefaultsManager.shareWatchSettings,
       streamingBitRate: UserDefaultsManager.cellularBitRate,
       downloadBitRate: UserDefaultsManager.downloadBitRate,
-      keepPlaying: UserDefaultsManager.keepPlaying)
+      keepPlaying: UserDefaultsManager.keepPlaying,
+      sending: Self.songs(of: sends))
     do {
-      try session.updateApplicationContext(Link.encode(settings))
+      try session.updateApplicationContext(Link.encode(phone))
     } catch {
-      debugLog("watch link: settings not sent: \(error)")
+      debugLog("watch link: state not sent: \(error)")
     }
   }
 
@@ -115,10 +141,10 @@ import WatchConnectivity
     let app = AppModel.shared
     guard let watch else { return app.show("The watch has not answered yet") }
     guard isSignedIn else { return app.show("Sign the watch in first") }
-    guard !watch.collections.contains(where: { $0.id == album.id }) else {
-      return app.show("Already on the watch")
-    }
     guard !sends.contains(where: { $0.id == album.id }) else { return app.show("Already sending") }
+    // A partly arrived album may be sent again; its songs on the watch are kept.
+    guard !watch.collections.contains(where: { $0.id == album.id && watch.incoming[$0.id] == nil })
+    else { return app.show("Already on the watch") }
     let kbps = Int(watch.downloadBitRate) ?? 0
     sends.append(Send(album: album, songs: max(1, album.songs.count)))
     app.show("Sending \(album.name) to the watch")
@@ -135,19 +161,24 @@ import WatchConnectivity
     }
   }
 
-  /// Hands a song or cover in the outbox to the watch.
+  /// Hands a song or cover in the outbox to the watch; `WatchSend` only
+  /// calls this while `canTransfer`.
   func transfer(_ file: URL, _ info: Link.FileInfo) {
+    guard canTransfer else { return }
     session.transferFile(file, metadata: Link.encode(info))
     updateProgress(info.collectionId)
   }
 
   /// Recomputes a send's progress: its songs count once downloaded and once
-  /// delivered.
-  func updateProgress(_ collectionId: String) {
+  /// delivered. A transfer that just finished may still be listed.
+  func updateProgress(_ collectionId: String, excluding finished: WCSessionFileTransfer? = nil) {
     guard let index = sends.firstIndex(where: { $0.id == collectionId }) else { return }
     let songs = sends[index].songs
     let downloading = WatchSend.shared.pending(collectionId)
-    let transferring = outgoing.filter { $0.collectionId == collectionId && $0.kind == .song }.count
+    let transferring = session.outstandingFileTransfers.filter { transfer in
+      guard transfer !== finished, let info = Self.info(of: transfer) else { return false }
+      return info.collectionId == collectionId && info.kind == .song
+    }.count
     guard downloading + transferring > 0 else {
       sends.remove(at: index)
       return
@@ -166,6 +197,10 @@ import WatchConnectivity
       AppModel.shared.show("Could not send \(send.album.name)")
     }
     sends.removeAll { $0.id == collectionId }
+  }
+
+  private static func songs(of sends: [Send]) -> [String: Int] {
+    sends.reduce(into: [:]) { $0[$1.id] = $1.songs }
   }
 
   private var outgoing: [Link.FileInfo] {
@@ -192,8 +227,10 @@ import WatchConnectivity
 
   fileprivate func activated() {
     refresh()
-    received(session.receivedApplicationContext)
-    shareSettings()
+    // Empty after a switch to another watch, which must not inherit the old one's.
+    watch = Link.decode(Link.WatchState.self, from: session.receivedApplicationContext)
+    updateWatch()
+    WatchSend.shared.handOver()
     // Sends of an earlier launch go on: downloads here, transfers with the
     // system.
     let albums = WatchSend.shared.albums + outgoing.filter { $0.kind == .song }.map(\.album)
@@ -211,11 +248,13 @@ import WatchConnectivity
     watch = state
     if signIn == .sending, state.account != nil {
       signIn = .idle
+      signInDeadline?.cancel()
       AppModel.shared.show("Watch signed in")
     }
   }
 
   fileprivate func signInFailed(_ message: String) {
+    signInDeadline?.cancel()
     signIn = .failed(message)
   }
 
@@ -227,7 +266,7 @@ import WatchConnectivity
       debugLog("watch link: transfer failed: \(error)")
       return failSend(info.collectionId)
     }
-    updateProgress(info.collectionId)
+    updateProgress(info.collectionId, excluding: transfer)
   }
 }
 

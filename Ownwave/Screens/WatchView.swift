@@ -42,7 +42,7 @@ struct WatchView: View {
     .navigationBarTitleDisplayMode(.inline)
     .onChange(of: shareSettings) {
       UserDefaultsManager.shareWatchSettings = $1
-      link.shareSettings()
+      link.updateWatch()
     }
     .task {
       albumViewModel.fetchDownloadedAlbums()
@@ -137,7 +137,10 @@ struct WatchView: View {
   // MARK: - Albums
 
   private var onWatchSection: some View {
-    let collections = link.watch?.collections ?? []
+    // An album still arriving shows once, as a send, not also with a check.
+    let collections = (link.watch?.collections ?? []).filter { collection in
+      link.watch?.incoming[collection.id] == nil && !link.sends.contains { $0.id == collection.id }
+    }
     return VStack(spacing: 8) {
       SectionTitle("On the watch")
       ForEach(collections) { collection in
@@ -152,7 +155,7 @@ struct WatchView: View {
       }
       ForEach(link.sends) { SendRow(send: $0) }
       if collections.isEmpty, link.sends.isEmpty {
-        Text("Nothing on the watch yet.")
+        Text(link.watch == nil ? "The watch has not reported yet." : "Nothing on the watch yet.")
           .font(.rowSubtitle)
           .foregroundStyle(palette.secondary)
           .frame(maxWidth: .infinity, alignment: .leading)
@@ -245,14 +248,8 @@ private struct SendRow: View {
       VStack(alignment: .leading, spacing: 2) {
         Text(send.album.name).font(.rowTitle).lineLimit(1)
         Text("Sending").font(.rowSubtitle).foregroundStyle(palette.secondary)
-        Capsule().fill(palette.surface2)
-          .overlay(alignment: .leading) {
-            GeometryReader { proxy in
-              Capsule().fill(palette.accent).frame(width: proxy.size.width * send.progress)
-            }
-          }
-          .frame(height: 3)
-          .padding(.top, 3)
+        // The Downloads list's look for the same thing.
+        ProgressView(value: send.progress).tint(palette.accent).padding(.top, 3)
       }
       Text("\(Int(send.progress * 100))%")
         .font(.rowSubtitle)

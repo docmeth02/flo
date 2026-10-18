@@ -20,6 +20,8 @@ enum Link {
     let server: String
     let user: String
     let password: String
+    /// The phone's account, so a watch signed in to it says so.
+    let accountKey: String
   }
 
   /// The watch's immediate answer to a sign-in; the outcome follows as its
@@ -31,13 +33,16 @@ enum Link {
   }
 
   /// The phone's application context: the settings the watch follows while
-  /// `share` is on.
-  struct Settings: Codable, Equatable {
+  /// `share` is on, and the albums on their way.
+  struct PhoneState: Codable, Equatable {
     let share: Bool
     /// The phone's cellular limit; the watch streams on its own link.
     let streamingBitRate: String
     let downloadBitRate: String
     let keepPlaying: Bool
+    /// The songs of each album the phone is sending; an album it gave up on
+    /// drops out.
+    var sending: [String: Int] = [:]
   }
 
   /// The watch's application context.
@@ -51,14 +56,12 @@ enum Link {
     struct Collection: Codable, Equatable, Identifiable {
       let id: String
       let name: String
-      let artist: String
       let songs: Int
       /// Nil when its songs came at different bitrates.
       let kbps: Int?
     }
 
     var account: Account?
-    var followsPhone = false
     var downloadBitRate = TranscodingSettings.defaultBitRate
     var collections: [Collection] = []
     /// Songs still expected from the phone, per collection.

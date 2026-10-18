@@ -128,7 +128,10 @@ struct WatchContentView: View {
     }
     // The iPhone signs the watch in with the watch's own login.
     .onChange(of: phone.signInRequest) { _, request in
-      guard let request, !authViewModel.isLoggedIn, !authViewModel.isSubmitting else { return }
+      guard let request, !authViewModel.isSubmitting else { return }
+      // Signed in meanwhile, or with a Keychain that would not read: the
+      // watch keeps its login, and its state tells the phone.
+      guard !authViewModel.isLoggedIn else { return phone.signInFinished(error: nil) }
       authViewModel.serverUrl = request.server
       authViewModel.username = request.user
       authViewModel.password = request.password
