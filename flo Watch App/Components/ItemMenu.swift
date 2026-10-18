@@ -160,7 +160,7 @@ extension View {
 private struct ItemMenuPresenter: ViewModifier {
   @Binding var target: MenuTarget?
 
-  @EnvironmentObject private var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject private var playerViewModel: PlayerViewModel
   @EnvironmentObject private var pinStore: PinStore
   @ObservedObject private var starStore = StarStore.shared
   @State private var toast: FloToast.Message?

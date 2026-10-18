@@ -1,5 +1,5 @@
 //
-//  WatchPlayerViewModel+QueueEditing.swift
+//  PlayerViewModel+QueueEditing.swift
 //  flo
 //
 
@@ -93,7 +93,7 @@ struct QueueOrders<Row: AnyObject> {
 /// `QueueOrders` on the play order (`queue`) and the stored order
 /// (`unshuffledQueue`), saves in one go and publishes both only when that
 /// worked.
-extension WatchPlayerViewModel {
+extension PlayerViewModel {
   /// Puts `songs` right after the current song. Starts them instead when
   /// nothing plays or a live radio does. Returns whether the queue changed.
   @discardableResult

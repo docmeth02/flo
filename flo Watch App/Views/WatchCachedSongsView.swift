@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct WatchCachedSongsView: View {
-  @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject var playerViewModel: PlayerViewModel
 
   let songs: [Song]
 

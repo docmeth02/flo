@@ -1,5 +1,5 @@
 //
-//  WatchPlayerViewModel.swift
+//  PlayerViewModel.swift
 //  flo
 //
 
@@ -17,7 +17,7 @@ final class PlayerClock: ObservableObject {
   var clampedProgress: Double { progress.isFinite ? min(max(progress, 0), 1) : 0 }
 }
 
-class WatchPlayerViewModel: ObservableObject {
+class PlayerViewModel: ObservableObject {
   var player: AVPlayer? {
     didSet { observeBuffering() }
   }

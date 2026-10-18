@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct WatchHomeView: View {
-  @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject var playerViewModel: PlayerViewModel
   @EnvironmentObject var albumViewModel: AlbumViewModel
 
   @Environment(\.showPlayer) private var showPlayer

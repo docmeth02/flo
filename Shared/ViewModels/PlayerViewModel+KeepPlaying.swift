@@ -1,12 +1,12 @@
 //
-//  WatchPlayerViewModel+KeepPlaying.swift
+//  PlayerViewModel+KeepPlaying.swift
 //  flo
 //
 
 import Foundation
 
 // Skips, qualification, the listening session and the Keep Playing mix.
-extension WatchPlayerViewModel {
+extension PlayerViewModel {
   /// Pressing next on a barely heard song is a negative signal for smart
   /// shuffle. Only early, user-initiated abandonment counts: natural track
   /// ends, radio, repeat modes that restart the same track and accidental

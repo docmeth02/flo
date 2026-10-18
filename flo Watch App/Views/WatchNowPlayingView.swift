@@ -7,7 +7,7 @@ import SwiftUI
 import WatchKit
 
 struct WatchNowPlayingView: View {
-  @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject var playerViewModel: PlayerViewModel
   @ObservedObject private var ratings = RatingStore.shared
 
   // Next to the library page, the crown belongs to the volume control only

@@ -17,7 +17,7 @@ extension EnvironmentValues {
 
 struct WatchContentView: View {
   @StateObject private var authViewModel = AuthViewModel()
-  @StateObject var playerViewModel = WatchPlayerViewModel()
+  @StateObject var playerViewModel = PlayerViewModel()
   @StateObject var albumViewModel = AlbumViewModel()
   // Playback and scrobbling use the shared instance; Settings must show the
   // same state.

@@ -1,5 +1,5 @@
 //
-//  WatchPlayerViewModel+Debug.swift
+//  PlayerViewModel+Debug.swift
 //  flo
 //
 
@@ -18,7 +18,7 @@
   // FLO_DEBUG_STALL=<s> treats the remote item as stalled <s> seconds after the
   // mix started (the simulator never stalls); FLO_DEBUG_STALL=<s>:offline
   // enters the connection wait instead.
-  extension WatchPlayerViewModel {
+  extension PlayerViewModel {
     func runDebugLaunchActions() {
       let env = ProcessInfo.processInfo.environment
       if let kbps = env["FLO_DEBUG_BITRATE"] {

@@ -1,5 +1,5 @@
 //
-//  WatchPlayerViewModel+NowPlayingInfo.swift
+//  PlayerViewModel+NowPlayingInfo.swift
 //  flo
 //
 
@@ -7,7 +7,7 @@ import MediaPlayer
 import WatchKit
 
 // The heart, the system's Now Playing info and the remote commands.
-extension WatchPlayerViewModel {
+extension PlayerViewModel {
   /// Asks the server whether the current song is starred; a refresh asks
   /// again only when the song change's lookup failed.
   @MainActor func loadStarred(refresh: Bool = false) {

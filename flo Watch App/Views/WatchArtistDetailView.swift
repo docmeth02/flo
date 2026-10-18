@@ -7,7 +7,7 @@ import SwiftUI
 
 struct WatchArtistDetailView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
-  @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject var playerViewModel: PlayerViewModel
   @Environment(\.showPlayer) private var showPlayer
 
   @StateObject var artistDetailViewModel = ArtistDetailViewModel()

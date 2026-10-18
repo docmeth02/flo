@@ -1,5 +1,5 @@
 //
-//  WatchPlayerViewModel+Recovery.swift
+//  PlayerViewModel+Recovery.swift
 //  flo
 //
 
@@ -7,7 +7,7 @@ import AVFoundation
 import Combine
 
 // Item loading, buffering, stalls, the connection wait and failed streams.
-extension WatchPlayerViewModel {
+extension PlayerViewModel {
   /// Tracks the current item's loading state for both songs and radio.
   func observeItemStatus(trackId: String?) {
     let item = playerItem

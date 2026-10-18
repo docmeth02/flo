@@ -1,12 +1,12 @@
 //
-//  WatchPlayerViewModel+Radio.swift
+//  PlayerViewModel+Radio.swift
 //  flo
 //
 
 import AVFoundation
 
 // Live radio stations.
-extension WatchPlayerViewModel {
+extension PlayerViewModel {
   /// Reconnects a failed radio station to its own stream URL; the song
   /// stream endpoint knows nothing about stations.
   func reloadRadioItem() {

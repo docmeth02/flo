@@ -1,5 +1,5 @@
 //
-//  WatchPlayerViewModel+AudioSession.swift
+//  PlayerViewModel+AudioSession.swift
 //  flo
 //
 
@@ -7,7 +7,7 @@ import AVFoundation
 import Combine
 
 // Interruptions, route changes and the start the output setup may interrupt.
-extension WatchPlayerViewModel {
+extension PlayerViewModel {
   func observeInterruptionNotifications() {
     NotificationCenter.default
       .publisher(for: AVAudioSession.interruptionNotification)

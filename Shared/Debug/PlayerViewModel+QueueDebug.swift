@@ -1,5 +1,5 @@
 //
-//  WatchPlayerViewModel+QueueDebug.swift
+//  PlayerViewModel+QueueDebug.swift
 //  flo
 //
 
@@ -12,7 +12,7 @@
   // cached library), remove:<index>, undo:<index> (remove, then Undo) or
   // move:<index>, indices in play order. The play order and the stored
   // positions are logged after each step.
-  extension WatchPlayerViewModel {
+  extension PlayerViewModel {
     func runQueueDebugAction() {
       guard let value = ProcessInfo.processInfo.environment["FLO_DEBUG_QUEUE"] else { return }
       let parts = value.split(separator: ":", maxSplits: 1).map(String.init)

@@ -10,7 +10,7 @@ import SwiftUI
 /// and scribble.
 struct WatchSearchView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
-  @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject var playerViewModel: PlayerViewModel
 
   @Environment(\.showPlayer) private var showPlayer
   @State private var query: String

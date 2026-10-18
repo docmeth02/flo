@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct WatchRadiosView: View {
-  @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject var playerViewModel: PlayerViewModel
 
   @StateObject var viewModel = RadiosViewModel()
 

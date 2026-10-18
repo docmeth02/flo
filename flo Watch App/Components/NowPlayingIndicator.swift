@@ -7,7 +7,7 @@ import SwiftUI
 
 /// The home screen's hero for the playing song, drawn over its cover backdrop.
 struct NowPlayingIndicator: View {
-  @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject var playerViewModel: PlayerViewModel
 
   @State private var tint: Color = .floLilac
 

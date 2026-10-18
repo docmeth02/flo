@@ -7,7 +7,7 @@ import SwiftUI
 
 struct WatchStarredSongsView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
-  @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject var playerViewModel: PlayerViewModel
 
   @Environment(\.showPlayer) private var showPlayer
   @State private var menu: MenuTarget?

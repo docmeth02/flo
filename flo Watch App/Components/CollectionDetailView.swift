@@ -9,7 +9,7 @@ import SwiftUI
 /// the tracks. The caller supplies the artwork above the title and the
 /// download and removal calls, which differ between albums and playlists.
 struct CollectionDetailView<Artwork: View>: View {
-  @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject var playerViewModel: PlayerViewModel
   @EnvironmentObject var downloadViewModel: DownloadViewModel
 
   let collectionId: String

@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct WatchQueueView: View {
-  @EnvironmentObject var playerViewModel: WatchPlayerViewModel
+  @EnvironmentObject var playerViewModel: PlayerViewModel
   @Environment(\.setQueueShown) private var setQueueShown
   @State private var tint: Color?
   @State private var toast: FloToast.Message?
