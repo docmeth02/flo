@@ -11,6 +11,7 @@ enum Route: Hashable {
   case artist(Artist)
   case playlist(Playlist)
   case settings
+  case watch
 }
 
 extension EnvironmentValues {
@@ -136,6 +137,7 @@ struct AppTabs: View {
             case .artist(let artist): ArtistView(artist: artist)
             case .playlist(let playlist): PlaylistView(playlist: playlist)
             case .settings: SettingsView()
+            case .watch: WatchView()
             }
           }
           .containerBackground(palette.background, for: .navigation)

@@ -7,7 +7,7 @@
   import SwiftUI
 
   // Simulator verification only. FLO_DEBUG_SCREEN=home|library|taste|search|
-  // settings|album|artist|playlist|nowplaying opens that screen once the
+  // settings|watch|album|artist|playlist|nowplaying opens that screen once the
   // library answered (album, artist and playlist: the first of each, or the
   // one named by FLO_DEBUG_SCREEN_ID), for screenshots.
   extension AppTabs {
@@ -24,6 +24,11 @@
       case "taste": tab = .taste
       case "search": tab = .search
       case "settings": paths[.home, default: NavigationPath()].append(Route.settings)
+      case "watch":
+        // FLO_DEBUG_WATCH=demo takes its albums from the list a second later.
+        let albums = app.albums
+        albums.albums = await albums.loadedOrCached(albums.albums, .albums)
+        paths[.home, default: NavigationPath()].append(Route.watch)
       case "album":
         let albums: [Album] = await Self.debugLoad(AlbumService.shared.getAlbum)
         if let album = pick(albums) { paths[.home, default: NavigationPath()].append(Route.album(album)) }
