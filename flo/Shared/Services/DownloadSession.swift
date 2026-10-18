@@ -54,14 +54,19 @@ enum DownloadFailure: Equatable {
   /// The connection broke or the system cancelled the task (a force-quit):
   /// tried again without counting, so a dead zone never uses up the retries.
   case connection
-  /// The server or the transfer failed (5xx, a Subsonic error, TLS).
+  /// The server or the transfer failed (5xx, a Subsonic error, a certificate).
   case counted
   /// Retrying cannot help: the server refused the credentials.
   case final
 
   /// For a task that ended with a URL loading error.
   static func classify(error: Error) -> DownloadFailure {
-    if ConnectivityMonitor.isConnectionError(error) || (error as? URLError)?.code == .cancelled {
+    // A handshake cut by a dropping link is no server fault; certificate
+    // errors still count.
+    let code = (error as? URLError)?.code
+    if ConnectivityMonitor.isConnectionError(error) || code == .cancelled
+      || code == .secureConnectionFailed
+    {
       return .connection
     }
     return .counted
@@ -173,7 +178,7 @@ final class DownloadSession: NSObject, ObservableObject {
     self.store = store
     let jobs = store.load()
     self.jobs = jobs
-    batches = Dictionary(grouping: jobs.filter { !$0.failed }, by: \.collectionId)
+    batches = Dictionary(grouping: jobs, by: \.collectionId)
       .mapValues { Set($0.map(\.id)) }
     super.init()
     // Created at launch, so the events of a relaunch find their delegate.
@@ -288,7 +293,9 @@ final class DownloadSession: NSObject, ObservableObject {
     let task = session.downloadTask(with: request)
     task.taskDescription = job.id
     tasks[job.id] = task
-    update(job.id) {
+    // Not saved here: a loop of submits would write the file once per song,
+    // and both values only matter while the process lives.
+    update(job.id, save: false) {
       $0.startedAt = Date()
       $0.retryAt = nil
     }
@@ -305,6 +312,10 @@ final class DownloadSession: NSObject, ObservableObject {
   }
 
   private func reconcile(_ running: [URLSessionTask]) {
+    // A task that finished since the snapshot is left to its delegate calls,
+    // which have run or are queued behind this: adopting it would block the
+    // job's retry, and a new task would make its file look stale.
+    var finishing = Set<String>()
     for task in running {
       guard let id = task.taskDescription, jobs.contains(where: { $0.id == id }),
         tasks[id] == nil || tasks[id] === task
@@ -312,9 +323,13 @@ final class DownloadSession: NSObject, ObservableObject {
         task.cancel()
         continue
       }
-      tasks[id] = task
+      if task.state == .completed {
+        finishing.insert(id)
+      } else {
+        tasks[id] = task
+      }
     }
-    for job in jobs where tasks[job.id] == nil && !job.failed {
+    for job in jobs where tasks[job.id] == nil && !job.failed && !finishing.contains(job.id) {
       if let retryAt = job.retryAt, retryAt > Date() {
         scheduleRetry(job.id, at: retryAt)
       } else if !saveMovedFile(of: job) {
@@ -337,10 +352,14 @@ final class DownloadSession: NSObject, ObservableObject {
   }
 
   private func finish(_ job: DownloadJob) {
-    AlbumService.shared.saveDownload(
-      albumId: job.collectionId, albumName: job.collectionName, song: job.song,
-      suffix: job.suffix, bitRate: job.kbps > 0 ? job.kbps : job.song.bitRate,
-      status: "Downloaded", isFromPlaylist: job.isPlaylist, playlistIndex: job.playlistIndex)
+    // An unsaved record keeps the job; the next activation finds the file
+    // in place and saves it again.
+    guard
+      AlbumService.shared.saveDownload(
+        albumId: job.collectionId, albumName: job.collectionName, song: job.song,
+        suffix: job.suffix, bitRate: job.kbps > 0 ? job.kbps : job.song.bitRate,
+        status: "Downloaded", isFromPlaylist: job.isPlaylist, playlistIndex: job.playlistIndex)
+    else { return RequestLog.shared.note("download \(job.song.title) not saved") }
     jobs.removeAll { $0.id == job.id }
     if !jobs.contains(where: { $0.collectionId == job.collectionId }) {
       batches[job.collectionId] = nil
@@ -352,16 +371,19 @@ final class DownloadSession: NSObject, ObservableObject {
   private func fail(_ job: DownloadJob, _ failure: DownloadFailure) {
     switch failure {
     case .connection:
-      // The session waits for a network itself, so a task that ran a while
-      // goes again at once; one that failed right away waits, or an
-      // unreachable host would be asked in a loop.
-      let ranFor = job.startedAt.map { Date().timeIntervalSince($0) } ?? .infinity
-      if ranFor < DownloadRetry.delays[0] {
+      // The session waits for a network itself, so a task submitted a while
+      // ago goes again at once; one that failed right away waits, or an
+      // unreachable host would be asked in a loop. In the background nothing
+      // is submitted, and the next activation picks the job up.
+      let sinceSubmit = job.startedAt.map { Date().timeIntervalSince($0) } ?? .infinity
+      if sinceSubmit < DownloadRetry.delays[0] {
         let retryAt = Date().addingTimeInterval(DownloadRetry.delays[0])
         update(job.id) { $0.retryAt = retryAt }
         scheduleRetry(job.id, at: retryAt)
-      } else {
+      } else if canSubmit {
         submit(job)
+      } else {
+        RequestLog.shared.note("download \(job.song.title) waits for the app")
       }
     case .counted:
       guard let delay = DownloadRetry.delay(afterAttempts: job.attempts) else {
@@ -413,10 +435,10 @@ final class DownloadSession: NSObject, ObservableObject {
     store.save(jobs)
   }
 
-  private func update(_ id: String, _ change: (inout DownloadJob) -> Void) {
+  private func update(_ id: String, save: Bool = true, _ change: (inout DownloadJob) -> Void) {
     guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
     change(&jobs[index])
-    store.save(jobs)
+    if save { store.save(jobs) }
   }
 
   /// The job of a task, nil when it was removed, cancelled or replaced.
@@ -464,8 +486,8 @@ extension DownloadSession: URLSessionDownloadDelegate {
       case .success:
         self.finish(job)
       case .failure(let error):
-        RequestLog.shared.note("download \(job.song.title) not moved: \(error)")
-        self.fail(job, .counted)
+        // Downloading again would not help a full disk.
+        self.markFailed(job, reason: "not moved: \(error.localizedDescription)")
       }
     }
   }

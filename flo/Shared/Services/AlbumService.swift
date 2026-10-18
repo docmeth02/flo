@@ -542,10 +542,12 @@ class AlbumService {
 
   /// `suffix` and `bitRate` describe the file as downloaded, which may be
   /// converted from the song's original.
+  /// False when the record could not be saved.
+  @discardableResult
   func saveDownload(
     albumId: String, albumName: String?, song: Song, suffix: String, bitRate: Int, status: String,
     isFromPlaylist: Bool = false, playlistIndex: Int = -1
-  ) {
+  ) -> Bool {
     let songId = isFromPlaylist ? "pl:\(albumId):\(song.mediaFileId)" : song.id
     let position = isFromPlaylist ? Int32(playlistIndex) : Int32(-1)
 
@@ -590,9 +592,11 @@ class AlbumService {
       downloadedSong.explicitStatus = song.explicitStatus.rawValue
     }
 
-    if CoreDataManager.shared.saveRecord(), let replacedFile {
+    guard CoreDataManager.shared.saveRecord() else { return false }
+    if let replacedFile {
       try? FileManager.default.removeItem(at: LocalFileManager.shared.fileURL(for: replacedFile))
     }
+    return true
   }
 
   /// The downloaded collection record for `id`, reused when it exists so a
@@ -654,6 +658,7 @@ class AlbumService {
   /// The download of one song for `DownloadSession`: the original file for
   /// `kbps` 0, else an MP3 the server converts, which has no length.
   func downloadRequest(mediaFileId: String, kbps: Int) -> URLRequest? {
+    guard !UserDefaultsManager.serverBaseURL.isEmpty else { return nil }
     let format = kbps > 0 ? TranscodingSettings.targetFormat : TranscodingSettings.sourceFormat
     let params: [String: Any] = ["id": mediaFileId, "format": format, "bitrate": kbps]
     return URL(string: subsonicURL(endpoint: API.SubsonicEndpoint.download, parameters: params))

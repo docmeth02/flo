@@ -41,11 +41,11 @@ final class DownloadSessionTests: XCTestCase {
   func testConnectionErrorsGoAgainUncounted() {
     let connection: [URLError.Code] = [
       .networkConnectionLost, .timedOut, .notConnectedToInternet, .cancelled,
+      .secureConnectionFailed,
     ]
     for code in connection {
       XCTAssertEqual(DownloadFailure.classify(error: URLError(code)), .connection, "\(code)")
     }
-    XCTAssertEqual(DownloadFailure.classify(error: URLError(.secureConnectionFailed)), .counted)
     XCTAssertEqual(DownloadFailure.classify(error: URLError(.serverCertificateUntrusted)), .counted)
   }
 
