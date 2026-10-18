@@ -12,6 +12,9 @@ extension Color {
   static let floLilac = Color(red: 0xC4 / 255, green: 0xA4 / 255, blue: 0xFE / 255)
   /// Labels on a lilac or cover tinted fill, dark enough for both.
   static let floInk = Color(red: 0x12 / 255, green: 0x0E / 255, blue: 0x22 / 255)
+  /// Behind white labels the system draws itself (swipe actions), where the
+  /// light lilac would be unreadable; the brand's deep lilac.
+  static let floLilacDeep = Color(red: 0x5E / 255, green: 0x4B / 255, blue: 0xC3 / 255)
   static let floText = Color(red: 0xF1 / 255, green: 0xF0 / 255, blue: 0xFC / 255)
   /// The "wave" of the wordmark, a lighter lilac than the accent.
   static let floWave = Color(red: 0xCA / 255, green: 0xAC / 255, blue: 0xFF / 255)

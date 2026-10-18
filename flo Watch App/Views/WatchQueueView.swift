@@ -45,7 +45,7 @@ struct WatchQueueView: View {
                 } label: {
                   Label("Next", systemImage: "text.line.first.and.arrowtriangle.forward")
                 }
-                .tint(.floLilac)
+                .tint(.floLilacDeep)
               }
           }
 
