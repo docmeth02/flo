@@ -2,7 +2,7 @@
 // grid and written as a 1024 px opaque sRGB PNG, since App Store Connect
 // rejects an icon with an alpha channel.
 //
-//   swift scripts/render-icon.swift "flo Watch App/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
+//   swift scripts/render-icon.swift "Ownwave Watch App/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
 import CoreGraphics
 import Foundation

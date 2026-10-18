@@ -2,7 +2,7 @@
 # Bumps the build number, tests, archives and uploads Ownwave to TestFlight,
 # then commits the bump and moves the testflight branch. Pushing stays manual.
 #
-#   scripts/release.sh            release from watchos
+#   scripts/release.sh            release from main
 #   scripts/release.sh --dry-run  everything up to the upload, then undo the bump
 #
 # The App Store Connect API key is read from ~/.appstoreconnect/flo-release.env
@@ -14,7 +14,7 @@ dry_run=false
 [[ "${1:-}" == "--dry-run" ]] && dry_run=true
 
 cd "$(dirname "$0")/.."
-project=flo.xcodeproj/project.pbxproj
+project=Ownwave.xcodeproj/project.pbxproj
 simulator=0B3254A5-34F8-4FC6-8C75-641D7EBA8331
 # The engine tests compile the shared sources for iOS.
 iphone_simulator=FCC76D75-A677-4993-944A-98777D8A0A67
@@ -23,7 +23,7 @@ fail() { echo "release: $*" >&2; exit 1; }
 
 git diff --quiet && git diff --cached --quiet || fail "the working tree has changes"
 branch=$(git branch --show-current)
-$dry_run || [[ "$branch" == watchos ]] || fail "release from watchos, not $branch"
+$dry_run || [[ "$branch" == main ]] || fail "release from main, not $branch"
 
 env_file="$HOME/.appstoreconnect/flo-release.env"
 [[ -f "$env_file" ]] || fail "missing $env_file"
@@ -55,19 +55,19 @@ bumped=true
 echo "release: build $build from $branch at $(git rev-parse --short HEAD)"
 
 echo "release: testing"
-xcodebuild test -project flo.xcodeproj -scheme "flo Watch App" \
+xcodebuild test -project Ownwave.xcodeproj -scheme "Ownwave Watch App" \
   -destination "platform=watchOS Simulator,id=$simulator" >"$log" 2>&1 \
   || fail "tests failed, see $log"
-xcodebuild test -project flo.xcodeproj -scheme "flo EngineTests" \
+xcodebuild test -project Ownwave.xcodeproj -scheme "Ownwave EngineTests" \
   -destination "platform=iOS Simulator,id=$iphone_simulator" >"$log" 2>&1 \
   || fail "engine tests failed, see $log"
 
 echo "release: archiving"
-xcodebuild archive -project flo.xcodeproj -scheme "flo watch" -configuration Release \
+xcodebuild archive -project Ownwave.xcodeproj -scheme "Ownwave" -configuration Release \
   -destination "generic/platform=iOS" -archivePath "$work/ownwave.xcarchive" "${auth[@]}" \
   >"$log" 2>&1 || fail "archive failed, see $log"
 
-binary=$(find "$work/ownwave.xcarchive" -type f -path "*flo Watch App.app/flo Watch App" | head -1)
+binary=$(find "$work/ownwave.xcarchive" -type f -path "*Ownwave Watch App.app/Ownwave Watch App" | head -1)
 [[ -n "$binary" ]] || fail "no watch binary in the archive"
 # Through a file: grep -q ending a pipe early could fail the check open.
 strings "$binary" >"$work/strings.txt" || fail "cannot read the release binary"
