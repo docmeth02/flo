@@ -21,6 +21,22 @@ extension WatchPlayerViewModel {
     guard hasNowPlaying(), let songId = nowPlaying.id, !songId.isEmpty else { return }
     starLookup += 1
     let lookup = starLookup
+    // Offline the lookup could only time out; it counts as failed, so the
+    // next play() asks again. Until the first verdict the monitor assumes the
+    // server answers.
+    ConnectivityMonitor.shared.onFirstVerdict { [weak self] _ in
+      MainActor.assumeIsolated {
+        guard let self, self.starLookup == lookup, self.isCurrentTrack(songId) else { return }
+        guard ConnectivityMonitor.shared.canReachServer else {
+          self.starLookupFailed = true
+          return
+        }
+        self.requestStarred(songId, lookup: lookup)
+      }
+    }
+  }
+
+  @MainActor private func requestStarred(_ songId: String, lookup: Int) {
     // Adopted only if no edit was waiting or made meanwhile: an edit being
     // sent can reach the server after it answered this lookup.
     let canAdopt = !StarStore.shared.isPending(songId)

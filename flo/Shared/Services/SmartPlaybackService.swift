@@ -90,6 +90,8 @@ final class SmartPlaybackService {
   }
 
   private static let songCacheMaxAge: TimeInterval = 24 * 60 * 60
+  // A reachable server answers the probe within a second or two.
+  private static let verdictWait: Duration = .seconds(4)
   // A full fetch takes big pages to keep the round trips down; the
   // incremental walk usually ends within its first small one.
   private static let fullPageSize = 1000
@@ -114,8 +116,15 @@ final class SmartPlaybackService {
     var (songs, starredIds) = await loadCachedLibrary()
 
     // Library songs are only playable when the server answers; with the
-    // network up but the server away they would all fail to stream.
-    let canStream = await ConnectivityMonitor.shared.canStream()
+    // network up but the server away they would all fail to stream. Offline
+    // the probe only ends with its timeout, so songs on the watch play once
+    // it has not answered for a few seconds.
+    let monitor = ConnectivityMonitor.shared
+    var verdict = await monitor.canStream(waitingAtMost: Self.verdictWait)
+    if verdict == nil, await offlinePlayableSongs().isEmpty {
+      verdict = await monitor.canStream()
+    }
+    let canStream = verdict ?? false
 
     if canStream {
       // Likes made elsewhere, or by Siri in an earlier session, reach the

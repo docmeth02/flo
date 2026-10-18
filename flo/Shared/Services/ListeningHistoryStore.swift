@@ -73,7 +73,7 @@ actor ListeningHistoryStore {
   static let shared = ListeningHistoryStore()
 
   enum Reason: String, Sendable {
-    case activation, mix, outbox, rebuild, debug
+    case activation, mix, outbox, reconnect, rebuild, debug
   }
 
   /// Half-life of positive affinity. Changing how plays are folded needs a
@@ -101,6 +101,10 @@ actor ListeningHistoryStore {
     center.addObserver(forName: .scrobbleOutboxFlushed, object: nil, queue: nil) { _ in
       Task { await ListeningHistoryStore.shared.refreshIfStale(reason: .outbox) }
     }
+    // An import that failed while the server was away runs once it is back.
+    center.addObserver(forName: .networkBecameOnline, object: nil, queue: nil) { _ in
+      Task { await ListeningHistoryStore.shared.refreshAfterReconnect() }
+    }
     center.addObserver(forName: .didLogout, object: nil, queue: nil) { _ in
       Task { await ListeningHistoryStore.shared.forgetLoggedOutAccounts() }
     }
@@ -121,6 +125,14 @@ actor ListeningHistoryStore {
     guard run == nil, AuthService.shared.accountKey == key else { return }
     if let failed = lastFailedAt, Date().timeIntervalSince(failed) < Self.staleAfter { return }
     await refresh(reason: reason)
+  }
+
+  private func refreshAfterReconnect() async {
+    // A run that failed against the server just before it came back would
+    // hold this one off again.
+    if let run { await run.task.value }
+    lastFailedAt = nil
+    await refreshIfStale(reason: .reconnect)
   }
 
   /// Imports what the server logged since the last run; joins a run in flight.

@@ -199,13 +199,16 @@ class WatchPlayerViewModel: ObservableObject {
       .receive(on: DispatchQueue.main)
       .sink { [weak self] _ in self?.clearForLogout() }
 
-    // Every successful probe republishes true; a song waiting for the server
-    // reloads, and a pre-cache that failed while it was gone gets another go.
+    // Every successful probe republishes true; a heart lookup skipped offline
+    // is made, a song waiting for the server reloads, and a pre-cache that
+    // failed while it was gone gets another go.
     reachabilityObservation = ConnectivityMonitor.shared.$isServerReachable
       .filter { $0 }
       .receive(on: DispatchQueue.main)
       .sink { [weak self] _ in
-        guard let self, self.isPlaying else { return }
+        guard let self else { return }
+        MainActor.assumeIsolated { self.loadStarred(refresh: true) }
+        guard self.isPlaying else { return }
         self.reloadAfterConnectionWait()
         self.precacheUpcoming()
       }

@@ -202,7 +202,8 @@ final class ConnectivityMonitor: ObservableObject {
 
   /// Whether songs can be streamed now. A verdict older than `maxAge` is
   /// renewed with a probe first: without a path monitor nothing else notices
-  /// a connection that dropped after the last request.
+  /// a connection that dropped after the last request. A probe under way is
+  /// joined; restarting it would let every caller wait out a new timeout.
   func canStream(maxAge: TimeInterval = 60) async -> Bool {
     await withCheckedContinuation { continuation in
       DispatchQueue.main.async {
@@ -215,9 +216,24 @@ final class ConnectivityMonitor: ObservableObject {
         self.probeWaiters.append {
           continuation.resume(returning: self.canReachServer)
         }
-        self.probeServerReachability()
+        self.probeIfIdle()
       }
     }
+  }
+
+  /// `canStream()`, or nil when no verdict came within `limit`; the probe
+  /// goes on.
+  func canStream(waitingAtMost limit: Duration) async -> Bool? {
+    // A task group would wait for the probe too; the stream ends the wait at
+    // whichever finishes first.
+    let (verdicts, deliver) = AsyncStream<Bool?>.makeStream()
+    Task { deliver.yield(await canStream()) }
+    Task {
+      try? await Task.sleep(for: limit)
+      deliver.yield(nil)
+    }
+    for await verdict in verdicts { return verdict }
+    return nil
   }
 
   private func deliverProbeResult() {

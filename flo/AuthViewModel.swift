@@ -51,7 +51,7 @@ class AuthViewModel: ObservableObject {
   /// Found, the stored login is in use: trust it immediately, since a cold
   /// launch must never block on a login that can only time out while
   /// offline. Navidrome tokens expire, so the session is renewed once the
-  /// first connectivity verdict is online, or later when the network comes
+  /// first connectivity verdict reaches the server, or later when it comes
   /// back. Only a confirmed absence shows the login screen; an unreadable
   /// Keychain keeps the app logged in and never wipes anything.
   private func adopt(_ login: KeychainRead<UserAuth>) {
@@ -67,10 +67,7 @@ class AuthViewModel: ObservableObject {
       needsReauthentication = true
 
       // A request rejected before the verdict has already triggered it.
-      ConnectivityMonitor.shared.onFirstVerdict { [weak self] online in
-        guard let self, online, self.needsReauthentication else { return }
-        self.reauthenticate()
-      }
+      renewWhenReachable()
 
     case .missing:
       storedLoginUnreadable = false
@@ -173,7 +170,18 @@ class AuthViewModel: ObservableObject {
     if storedLoginUnreadable {
       adopt(AuthService.shared.loadStoredLogin())
     } else if needsReauthentication {
-      reauthenticate()
+      renewWhenReachable()
+    }
+  }
+
+  /// Renews once the server is known to answer: offline a login could only
+  /// time out, and the probe that finds the server back posts
+  /// `networkBecameOnline`.
+  private func renewWhenReachable() {
+    ConnectivityMonitor.shared.onFirstVerdict { [weak self] _ in
+      guard let self, self.needsReauthentication, ConnectivityMonitor.shared.canReachServer
+      else { return }
+      self.reauthenticate()
     }
   }
 
