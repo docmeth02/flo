@@ -65,9 +65,14 @@ struct HomeView: View {
   }
 
   private var header: some View {
-    HStack {
+    HStack(spacing: 10) {
       Wordmark()
       Spacer()
+      NavigationLink(value: Route.watch) {
+        Image(systemName: "applewatch")
+      }
+      .buttonStyle(CircleButtonStyle(size: 42))
+      .accessibilityLabel("Watch")
       NavigationLink(value: Route.settings) {
         Image(systemName: "gearshape")
       }

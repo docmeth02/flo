@@ -62,6 +62,9 @@ enum UserDefaultsKeys {
   static let cellularBitRate = "cellularBitRate"
   static let streamOnCellular = "streamOnCellular"
   static let downloadOverCellular = "downloadOverCellular"
+  // The watch follows the phone's settings; the phone shares them.
+  static let settingsFollowPhone = "settingsFollowPhone"
+  static let shareWatchSettings = "shareWatchSettings"
   static let streamCacheMaxSize = "streamCacheMaxSize"
   static let keepPlaying = "keepPlaying"
   static let showMixReasons = "showMixReasons"

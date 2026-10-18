@@ -13,6 +13,7 @@ struct ItemMenuItems: View {
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var pins: PinStore
   @ObservedObject private var stars = StarStore.shared
+  @ObservedObject private var watch = WatchLink.shared
 
   private var actions: MenuActions { MenuActions(player: app.player, pins: pins, stars: stars) }
 
@@ -30,6 +31,9 @@ struct ItemMenuItems: View {
     }
     if case .album(let album) = target {
       Button("Download", systemImage: "arrow.down.circle") { app.download(album) }
+      if watch.isAppInstalled {
+        Button("Send to Watch", systemImage: "applewatch") { watch.send(album) }
+      }
     }
   }
 

@@ -49,18 +49,22 @@ final class AppModel: ObservableObject {
     toast = nil
   }
 
+  /// The album's songs; an album listed without them asks the server.
+  func songs(of album: Album) async -> [Song] {
+    guard album.songs.isEmpty else { return album.songs }
+    return await withCheckedContinuation { continuation in
+      AlbumService.shared.getSongFromAlbum(id: album.id) {
+        continuation.resume(returning: (try? $0.get()) ?? [])
+      }
+    }
+  }
+
   /// Downloads an album to the phone, fetching its songs first when it was
   /// listed without them.
   func download(_ album: Album) {
     var album = album
     Task {
-      if album.songs.isEmpty {
-        album.songs = await withCheckedContinuation { continuation in
-          AlbumService.shared.getSongFromAlbum(id: album.id) {
-            continuation.resume(returning: (try? $0.get()) ?? [])
-          }
-        }
-      }
+      album.songs = await songs(of: album)
       guard !album.songs.isEmpty else { return show("Not available offline") }
       let onPhone = AlbumService.shared.downloadedMediaFileIds(collectionId: album.id)
       guard album.songs.contains(where: { !onPhone.contains($0.playbackID) }) else {

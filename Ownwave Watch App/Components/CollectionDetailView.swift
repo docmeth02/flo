@@ -11,6 +11,7 @@ import SwiftUI
 struct CollectionDetailView<Artwork: View>: View {
   @EnvironmentObject var playerViewModel: PlayerViewModel
   @EnvironmentObject var downloadViewModel: DownloadViewModel
+  @ObservedObject private var phone = PhoneLink.shared
 
   let collectionId: String
   let title: String
@@ -41,6 +42,11 @@ struct CollectionDetailView<Artwork: View>: View {
     if downloadViewModel.isDownloading(collectionId: collectionId) {
       return .downloading(
         percent: Int(downloadViewModel.getDownloadedTrackProgress(collectionId: collectionId)))
+    }
+    // Songs the iPhone is still sending are on their way, not missing.
+    if phone.isReceiving(collectionId: collectionId) {
+      return .downloading(
+        percent: phone.progress(collectionId: collectionId, songs: downloadedIds.count))
     }
     // An interrupted download leaves some tracks behind; offer the rest.
     if downloaded && missingTrackCount > 0 { return .partial(missing: missingTrackCount) }

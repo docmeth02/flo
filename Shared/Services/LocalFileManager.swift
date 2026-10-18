@@ -21,17 +21,21 @@ class LocalFileManager {
 
   /// The size of the downloads folder, measured off the main thread.
   func calculateDirectorySize() async -> String {
+    bytesToMBOrGB(await downloadsBytes())
+  }
+
+  func downloadsBytes() async -> Int64 {
     await Task.detached(priority: .userInitiated) { self.directorySize() }.value
   }
 
-  private func directorySize() -> String {
+  private func directorySize() -> Int64 {
     guard
       let enumerator = fileManager.enumerator(
         at: fileURL(for: "Media"),
         includingPropertiesForKeys: [.totalFileAllocatedSizeKey],
         options: [.skipsHiddenFiles])
     else {
-      return "0 MB"
+      return 0
     }
 
     var totalSize: Int64 = 0
@@ -47,7 +51,7 @@ class LocalFileManager {
       }
     }
 
-    return bytesToMBOrGB(totalSize)
+    return totalSize
   }
 
   func fileExists(fileName: String) -> Bool {

@@ -8,8 +8,8 @@
 import SwiftUI
 import WatchKit
 
-/// Hands the download session's wake-ups to `DownloadSession`; everything
-/// else is completed at once.
+/// Hands the download session's wake-ups to `DownloadSession` and the
+/// iPhone link's to `PhoneLink`; everything else is completed at once.
 final class AppDelegate: NSObject, WKApplicationDelegate {
   func handle(_ backgroundTasks: Set<WKRefreshBackgroundTask>) {
     for task in backgroundTasks {
@@ -18,6 +18,8 @@ final class AppDelegate: NSObject, WKApplicationDelegate {
         DownloadSession.shared.handleBackgroundEvents {
           refresh.setTaskCompletedWithSnapshot(false)
         }
+      case let link as WKWatchConnectivityRefreshBackgroundTask:
+        MainActor.assumeIsolated { PhoneLink.shared.hold(link) }
       case let snapshot as WKSnapshotRefreshBackgroundTask:
         snapshot.setTaskCompleted(
           restoredDefaultState: false, estimatedSnapshotExpiration: .distantFuture, userInfo: nil)
@@ -34,6 +36,7 @@ struct FloWatchApp: App {
 
   init() {
     AppLaunch.warmUp()
+    PhoneLink.shared.activate()
   }
 
   var body: some Scene {

@@ -80,15 +80,27 @@ struct SettingsView: View {
       .padding(.bottom, 24)
     }
     .navigationBarTitleDisplayMode(.inline)
-    .onChange(of: keepPlaying) { UserDefaultsManager.keepPlaying = $1 }
+    // Keep Playing and the cellular and download bitrates are what the watch
+    // follows.
+    .onChange(of: keepPlaying) {
+      UserDefaultsManager.keepPlaying = $1
+      WatchLink.shared.updateWatch()
+    }
     .onChange(of: showMixReasons) { UserDefaultsManager.showMixReasons = $1 }
     .onChange(of: streamOnCellular) { UserDefaultsManager.streamOnCellular = $1 }
     .onChange(of: wifiBitRate) { UserDefaultsManager.maxBitRate = $1 }
-    .onChange(of: cellularBitRate) { UserDefaultsManager.cellularBitRate = $1 }
-    .onChange(of: downloadBitRate) { UserDefaultsManager.downloadBitRate = $1 }
+    .onChange(of: cellularBitRate) {
+      UserDefaultsManager.cellularBitRate = $1
+      WatchLink.shared.updateWatch()
+    }
+    .onChange(of: downloadBitRate) {
+      UserDefaultsManager.downloadBitRate = $1
+      WatchLink.shared.updateWatch()
+    }
     .onChange(of: downloadOverCellular) {
       UserDefaultsManager.downloadOverCellular = $1
       DownloadSession.shared.cellularAccessChanged()
+      WatchSend.shared.cellularAccessChanged()
     }
     .onAppear {
       if case .found(let login) = KeychainManager.loadAuth() { username = login.username }
