@@ -1,12 +1,12 @@
 //
 //  PlaySomethingIntent.swift
-//  flo Watch App
+//  flo
 //
 
 import AppIntents
 
 /// Play Something for Siri, Shortcuts and the Action Button. The mix is built
-/// by the player that WatchContentView owns, so the intent only asks for it.
+/// by the player the app's root view owns, so the intent only asks for it.
 struct PlaySomethingIntent: AppIntent {
   static var title: LocalizedStringResource = "Play Something"
   static var description = IntentDescription("Plays a smart mix from your library.")
@@ -77,7 +77,7 @@ extension Notification.Name {
   static let playRequested = Notification.Name("flo.playRequested")
 }
 
-/// What an intent asked the app to play. WatchContentView takes it; a launch
+/// What an intent asked the app to play. The app's root view takes it; a launch
 /// by the intent can run perform() before the view subscribed to the
 /// notification, so the view also takes a pending request when it appears.
 enum PlayRequest {

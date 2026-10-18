@@ -1,6 +1,6 @@
 //
 //  WatchPlayerViewModel+NowPlayingInfo.swift
-//  flo Watch App
+//  flo
 //
 
 import MediaPlayer

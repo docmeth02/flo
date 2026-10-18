@@ -1,6 +1,6 @@
 //
 //  WatchPlayerViewModel+QueueEditing.swift
-//  flo Watch App
+//  flo
 //
 
 import Foundation

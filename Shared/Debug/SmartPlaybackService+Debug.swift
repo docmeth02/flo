@@ -1,6 +1,6 @@
 //
 //  SmartPlaybackService+Debug.swift
-//  flo Watch App
+//  flo
 //
 
 #if DEBUG

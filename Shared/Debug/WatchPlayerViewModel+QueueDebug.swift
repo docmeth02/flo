@@ -1,6 +1,6 @@
 //
 //  WatchPlayerViewModel+QueueDebug.swift
-//  flo Watch App
+//  flo
 //
 
 #if DEBUG

@@ -1,6 +1,6 @@
 //
 //  RateIntents.swift
-//  flo Watch App
+//  flo
 //
 
 import AppIntents

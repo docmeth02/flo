@@ -1,6 +1,6 @@
 //
 //  WatchPlayerViewModel+AudioSession.swift
-//  flo Watch App
+//  flo
 //
 
 import AVFoundation

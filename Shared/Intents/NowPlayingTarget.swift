@@ -1,6 +1,6 @@
 //
 //  NowPlayingTarget.swift
-//  flo Watch App
+//  flo
 //
 
 import Foundation

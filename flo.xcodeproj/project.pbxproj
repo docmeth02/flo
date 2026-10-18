@@ -30,6 +30,8 @@
 		34390AC1ABD4A1A5B9CFBCE8 /* QueueEditingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 962CC9FEC81B29C1608ADC91 /* QueueEditingTests.swift */; };
 		3911EF003135778456337152 /* ScrobbleQueueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */; };
 		3B2E32B9217BF519B4C0D093 /* PinStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6543C7E35E9DD723A4C89C0F /* PinStore.swift */; };
+		3D7A0E5B9C14F2A86B01C2D1 /* DownloadSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */; };
+		3D7A0E5B9C14F2A86B01C2D3 /* DownloadSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D7A0E5B9C14F2A86B01C2D2 /* DownloadSessionTests.swift */; };
 		3F1F384C57AEEBC202326F8B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9FF8B518F2ED916918EB6C66 /* Foundation.framework */; };
 		3FED4C4043890696D075FFBC /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
 		48426E09F42798E3F16C85E2 /* WatchQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BDA0AFDF99572D783F7433F /* WatchQueueView.swift */; };
@@ -59,6 +61,8 @@
 		7629BD4F6227A8E16A2BBB5E /* CoverArtCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */; };
 		767A2AA39FD3A3AF4F428164 /* WatchPlayerViewModel+NowPlayingInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B1BF4972348FFB9FFB29036 /* WatchPlayerViewModel+NowPlayingInfo.swift */; };
 		79A34A805FA50EE0C4B7810D /* StreamCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */; };
+		7A3C1E5D9B2F4A6C8E0D1F23 /* FamiljenGrotesk[wght].ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7A3C1E5D9B2F4A6C8E0D1F24 /* FamiljenGrotesk[wght].ttf */; };
+		7A3C1E5D9B2F4A6C8E0D1F25 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 7A3C1E5D9B2F4A6C8E0D1F26 /* OFL.txt */; };
 		7CB0AF2CAF287CB275F8E58B /* WatchPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88D8350161966488618D240F /* WatchPlayerViewModel.swift */; };
 		8071D6D58C9EF635A1ABE704 /* MixRanker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2805B2B3AE86B8713D6AEA /* MixRanker.swift */; };
 		854D35E557CBD828EC654F35 /* UserDefaultsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */; };
@@ -120,11 +124,7 @@
 		F4BA80DE5D3F471701EABF9A /* WatchSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89CB0839D0A2902036399ED6 /* WatchSearchView.swift */; };
 		F603ADBA32F245B193DE927F /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E012C149DDD00D9BAEB /* AuthService.swift */; };
 		FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
-		7A3C1E5D9B2F4A6C8E0D1F23 /* FamiljenGrotesk[wght].ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7A3C1E5D9B2F4A6C8E0D1F24 /* FamiljenGrotesk[wght].ttf */; };
-		7A3C1E5D9B2F4A6C8E0D1F25 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 7A3C1E5D9B2F4A6C8E0D1F26 /* OFL.txt */; };
 		FE84EAF37C9E7F4D5488B658 /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */; };
-		3D7A0E5B9C14F2A86B01C2D1 /* DownloadSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */; };
-		3D7A0E5B9C14F2A86B01C2D3 /* DownloadSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D7A0E5B9C14F2A86B01C2D2 /* DownloadSessionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -179,6 +179,8 @@
 		3183470828F81D158DB4A77D /* ArtistIdentity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtistIdentity.swift; sourceTree = "<group>"; };
 		3218989327BEB845A9A2ACFF /* flo Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "flo Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		332FFE057C54639E0112CB1F /* WatchLikedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLikedView.swift; sourceTree = "<group>"; };
+		3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadSession.swift; sourceTree = "<group>"; };
+		3D7A0E5B9C14F2A86B01C2D2 /* DownloadSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadSessionTests.swift; sourceTree = "<group>"; };
 		41ED1C069984CF677281CBB3 /* ArtistAppEntity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtistAppEntity.swift; sourceTree = "<group>"; };
 		42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RequestLog.swift; sourceTree = "<group>"; };
 		4A0A3A849C5FEAFB7E57BE5C /* flo watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flo watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -201,6 +203,8 @@
 		753A1F5C3EC0F41E987BAB31 /* WatchPlayerViewModel+Recovery.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WatchPlayerViewModel+Recovery.swift"; sourceTree = "<group>"; };
 		77166ADDD3DA46B0C53E18D5 /* Localizable.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		7A31EF1F3148DA550C9A9567 /* WatchHomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchHomeView.swift; sourceTree = "<group>"; };
+		7A3C1E5D9B2F4A6C8E0D1F24 /* FamiljenGrotesk[wght].ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FamiljenGrotesk[wght].ttf"; sourceTree = "<group>"; };
+		7A3C1E5D9B2F4A6C8E0D1F26 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
 		88D8350161966488618D240F /* WatchPlayerViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchPlayerViewModel.swift; sourceTree = "<group>"; };
 		89CB0839D0A2902036399ED6 /* WatchSearchView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSearchView.swift; sourceTree = "<group>"; };
 		8DFCE00EB3D08D69E35F8A68 /* WatchCachedSongsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchCachedSongsView.swift; sourceTree = "<group>"; };
@@ -215,8 +219,6 @@
 		A47046B69F3F233D98063F27 /* LibrarySearchTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LibrarySearchTests.swift; sourceTree = "<group>"; };
 		AAB103792407F3592AC4D765 /* KeychainReadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeychainReadTests.swift; sourceTree = "<group>"; };
 		AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectivityMonitor.swift; sourceTree = "<group>"; };
-		3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadSession.swift; sourceTree = "<group>"; };
-		3D7A0E5B9C14F2A86B01C2D2 /* DownloadSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadSessionTests.swift; sourceTree = "<group>"; };
 		AF66688A924A53978D5BBCA3 /* WatchDiagnosticsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDiagnosticsView.swift; sourceTree = "<group>"; };
 		B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistDetailViewModel.swift; sourceTree = "<group>"; };
 		B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistRadio.swift; sourceTree = "<group>"; };
@@ -237,8 +239,6 @@
 		C41470BA2CE65808008BDCE8 /* Artist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artist.swift; sourceTree = "<group>"; };
 		C415F54D2C11908100E3E1D2 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		C415F5592C11953000E3E1D2 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
-		7A3C1E5D9B2F4A6C8E0D1F24 /* FamiljenGrotesk[wght].ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FamiljenGrotesk[wght].ttf"; sourceTree = "<group>"; };
-		7A3C1E5D9B2F4A6C8E0D1F26 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
 		C4289F472C12391300C3A4FD /* AlbumViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumViewModel.swift; sourceTree = "<group>"; };
 		C4289F492C12392B00C3A4FD /* Album.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Album.swift; sourceTree = "<group>"; };
 		C446A6B62C08DE8800CC9787 /* UserAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAuth.swift; sourceTree = "<group>"; };
@@ -331,16 +331,49 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		2FEDE5BA6BF2A1A941B1BE68 /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				F10E00000000000000000003 /* AuthViewModel+Debug.swift */,
+				F10E00000000000000000005 /* SmartPlaybackService+Debug.swift */,
+				F10E00000000000000000002 /* WatchPlayerViewModel+Debug.swift */,
+				4B5BB60F44BF48FF7A25BE73 /* WatchPlayerViewModel+QueueDebug.swift */,
+			);
+			name = Debug;
+			path = Debug;
+			sourceTree = "<group>";
+		};
 		618CC93703E8877FFCDE4789 /* Intents */ = {
 			isa = PBXGroup;
 			children = (
-				EBB2DF36BC3392244E112731 /* PlaySomethingIntent.swift */,
 				41ED1C069984CF677281CBB3 /* ArtistAppEntity.swift */,
 				FFFB8E4411B7DE421406E089 /* NowPlayingTarget.swift */,
+				EBB2DF36BC3392244E112731 /* PlaySomethingIntent.swift */,
 				FA19B96B3927E5638EBB93C1 /* RateIntents.swift */,
 			);
 			name = Intents;
 			path = Intents;
+			sourceTree = "<group>";
+		};
+		86FC5F7B79165EF7E4D67042 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				C4289F472C12391300C3A4FD /* AlbumViewModel.swift */,
+				B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */,
+				C415F54D2C11908100E3E1D2 /* AuthViewModel.swift */,
+				C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */,
+				C467AD502D3264AE00644E68 /* FloooViewModel.swift */,
+				B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */,
+				88D8350161966488618D240F /* WatchPlayerViewModel.swift */,
+				F62E9B1C58A38398F40C511E /* WatchPlayerViewModel+AudioSession.swift */,
+				6DB5FDCA757705B0741AF994 /* WatchPlayerViewModel+KeepPlaying.swift */,
+				9B1BF4972348FFB9FFB29036 /* WatchPlayerViewModel+NowPlayingInfo.swift */,
+				6CA1E05BC293CD0606FB46EC /* WatchPlayerViewModel+QueueEditing.swift */,
+				9031A01F807A324732CB2878 /* WatchPlayerViewModel+Radio.swift */,
+				753A1F5C3EC0F41E987BAB31 /* WatchPlayerViewModel+Recovery.swift */,
+			);
+			name = ViewModels;
+			path = ViewModels;
 			sourceTree = "<group>";
 		};
 		99C512802A8D10FE8D9D5EE8 /* watchOS */ = {
@@ -372,22 +405,6 @@
 			path = "flo Watch AppTests";
 			sourceTree = "<group>";
 		};
-		B0AD2E702F4B037400577062 /* Artists */ = {
-			isa = PBXGroup;
-			children = (
-				B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */,
-			);
-			path = Artists;
-			sourceTree = "<group>";
-		};
-		B0BAAAA72F32139D002A5FBB /* Radios */ = {
-			isa = PBXGroup;
-			children = (
-				B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */,
-			);
-			path = Radios;
-			sourceTree = "<group>";
-		};
 		BF0C8310E85E03FC45C8E535 /* Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -410,41 +427,29 @@
 			children = (
 				638B2D1AECAA38268427598A /* WatchApp.swift */,
 				2902A4035F798586E2A6C881 /* Views */,
-				FC042B4DD47E6FF44A016E1C /* ViewModels */,
 				BF0C8310E85E03FC45C8E535 /* Components */,
 				F10E00000000000000000000 /* Debug */,
 				C33E4D7DFB09BB760978CACE /* Assets.xcassets */,
 				267F2A01FFC103AFBE22C7B9 /* AppShortcuts.xcstrings */,
-				618CC93703E8877FFCDE4789 /* Intents */,
 				77166ADDD3DA46B0C53E18D5 /* Localizable.xcstrings */,
 			);
 			name = "flo Watch App";
 			path = "flo Watch App";
 			sourceTree = "<group>";
 		};
-		C4289F4B2C1253B800C3A4FD /* Shared */ = {
-			isa = PBXGroup;
-			children = (
-				C4875DFE2C149CD500D9BAEB /* Services */,
-				C4289F4D2C1253EB00C3A4FD /* Utils */,
-				C4289F4C2C1253BE00C3A4FD /* Models */,
-			);
-			path = Shared;
-			sourceTree = "<group>";
-		};
 		C4289F4C2C1253BE00C3A4FD /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				C4289F492C12392B00C3A4FD /* Album.swift */,
+				C41470BA2CE65808008BDCE8 /* Artist.swift */,
 				B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */,
-				C467AD522D3267CE00644E68 /* Subsonic.swift */,
+				C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */,
 				C4824D222CE8C41D003EAB52 /* Playable.swift */,
 				C4100A6A2CE78B5F001BC9BE /* Playlist.swift */,
-				C41470BA2CE65808008BDCE8 /* Artist.swift */,
-				C4289F492C12392B00C3A4FD /* Album.swift */,
-				C446A6B62C08DE8800CC9787 /* UserAuth.swift */,
-				C4120FDC2C15E1C300E712BE /* Song.swift */,
-				C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */,
 				B0BAAAAA2F3214F7002A5FBB /* Radio.swift */,
+				C4120FDC2C15E1C300E712BE /* Song.swift */,
+				C467AD522D3267CE00644E68 /* Subsonic.swift */,
+				C446A6B62C08DE8800CC9787 /* UserAuth.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -453,8 +458,8 @@
 			isa = PBXGroup;
 			children = (
 				C415F5592C11953000E3E1D2 /* Constants.swift */,
-				C49134522C15BE0C00CCF2EB /* Strings.swift */,
 				C4120FD82C15D58E00E712BE /* Errors.swift */,
+				C49134522C15BE0C00CCF2EB /* Strings.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -463,6 +468,7 @@
 			isa = PBXGroup;
 			children = (
 				C4289F4F2C12553E00C3A4FD /* Fonts */,
+				C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -479,35 +485,35 @@
 		C4875DFE2C149CD500D9BAEB /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				C4F870CD2CEFCC5B00312F8A /* FloooService.swift */,
-				5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */,
-				29E53048E3A319C3B7EA7D87 /* ScrobbleReceipts.swift */,
-				C4875DFF2C149D9000D9BAEB /* AlbumService.swift */,
-				C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */,
-				0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */,
-				0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */,
-				C4875E012C149DDD00D9BAEB /* AuthService.swift */,
 				C4875E032C149F9A00D9BAEB /* APIManager.swift */,
-				C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */,
-				C4FE524C2C14E71B0053763A /* KeychainManager.swift */,
+				C4875DFF2C149D9000D9BAEB /* AlbumService.swift */,
+				3183470828F81D158DB4A77D /* ArtistIdentity.swift */,
+				C4875E012C149DDD00D9BAEB /* AuthService.swift */,
+				AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */,
 				C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */,
+				0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */,
+				3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */,
+				C4F870CD2CEFCC5B00312F8A /* FloooService.swift */,
+				C4FE524C2C14E71B0053763A /* KeychainManager.swift */,
+				0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */,
+				BA6E4B95E86671912ADCC03D /* LibrarySearch.swift */,
+				65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */,
 				C401D0992C5AED9F009F91C7 /* LocalFileManager.swift */,
+				BF2805B2B3AE86B8713D6AEA /* MixRanker.swift */,
+				C82E4A2833D5B79A9B7841EB /* PendingEdits.swift */,
+				6543C7E35E9DD723A4C89C0F /* PinStore.swift */,
+				E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */,
 				C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */,
 				B0BAAAAC2F321697002A5FBB /* RadioService.swift */,
-				C533CDA257C450543A1A341D /* SmartPlaybackService.swift */,
-				AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */,
-				3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */,
-				42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */,
-				65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */,
 				17258430B8997B70CB97CC82 /* RatingStore.swift */,
-				E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */,
 				D1388C037165FF767131D19D /* RecommendationLog.swift */,
-				BF2805B2B3AE86B8713D6AEA /* MixRanker.swift */,
-				6543C7E35E9DD723A4C89C0F /* PinStore.swift */,
-				C82E4A2833D5B79A9B7841EB /* PendingEdits.swift */,
+				42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */,
+				5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */,
+				29E53048E3A319C3B7EA7D87 /* ScrobbleReceipts.swift */,
+				C533CDA257C450543A1A341D /* SmartPlaybackService.swift */,
 				A3A20AA7BB94954318E4D4A8 /* StarStore.swift */,
-				BA6E4B95E86671912ADCC03D /* LibrarySearch.swift */,
-				3183470828F81D158DB4A77D /* ArtistIdentity.swift */,
+				C4CACHE002D7B0000003B9C4F /* StreamCacheManager.swift */,
+				C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -515,7 +521,7 @@
 		C4E8D94F2B763BA900C2353E = {
 			isa = PBXGroup;
 			children = (
-				C4E8D95A2B763BA900C2353E /* flo */,
+				C4E8D95A2B763BA900C2353E /* Shared */,
 				C4E8D9592B763BA900C2353E /* Products */,
 				BF2DF53DA004FBCBF3B0118C /* flo Watch App */,
 				E9D6B1F2C4106FA2C9676FF9 /* Frameworks */,
@@ -533,20 +539,18 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		C4E8D95A2B763BA900C2353E /* flo */ = {
+		C4E8D95A2B763BA900C2353E /* Shared */ = {
 			isa = PBXGroup;
 			children = (
-				C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */,
+				2FEDE5BA6BF2A1A941B1BE68 /* Debug */,
+				618CC93703E8877FFCDE4789 /* Intents */,
+				C4289F4C2C1253BE00C3A4FD /* Models */,
 				C4289F4E2C12553800C3A4FD /* Resources */,
-				C4289F4B2C1253B800C3A4FD /* Shared */,
-				C415F54D2C11908100E3E1D2 /* AuthViewModel.swift */,
-				C4289F472C12391300C3A4FD /* AlbumViewModel.swift */,
-				B0BAAAA72F32139D002A5FBB /* Radios */,
-				B0AD2E702F4B037400577062 /* Artists */,
-				C467AD502D3264AE00644E68 /* FloooViewModel.swift */,
-				C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */,
+				C4875DFE2C149CD500D9BAEB /* Services */,
+				C4289F4D2C1253EB00C3A4FD /* Utils */,
+				86FC5F7B79165EF7E4D67042 /* ViewModels */,
 			);
-			path = flo;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		E9D6B1F2C4106FA2C9676FF9 /* Frameworks */ = {
@@ -561,29 +565,10 @@
 			isa = PBXGroup;
 			children = (
 				F10E00000000000000000001 /* WatchContentView+Debug.swift */,
-				F10E00000000000000000002 /* WatchPlayerViewModel+Debug.swift */,
-				F10E00000000000000000003 /* AuthViewModel+Debug.swift */,
 				F10E00000000000000000004 /* WatchHomeView+Debug.swift */,
-				F10E00000000000000000005 /* SmartPlaybackService+Debug.swift */,
-				4B5BB60F44BF48FF7A25BE73 /* WatchPlayerViewModel+QueueDebug.swift */,
 				23D3B96B083E2837F57F165F /* WatchContentView+MenuDebug.swift */,
 			);
 			path = Debug;
-			sourceTree = "<group>";
-		};
-		FC042B4DD47E6FF44A016E1C /* ViewModels */ = {
-			isa = PBXGroup;
-			children = (
-				88D8350161966488618D240F /* WatchPlayerViewModel.swift */,
-				6CA1E05BC293CD0606FB46EC /* WatchPlayerViewModel+QueueEditing.swift */,
-				F62E9B1C58A38398F40C511E /* WatchPlayerViewModel+AudioSession.swift */,
-				6DB5FDCA757705B0741AF994 /* WatchPlayerViewModel+KeepPlaying.swift */,
-				9B1BF4972348FFB9FFB29036 /* WatchPlayerViewModel+NowPlayingInfo.swift */,
-				9031A01F807A324732CB2878 /* WatchPlayerViewModel+Radio.swift */,
-				753A1F5C3EC0F41E987BAB31 /* WatchPlayerViewModel+Recovery.swift */,
-			);
-			name = ViewModels;
-			path = ViewModels;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -867,7 +852,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 7K3G973VGB;
 				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave.watchkitapp.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.m2-entertainment.ownwave.watchkitapp.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_VERSION = 5.0;
@@ -898,7 +883,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.m2-entertainment.ownwave.watchkitapp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -924,7 +909,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.m2-entertainment.ownwave";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
@@ -944,7 +929,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.m2-entertainment.ownwave";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
@@ -1097,7 +1082,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.m2-entertainment.ownwave.watchkitapp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1118,7 +1103,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 7K3G973VGB;
 				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = de.m2-entertainment.ownwave.watchkitapp.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.m2-entertainment.ownwave.watchkitapp.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_VERSION = 5.0;
