@@ -115,6 +115,12 @@ class UserDefaultsManager {
     set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.streamOnCellular) }
   }
 
+  /// Whether a smart mix's songs say why they were picked. On by default.
+  static var showMixReasons: Bool {
+    get { UserDefaults.standard.object(forKey: UserDefaultsKeys.showMixReasons) as? Bool ?? true }
+    set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.showMixReasons) }
+  }
+
   /// Downloads may use cellular data: the watch's own link (Wi-Fi and the
   /// paired iPhone always can), or the iPhone's. Off by default.
   static var downloadOverCellular: Bool {

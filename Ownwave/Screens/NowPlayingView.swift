@@ -64,6 +64,9 @@ struct NowPlayingView: View {
       } action: {
         isPastPeek = $1
       }
+      #if DEBUG
+        .task { await runDebugUpNext { scroll(to: page) } }
+      #endif
       // Keeps the queue's rows from running under the status bar.
       .overlay(alignment: .top) {
         LinearGradient(
@@ -127,6 +130,7 @@ private struct PlayerPage: View {
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var player: PlayerViewModel
   @ObservedObject private var ratings = RatingStore.shared
+  @ObservedObject private var mixes = RecommendationLog.shared
   @Environment(\.palette) private var palette
 
   private var song: QueueEntity { player.nowPlaying }
@@ -139,6 +143,7 @@ private struct PlayerPage: View {
         .frame(maxWidth: 322)
         .shadow(color: .black.opacity(0.35), radius: 25, y: 24)
       titleRow
+      if let why = mixes.shownReason(for: song) { pill(why.note) }
       if player.isLiveRadio {
         Text("Live")
           .font(.meta.weight(.semibold))
@@ -216,6 +221,18 @@ private struct PlayerPage: View {
         .glassEffect(.regular.interactive(), in: Circle())
     }
     .buttonStyle(.plain)
+  }
+
+  /// Why the mix picked the song, tucked up to the title row.
+  private func pill(_ note: String) -> some View {
+    Text(note)
+      .font(.rowSubtitle)
+      .foregroundStyle(palette.secondary)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.vertical, 9)
+      .padding(.horizontal, 12)
+      .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .padding(.top, -6)
   }
 
   /// Why the song is not playing, when it waits on more than its data.
@@ -440,6 +457,7 @@ private struct UpNextPage: View {
 
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var player: PlayerViewModel
+  @ObservedObject private var mixes = RecommendationLog.shared
   @Environment(\.palette) private var palette
 
   /// The rows after the current one, with their index in the play order.
@@ -518,6 +536,9 @@ private struct UpNextPage: View {
       VStack(alignment: .leading, spacing: 2) {
         Text(item.songName ?? "Unknown").font(.rowTitle.weight(.semibold))
         Text(item.artistName ?? "Unknown").font(.meta).foregroundStyle(palette.secondary)
+        if let why = mixes.shownReason(for: item) {
+          Text(why.note).font(.whyLine).foregroundStyle(palette.secondary).padding(.top, 1)
+        }
       }
       .lineLimit(1)
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -563,7 +584,19 @@ private struct GlassCircle: View {
   }
 }
 
+extension RecommendationLog {
+  /// Why a mix queued the entry, while the listener wants to see it.
+  fileprivate func shownReason(for entry: QueueEntity) -> MixReason? {
+    guard UserDefaultsManager.showMixReasons,
+      entry.playbackOrigin.isMix, let id = entry.id
+    else { return nil }
+    return reason(for: id)
+  }
+}
+
 extension Font {
   /// The queue's source under "Playing from".
   fileprivate static let playingFrom = familjen(14, relativeTo: .subheadline)
+  /// The reason under an Up Next row.
+  fileprivate static let whyLine = system(.caption)
 }

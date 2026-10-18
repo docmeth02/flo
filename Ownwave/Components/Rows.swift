@@ -19,6 +19,8 @@ struct ItemRow<Trailing: View>: View {
   var subtitle = ""
   var isPlaying = false
   var artSize: CGFloat = 48
+  /// Two for subtitles that say more than an artist, such as a skip's.
+  var subtitleLines = 1
   @ViewBuilder var trailing: Trailing
 
   @Environment(\.palette) private var palette
@@ -40,7 +42,7 @@ struct ItemRow<Trailing: View>: View {
           Text(subtitle)
             .font(.rowSubtitle)
             .foregroundStyle(palette.secondary)
-            .lineLimit(1)
+            .lineLimit(subtitleLines)
         }
       }
       Spacer(minLength: 0)

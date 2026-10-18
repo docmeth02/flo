@@ -10,6 +10,9 @@ import Foundation
 /// than about one the user did.
 enum PlaybackOrigin: String {
   case smartShuffle, keepPlaying, album, playlist, starred, cached, manual
+
+  /// A mix or its Keep Playing continuation picked the song.
+  var isMix: Bool { self == .smartShuffle || self == .keepPlaying }
 }
 
 /// The journal's recent events of the logged-in account.
@@ -38,7 +41,7 @@ final class PlaybackJournal {
 
   private static let retention: TimeInterval = 30 * 86400
   private static let heardWindow: TimeInterval = 48 * 3600
-  private static let skipWindow: TimeInterval = 14 * 86400
+  static let skipWindow: TimeInterval = 14 * 86400
 
   private init() {
     NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: nil) { _ in
@@ -82,6 +85,65 @@ final class PlaybackJournal {
       }
       return snapshot
     }
+  }
+
+  /// A song skipped in the last 14 days, the window its skips weigh in.
+  struct SkippedSong: Sendable, Equatable {
+    let songId: String
+    let title: String
+    let artist: String
+    let albumId: String
+    var count: Int
+    let latest: Date
+  }
+
+  /// The songs skipped in the skip window, latest skip first.
+  func recentSkips() async -> [SkippedSong] {
+    guard let key = AuthService.shared.accountKey else { return [] }
+    let since = Date().addingTimeInterval(-Self.skipWindow)
+
+    return await CoreDataManager.shared.performBackground { context in
+      let request = NSFetchRequest<HistoryEntity>(entityName: "HistoryEntity")
+      request.predicate = NSPredicate(
+        format: "accountKey == %@ AND skipped == YES AND timestamp >= %@", key, since as NSDate)
+      request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+      var songs: [String: SkippedSong] = [:]
+      var order: [String] = []
+      for row in (try? context.fetch(request)) ?? [] {
+        guard let id = row.songId, !id.isEmpty, let at = row.timestamp else { continue }
+        if songs[id] != nil {
+          songs[id]?.count += 1
+        } else {
+          order.append(id)
+          songs[id] = SkippedSong(
+            songId: id, title: row.trackName ?? "", artist: row.artistName ?? "",
+            albumId: row.albumId ?? "", count: 1, latest: at)
+        }
+      }
+      return order.compactMap { songs[$0] }
+    }
+  }
+
+  /// Takes back the song's skips: its rows count as heard, so the song keeps
+  /// its cooldown and loses its penalty. Returns the rows for `restoreSkips`,
+  /// none when the change could not be saved.
+  @MainActor func forgetSkips(songId: String) -> [NSManagedObjectID] {
+    guard let key = AuthService.shared.accountKey else { return [] }
+    let request = NSFetchRequest<HistoryEntity>(entityName: "HistoryEntity")
+    request.predicate = NSPredicate(
+      format: "accountKey == %@ AND songId == %@ AND skipped == YES", key, songId)
+    let rows = (try? CoreDataManager.shared.viewContext.fetch(request)) ?? []
+    rows.forEach { $0.skipped = false }
+    guard CoreDataManager.shared.saveRecord() else { return [] }
+    return rows.map(\.objectID)
+  }
+
+  @MainActor func restoreSkips(_ rows: [NSManagedObjectID]) {
+    let context = CoreDataManager.shared.viewContext
+    for id in rows {
+      (try? context.existingObject(with: id) as? HistoryEntity)?.skipped = true
+    }
+    CoreDataManager.shared.saveRecord()
   }
 
   /// Drops rows older than 30 days, and rows of no account, which nothing

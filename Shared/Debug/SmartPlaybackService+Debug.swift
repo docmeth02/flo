@@ -56,7 +56,7 @@
         for (n, pick) in record.picks.enumerated() {
           debugLog(
             "pick \(n + 1) \(pick.slot): \(pick.title) — \(pick.artist) · \(pick.reason) · "
-              + pick.scores)
+              + pick.scores + " · why=\(pick.why.kind.rawValue) \(pick.why.note)")
         }
         debugLog(
           "mix record: mode=\(record.mode) eligible=\(record.eligible) "

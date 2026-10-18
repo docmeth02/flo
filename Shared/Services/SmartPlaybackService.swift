@@ -9,7 +9,7 @@ import Foundation
 /// Generates personalized song recommendations from on-device listening data.
 ///
 /// All heavy work (library cache decode, history aggregation, scoring) runs off
-/// the main thread; callers `await generateMix` and receive plain `Song` values.
+/// the main thread; callers `await mix` and receive plain `Song` values.
 final class SmartPlaybackService {
   static let shared = SmartPlaybackService()
 
@@ -34,10 +34,6 @@ final class SmartPlaybackService {
   }
 
   /// Build a fresh mix of `count` songs for a listening mode.
-  func generateMix(count: Int, mode: MixMode) async -> [Song] {
-    await mix(count: count, mode: mode).songs
-  }
-
   /// The cached library keyed by playback id, with the keys listening history
   /// is aggregated under: plays mirrored from the server join songs through it.
   struct LibraryIndex: Sendable {
@@ -90,6 +86,8 @@ final class SmartPlaybackService {
   }
 
   private static let songCacheMaxAge: TimeInterval = 24 * 60 * 60
+  /// The plays a reason counts, and Taste's: those of the last 60 days.
+  static let reasonWindow: TimeInterval = 60 * 86400
   // A reachable server answers the probe within a second or two.
   private static let verdictWait: Duration = .seconds(4)
   // A full fetch takes big pages to keep the round trips down; the
@@ -149,6 +147,8 @@ final class SmartPlaybackService {
 
     async let affinity = ListeningHistoryStore.shared.snapshot()
     async let journal = PlaybackJournal.shared.snapshot()
+    async let recentPlays = ListeningHistoryStore.shared.playCounts(
+      since: Date().addingTimeInterval(-Self.reasonWindow))
     // Ratings changed in another client since the last refresh count when
     // the server answers quickly.
     if canStream, case .playSomething = mode {
@@ -165,8 +165,9 @@ final class SmartPlaybackService {
     let started = DispatchTime.now().uptimeNanoseconds
     let (picked, record) = MixRanker().rank(
       library: songs, index: index, affinity: await affinity, journal: await journal,
-      pendingPlays: pendingPlays, ratings: ratings, starred: starred, likedAlbums: liked.albums,
-      likedArtists: liked.artists, mode: mode, count: count, now: Date(), rng: &rng)
+      pendingPlays: pendingPlays, recentPlays: await recentPlays, ratings: ratings,
+      starred: starred, likedAlbums: liked.albums, likedArtists: liked.artists, mode: mode,
+      count: count, now: Date(), rng: &rng)
     let elapsed = Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
 
     await MainActor.run { RecommendationLog.shared.record(record) }

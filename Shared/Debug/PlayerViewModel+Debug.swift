@@ -97,8 +97,7 @@
           if env["FLO_DEBUG_BROKEN_FIRST"] == "1" {
             // A song id the server does not know ahead of a mix, to exercise
             // failed streams.
-            let songs = await SmartPlaybackService.shared.generateMix(
-              count: 15, mode: .playSomething)
+            let songs = await SmartPlaybackService.shared.mix(count: 15, mode: .playSomething).songs
             guard let first = songs.first else { return debugLog("mix generated: 0 songs") }
             let broken = Song(
               id: "broken-\(first.id)", title: "Broken", albumId: first.albumId,

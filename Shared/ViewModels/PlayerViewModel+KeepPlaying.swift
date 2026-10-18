@@ -106,7 +106,7 @@ extension PlayerViewModel {
         "keep playing: seed=\(seedId) accepted=\(accepted != nil) artist=\(seed.artist) "
           + "album=\(seed.albumId) anchorGenres=\(anchorGenres.sorted()) "
           + "sessionMinutes=\(String(format: "%.1f", sessionMinutes)) queueIds=\(queueIds.count)")
-      let songs = await SmartPlaybackService.shared.generateMix(
+      let (songs, record) = await SmartPlaybackService.shared.mix(
         count: 10,
         mode: .keepPlaying(
           SmartPlaybackService.KeepPlayingContext(
@@ -150,6 +150,7 @@ extension PlayerViewModel {
         // Through addToQueue, so shuffle state and failure counts reset like
         // for any other new queue.
         self.addToQueue(idx: 0, item: queue)
+        if let record { RecommendationLog.shared.markPlayed(record) }
       }
     }
   }

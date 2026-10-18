@@ -726,10 +726,14 @@ class PlayerViewModel: ObservableObject {
   /// while a mix is already being built, when none came together, or when the
   /// user started something else in the meantime.
   @MainActor func playSomething() async -> Bool {
-    await playWhenBuilt {
-      let songs = await SmartPlaybackService.shared.generateMix(count: 15, mode: .playSomething)
-      return SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: songs)
+    var record: MixRecord?
+    let played = await playWhenBuilt {
+      let mix = await SmartPlaybackService.shared.mix(count: 15, mode: .playSomething)
+      record = mix.record
+      return SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: mix.songs)
     }
+    if played, let record { RecommendationLog.shared.markPlayed(record) }
+    return played
   }
 
   /// Plays an artist's top songs, for the intent; without top songs the
@@ -922,7 +926,7 @@ extension PlayerViewModel {
   /// A mix or its Keep Playing continuation.
   var isSmartMix: Bool {
     guard hasNowPlaying() else { return false }
-    return [.smartShuffle, .keepPlaying].contains(nowPlaying.playbackOrigin)
+    return nowPlaying.playbackOrigin.isMix
   }
 
   /// "Smart Mix", else the album or playlist the queue came from.
