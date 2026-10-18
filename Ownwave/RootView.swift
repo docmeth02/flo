@@ -79,7 +79,7 @@ private struct Themed<Content: View>: View {
 }
 
 struct AppTabs: View {
-  enum TabID { case home, library, search }
+  enum TabID { case home, library, taste, search }
 
   @EnvironmentObject var app: AppModel
   @Environment(\.palette) private var palette
@@ -95,6 +95,9 @@ struct AppTabs: View {
       }
       Tab("Library", systemImage: "books.vertical", value: .library) {
         stack(.library) { LibraryView(chip: $libraryChip) }
+      }
+      Tab("Taste", systemImage: "slider.horizontal.3", value: .taste) {
+        stack(.taste) { TasteView() }
       }
       Tab("Search", systemImage: "magnifyingglass", value: .search, role: Self.searchRole) {
         stack(.search) { SearchView() }
