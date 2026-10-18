@@ -17,8 +17,19 @@ class CoreDataManager {
 
   init() {}
 
-  private static func inMemoryContainer() -> NSPersistentContainer {
-    let container = NSPersistentContainer(name: "flo")
+  /// Loaded from the bundle that holds this class: the app, or the test
+  /// bundle when the tests compile the engine themselves. One instance for
+  /// every container, so the entity classes are claimed by one model.
+  static let model: NSManagedObjectModel = {
+    let bundle = Bundle(for: CoreDataManager.self)
+    guard let url = bundle.url(forResource: "flo", withExtension: "momd"),
+      let model = NSManagedObjectModel(contentsOf: url)
+    else { fatalError("flo.momd is missing from \(bundle.bundlePath)") }
+    return model
+  }()
+
+  static func inMemoryContainer() -> NSPersistentContainer {
+    let container = NSPersistentContainer(name: "flo", managedObjectModel: model)
     let description = NSPersistentStoreDescription()
 
     description.type = NSInMemoryStoreType
@@ -53,7 +64,7 @@ class CoreDataManager {
   }()
 
   private static func loadPersistentContainer() -> NSPersistentContainer? {
-    let container = NSPersistentContainer(name: "flo")
+    let container = NSPersistentContainer(name: "flo", managedObjectModel: model)
     container.persistentStoreDescriptions.forEach { description in
       description.shouldAddStoreAsynchronously = false
       description.shouldMigrateStoreAutomatically = true

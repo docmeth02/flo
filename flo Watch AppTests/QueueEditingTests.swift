@@ -7,13 +7,7 @@ final class QueueEditingTests: XCTestCase {
   private var service: PlaybackService!
 
   override func setUpWithError() throws {
-    // The app's model: a second copy of it makes the entity classes ambiguous.
-    let container = NSPersistentContainer(
-      name: "flo", managedObjectModel: CoreDataManager.shared.persistentContainer.managedObjectModel)
-    let store = NSPersistentStoreDescription()
-    store.type = NSInMemoryStoreType
-    container.persistentStoreDescriptions = [store]
-    container.loadPersistentStores { _, error in XCTAssertNil(error) }
+    let container = CoreDataManager.inMemoryContainer()
     service = PlaybackService(context: container.viewContext)
   }
 

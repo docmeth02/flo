@@ -28,13 +28,7 @@ final class ScrobbleOutboxTests: XCTestCase {
     []
 
   override func setUpWithError() throws {
-    // The app's model: a second copy of it makes the entity classes ambiguous.
-    let container = NSPersistentContainer(
-      name: "flo", managedObjectModel: CoreDataManager.shared.persistentContainer.managedObjectModel)
-    let description = NSPersistentStoreDescription()
-    description.type = NSInMemoryStoreType
-    container.persistentStoreDescriptions = [description]
-    container.loadPersistentStores { _, error in XCTAssertNil(error) }
+    let container = CoreDataManager.inMemoryContainer()
     store = Store()
     store.persistentContainer = container
 

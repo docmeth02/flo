@@ -79,13 +79,7 @@ final class PlaybackRulesTests: XCTestCase {
 
   /// The journal and the ranker tell a song's origin by the queue's name.
   func testQueueNamesMapToOrigins() throws {
-    // The app's model: a second copy of it makes the entity classes ambiguous.
-    let container = NSPersistentContainer(
-      name: "flo", managedObjectModel: CoreDataManager.shared.persistentContainer.managedObjectModel)
-    let store = NSPersistentStoreDescription()
-    store.type = NSInMemoryStoreType
-    container.persistentStoreDescriptions = [store]
-    container.loadPersistentStores { _, error in XCTAssertNil(error) }
+    let container = CoreDataManager.inMemoryContainer()
 
     func origin(_ name: String, playlist: Bool = false) -> PlaybackOrigin {
       let entry = QueueEntity(context: container.viewContext)
