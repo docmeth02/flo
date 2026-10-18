@@ -19,6 +19,7 @@
     func runDebugLaunchActions() async {
       await withTaskGroup(of: Void.self) { group in
         group.addTask { await runDebugDownloadActions() }
+        group.addTask { await runDebugBadDownload() }
         group.addTask { await runDebugSyncActions() }
         group.addTask { await runDebugHistoryActions() }
         group.addTask { await runDebugKeepPlaying() }
@@ -96,6 +97,25 @@
       }
       try? await Task.sleep(nanoseconds: 2_000_000_000)
       logMediaFiles("after removal")
+    }
+
+    // FLO_DEBUG_DOWNLOAD_BADID=1 queues a song with a media id the server
+    // does not know into a made-up collection and logs whether it failed for
+    // good (the red X) once its retries are spent, after about 8 minutes.
+    private func runDebugBadDownload() async {
+      guard ProcessInfo.processInfo.environment["FLO_DEBUG_DOWNLOAD_BADID"] == "1" else { return }
+      try? await Task.sleep(nanoseconds: 6_000_000_000)
+      let song = Song(
+        id: "flo-debug-missing", title: "Missing", albumId: "flo-debug-badid",
+        albumName: "Bad id", artist: "flo", trackNumber: 1, discNumber: 1, bitRate: 0,
+        sampleRate: 0, suffix: "mp3", duration: 0, mediaFileId: "flo-debug-missing")
+      let album = Album(id: "flo-debug-badid", name: "Bad id", songs: [song])
+      debugLog("bad id download: queued")
+      downloadViewModel.addItem(album)
+      for _ in 0..<600 where downloadViewModel.isDownloading(collectionId: album.id) {
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+      }
+      debugLog("bad id download: failed=\(downloadViewModel.hasFailed(collectionId: album.id))")
     }
 
     // FLO_DEBUG_SYNC=1|force syncs the song library and logs what it cached.

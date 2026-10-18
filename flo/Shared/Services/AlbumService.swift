@@ -651,30 +651,13 @@ class AlbumService {
     }
   }
 
-  /// `kbps` 0 fetches the original file, else an MP3 the server converts,
-  /// which has no length to show progress by.
-  func downloadNew(
-    collectionId: String, mediaFileId: String, suffix: String, kbps: Int,
-    progressUpdate: ((Double) -> Void)?,
-    completion: @escaping (Result<URL, Error>) -> Void
-  ) -> DownloadRequest {
+  /// The download of one song for `DownloadSession`: the original file for
+  /// `kbps` 0, else an MP3 the server converts, which has no length.
+  func downloadRequest(mediaFileId: String, kbps: Int) -> URLRequest? {
     let format = kbps > 0 ? TranscodingSettings.targetFormat : TranscodingSettings.sourceFormat
     let params: [String: Any] = ["id": mediaFileId, "format": format, "bitrate": kbps]
-    let path = Self.downloadPath(
-      collectionId: collectionId, mediaFileId: mediaFileId, suffix: suffix)
-
-    return APIManager.shared.SubsonicEndpointDownload(
-      endpoint: API.SubsonicEndpoint.download, parameters: params, progressUpdate: progressUpdate
-    ) { result in
-      switch result {
-      case .success(let tempFile):
-        LocalFileManager.shared.moveFile(
-          source: tempFile, target: LocalFileManager.shared.fileURL(for: path),
-          completion: completion)
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    return URL(string: subsonicURL(endpoint: API.SubsonicEndpoint.download, parameters: params))
+      .map { URLRequest(url: $0) }
   }
 
   /// Removes a downloaded album or playlist: every song file at its stored
@@ -684,6 +667,9 @@ class AlbumService {
   func removeDownloadedCollection(
     id: String, completion: @escaping (Result<Bool, Error>) -> Void
   ) {
+    // A song still downloading would bring the collection back.
+    DownloadSession.shared.cancel(collectionId: id)
+
     let songs = CoreDataManager.shared.getRecordByKey(
       entity: SongEntity.self, key: \SongEntity.albumId, value: id)
 

@@ -7,9 +7,30 @@
 
 import AVFoundation
 import SwiftUI
+import WatchKit
+
+/// Hands the download session's wake-ups to `DownloadSession`; everything
+/// else is completed at once.
+final class AppDelegate: NSObject, WKApplicationDelegate {
+  func handle(_ backgroundTasks: Set<WKRefreshBackgroundTask>) {
+    for task in backgroundTasks {
+      switch task {
+      case let refresh as WKURLSessionRefreshBackgroundTask:
+        DownloadSession.shared.handle(refresh)
+      case let snapshot as WKSnapshotRefreshBackgroundTask:
+        snapshot.setTaskCompleted(
+          restoredDefaultState: false, estimatedSnapshotExpiration: .distantFuture, userInfo: nil)
+      default:
+        task.setTaskCompletedWithSnapshot(false)
+      }
+    }
+  }
+}
 
 @main
 struct FloWatchApp: App {
+  @WKApplicationDelegateAdaptor private var appDelegate: AppDelegate
+
   init() {
     do {
       try AVAudioSession.sharedInstance().setCategory(
@@ -33,6 +54,8 @@ struct FloWatchApp: App {
     PlaybackJournal.shared.pruneOld()
     // Sends rating edits the server has not confirmed yet.
     _ = RatingStore.shared
+    // A relaunch for finished downloads delivers them to this session.
+    _ = DownloadSession.shared
 
     #if DEBUG
       SmartPlaybackService.shared.runDebugLaunchActions()

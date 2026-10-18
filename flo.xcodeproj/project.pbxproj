@@ -122,6 +122,8 @@
 		FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		FB66DABB7F1FED68A499E009 /* PlusJakartaSans-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C415F55E2C11A34C00E3E1D2 /* PlusJakartaSans-VariableFont_wght.ttf */; };
 		FE84EAF37C9E7F4D5488B658 /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */; };
+		3D7A0E5B9C14F2A86B01C2D1 /* DownloadSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */; };
+		3D7A0E5B9C14F2A86B01C2D3 /* DownloadSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D7A0E5B9C14F2A86B01C2D2 /* DownloadSessionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -212,6 +214,8 @@
 		A47046B69F3F233D98063F27 /* LibrarySearchTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LibrarySearchTests.swift; sourceTree = "<group>"; };
 		AAB103792407F3592AC4D765 /* KeychainReadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeychainReadTests.swift; sourceTree = "<group>"; };
 		AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectivityMonitor.swift; sourceTree = "<group>"; };
+		3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadSession.swift; sourceTree = "<group>"; };
+		3D7A0E5B9C14F2A86B01C2D2 /* DownloadSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadSessionTests.swift; sourceTree = "<group>"; };
 		AF66688A924A53978D5BBCA3 /* WatchDiagnosticsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDiagnosticsView.swift; sourceTree = "<group>"; };
 		B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistDetailViewModel.swift; sourceTree = "<group>"; };
 		B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistRadio.swift; sourceTree = "<group>"; };
@@ -360,6 +364,7 @@
 				B27B0002A1B2C3D4E5F60002 /* RatingStoreTests.swift */,
 				A47046B69F3F233D98063F27 /* LibrarySearchTests.swift */,
 				94682F31DD969BB7C5532773 /* ArtistIdentityTests.swift */,
+				3D7A0E5B9C14F2A86B01C2D2 /* DownloadSessionTests.swift */,
 			);
 			name = "flo Watch AppTests";
 			path = "flo Watch AppTests";
@@ -488,6 +493,7 @@
 				B0BAAAAC2F321697002A5FBB /* RadioService.swift */,
 				C533CDA257C450543A1A341D /* SmartPlaybackService.swift */,
 				AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */,
+				3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */,
 				42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */,
 				65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */,
 				17258430B8997B70CB97CC82 /* RatingStore.swift */,
@@ -761,6 +767,7 @@
 				D990D07BDC3E9BA0B765EC45 /* LibraryCacheManager.swift in Sources */,
 				EE8257FFD4E35E3713B38C38 /* SmartPlaybackService.swift in Sources */,
 				FE84EAF37C9E7F4D5488B658 /* ConnectivityMonitor.swift in Sources */,
+				3D7A0E5B9C14F2A86B01C2D1 /* DownloadSession.swift in Sources */,
 				7629BD4F6227A8E16A2BBB5E /* CoverArtCacheManager.swift in Sources */,
 				57D805A2215E047ACD99D945 /* LocalFileManager.swift in Sources */,
 				A08ED21ABC61336BDD76B09E /* KeychainManager.swift in Sources */,
@@ -827,6 +834,7 @@
 				B27B0001A1B2C3D4E5F60001 /* RatingStoreTests.swift in Sources */,
 				706A9BA48D41460C03ECD61A /* LibrarySearchTests.swift in Sources */,
 				02DD88D3FA48F29A94068F2B /* ArtistIdentityTests.swift in Sources */,
+				3D7A0E5B9C14F2A86B01C2D3 /* DownloadSessionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

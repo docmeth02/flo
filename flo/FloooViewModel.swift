@@ -57,6 +57,8 @@ class FloooViewModel: ObservableObject {
   }
 
   func optimizeLocalStorage() {
+    // A song still downloading would come back.
+    DownloadSession.shared.cancelAll()
     LocalFileManager.shared.deleteDownloadedAlbums { result in
       switch result {
       case .success:
