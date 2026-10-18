@@ -8,6 +8,7 @@ import SwiftUI
 struct WatchDownloadsView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
   @EnvironmentObject var downloadViewModel: DownloadViewModel
+  @ObservedObject private var phone = PhoneLink.shared
 
   @State private var cachedSongs: [Song] = []
 
@@ -38,6 +39,10 @@ struct WatchDownloadsView: View {
                 if downloadViewModel.isDownloading(collectionId: album.id) {
                   Text("\(Int(downloadViewModel.getDownloadedTrackProgress(collectionId: album.id)))%")
                     .font(.system(.footnote, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(Color.floLilac)
+                } else if phone.isReceiving(collectionId: album.id) {
+                  Image(systemName: "iphone.and.arrow.forward")
+                    .font(.system(size: 14))
                     .foregroundStyle(Color.floLilac)
                 } else if downloadViewModel.hasFailed(collectionId: album.id) {
                   Image(systemName: "xmark.circle.fill")

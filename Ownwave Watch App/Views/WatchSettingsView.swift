@@ -8,6 +8,8 @@ import SwiftUI
 struct WatchSettingsView: View {
   @EnvironmentObject var authViewModel: AuthViewModel
   @EnvironmentObject var floooViewModel: FloooViewModel
+  // Applied settings from the iPhone refresh the rows.
+  @ObservedObject private var phone = PhoneLink.shared
 
   @State private var selectedBitRate: String = UserDefaultsManager.maxBitRate
   @State private var selectedDownloadBitRate: String = UserDefaultsManager.downloadBitRate
@@ -42,19 +44,25 @@ struct WatchSettingsView: View {
         }
         .tint(.floLilac)
         .floRow()
+        .disabled(UserDefaultsManager.settingsFollowPhone)
       } header: {
         FloSectionHeader("Playback")
+      } footer: {
+        followsPhone
       }
 
       Section {
-        bitRatePicker("Streaming", selection: $selectedBitRate)
-          .onChange(of: selectedBitRate) { _, newValue in
-            UserDefaultsManager.maxBitRate = newValue
-          }
-        bitRatePicker("Downloads", selection: $selectedDownloadBitRate)
-          .onChange(of: selectedDownloadBitRate) { _, newValue in
-            UserDefaultsManager.downloadBitRate = newValue
-          }
+        Group {
+          bitRatePicker("Streaming", selection: $selectedBitRate)
+            .onChange(of: selectedBitRate) { _, newValue in
+              UserDefaultsManager.maxBitRate = newValue
+            }
+          bitRatePicker("Downloads", selection: $selectedDownloadBitRate)
+            .onChange(of: selectedDownloadBitRate) { _, newValue in
+              UserDefaultsManager.downloadBitRate = newValue
+            }
+        }
+        .disabled(UserDefaultsManager.settingsFollowPhone)
         Toggle(
           isOn: Binding(
             get: { UserDefaultsManager.downloadOverCellular },
@@ -76,6 +84,8 @@ struct WatchSettingsView: View {
         .floRow()
       } header: {
         FloSectionHeader("Bitrate & Data")
+      } footer: {
+        followsPhone
       }
 
       Section {
@@ -148,6 +158,11 @@ struct WatchSettingsView: View {
       }
     }
     .floNavigationTitle("Settings")
+    .onReceive(phone.objectWillChange) {
+      // The values are in place before the link announces them.
+      selectedBitRate = UserDefaultsManager.maxBitRate
+      selectedDownloadBitRate = UserDefaultsManager.downloadBitRate
+    }
     .onAppear {
       floooViewModel.getLocalStorageInformation()
     }
@@ -183,6 +198,14 @@ struct WatchSettingsView: View {
       }
     } message: {
       Text("All downloaded music will be removed.")
+    }
+  }
+
+  @ViewBuilder private var followsPhone: some View {
+    if UserDefaultsManager.settingsFollowPhone {
+      Text("Follows your iPhone")
+        .font(.caption2)
+        .foregroundStyle(Color.floSecondary)
     }
   }
 

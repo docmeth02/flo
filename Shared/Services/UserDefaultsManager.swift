@@ -123,6 +123,19 @@ class UserDefaultsManager {
 
   /// Downloads may use cellular data: the watch's own link (Wi-Fi and the
   /// paired iPhone always can), or the iPhone's. Off by default.
+  /// The watch's bitrates and Keep Playing follow the iPhone's.
+  static var settingsFollowPhone: Bool {
+    get { UserDefaults.standard.bool(forKey: UserDefaultsKeys.settingsFollowPhone) }
+    set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.settingsFollowPhone) }
+  }
+
+  /// The iPhone shares its bitrates and Keep Playing with the watch. On by
+  /// default.
+  static var shareWatchSettings: Bool {
+    get { UserDefaults.standard.object(forKey: UserDefaultsKeys.shareWatchSettings) as? Bool ?? true }
+    set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.shareWatchSettings) }
+  }
+
   static var downloadOverCellular: Bool {
     get { UserDefaults.standard.bool(forKey: UserDefaultsKeys.downloadOverCellular) }
     set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.downloadOverCellular) }

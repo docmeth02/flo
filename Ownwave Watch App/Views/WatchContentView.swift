@@ -24,6 +24,7 @@ struct WatchContentView: View {
   @ObservedObject private var floooViewModel = FloooViewModel.shared
   @StateObject var downloadViewModel = DownloadViewModel()
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
+  @ObservedObject private var phone = PhoneLink.shared
   @Environment(\.scenePhase) private var scenePhase
 
   @State var selectedTab = Tab.home
@@ -125,6 +126,19 @@ struct WatchContentView: View {
     .onChange(of: playerViewModel.hasNowPlaying()) { _, hasNowPlaying in
       if !hasNowPlaying { selectedTab = .home }
     }
+    // The iPhone signs the watch in with the watch's own login.
+    .onChange(of: phone.signInRequest) { _, request in
+      guard let request, !authViewModel.isLoggedIn, !authViewModel.isSubmitting else { return }
+      authViewModel.serverUrl = request.server
+      authViewModel.username = request.user
+      authViewModel.password = request.password
+      authViewModel.login()
+    }
+    .onChange(of: authViewModel.isSubmitting) { _, submitting in
+      guard !submitting else { return }
+      phone.signInFinished(error: authViewModel.isLoggedIn ? nil : authViewModel.alertMessage)
+    }
+    .onChange(of: authViewModel.isLoggedIn) { phone.publishState() }
     .onAppear(perform: takePlayRequest)
     .onReceive(NotificationCenter.default.publisher(for: .playRequested)) { _ in
       takePlayRequest()

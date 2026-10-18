@@ -86,6 +86,7 @@
 		4CC28174B1DBFE6CDF8AD636 /* WatchStarredSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5055C3CF1C4E3BB88F96CCCD /* WatchStarredSongsView.swift */; };
 		4D8CC4F1DB294CEF5F9F63DD /* DiagnosticsReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A59D47FB2CC1314CD1F3C3 /* DiagnosticsReport.swift */; };
 		4DE465B1CC1E6A07B1AAF79C /* WatchDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF66688A924A53978D5BBCA3 /* WatchDiagnosticsView.swift */; };
+		4ED53DB55FA2B05CE17D1DD4 /* PhoneLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEDED51722CC7DC620CD7124 /* PhoneLink.swift */; };
 		4F8E0BD04AC14F52D5C8E033 /* ExplicitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */; };
 		50CDEED087F337229E9A8581 /* PlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */; };
 		527968DC0B9DF0EC23B0608A /* PendingEdits.swift in Sources */ = {isa = PBXBuildFile; fileRef = C82E4A2833D5B79A9B7841EB /* PendingEdits.swift */; };
@@ -503,6 +504,7 @@
 		D6699C44D5AD9144242023B3 /* WatchLinkTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLinkTests.swift; sourceTree = "<group>"; };
 		DB244999A6DB433F2FCE3BBA /* OwnwaveApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OwnwaveApp.swift; sourceTree = "<group>"; };
 		DBBEDF2A669F7923F874BBEC /* TasteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteView.swift; sourceTree = "<group>"; };
+		DEDED51722CC7DC620CD7124 /* PhoneLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhoneLink.swift; sourceTree = "<group>"; };
 		DFB35A7F59E1A97C0988F15B /* Theme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		E0CE0078920231694ED30C83 /* LoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		E2B7F2105E47E05FA46FF9AE /* JetBrainsMono-Medium.ttf */ = {isa = PBXFileReference; includeInIndex = 1; path = "JetBrainsMono-Medium.ttf"; sourceTree = "<group>"; };
@@ -777,6 +779,7 @@
 				BF0C8310E85E03FC45C8E535 /* Components */,
 				F10E00000000000000000000 /* Debug */,
 				C33E4D7DFB09BB760978CACE /* Assets.xcassets */,
+				CD9F3821C5BFE3B3737B31CF /* Services */,
 			);
 			name = "Ownwave Watch App";
 			path = "Ownwave Watch App";
@@ -916,6 +919,15 @@
 			);
 			name = Fonts;
 			path = Fonts;
+			sourceTree = "<group>";
+		};
+		CD9F3821C5BFE3B3737B31CF /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				DEDED51722CC7DC620CD7124 /* PhoneLink.swift */,
+			);
+			name = Services;
+			path = Services;
 			sourceTree = "<group>";
 		};
 		E84048E4D8939E04AFE0AB22 /* Debug */ = {
@@ -1327,6 +1339,7 @@
 				EA2B70501F87083E73FAFBDF /* MixReason.swift in Sources */,
 				14C4C9E074827F44DE88B4CF /* TasteSummary.swift in Sources */,
 				F23807C35755089A328B04C0 /* WatchLinkProtocol.swift in Sources */,
+				4ED53DB55FA2B05CE17D1DD4 /* PhoneLink.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
