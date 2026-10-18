@@ -8,10 +8,29 @@
 
   // Simulator verification only. FLO_DEBUG_WATCH=signin signs the watch in a
   // few seconds after launch; FLO_DEBUG_WATCH=send:<albumId> sends that album;
-  // FLO_DEBUG_WATCH=demo|demo-signedout shows a made-up watch for screenshots.
+  // FLO_DEBUG_WATCH=demo|demo-signedout shows a made-up watch for screenshots;
+  // demo-send:<albumId> sends that album to the made-up watch, which runs the
+  // outbox downloads and the cover, with nothing handed over.
   extension WatchLink {
     func runDebugLaunchActions() {
       guard let action = ProcessInfo.processInfo.environment["FLO_DEBUG_WATCH"] else { return }
+      if action.hasPrefix("demo-send:") {
+        showDemo(signedIn: true)
+        Task { @MainActor in
+          try? await Task.sleep(for: .seconds(5))
+          var album = Album()
+          album.id = String(action.dropFirst(10))
+          album.name = album.id
+          send(album)
+          for _ in 0..<30 {
+            try? await Task.sleep(for: .seconds(2))
+            debugLog(
+              "watch send: sends=\(sends.map { "\($0.id) \($0.songs) \(Int($0.progress * 100))%" }) "
+                + "pending=\(WatchSend.shared.pending(album.id))")
+          }
+        }
+        return
+      }
       if action.hasPrefix("demo") { return showDemo(signedIn: action == "demo") }
       Task { @MainActor in
         try? await Task.sleep(for: .seconds(5))

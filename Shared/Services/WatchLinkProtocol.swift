@@ -77,7 +77,8 @@ enum Link {
     let kind: Kind
     let accountKey: String
     let collectionId: String
-    /// The songs the whole send brings, so the watch knows when it is done.
+    /// The songs the whole send brings, for the phone's progress after a
+    /// relaunch.
     let songCount: Int
     /// Without its songs.
     let album: Album

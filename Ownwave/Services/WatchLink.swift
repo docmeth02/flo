@@ -142,18 +142,23 @@ import WatchConnectivity
     guard let watch else { return app.show("The watch has not answered yet") }
     guard isSignedIn else { return app.show("Sign the watch in first") }
     guard !sends.contains(where: { $0.id == album.id }) else { return app.show("Already sending") }
-    // A partly arrived album may be sent again; its songs on the watch are kept.
-    guard !watch.collections.contains(where: { $0.id == album.id && watch.incoming[$0.id] == nil })
-    else { return app.show("Already on the watch") }
     let kbps = Int(watch.downloadBitRate) ?? 0
     sends.append(Send(album: album, songs: max(1, album.songs.count)))
-    app.show("Sending \(album.name) to the watch")
     Task {
       let songs = await app.songs(of: album)
       guard !songs.isEmpty else {
         sends.removeAll { $0.id == album.id }
         return app.show("Could not send \(album.name)")
       }
+      // A partly arrived album may go again; the songs already there are
+      // simply replaced.
+      if let there = watch.collections.first(where: { $0.id == album.id }),
+        there.songs >= songs.count
+      {
+        sends.removeAll { $0.id == album.id }
+        return app.show("Already on the watch")
+      }
+      app.show("Sending \(album.name) to the watch")
       if let index = sends.firstIndex(where: { $0.id == album.id }) {
         sends[index].songs = songs.count
       }
@@ -261,7 +266,8 @@ import WatchConnectivity
   fileprivate func transferFinished(_ transfer: WCSessionFileTransfer, error: Error?) {
     let info = Self.info(of: transfer)
     WatchSend.shared.delivered(transfer.file.fileURL)
-    guard let info else { return }
+    // A cover is a nicety; the songs decide.
+    guard let info, info.kind == .song else { return }
     if let error {
       debugLog("watch link: transfer failed: \(error)")
       return failSend(info.collectionId)

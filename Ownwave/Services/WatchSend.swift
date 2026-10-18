@@ -22,6 +22,8 @@ final class WatchSend: NSObject {
     let songCount: Int
     let kbps: Int
     var attempts = 0
+    /// A server failure waits until then, also across launches.
+    var retryAt: Date?
     /// Set once the song is in the outbox.
     var downloaded = false
 
@@ -91,20 +93,21 @@ final class WatchSend: NSObject {
   /// them.
   func handOver() {
     guard MainActor.assumeIsolated({ WatchLink.shared.canTransfer }) else { return }
-    for job in jobs where job.downloaded {
-      guard FileManager.default.fileExists(atPath: job.file.path) else {
-        // Lost between a crash and its save: fetch it again.
-        update(job.id) { $0.downloaded = false }
-        continue
-      }
+    // Lost between a crash and its save: fetched again.
+    for job in jobs where job.downloaded && !FileManager.default.fileExists(atPath: job.file.path) {
+      update(job.id) { $0.downloaded = false }
+    }
+    // Out of the jobs before the transfers start, so the progress counts
+    // each song once.
+    let handed = jobs.filter(\.downloaded)
+    if !handed.isEmpty {
+      jobs.removeAll(where: \.downloaded)
+      save()
+    }
+    for job in handed {
       Self.transfer(
         job.file, .song, album: job.album, song: job.song, songCount: job.songCount,
         suffix: job.suffix, kbps: job.kbps)
-    }
-    let handed = Set(jobs.filter(\.downloaded).map(\.id))
-    if !handed.isEmpty {
-      jobs.removeAll { handed.contains($0.id) }
-      save()
     }
     resume()
   }
@@ -130,10 +133,11 @@ final class WatchSend: NSObject {
 
   /// "Download on cellular" changed: running tasks start again with it.
   func cellularAccessChanged() {
-    let running = tasks
     tasks = [:]
-    running.values.forEach { $0.cancel() }
-    resume()
+    session.getAllTasks { running in
+      running.forEach { $0.cancel() }
+      DispatchQueue.main.async { self.resume() }
+    }
   }
 
   /// The watch has the file, or will never get it: the outbox copy goes, and
@@ -167,17 +171,24 @@ final class WatchSend: NSObject {
   private func resume() {
     session.getAllTasks { running in
       DispatchQueue.main.async {
-        for task in running {
+        // Finished and cancelled tasks are left to their delegate calls.
+        for task in running where task.state == .running || task.state == .suspended {
           guard let id = task.taskDescription,
             self.jobs.contains(where: { $0.id == id && !$0.downloaded })
           else {
             task.cancel()
             continue
           }
-          self.tasks[id] = task
+          if self.tasks[id] == nil { self.tasks[id] = task }
         }
         guard !AppPlatform.isInBackground else { return }
-        self.jobs.filter { !$0.downloaded && self.tasks[$0.id] == nil }.forEach(self.submit)
+        for job in self.jobs where !job.downloaded && self.tasks[job.id] == nil {
+          if let retryAt = job.retryAt, retryAt > Date() {
+            self.retry(job, after: retryAt.timeIntervalSinceNow)
+          } else {
+            self.submit(job)
+          }
+        }
       }
     }
   }
@@ -190,6 +201,7 @@ final class WatchSend: NSObject {
     let task = session.downloadTask(with: request)
     task.taskDescription = job.id
     tasks[job.id] = task
+    if job.retryAt != nil { update(job.id) { $0.retryAt = nil } }
     task.resume()
   }
 
@@ -234,7 +246,8 @@ final class WatchSend: NSObject {
   private func retry(_ job: Job, after delay: TimeInterval) {
     DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
       guard let job = self.jobs.first(where: { $0.id == job.id }), !job.downloaded,
-        self.tasks[job.id] == nil, !AppPlatform.isInBackground
+        self.tasks[job.id] == nil, (job.retryAt ?? .distantPast) <= Date(),
+        !AppPlatform.isInBackground
       else { return }
       self.submit(job)
     }
@@ -251,7 +264,10 @@ final class WatchSend: NSObject {
       guard let delay = DownloadRetry.delay(afterAttempts: job.attempts) else {
         return failSend(job.album.id)
       }
-      update(job.id) { $0.attempts += 1 }
+      update(job.id) {
+        $0.attempts += 1
+        $0.retryAt = Date().addingTimeInterval(delay)
+      }
       retry(job, after: delay)
     case .final:
       failSend(job.album.id)
@@ -261,7 +277,7 @@ final class WatchSend: NSObject {
   /// The watch's covers are small; a 200 px PNG goes with the songs.
   private func sendCover(of album: Album, songCount: Int) {
     let target = Self.outbox.appendingPathComponent(album.id).appendingPathComponent("cover.png")
-    Task {
+    Task { @MainActor in
       var source = AlbumService.shared.downloadedCoverPath(albumId: album.id)
       if source == nil { source = await CoverArtCacheManager.shared.coverPath(albumId: album.id) }
       guard let source,
@@ -319,7 +335,9 @@ extension WatchSend: URLSessionDownloadDelegate {
   }
 
   func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-    guard let error, let job = job(of: task), tasks[job.id] === task else { return }
+    // A task replaced since (a cancel and a new submit) has nothing to say.
+    guard let error, let job = job(of: task), tasks[job.id] == nil || tasks[job.id] === task
+    else { return }
     failed(job, DownloadFailure.classify(error: error))
   }
 

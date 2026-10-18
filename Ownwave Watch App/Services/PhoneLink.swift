@@ -103,7 +103,10 @@ import WatchKit
 
   fileprivate func activated() {
     companionChanged()
-    if !apply(session.receivedApplicationContext) { publishState() }
+    // The last context outlives the iPhone app; only a present one is followed.
+    if !session.isCompanionAppInstalled || !apply(session.receivedApplicationContext) {
+      publishState()
+    }
     completeTasksIfIdle()
   }
 
