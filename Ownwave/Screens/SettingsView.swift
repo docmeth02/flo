@@ -132,7 +132,7 @@ struct SettingsView: View {
         refreshStorage()
       }
       Button("Delete All Downloads", role: .destructive) {
-        flooo.optimizeLocalStorage()
+        flooo.deleteAllDownloads()
         refreshStorage()
       }
     } message: {

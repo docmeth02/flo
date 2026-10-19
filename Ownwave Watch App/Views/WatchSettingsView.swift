@@ -187,7 +187,7 @@ struct WatchSettingsView: View {
     .alert("Clear Downloads?", isPresented: $showClearAlert) {
       Button("Cancel", role: .cancel) {}
       Button("Clear", role: .destructive) {
-        floooViewModel.optimizeLocalStorage()
+        floooViewModel.deleteAllDownloads()
       }
     } message: {
       Text("All downloaded music will be removed.")
