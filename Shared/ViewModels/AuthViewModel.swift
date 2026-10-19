@@ -210,8 +210,6 @@ class AuthViewModel: ObservableObject {
       // Published state changes on main, whichever queue Alamofire answered on.
       Task { @MainActor in
         guard let self else { return }
-        self.isSubmitting = false
-
         switch result {
         case .success(let data):
           self.persistAuthData(data, serverUrl: self.serverUrl)
@@ -224,23 +222,28 @@ class AuthViewModel: ObservableObject {
             debugLog("error saving password to Keychain: \(error)")
           }
 
+          self.isSubmitting = false
           self.isLoggedIn = true
           self.username = ""
           self.password = ""
           self.serverUrl = ""
 
-        case .failure(.server(let message)), .failure(.invalidCredentials(let message)):
-          self.alertMessage = message
-          self.showAlert = true
+        case .failure(let error):
+          self.isSubmitting = false
 
-        case .failure(.sessionExpired):
-          // A bare 401/403 without Navidrome's error body, e.g. from a
-          // reverse proxy in front of the server.
-          self.alertMessage = "The server refused the request. Please try again."
-          self.showAlert = true
+          switch error {
+          case .server(let message), .invalidCredentials(let message):
+            self.alertMessage = message
 
-        case .failure(.unknown):
-          self.alertMessage = "Unknown error occurred"
+          case .sessionExpired:
+            // A bare 401/403 without Navidrome's error body, e.g. from a
+            // reverse proxy in front of the server.
+            self.alertMessage = "The server refused the request. Please try again."
+
+          case .unknown:
+            self.alertMessage = "Unknown error occurred"
+          }
+
           self.showAlert = true
         }
       }

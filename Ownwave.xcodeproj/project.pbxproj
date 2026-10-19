@@ -291,6 +291,7 @@
 		CE619F66F4215A6B62C9C47A /* WidgetGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10DC358D9887C65057013EB9 /* WidgetGallery.swift */; };
 		CF1A10394114EB138CFAC69E /* ArtistAppEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41ED1C069984CF677281CBB3 /* ArtistAppEntity.swift */; };
 		CFB3CC406C299B4E43BD8FA5 /* LibrarySearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA6E4B95E86671912ADCC03D /* LibrarySearch.swift */; };
+		D12D9B6819F234AD2BCDB350 /* EngineRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42E5CFC7824F74C00E75D934 /* EngineRulesTests.swift */; };
 		D153D6AF62AE808C984B5F2F /* Rows.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0857971DC1FF8BBC593757B /* Rows.swift */; };
 		D25AF44BCEB4F1ECC4EAA971 /* WatchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE281A2946A2E18C84927D8 /* WatchSettingsView.swift */; };
 		D349080D92950A1C67EDADB6 /* TrackRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA601DF6D60F70D262CE557B /* TrackRowView.swift */; };
@@ -317,6 +318,7 @@
 		E0D9C52A13756CF9925D50C1 /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		E0E2051C2ECAE641EC151B62 /* WatchLinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21A03CD944EFA80449CFC2FC /* WatchLinkProtocol.swift */; };
 		E1442A8B84C01EE321E02C9C /* PhoneLink+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D7E85400EE91596AC2581D9 /* PhoneLink+Debug.swift */; };
+		E183C3A643387B5FC8E469F6 /* EngineRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42E5CFC7824F74C00E75D934 /* EngineRulesTests.swift */; };
 		E1B367AFC26C1744F16F61BF /* ListeningHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */; };
 		E24C603537870EB856422528 /* StarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3A20AA7BB94954318E4D4A8 /* StarStore.swift */; };
 		E2B4A133D2D8768643352D37 /* AuthViewModel+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10E00000000000000000003 /* AuthViewModel+Debug.swift */; };
@@ -464,6 +466,7 @@
 		3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadSession.swift; sourceTree = "<group>"; };
 		3D7A0E5B9C14F2A86B01C2D2 /* DownloadSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadSessionTests.swift; sourceTree = "<group>"; };
 		41ED1C069984CF677281CBB3 /* ArtistAppEntity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtistAppEntity.swift; sourceTree = "<group>"; };
+		42E5CFC7824F74C00E75D934 /* EngineRulesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EngineRulesTests.swift; sourceTree = "<group>"; };
 		42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RequestLog.swift; sourceTree = "<group>"; };
 		477F38684B1CD3B0BEE039A7 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		49C1611BCD0864A0BF006A78 /* LibraryParts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LibraryParts.swift; sourceTree = "<group>"; };
@@ -867,6 +870,7 @@
 				D6699C44D5AD9144242023B3 /* WatchLinkTests.swift */,
 				3D2F9F871B146ABAB706FD3E /* ModelTests.swift */,
 				AB0B22011B0001E9EBC3CF78 /* TestSupport.swift */,
+				42E5CFC7824F74C00E75D934 /* EngineRulesTests.swift */,
 			);
 			name = "Ownwave Watch AppTests";
 			path = "Ownwave Watch AppTests";
@@ -1420,6 +1424,7 @@
 				DF2F45CCB9C706023B607EB2 /* ListeningHistoryStore+Debug.swift in Sources */,
 				26F7307E4A23E34BC2D76B89 /* ScrobbleAPI+Debug.swift in Sources */,
 				9D2E83272519615CD2A7B39B /* TestSupport.swift in Sources */,
+				E183C3A643387B5FC8E469F6 /* EngineRulesTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1693,6 +1698,7 @@
 				F9A7ACDB28E6BF251B18C16D /* WatchLinkTests.swift in Sources */,
 				2D6205B25402169754A8AB7C /* ModelTests.swift in Sources */,
 				B72BB02DDE82E2D3D760247E /* TestSupport.swift in Sources */,
+				D12D9B6819F234AD2BCDB350 /* EngineRulesTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

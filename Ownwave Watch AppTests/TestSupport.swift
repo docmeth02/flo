@@ -12,8 +12,8 @@ extension XCTestCase {
     return UserDefaults(suiteName: name)!
   }
 
-  /// Lets an answer's hop to the main actor run.
-  func settle() async {
+  /// Lets an answer's hop to the main actor run; yielding elsewhere would not.
+  @MainActor func settle() async {
     for _ in 0..<5 { await Task.yield() }
   }
 }

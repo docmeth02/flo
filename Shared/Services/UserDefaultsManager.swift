@@ -15,16 +15,18 @@ enum UserDefaultsManager {
   }
 
   static var serverBaseURL: String {
-    get {
-      // Endpoints start with "/"; a stored trailing slash would double it.
-      var url = (sharedDefaults.string(forKey: UserDefaultsKeys.serverURL) ?? "")
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-      while url.hasSuffix("/") { url.removeLast() }
-      return url
-    }
+    get { baseURL(sharedDefaults.string(forKey: UserDefaultsKeys.serverURL) ?? "") }
     set {
       sharedDefaults.set(newValue, forKey: UserDefaultsKeys.serverURL)
     }
+  }
+
+  /// A stored server URL without surrounding whitespace or trailing slashes:
+  /// endpoints start with "/", and a trailing slash would double it.
+  static func baseURL(_ stored: String) -> String {
+    var url = stored.trimmingCharacters(in: .whitespacesAndNewlines)
+    while url.hasSuffix("/") { url.removeLast() }
+    return url
   }
 
   static var queueActiveIdx: Int {

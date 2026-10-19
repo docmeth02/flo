@@ -88,7 +88,7 @@ final class RequestLog: ObservableObject {
           retries: attempt))
     }
 
-    private static func describe(_ request: URLRequest?) -> String {
+    static func describe(_ request: URLRequest?) -> String {
       guard let url = request?.url else { return "?" }
       let path = url.path
       if let range = path.range(of: "/rest/") {

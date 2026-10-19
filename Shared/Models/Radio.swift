@@ -39,7 +39,7 @@ struct Radio: Codable, Identifiable, Hashable {
     )
   }
 
-  private static func displayHost(from urlString: String) -> String {
+  static func displayHost(from urlString: String) -> String {
     guard let url = URL(string: urlString),
       let host = url.host,
       !host.isEmpty

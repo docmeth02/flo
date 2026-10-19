@@ -204,7 +204,7 @@ final class PlaybackJournal {
 
   /// 1.5 for an early skip of a song the app picked, 1 for a later one, 0.75
   /// for a song the user picked.
-  private static func skipWeight(origin: String?, listened: Double) -> Double {
+  static func skipWeight(origin: String?, listened: Double) -> Double {
     switch origin.flatMap(PlaybackOrigin.init(rawValue:)) {
     case .smartShuffle, .keepPlaying: return listened <= earlySkipSeconds ? 1.5 : 1.0
     default: return 0.75

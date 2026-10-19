@@ -86,8 +86,14 @@ class AuthService {
   /// out. Built from the stored login, never from a token, so it survives
   /// token renewals.
   var accountKey: String? {
-    let id = credentialsLock.withLock { userId } ?? ""
-    guard !id.isEmpty, let url = URLComponents(string: UserDefaultsManager.serverBaseURL),
+    Self.accountKey(
+      serverURL: UserDefaultsManager.serverBaseURL, userId: credentialsLock.withLock { userId })
+  }
+
+  /// "host[:port]/path|userId", the server part lowercased and without a
+  /// trailing slash; nil without a user or a host.
+  static func accountKey(serverURL: String, userId: String?) -> String? {
+    guard let id = userId, !id.isEmpty, let url = URLComponents(string: serverURL),
       let host = url.host, !host.isEmpty
     else { return nil }
     var server = host + (url.port.map { ":\($0)" } ?? "") + url.path

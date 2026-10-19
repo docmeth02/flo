@@ -322,4 +322,33 @@ final class MixRankerTests: XCTestCase {
     XCTAssertEqual(Set(picked.map(\.id)), ["t0", "t1", "t2"])
     XCTAssertEqual(picked.count, 3)
   }
+
+  /// A version of a song heard an hour ago cools down with it; another
+  /// title of the same artist does not.
+  func testTitleSiblingsOfARecentSongCoolDown() throws {
+    let songs = zip(["heard", "live", "other"], ["Intro", "Intro (Live)", "Outro"]).map {
+      Song.fixture($0, title: $1, artist: "A", album: $0)
+    }
+    var journal = JournalSnapshot()
+    journal.lastHeardAt["heard"] = now.addingTimeInterval(-3600)
+    let picks = rank(songs, journal: journal, count: 3, seed: 1).record.picks
+
+    func cool(_ id: String) throws -> Double {
+      let scores = try XCTUnwrap(picks.first { $0.songId == id }?.scores)
+      let field = scores.components(separatedBy: "cool=").last?.split(separator: " ").first
+      let value = String(try XCTUnwrap(field))
+      // The score line writes ".45" for 0.45.
+      return try XCTUnwrap(Double(value.hasPrefix(".") ? "0" + value : value))
+    }
+    XCTAssertEqual(try cool("live"), 0.45, accuracy: 0.01)
+    XCTAssertEqual(try cool("other"), 1, accuracy: 0.01)
+  }
+
+  func testTitleNormalizationDropsVersionMarkers() {
+    XCTAssertEqual(SmartPlaybackService.normalizeTitle("Intro (Live)"), "intro")
+    XCTAssertEqual(SmartPlaybackService.normalizeTitle("Song [2019 Remaster]"), "song")
+    XCTAssertEqual(SmartPlaybackService.normalizeTitle("Track - Acoustic"), "track")
+    XCTAssertEqual(SmartPlaybackService.normalizeTitle("Hit feat. Someone"), "hit")
+    XCTAssertEqual(SmartPlaybackService.normalizeTitle("Intro (North)"), "intro (north)")
+  }
 }

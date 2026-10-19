@@ -475,7 +475,7 @@ actor ListeningHistoryStore {
       inserted: inserted, matched: matched)
   }
 
-  private struct Fold {
+  struct Fold {
     let kind: AffinitySnapshot.Kind
     let key: String
     let time: Date
@@ -484,7 +484,7 @@ actor ListeningHistoryStore {
 
   /// Folds each play of weight q at time t into (W, r) with half-life H:
   /// r' = max(r, t), W' = W·2^(−(r'−r)/H) + q·2^(−(r'−t)/H).
-  private static func apply(
+  static func apply(
     _ folds: [Fold], key: String, generation: Int16, in context: NSManagedObjectContext
   ) {
     guard !folds.isEmpty else { return }
