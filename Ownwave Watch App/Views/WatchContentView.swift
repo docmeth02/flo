@@ -93,10 +93,13 @@ struct WatchContentView: View {
         WatchLoginView(viewModel: authViewModel)
       }
     }
-    .overlay(alignment: .top) {
+    // At the bottom, where it covers the least: the player's top holds the
+    // title.
+    .overlay(alignment: .bottom) {
       if !connectivity.isOnline {
         Badge(kind: .offline)
-          .padding(.top, 2)
+          .padding(.bottom, FloLayout.offlineBadgeLift)
+          .ignoresSafeArea(edges: .bottom)
       }
     }
     .onChange(of: scenePhase) { _, phase in

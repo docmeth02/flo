@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import WatchKit
 
 /// The watch's colors: the dark palette plus a few the phone does not use.
 extension Color {
@@ -34,6 +35,11 @@ extension Color {
 
 /// Sizes shared by rows and their tiles.
 enum FloLayout {
+  /// How far the offline badge sits above the page dots: as far as the
+  /// player's bottom row leaves room, 10 pt on the Ultra, less on 44-46 mm,
+  /// none (over the dots) on 41-42 mm.
+  static let offlineBadgeLift = min(
+    10, max(0, (WKInterfaceDevice.current().screenBounds.height - 236) / 2))
   static let rowRadius: CGFloat = 14
   static let rowHeight: CGFloat = 44
   static let coverRowHeight: CGFloat = 52
