@@ -27,21 +27,13 @@ class StreamCacheManager {
   ].filter { $0.bytes <= AppPlatform.largestStreamCache }
 
   private let fileManager = FileManager.default
-  private let cacheDirectory: URL?
+  private let cacheDirectory = URL.cacheDirectory(named: "StreamCache")
   private let syncQueue = DispatchQueue(label: "flo.streamcache")
   private var inFlightDownloads: [String: DownloadRequest] = [:]
   private var inFlightKeys: Set<String> = []
   private var currentlyPlayingSongId: String?
 
-  private init() {
-    self.cacheDirectory =
-      fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first?
-      .appendingPathComponent("StreamCache")
-
-    if let dir = cacheDirectory, !fileManager.fileExists(atPath: dir.path) {
-      try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
-    }
-  }
+  private init() {}
 
   // MARK: - Public API
 
@@ -70,10 +62,9 @@ class StreamCacheManager {
   /// The file of a ready cache record, refreshing its access time; records
   /// whose file vanished are dropped.
   private func readyFileURL(for record: CacheEntity) -> URL? {
-    guard record.state == "ready", let filePath = record.filePath, let dir = cacheDirectory
-    else { return nil }
+    guard record.state == "ready", let filePath = record.filePath else { return nil }
 
-    let fileURL = dir.appendingPathComponent(filePath)
+    let fileURL = cacheDirectory.appendingPathComponent(filePath)
     guard fileManager.fileExists(atPath: fileURL.path) else {
       CoreDataManager.shared.viewContext.delete(record)
       CoreDataManager.shared.saveRecord()
@@ -179,12 +170,7 @@ class StreamCacheManager {
 
       switch result {
       case .success(let tempFile):
-        guard let dir = self.cacheDirectory else {
-          DispatchQueue.main.async { self.removeCacheRecord(key: key) }
-          return
-        }
-
-        let target = dir.appendingPathComponent("\(key).\(suffix)")
+        let target = self.cacheDirectory.appendingPathComponent("\(key).\(suffix)")
 
         guard (try? LocalFileManager.shared.moveFile(source: tempFile, target: target)) != nil else {
           DispatchQueue.main.async { self.removeCacheRecord(key: key) }
@@ -276,10 +262,8 @@ class StreamCacheManager {
     cancelDownloads()
 
     // Delete all files
-    if let dir = cacheDirectory, fileManager.fileExists(atPath: dir.path) {
-      try? fileManager.removeItem(at: dir)
-      try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
-    }
+    try? fileManager.removeItem(at: cacheDirectory)
+    try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
 
     deleteAllCacheRecords()
   }
@@ -307,16 +291,15 @@ class StreamCacheManager {
 
       for record in records {
         if record.state == "downloading" {
-          if let filePath = record.filePath, let dir = cacheDirectory {
-            let fileURL = dir.appendingPathComponent(filePath)
-            try? fileManager.removeItem(at: fileURL)
+          if let filePath = record.filePath {
+            try? fileManager.removeItem(at: cacheDirectory.appendingPathComponent(filePath))
           }
           CoreDataManager.shared.viewContext.delete(record)
           continue
         }
 
-        if let filePath = record.filePath, let dir = cacheDirectory {
-          let fileURL = dir.appendingPathComponent(filePath)
+        if let filePath = record.filePath {
+          let fileURL = cacheDirectory.appendingPathComponent(filePath)
           if !fileManager.fileExists(atPath: fileURL.path) {
             CoreDataManager.shared.viewContext.delete(record)
           }
@@ -331,9 +314,8 @@ class StreamCacheManager {
       let survivingRecords = CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)
       let knownFiles = Set(survivingRecords.compactMap { $0.filePath })
 
-      if let dir = cacheDirectory,
-        let files = try? fileManager.contentsOfDirectory(
-          at: dir, includingPropertiesForKeys: nil)
+      if let files = try? fileManager.contentsOfDirectory(
+        at: cacheDirectory, includingPropertiesForKeys: nil)
       {
         for file in files {
           if !knownFiles.contains(file.lastPathComponent) {
@@ -379,9 +361,8 @@ class StreamCacheManager {
 
       let size = record.fileSize
 
-      if let filePath = record.filePath, let dir = cacheDirectory {
-        let fileURL = dir.appendingPathComponent(filePath)
-        try? fileManager.removeItem(at: fileURL)
+      if let filePath = record.filePath {
+        try? fileManager.removeItem(at: cacheDirectory.appendingPathComponent(filePath))
       }
 
       CoreDataManager.shared.viewContext.delete(record)

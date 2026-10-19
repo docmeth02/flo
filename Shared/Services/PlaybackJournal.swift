@@ -153,10 +153,10 @@ final class PlaybackJournal {
     let cutoff = Date().addingTimeInterval(-Self.retention)
     Task {
       let removed = await CoreDataManager.shared.performBackground { context in
-        Self.batchDelete(
+        context.batchDelete(
+          "HistoryEntity",
           NSPredicate(
-            format: "timestamp == nil OR timestamp < %@ OR accountKey == nil", cutoff as NSDate),
-          in: context)
+            format: "timestamp == nil OR timestamp < %@ OR accountKey == nil", cutoff as NSDate))
       }
       debugLog("journal: pruned \(removed) rows")
     }
@@ -194,9 +194,9 @@ final class PlaybackJournal {
     let current = AuthService.shared.accountKey
     Task {
       await CoreDataManager.shared.performBackground { context in
-        _ = Self.batchDelete(
-          current.map { NSPredicate(format: "accountKey != %@", $0) } ?? NSPredicate(value: true),
-          in: context)
+        context.batchDelete(
+          "HistoryEntity",
+          current.map { NSPredicate(format: "accountKey != %@", $0) } ?? NSPredicate(value: true))
       }
       debugLog("journal: forgot logged out accounts")
     }
@@ -209,16 +209,6 @@ final class PlaybackJournal {
     case .smartShuffle, .keepPlaying: return listened <= earlySkipSeconds ? 1.5 : 1.0
     default: return 0.75
     }
-  }
-
-  private static func batchDelete(_ predicate: NSPredicate, in context: NSManagedObjectContext)
-    -> Int
-  {
-    let fetch = NSFetchRequest<NSFetchRequestResult>(entityName: "HistoryEntity")
-    fetch.predicate = predicate
-    let request = NSBatchDeleteRequest(fetchRequest: fetch)
-    request.resultType = .resultTypeCount
-    return ((try? context.execute(request)) as? NSBatchDeleteResult)?.result as? Int ?? 0
   }
 }
 

@@ -100,7 +100,7 @@ final class RequestLog: ObservableObject {
 
     private static func shortText(_ error: AFError) -> String {
       let text = error.underlyingError?.localizedDescription ?? error.localizedDescription
-      return text.count > 60 ? String(text.prefix(59)) + "…" : text
+      return text.truncated(to: 60)
     }
   }
 }

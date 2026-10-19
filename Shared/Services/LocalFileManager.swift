@@ -92,3 +92,12 @@ class LocalFileManager {
     }
   }
 }
+
+extension URL {
+  /// A folder in the app's caches, created when missing.
+  static func cacheDirectory(named name: String) -> URL {
+    let url = URL.cachesDirectory.appendingPathComponent(name, isDirectory: true)
+    try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+    return url
+  }
+}

@@ -12,6 +12,13 @@ extension Double {
   }
 }
 
+extension String {
+  /// The string cut to at most `length` characters, the last one an ellipsis.
+  func truncated(to length: Int) -> String {
+    count > length ? String(prefix(length - 1)) + "…" : self
+  }
+}
+
 func bytesToMBOrGB(_ bytes: Int64) -> String {
   let gigabyte: Int64 = 1024 * 1024 * 1024
   let megabyte: Int64 = 1024 * 1024

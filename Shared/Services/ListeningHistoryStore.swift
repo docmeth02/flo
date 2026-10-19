@@ -181,7 +181,7 @@ actor ListeningHistoryStore {
       let predicate =
         current.map { NSPredicate(format: "accountKey != %@", $0) } ?? NSPredicate(value: true)
       for entity in ["PlayEntity", "AffinityEntity", "HistorySyncStateEntity"] {
-        Self.batchDelete(entity, predicate, in: context)
+        context.batchDelete(entity, predicate)
       }
     }
     debugLog("history: forgot logged out accounts")
@@ -327,7 +327,7 @@ actor ListeningHistoryStore {
 
   private static func shortReason(_ error: Error) -> String {
     let text = ((error as? AFError)?.underlyingError ?? error).localizedDescription
-    return text.count > 60 ? String(text.prefix(59)) + "…" : text
+    return text.truncated(to: 60)
   }
 
   // MARK: - Core Data (background context only)
@@ -390,11 +390,10 @@ actor ListeningHistoryStore {
     // The first page of a generation replaces what the previous one left.
     if !progress.bootstrapComplete, progress.bootstrapNextStart == 0 {
       let byAccount = NSPredicate(format: "accountKey == %@", key)
-      batchDelete("PlayEntity", byAccount, in: context)
-      batchDelete(
+      context.batchDelete("PlayEntity", byAccount)
+      context.batchDelete(
         "AffinityEntity",
-        NSPredicate(format: "accountKey == %@ AND generation != %d", key, progress.generation),
-        in: context)
+        NSPredicate(format: "accountKey == %@ AND generation != %d", key, progress.generation))
     }
 
     let existingRequest = NSFetchRequest<NSDictionary>(entityName: "PlayEntity")
@@ -541,14 +540,6 @@ actor ListeningHistoryStore {
     request.sortDescriptors = [NSSortDescriptor(key: "serverScrobbleId", ascending: false)]
     request.fetchLimit = 1
     return (try? context.fetch(request))?.first?.serverScrobbleId
-  }
-
-  private static func batchDelete(
-    _ entityName: String, _ predicate: NSPredicate, in context: NSManagedObjectContext
-  ) {
-    let fetch = NSFetchRequest<NSFetchRequestResult>(entityName: entityName)
-    fetch.predicate = predicate
-    _ = try? context.execute(NSBatchDeleteRequest(fetchRequest: fetch))
   }
 
   private static func importState(of state: HistorySyncStateEntity) -> ImportState {

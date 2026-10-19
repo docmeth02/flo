@@ -9,24 +9,15 @@ class CoverArtCacheManager {
   static let shared = CoverArtCacheManager()
 
   private let fileManager = FileManager.default
-  private let cacheDirectory: URL?
+  private let cacheDirectory = URL.cacheDirectory(named: "CoverArtCache")
   private var inFlightIds: Set<String> = []
   private var waiters: [String: [(String?) -> Void]] = [:]
   private let syncQueue = DispatchQueue(label: "flo.coverartcache")
 
-  private init() {
-    self.cacheDirectory =
-      fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first?
-      .appendingPathComponent("CoverArtCache")
-
-    if let dir = cacheDirectory, !fileManager.fileExists(atPath: dir.path) {
-      try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
-    }
-  }
+  private init() {}
 
   func cachedFilePath(albumId: String) -> String? {
-    guard let dir = cacheDirectory else { return nil }
-    let file = dir.appendingPathComponent("\(albumId).img")
+    let file = fileURL(albumId: albumId)
     guard fileManager.fileExists(atPath: file.path) else { return nil }
     return file.path
   }
@@ -58,8 +49,8 @@ class CoverArtCacheManager {
       endpoint: API.SubsonicEndpoint.coverArt, parameters: params
     ) { [weak self] result in
       guard let self = self else { return }
-      if case .success(let tempFile) = result, let dir = self.cacheDirectory {
-        let target = dir.appendingPathComponent("\(albumId).img")
+      if case .success(let tempFile) = result {
+        let target = self.fileURL(albumId: albumId)
         try? self.fileManager.removeItem(at: target)
         try? self.fileManager.moveItem(at: tempFile, to: target)
       }
@@ -82,8 +73,11 @@ class CoverArtCacheManager {
 
   func clearCache() {
     syncQueue.sync { inFlightIds.removeAll() }
-    guard let dir = cacheDirectory, fileManager.fileExists(atPath: dir.path) else { return }
-    try? fileManager.removeItem(at: dir)
-    try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+    try? fileManager.removeItem(at: cacheDirectory)
+    try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+  }
+
+  private func fileURL(albumId: String) -> URL {
+    cacheDirectory.appendingPathComponent("\(albumId).img")
   }
 }
