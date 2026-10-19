@@ -286,83 +286,70 @@ class AlbumService {
   }
 
   /// Whether the server has the song starred; nil when it could not tell.
-  func isStarred(songId: String, completion: @escaping (Bool?) -> Void) {
+  func isStarred(songId: String) async -> Bool? {
     let params: [String: Any] = [
       "_start": 0, "_end": 1, "id": songId,
     ]
 
-    APIManager.shared.ndRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
-      (response: DataResponse<[Song], AFError>) in
-      switch response.result {
-      case .success(let songs):
-        completion(songs.first?.starred ?? false)
-      case .failure:
-        completion(nil)
-      }
-    }
+    let response: DataResponse<[Song], AFError> =
+      await APIManager.shared.ndRequest(endpoint: API.NDEndpoint.getSong, parameters: params)
+    return response.value.map { $0.first?.starred ?? false }
   }
 
   /// Stars a song, album or artist; Navidrome takes all three as `id`.
-  func star(id: String, completion: @escaping (Result<Void, Error>) -> Void) {
-    APIManager.shared.subsonicAction(
-      endpoint: API.SubsonicEndpoint.star, parameters: ["id": id], completion: completion)
+  func star(id: String) async throws {
+    try await APIManager.shared.subsonicAction(
+      endpoint: API.SubsonicEndpoint.star, parameters: ["id": id])
   }
 
-  func unstar(id: String, completion: @escaping (Result<Void, Error>) -> Void) {
-    APIManager.shared.subsonicAction(
-      endpoint: API.SubsonicEndpoint.unstar, parameters: ["id": id], completion: completion)
+  func unstar(id: String) async throws {
+    try await APIManager.shared.subsonicAction(
+      endpoint: API.SubsonicEndpoint.unstar, parameters: ["id": id])
   }
 
   /// Rates a song, album or artist 1 to 5; 0 removes its rating. Navidrome
   /// takes all three as `id`.
-  func setRating(id: String, rating: Int, completion: @escaping (Result<Void, Error>) -> Void) {
-    APIManager.shared.subsonicAction(
-      endpoint: API.SubsonicEndpoint.setRating, parameters: ["id": id, "rating": rating],
-      completion: completion)
+  func setRating(id: String, rating: Int) async throws {
+    try await APIManager.shared.subsonicAction(
+      endpoint: API.SubsonicEndpoint.setRating, parameters: ["id": id, "rating": rating])
   }
 
   /// Every song the account rated, with its rating.
-  func getRatedSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
-    ndList(API.NDEndpoint.getSong, ["has_rating": "true", "_start": 0, "_end": 0], completion)
+  func getRatedSongs() async throws -> [Song] {
+    try await ndList(API.NDEndpoint.getSong, ["has_rating": "true", "_start": 0, "_end": 0])
   }
 
   /// Every album the account rated, with its rating.
-  func getRatedAlbums(completion: @escaping (Result<[Album], Error>) -> Void) {
-    ndList(API.NDEndpoint.getAlbum, ["has_rating": "true", "_start": 0, "_end": 0], completion)
+  func getRatedAlbums() async throws -> [Album] {
+    try await ndList(API.NDEndpoint.getAlbum, ["has_rating": "true", "_start": 0, "_end": 0])
   }
 
   /// Every artist the account rated, with its rating.
-  func getRatedArtists(completion: @escaping (Result<[Artist], Error>) -> Void) {
-    ndList(API.NDEndpoint.getArtists, ["has_rating": "true", "_start": 0, "_end": 0], completion)
+  func getRatedArtists() async throws -> [Artist] {
+    try await ndList(API.NDEndpoint.getArtists, ["has_rating": "true", "_start": 0, "_end": 0])
   }
 
   /// The server's version, nil when it does not say or does not answer.
-  func serverVersion(completion: @escaping (String?) -> Void) {
-    APIManager.shared.subsonicRequest(endpoint: API.SubsonicEndpoint.ping, parameters: nil) {
-      (response: DataResponse<SubsonicEnvelope<BasicResponse>, AFError>) in
-      completion(response.value?.subsonicResponse.serverVersion)
-    }
+  func serverVersion() async -> String? {
+    let response: DataResponse<SubsonicEnvelope<BasicResponse>, AFError> =
+      await APIManager.shared.subsonicRequest(endpoint: API.SubsonicEndpoint.ping, parameters: nil)
+    return response.value?.subsonicResponse.serverVersion
   }
 
   /// Every liked song, album and artist of the account.
-  func getStarred(
-    completion: @escaping (Result<(songs: [Song], collections: StarredCollections), Error>) -> Void
-  ) {
-    APIManager.shared.subsonicRequest(
-      endpoint: API.SubsonicEndpoint.getStarred2, parameters: nil
-    ) {
-      (response: DataResponse<SubsonicEnvelope<Starred2>, AFError>) in
-      completion(
-        response.result.mapError { $0 as Error }
-          .flatMap { $0.result { $0 ?? Starred2(song: nil, album: nil, artist: nil) } }
-          .map { ($0.songs, $0.collections) })
-    }
+  func getStarred() async throws -> (songs: [Song], collections: StarredCollections) {
+    let response: DataResponse<SubsonicEnvelope<Starred2>, AFError> =
+      await APIManager.shared.subsonicRequest(
+        endpoint: API.SubsonicEndpoint.getStarred2, parameters: nil)
+    let starred = try response.result.get()
+      .payload { $0 ?? Starred2(song: nil, album: nil, artist: nil) }
+    return (starred.songs, starred.collections)
   }
 
-  func getSongFromAlbum(id: String, completion: @escaping (Result<[Song], Error>) -> Void) {
-    ndList(
+  func getSongFromAlbum(id: String) async throws -> [Song] {
+    try await ndList(
       API.NDEndpoint.getSong,
-      ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "album", "album_id": id], completion)
+      ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "album", "album_id": id])
   }
 
   /// The downloaded albums and playlists, each as an album.
@@ -374,99 +361,75 @@ class AlbumService {
     }
   }
 
-  func getAlbum(completion: @escaping (Result<[Album], Error>) -> Void) {
-    ndList(
-      API.NDEndpoint.getAlbum, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"],
-      completion)
+  func getAlbum() async throws -> [Album] {
+    try await ndList(
+      API.NDEndpoint.getAlbum, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"])
   }
 
-  func getArtists(completion: @escaping (Result<[Artist], Error>) -> Void) {
-    ndList(
-      API.NDEndpoint.getArtists, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"],
-      completion)
+  func getArtists() async throws -> [Artist] {
+    try await ndList(
+      API.NDEndpoint.getArtists, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"])
   }
 
-  func getAlbumsByArtist(id: String, completion: @escaping (Result<[Album], Error>) -> Void) {
-    ndList(
+  func getAlbumsByArtist(id: String) async throws -> [Album] {
+    try await ndList(
       API.NDEndpoint.getAlbum,
       [
         "_start": 0, "_end": 0, "_order": "ASC", "_sort": "max_year desc,date desc",
         "artist_id": id,
-      ], completion)
+      ])
   }
 
-  func getPlaylists(completion: @escaping (Result<[Playlist], Error>) -> Void) {
-    ndList(
-      API.NDEndpoint.getPlaylists, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"],
-      completion)
+  func getPlaylists() async throws -> [Playlist] {
+    try await ndList(
+      API.NDEndpoint.getPlaylists, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"])
   }
 
-  func getSongsByPlaylist(id: String, completion: @escaping (Result<[Song], Error>) -> Void) {
-    ndList(
+  func getSongsByPlaylist(id: String) async throws -> [Song] {
+    try await ndList(
       "\(API.NDEndpoint.getPlaylists)/\(id)/tracks",
-      ["playlist_id": id, "_start": 0, "_end": 0, "_order": "ASC", "_sort": "id"], completion)
+      ["playlist_id": id, "_start": 0, "_end": 0, "_order": "ASC", "_sort": "id"])
   }
 
   /// A whole list from Navidrome's own API.
   private func ndList<T: Decodable>(
-    _ endpoint: String, _ parameters: [String: Any],
-    _ completion: @escaping (Result<[T], Error>) -> Void
-  ) {
-    APIManager.shared.ndRequest(endpoint: endpoint, parameters: parameters) {
-      (response: DataResponse<[T], AFError>) in
-      completion(response.result.mapError { $0 })
-    }
+    _ endpoint: String, _ parameters: [String: Any]
+  ) async throws -> [T] {
+    let response: DataResponse<[T], AFError> =
+      await APIManager.shared.ndRequest(endpoint: endpoint, parameters: parameters)
+    return try response.result.get()
   }
 
   /// The stamp of the server's `entity` list ("song", "album", ...), from a
   /// one item request.
-  func getLibraryStamp(
-    entity: String, completion: @escaping (Result<LibraryStamp, Error>) -> Void
-  ) {
+  func getLibraryStamp(entity: String) async throws -> LibraryStamp {
     let params: [String: Any] = ["_start": 0, "_end": 1, "_sort": "updated_at", "_order": "DESC"]
 
-    APIManager.shared.ndRequest(endpoint: "/api/\(entity)", parameters: params) {
-      (response: DataResponse<[UpdatedAtOnly], AFError>) in
-      switch response.result {
-      case .success(let items):
-        let total = response.response?.value(forHTTPHeaderField: "X-Total-Count")
-          .flatMap(Int.init)
-        completion(.success(LibraryStamp(total: total, newestUpdatedAt: items.first?.updatedAt)))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    let response: DataResponse<[UpdatedAtOnly], AFError> =
+      await APIManager.shared.ndRequest(endpoint: "/api/\(entity)", parameters: params)
+    let items = try response.result.get()
+    let total = response.response?.value(forHTTPHeaderField: "X-Total-Count").flatMap(Int.init)
+    return LibraryStamp(total: total, newestUpdatedAt: items.first?.updatedAt)
   }
 
   /// One page of the song library, most recently changed first.
-  func getSongsPage(
-    start: Int, end: Int, completion: @escaping (Result<[SongPageItem], Error>) -> Void
-  ) {
+  func getSongsPage(start: Int, end: Int) async throws -> [SongPageItem] {
     let params: [String: Any] = [
       "_start": start, "_end": end, "_sort": "updated_at", "_order": "DESC",
     ]
 
-    ndList(API.NDEndpoint.getSong, params, completion)
+    return try await ndList(API.NDEndpoint.getSong, params)
   }
 
   /// One page of the server's play log, highest id first, with the log's size.
-  func getScrobblePage(
-    start: Int, end: Int,
-    completion: @escaping (Result<(rows: [ScrobbleRow], total: Int?), Error>) -> Void
-  ) {
+  func getScrobblePage(start: Int, end: Int) async throws -> (rows: [ScrobbleRow], total: Int?) {
     let params: [String: Any] = ["_start": start, "_end": end, "_sort": "id", "_order": "DESC"]
 
-    APIManager.shared.ndRequest(endpoint: API.NDEndpoint.getScrobbles, parameters: params) {
-      (response: DataResponse<[ScrobbleRow], AFError>) in
-      switch response.result {
-      case .success(let rows):
-        let total = response.response?.value(forHTTPHeaderField: "X-Total-Count")
-          .flatMap(Int.init)
-        completion(.success((rows, total)))
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    let response: DataResponse<[ScrobbleRow], AFError> =
+      await APIManager.shared.ndRequest(endpoint: API.NDEndpoint.getScrobbles, parameters: params)
+    let rows = try response.result.get()
+    let total = response.response?.value(forHTTPHeaderField: "X-Total-Count").flatMap(Int.init)
+    return (rows, total)
   }
 
   func getSongsByAlbumId(albumId: String) -> [Song] {
@@ -537,28 +500,15 @@ class AlbumService {
 
   /// Downloads the cover art `artId` as the stored cover of `id`; without
   /// `overwrite` a cover already stored stays.
-  func downloadCover(
-    artId: String, as id: String, overwrite: Bool = true,
-    completion: @escaping (Result<URL, Error>) -> Void
-  ) {
+  @discardableResult
+  func downloadCover(artId: String, as id: String, overwrite: Bool = true) async throws -> URL {
     let params: [String: Any] = ["id": artId, "size": AppPlatform.coverArtSize]
 
-    APIManager.shared.subsonicDownload(
-      endpoint: API.SubsonicEndpoint.coverArt, parameters: params
-    ) { result in
-      switch result {
-      case .success(let tempFile):
-        completion(
-          Result {
-            try LocalFileManager.shared.moveFile(
-              source: tempFile,
-              target: LocalFileManager.shared.fileURL(for: Self.coverPath(id: id)),
-              forceOverride: overwrite)
-          })
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+    let tempFile = try await APIManager.shared.subsonicDownload(
+      endpoint: API.SubsonicEndpoint.coverArt, parameters: params)
+    return try LocalFileManager.shared.moveFile(
+      source: tempFile, target: LocalFileManager.shared.fileURL(for: Self.coverPath(id: id)),
+      forceOverride: overwrite)
   }
 
   /// `suffix` and `bitRate` describe the file as downloaded, which may be

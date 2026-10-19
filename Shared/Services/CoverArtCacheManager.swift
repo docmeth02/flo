@@ -10,8 +10,7 @@ class CoverArtCacheManager {
 
   private let fileManager = FileManager.default
   private let cacheDirectory = URL.cacheDirectory(named: "CoverArtCache")
-  private var inFlightIds: Set<String> = []
-  private var waiters: [String: [(String?) -> Void]] = [:]
+  private var downloads: [String: Task<String?, Never>] = [:]
   private let syncQueue = DispatchQueue(label: "flo.coverartcache")
 
   private init() {}
@@ -22,57 +21,38 @@ class CoverArtCacheManager {
     return file.path
   }
 
-  /// Local path of the album's cover, downloading it first when needed.
-  /// Concurrent callers for the same album share one download; the
-  /// completion runs on an arbitrary queue and gets nil when it failed.
-  func coverPath(albumId: String, completion: @escaping (String?) -> Void) {
-    guard !albumId.isEmpty else { return completion(nil) }
+  /// Local path of the album's cover, downloading it first when needed; nil
+  /// when that failed. Concurrent callers for the same album share one
+  /// download.
+  func coverPath(albumId: String) async -> String? {
+    guard !albumId.isEmpty else { return nil }
 
-    var cached: String?
-    var shouldDownload = false
-    syncQueue.sync {
-      if let path = cachedFilePath(albumId: albumId) {
-        cached = path
-        return
-      }
-      waiters[albumId, default: []].append(completion)
-      if !inFlightIds.contains(albumId) {
-        inFlightIds.insert(albumId)
-        shouldDownload = true
-      }
+    let download = syncQueue.sync { () -> Task<String?, Never>? in
+      if cachedFilePath(albumId: albumId) != nil { return nil }
+      if let running = downloads[albumId] { return running }
+      let task = Task { await self.download(albumId: albumId) }
+      downloads[albumId] = task
+      return task
     }
-    if let cached { return completion(cached) }
-    guard shouldDownload else { return }
-
-    let params: [String: Any] = ["id": "al-\(albumId)", "size": AppPlatform.coverArtSize]
-    APIManager.shared.subsonicDownload(
-      endpoint: API.SubsonicEndpoint.coverArt, parameters: params
-    ) { [weak self] result in
-      guard let self = self else { return }
-      if case .success(let tempFile) = result {
-        let target = self.fileURL(albumId: albumId)
-        try? self.fileManager.removeItem(at: target)
-        try? self.fileManager.moveItem(at: tempFile, to: target)
-      }
-
-      var pending: [(String?) -> Void] = []
-      self.syncQueue.sync {
-        self.inFlightIds.remove(albumId)
-        pending = self.waiters.removeValue(forKey: albumId) ?? []
-      }
-      let path = self.cachedFilePath(albumId: albumId)
-      pending.forEach { $0(path) }
-    }
+    guard let download else { return cachedFilePath(albumId: albumId) }
+    return await download.value
   }
 
-  func coverPath(albumId: String) async -> String? {
-    await withCheckedContinuation { continuation in
-      coverPath(albumId: albumId) { continuation.resume(returning: $0) }
+  private func download(albumId: String) async -> String? {
+    let params: [String: Any] = ["id": "al-\(albumId)", "size": AppPlatform.coverArtSize]
+    if let tempFile = try? await APIManager.shared.subsonicDownload(
+      endpoint: API.SubsonicEndpoint.coverArt, parameters: params)
+    {
+      let target = fileURL(albumId: albumId)
+      try? fileManager.removeItem(at: target)
+      try? fileManager.moveItem(at: tempFile, to: target)
     }
+    syncQueue.sync { downloads[albumId] = nil }
+    return cachedFilePath(albumId: albumId)
   }
 
   func clearCache() {
-    syncQueue.sync { inFlightIds.removeAll() }
+    syncQueue.sync { downloads.removeAll() }
     try? fileManager.removeItem(at: cacheDirectory)
     try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
   }

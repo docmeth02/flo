@@ -37,6 +37,10 @@ class AlbumViewModel: ObservableObject {
 
   private static let reloadAfter: TimeInterval = 5 * 60
 
+  /// A whole library list from the server; run on the main actor so it can
+  /// tell StarStore what the list says.
+  private typealias ListRequest<T> = @MainActor () async throws -> [T]
+
   @Published private(set) var listStates: [Library: ListState] = [:]
 
   /// The artist whose albums `artistAlbums` holds, so a late answer for the
@@ -98,26 +102,23 @@ class AlbumViewModel: ObservableObject {
 
     self.album.songs = checkLocalSongs
 
-    AlbumService.shared.getSongFromAlbum(id: id) { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let songs):
-          guard id == self.album.id else { return }
-          let remoteSongs = songs.filter { song in
-            !self.album.songs.contains(where: { $0.id == song.id })
-          }
-          self.album.songs.append(contentsOf: remoteSongs)
-
-          self.album.songs.sort { (lhs, rhs) in
-            if lhs.discNumber == rhs.discNumber {
-              return lhs.trackNumber < rhs.trackNumber
-            }
-            return lhs.discNumber < rhs.discNumber
-          }
-
-        case .failure(let error):
-          debugLog("album songs failed: \(error)")
+    Task { @MainActor in
+      do {
+        let songs = try await AlbumService.shared.getSongFromAlbum(id: id)
+        guard id == self.album.id else { return }
+        let remoteSongs = songs.filter { song in
+          !self.album.songs.contains(where: { $0.id == song.id })
         }
+        self.album.songs.append(contentsOf: remoteSongs)
+
+        self.album.songs.sort { (lhs, rhs) in
+          if lhs.discNumber == rhs.discNumber {
+            return lhs.trackNumber < rhs.trackNumber
+          }
+          return lhs.discNumber < rhs.discNumber
+        }
+      } catch {
+        debugLog("album songs failed: \(error)")
       }
     }
   }
@@ -132,59 +133,51 @@ class AlbumViewModel: ObservableObject {
     let localSongs = AlbumService.shared.getPlaylistSongs(playlistId: id)
     assign(localSongs)
 
-    AlbumService.shared.getSongsByPlaylist(id: id) { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success(let remoteSongs):
-          let merged = Self.mergePlaylistSongs(local: localSongs, remote: remoteSongs)
-          AlbumService.shared.updatePlaylistPositions(playlistId: id, songs: merged)
-          guard isShown() else { return }
-          assign(merged)
-
-        case .failure(let error):
-          debugLog("playlist songs failed: \(error)")
-        }
+    Task { @MainActor in
+      do {
+        let remoteSongs = try await AlbumService.shared.getSongsByPlaylist(id: id)
+        let merged = Self.mergePlaylistSongs(local: localSongs, remote: remoteSongs)
+        AlbumService.shared.updatePlaylistPositions(playlistId: id, songs: merged)
+        guard isShown() else { return }
+        assign(merged)
+      } catch {
+        debugLog("playlist songs failed: \(error)")
       }
     }
   }
 
   // MARK: - Generic cache helpers
 
-  /// Requests the list, assigns it and caches it, then calls `done`, all on
-  /// the main thread. An empty answer is a real answer (e.g. every song
-  /// unliked) and replaces the cached list too.
+  /// Requests the list, assigns it and caches it on the main thread; the
+  /// task ends when that is done. An empty answer is a real answer (e.g.
+  /// every song unliked) and replaces the cached list too.
+  @discardableResult
   private func requestCached<T: Codable>(
     _ library: Library,
     assign: @escaping ([T]) -> Void,
-    request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void,
-    done: @escaping () -> Void
-  ) {
+    request: @escaping ListRequest<T>
+  ) -> Task<Void, Never> {
     let cacheGeneration = LibraryCacheManager.shared.generation
     // A new attempt takes the list out of its error state.
     listStates[library] = ListState(isLoading: true)
-    request { result in
-      DispatchQueue.main.async {
-        // Logout clears the cache and bumps its generation; an answer for the
-        // previous account must not refill the lists either.
-        guard LibraryCacheManager.shared.generation == cacheGeneration else {
-          done()
-          return
+    return Task { @MainActor in
+      let result = await Result { try await request() }
+      // Logout clears the cache and bumps its generation; an answer for the
+      // previous account must not refill the lists either.
+      guard LibraryCacheManager.shared.generation == cacheGeneration else { return }
+      switch result {
+      case .success(let items):
+        debugLog("\(library.rawValue) loaded: \(items.count)")
+        assign(items)
+        self.listStates[library] = ListState(loadedAt: Date())
+        DispatchQueue.global(qos: .utility).async {
+          LibraryCacheManager.shared.save(
+            items, forKey: library.cacheKey, generation: cacheGeneration)
+          // Siri reads the artist names for "Play <artist>" from this cache.
+          if library == .artists { FloShortcuts.updateAppShortcutParameters() }
         }
-        switch result {
-        case .success(let items):
-          debugLog("\(library.rawValue) loaded: \(items.count)")
-          assign(items)
-          self.listStates[library] = ListState(loadedAt: Date())
-          DispatchQueue.global(qos: .utility).async {
-            LibraryCacheManager.shared.save(
-              items, forKey: library.cacheKey, generation: cacheGeneration)
-            // Siri reads the artist names for "Play <artist>" from this cache.
-            if library == .artists { FloShortcuts.updateAppShortcutParameters() }
-          }
-        case .failure:
-          self.listStates[library] = ListState(failed: true)
-        }
-        done()
+      case .failure:
+        self.listStates[library] = ListState(failed: true)
       }
     }
   }
@@ -197,7 +190,7 @@ class AlbumViewModel: ObservableObject {
     maxAge: TimeInterval? = nil,
     current: [T],
     assign: @escaping ([T]) -> Void,
-    request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void
+    request: @escaping ListRequest<T>
   ) {
     let state = state(library)
     if state.isLoading { return }
@@ -211,20 +204,16 @@ class AlbumViewModel: ObservableObject {
     {
       assign(cached)
     }
-    requestCached(library, assign: assign, request: request) {}
+    requestCached(library, assign: assign, request: request)
   }
 
   @MainActor
   private func refreshCached<T: Codable>(
     _ library: Library,
     assign: @escaping ([T]) -> Void,
-    request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void
+    request: @escaping ListRequest<T>
   ) async {
-    await withCheckedContinuation { continuation in
-      requestCached(library, assign: assign, request: request) {
-        continuation.resume()
-      }
-    }
+    await requestCached(library, assign: assign, request: request).value
   }
 
   func fetchStarredSongs() {
@@ -245,19 +234,11 @@ class AlbumViewModel: ObservableObject {
 
   /// The server's Liked Songs, which also tell StarStore what is starred now
   /// (the cached copy shown meanwhile does not).
-  private static func starredSongsRequest(_ completion: @escaping (Result<[Song], Error>) -> Void) {
-    let since = MainActor.assumeIsolated { StarStore.shared.listRevision }
-    AlbumService.shared.getStarred { starred in
-      let result = starred.map(\.songs)
-      if case .success(let songs) = result {
-        DispatchQueue.main.async {
-          MainActor.assumeIsolated {
-            StarStore.shared.adoptServerStars(songs.map(\.playbackID), since: since)
-          }
-        }
-      }
-      completion(result)
-    }
+  @MainActor private static func starredSongsRequest() async throws -> [Song] {
+    let since = StarStore.shared.listRevision
+    let songs = try await AlbumService.shared.getStarred().songs
+    StarStore.shared.adoptServerStars(songs.map(\.playbackID), since: since)
+    return songs
   }
 
   private static let albumsRequest = adoptingStars(AlbumService.shared.getAlbum) {
@@ -270,20 +251,14 @@ class AlbumViewModel: ObservableObject {
   /// A full list of albums or artists, which also tells StarStore which of
   /// them are starred now.
   private static func adoptingStars<T>(
-    _ request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void,
+    _ request: @escaping () async throws -> [T],
     star: @escaping (T) -> (id: String, starred: Bool)
-  ) -> (@escaping (Result<[T], Error>) -> Void) -> Void {
-    { completion in
-      let since = MainActor.assumeIsolated { StarStore.shared.listRevision }
-      request { result in
-        if case .success(let items) = result {
-          let stars = items.map(star)
-          DispatchQueue.main.async {
-            MainActor.assumeIsolated { StarStore.shared.adoptServerList(stars, since: since) }
-          }
-        }
-        completion(result)
-      }
+  ) -> ListRequest<T> {
+    {
+      let since = StarStore.shared.listRevision
+      let items = try await request()
+      StarStore.shared.adoptServerList(items.map(star), since: since)
+      return items
     }
   }
 
@@ -331,16 +306,15 @@ class AlbumViewModel: ObservableObject {
     {
       return
     }
-    AlbumService.shared.getAlbumsByArtist(id: id) { result in
-      DispatchQueue.main.async {
-        guard id == self.artistAlbumsId else { return }
-        switch result {
-        case .success(let albums):
-          self.artistAlbums = albums
-          self.artistAlbumsLoadedAt = Date()
-        case .failure(let error):
-          debugLog("artist albums failed: \(error)")
-        }
+    Task { @MainActor in
+      let result = await Result { try await AlbumService.shared.getAlbumsByArtist(id: id) }
+      guard id == self.artistAlbumsId else { return }
+      switch result {
+      case .success(let albums):
+        self.artistAlbums = albums
+        self.artistAlbumsLoadedAt = Date()
+      case .failure(let error):
+        debugLog("artist albums failed: \(error)")
       }
     }
   }

@@ -19,13 +19,15 @@ final class PendingEditsTests: XCTestCase {
   ) -> (PendingEdits<Int>, settled: () -> [(String, Int, Bool)]) {
     let edits = PendingEdits<Int>(
       name: "test", key: key, defaults: defaults, canSend: { server.reachable },
-      send: { id, value, completion in server.sent.append((id, value, completion)) })
+      send: { @MainActor id, value in
+        try await answeredByTest { server.sent.append((id, value, $0)) }
+      })
     var settled: [(String, Int, Bool)] = []
     edits.onSettle = { settled.append(($0, $1, $2)) }
     return (edits, { settled })
   }
 
-  func testPendingEditSurvivesANewInstance() {
+  func testPendingEditSurvivesANewInstance() async {
     let defaults = makeDefaults()
     let server = FakeServer()
     server.reachable = false
@@ -36,6 +38,7 @@ final class PendingEditsTests: XCTestCase {
     XCTAssertEqual(edits["s1"], 4)
     server.reachable = true
     edits.flush()
+    await settle()
     XCTAssertEqual(server.sent.map(\.id), ["s1"])
   }
 
@@ -44,6 +47,7 @@ final class PendingEditsTests: XCTestCase {
     let server = FakeServer()
     let (edits, settled) = makeEdits(server, defaults: defaults)
     edits.set(5, id: "s1")
+    await settle()
     server.sent[0].answer(.success(()))
     await settle()
 
@@ -57,6 +61,7 @@ final class PendingEditsTests: XCTestCase {
     let server = FakeServer()
     let (edits, settled) = makeEdits(server, defaults: makeDefaults())
     edits.set(3, id: "gone")
+    await settle()
     server.sent[0].answer(.failure(SubsonicError(code: 70, message: "not found")))
     await settle()
 
@@ -68,12 +73,14 @@ final class PendingEditsTests: XCTestCase {
     let server = FakeServer()
     let (edits, settled) = makeEdits(server, defaults: makeDefaults())
     edits.set(2, id: "s1")
+    await settle()
     server.sent[0].answer(.failure(URLError(.notConnectedToInternet)))
     await settle()
 
     XCTAssertEqual(edits["s1"], 2)
     XCTAssertTrue(settled().isEmpty)
     edits.flush()
+    await settle()
     XCTAssertEqual(server.sent.count, 2)
   }
 
@@ -82,6 +89,7 @@ final class PendingEditsTests: XCTestCase {
     let (edits, settled) = makeEdits(server, defaults: makeDefaults())
     edits.set(1, id: "s1")
     edits.set(4, id: "s1")
+    await settle()
     // The first is still under way; the second waits for it.
     XCTAssertEqual(server.sent.count, 1)
 
@@ -102,6 +110,7 @@ final class PendingEditsTests: XCTestCase {
     let (edits, settled) = makeEdits(server, defaults: makeDefaults())
     edits.set(5, id: "s1")
     edits.forgetAccount()
+    await settle()
     server.sent[0].answer(.success(()))
     await settle()
 

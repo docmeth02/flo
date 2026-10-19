@@ -256,19 +256,18 @@ final class DownloadSession: NSObject, ObservableObject {
     }
     Task {
       for albumId in albumIds {
-        await withCheckedContinuation { done in
-          AlbumService.shared.downloadCover(artId: "al-\(albumId)", as: albumId, overwrite: false) {
-            _ in done.resume()
-          }
-        }
+        _ = try? await AlbumService.shared.downloadCover(
+          artId: "al-\(albumId)", as: albumId, overwrite: false)
       }
     }
     queueSongs(of: Album(from: playlist))
   }
 
   private static func downloadCover(artId: String, as id: String) {
-    AlbumService.shared.downloadCover(artId: artId, as: id) { result in
-      if case .failure(let error) = result {
+    Task {
+      do {
+        try await AlbumService.shared.downloadCover(artId: artId, as: id)
+      } catch {
         debugLog("cover \(id) not saved: \(error.localizedDescription)")
       }
     }

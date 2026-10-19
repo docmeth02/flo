@@ -41,38 +41,27 @@
       guard let kind = env["FLO_DEBUG_DOWNLOAD"] else { return }
       try? await Task.sleep(nanoseconds: 6_000_000_000)
 
-      func songs(_ load: (@escaping (Result<[Song], Error>) -> Void) -> Void) async -> [Song] {
-        await withCheckedContinuation { continuation in
-          load { continuation.resume(returning: (try? $0.get()) ?? []) }
-        }
-      }
-
       var album: Album
       var playlist: Playlist?
       if kind == "playlist" {
-        let playlists: [Playlist] = await withCheckedContinuation { continuation in
-          AlbumService.shared.getPlaylists { continuation.resume(returning: (try? $0.get()) ?? []) }
-        }
+        let playlists = (try? await AlbumService.shared.getPlaylists()) ?? []
         guard var first = playlists.first else { return debugLog("no playlists") }
-        first.songs = await songs {
-          AlbumService.shared.getSongsByPlaylist(id: first.id, completion: $0)
-        }
+        first.songs = (try? await AlbumService.shared.getSongsByPlaylist(id: first.id)) ?? []
         playlist = first
         album = Album(from: first)
         DownloadSession.shared.enqueue(first)
       } else {
-        let albums: [Album] = await withCheckedContinuation { continuation in
-          AlbumService.shared.getAlbum { result in
-            if case .failure(let error) = result { debugLog("albums failed: \(error)") }
-            continuation.resume(returning: (try? result.get()) ?? [])
-          }
+        let albums: [Album]
+        do {
+          albums = try await AlbumService.shared.getAlbum()
+        } catch {
+          debugLog("albums failed: \(error)")
+          albums = []
         }
         var smallest: Album?
         for candidate in albums.prefix(10) {
           var loaded = candidate
-          loaded.songs = await songs {
-            AlbumService.shared.getSongFromAlbum(id: candidate.id, completion: $0)
-          }
+          loaded.songs = (try? await AlbumService.shared.getSongFromAlbum(id: candidate.id)) ?? []
           if !loaded.songs.isEmpty, loaded.songs.count < (smallest?.songs.count ?? .max) {
             smallest = loaded
           }
@@ -308,30 +297,24 @@
       guard let name = ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN"] else { return }
       try? await Task.sleep(nanoseconds: 4_000_000_000)
 
-      func load<T>(_ call: (@escaping (Result<[T], Error>) -> Void) -> Void) async -> [T] {
-        await withCheckedContinuation { continuation in
-          call { continuation.resume(returning: (try? $0.get()) ?? []) }
-        }
-      }
-
       let view: AnyView
       switch name {
       case "albums": view = AnyView(WatchAlbumsListView())
       case "artists": view = AnyView(WatchArtistsListView())
       case "album":
-        guard let album = await load(AlbumService.shared.getAlbum).first else {
+        guard let album = try? await AlbumService.shared.getAlbum().first else {
           return debugLog("screen hook: no albums")
         }
         view = AnyView(WatchAlbumDetailView(album: album))
       case "playlist":
-        guard let playlist = await load(AlbumService.shared.getPlaylists).first else {
+        guard let playlist = try? await AlbumService.shared.getPlaylists().first else {
           return debugLog("screen hook: no playlists")
         }
         view = AnyView(WatchPlaylistDetailView(playlist: playlist))
       case "artist":
         // The artist with the most albums, so the album list has rows.
         guard
-          let artist = await load(AlbumService.shared.getArtists).max(by: {
+          let artist = try? await AlbumService.shared.getArtists().max(by: {
             $0.albumCount < $1.albumCount
           })
         else {
@@ -361,13 +344,11 @@
       // button does, to check that the pushed screen gives way to the player;
       // =<albumId>:<songId> plays that song of that album instead.
       guard let play = ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN_PLAY"],
-        var album = await load(AlbumService.shared.getAlbum).first
+        var album = try? await AlbumService.shared.getAlbum().first
       else { return }
       let target = play.split(separator: ":").map(String.init)
       if target.count == 2 { album.id = target[0] }
-      album.songs = await load {
-        AlbumService.shared.getSongFromAlbum(id: album.id, completion: $0)
-      }
+      album.songs = (try? await AlbumService.shared.getSongFromAlbum(id: album.id)) ?? []
       let index = target.count == 2 ? album.songs.firstIndex { $0.playbackID == target[1] } ?? 0 : 0
       try? await Task.sleep(nanoseconds: 3_000_000_000)
       // Library screens are links the reset drops; this one is hook state.

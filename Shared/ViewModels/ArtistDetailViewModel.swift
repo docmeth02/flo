@@ -14,10 +14,7 @@ final class ArtistDetailViewModel: ObservableObject {
   func fetchArtistRadio(artist: Artist) async -> [Song]? {
     isLoadingRadio = true
     defer { isLoadingRadio = false }
-    let result = await withCheckedContinuation { continuation in
-      RadioService.shared.getSimilarSongs(id: artist.id) { continuation.resume(returning: $0) }
-    }
-    return try? result.get()
+    return try? await RadioService.shared.getSimilarSongs(id: artist.id)
   }
 
   /// What the artist screens say when Artist Radio has nothing to play.

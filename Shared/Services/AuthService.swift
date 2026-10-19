@@ -247,15 +247,13 @@ class AuthService {
   }
 
   func login(
-    serverUrl: String, username: String, password: String,
-    completion: @escaping (Result<UserAuth, AuthError>) -> Void
-  ) {
+    serverUrl: String, username: String, password: String
+  ) async throws(AuthError) -> UserAuth {
     let url = "\(serverUrl)\(API.NDEndpoint.login)"
     let parameters: [String: Any] = ["username": username, "password": password]
 
-    APIManager.shared.login(endpoint: url, parameters: parameters) {
-      (response: DataResponse<UserAuth, AFError>) in
-      completion(response.result.mapError { AuthError(login: $0, body: response.data) })
-    }
+    let response: DataResponse<UserAuth, AFError> =
+      await APIManager.shared.login(endpoint: url, parameters: parameters)
+    return try response.result.mapError { AuthError(login: $0, body: response.data) }.get()
   }
 }

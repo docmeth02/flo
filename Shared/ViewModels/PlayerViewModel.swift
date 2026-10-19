@@ -749,13 +749,13 @@ class PlayerViewModel: ObservableObject {
       var online = await ConnectivityMonitor.shared.canStream()
       var songs: [Song] = []
       if online {
-        let result = await withCheckedContinuation { continuation in
-          RadioService.shared.getTopSongs(artistId: id) { continuation.resume(returning: $0) }
+        do {
+          songs = try await RadioService.shared.getTopSongs(artistId: id)
+        } catch {
+          // A failed request most likely means the link went; the monitor may
+          // not know yet.
+          online = false
         }
-        songs = (try? result.get()) ?? []
-        // A failed request most likely means the link went; the monitor may
-        // not know yet.
-        if case .failure = result { online = false }
       }
       if songs.isEmpty {
         let keys = await SmartPlaybackService.shared.libraryIndex(allowSync: false).artistKeys

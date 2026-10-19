@@ -25,8 +25,8 @@
       }
       guard env["FLO_DEBUG_STAR"] != nil || env["FLO_DEBUG_MENU"] != nil else { return }
       try? await Task.sleep(nanoseconds: 4_000_000_000)
-      let albums: [Album] = await Self.debugLoad(AlbumService.shared.getAlbum)
-      let artists: [Artist] = await Self.debugLoad(AlbumService.shared.getArtists)
+      let albums = (try? await AlbumService.shared.getAlbum()) ?? []
+      let artists = (try? await AlbumService.shared.getArtists()) ?? []
 
       if case (let kind, let id)? = env["FLO_DEBUG_STAR"].flatMap(Self.debugItem) {
         // The cached lists when offline, where the requests above fail.
@@ -48,9 +48,7 @@
       switch env["FLO_DEBUG_MENU"] {
       case "song":
         guard var album = albums.first else { return debugLog("menu hook: no albums") }
-        album.songs = await Self.debugLoad {
-          AlbumService.shared.getSongFromAlbum(id: album.id, completion: $0)
-        }
+        album.songs = (try? await AlbumService.shared.getSongFromAlbum(id: album.id)) ?? []
         guard let song = album.songs.first else { return debugLog("menu hook: no songs") }
         screen = AnyView(WatchAlbumDetailView(album: album))
         target = .song(song, context: album.name, isFromPlaylist: false)
@@ -74,14 +72,6 @@
       let parts = value.split(separator: ":", maxSplits: 1).map(String.init)
       guard parts.count == 2, let kind = PinStore.Kind(rawValue: parts[0]) else { return nil }
       return (kind, parts[1])
-    }
-
-    private static func debugLoad<T>(
-      _ call: (@escaping (Result<[T], Error>) -> Void) -> Void
-    ) async -> [T] {
-      await withCheckedContinuation { continuation in
-        call { continuation.resume(returning: (try? $0.get()) ?? []) }
-      }
     }
   }
 

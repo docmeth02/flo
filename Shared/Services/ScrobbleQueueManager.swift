@@ -30,10 +30,8 @@ struct ScrobblePayload {
 final class ScrobbleQueueManager {
   static let shared = ScrobbleQueueManager()
 
-  /// Submits one listen to the server; the completion may run on any thread.
-  typealias Send = (
-    _ songId: String, _ time: Date, _ completion: @escaping (Result<Void, Error>) -> Void
-  ) -> Void
+  /// Submits one listen to the server.
+  typealias Send = (_ songId: String, _ time: Date) async throws -> Void
 
   private static let initialRetryDelay: TimeInterval = 30
   private static let maxRetryDelay: TimeInterval = 30 * 60
@@ -64,9 +62,9 @@ final class ScrobbleQueueManager {
     store: CoreDataManager = .shared,
     receipts: ScrobbleReceipts = ScrobbleReceipts(),
     accountKey: @escaping () -> String? = { AuthService.shared.accountKey },
-    send: @escaping Send = { songId, time, completion in
-      ScrobbleAPI.shared.scrobbleToBuiltinEndpoint(
-        submission: true, songId: songId, time: time, completion: completion)
+    send: @escaping Send = { songId, time in
+      try await ScrobbleAPI.shared.scrobbleToBuiltinEndpoint(
+        submission: true, songId: songId, time: time)
     },
     canReachServer: @escaping () -> Bool = { ConnectivityMonitor.shared.canReachServer },
     probeServer: @escaping () -> Void = { ConnectivityMonitor.shared.probeServerReachability() },
@@ -131,7 +129,7 @@ final class ScrobbleQueueManager {
     guard store.saveRecord() else {
       // The store failed and dropped the entry; one direct attempt beats
       // losing the play.
-      send(payload.songId, payload.listenTime) { _ in }
+      Task { [send] in try? await send(payload.songId, payload.listenTime) }
       return
     }
     reload()
@@ -235,32 +233,32 @@ final class ScrobbleQueueManager {
     }
 
     let generation = accountGeneration
-    send(songId, entry.listenTime ?? Date()) { [weak self] result in
-      DispatchQueue.main.async {
-        guard let self = self else { return }
-        // A logout meanwhile deleted the entry; it must not be touched again.
-        guard generation == self.accountGeneration else {
-          self.isFlushing = false
-          return
-        }
+    let listenTime = entry.listenTime ?? Date()
+    Task { @MainActor [weak self, send] in
+      let result = await Result { try await send(songId, listenTime) }
+      guard let self = self else { return }
+      // A logout meanwhile deleted the entry; it must not be touched again.
+      guard generation == self.accountGeneration else {
+        self.isFlushing = false
+        return
+      }
 
-        switch result {
-        case .success:
-          debugLog("queued scrobble delivered: \(songId)")
-          self.receipts.insert(receipt)
-          if self.delete(entry) { self.receipts.remove(receipt) }
-          self.submitPending(remaining)
+      switch result {
+      case .success:
+        debugLog("queued scrobble delivered: \(songId)")
+        self.receipts.insert(receipt)
+        if self.delete(entry) { self.receipts.remove(receipt) }
+        self.submitPending(remaining)
 
-        case .failure(let error) where ScrobbleAPI.shared.isPermanentFailure(error):
-          self.delete(entry)
-          self.submitPending(remaining)
+      case .failure(let error) where ScrobbleAPI.shared.isPermanentFailure(error):
+        self.delete(entry)
+        self.submitPending(remaining)
 
-        case .failure:
-          self.isFlushing = false
-          self.reload()
-          self.backOff()
-          self.scheduleRetry()
-        }
+      case .failure:
+        self.isFlushing = false
+        self.reload()
+        self.backOff()
+        self.scheduleRetry()
       }
     }
   }

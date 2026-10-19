@@ -126,9 +126,11 @@ class FloooViewModel: ObservableObject {
     let report = waitingReports.removeFirst()
     reportInFlight = true
 
-    ScrobbleAPI.shared.reportPlayback(
-      mediaId: report.payload.songId, positionMs: report.positionMs, state: report.state
-    ) { [weak self] result in
+    Task { @MainActor [weak self] in
+      let result = await Result {
+        try await ScrobbleAPI.shared.reportPlayback(
+          mediaId: report.payload.songId, positionMs: report.positionMs, state: report.state)
+      }
       guard let self else { return }
       self.reportInFlight = false
 
@@ -168,12 +170,12 @@ class FloooViewModel: ObservableObject {
 
     guard ConnectivityMonitor.shared.canReachServer else { return }
 
-    ScrobbleAPI.shared.scrobbleToBuiltinEndpoint(
-      submission: false, songId: payload.songId, time: payload.listenTime
-    ) { result in
-      if case .success = result {
-        debugLog("scrobble delivered: \(payload.songId) submission=false")
-      }
+    Task {
+      guard
+        (try? await ScrobbleAPI.shared.scrobbleToBuiltinEndpoint(
+          submission: false, songId: payload.songId, time: payload.listenTime)) != nil
+      else { return }
+      debugLog("scrobble delivered: \(payload.songId) submission=false")
     }
   }
 }

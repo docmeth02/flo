@@ -28,116 +28,93 @@ class APIManager {
       eventMonitors: [RequestLog.shared.monitor])
   }
 
+  // Requests outlive the task awaiting them: a view's task ends when the
+  // view goes, and the answer still counts.
   func ndRequest<T: Decodable>(
-    endpoint: String, parameters: Parameters?,
-    completion: @escaping (DataResponse<T, AFError>) -> Void
-  ) {
+    endpoint: String, parameters: Parameters?
+  ) async -> DataResponse<T, AFError> {
     let authSession = AuthService.shared.sessionSnapshot()
     let token = authSession.ndToken
 
     let url = "\(UserDefaultsManager.serverBaseURL)\(endpoint)"
     let headers: HTTPHeaders = [API.ndAuthHeader: "Bearer \(token)"]
 
-    session.request(url, parameters: parameters, headers: headers)
+    let response = await session.request(url, parameters: parameters, headers: headers)
       .validate(statusCode: 200..<300)
-      .responseDecodable(of: T.self) { response in
-        if response.error == nil,
-          let refreshed = response.response?.value(forHTTPHeaderField: "X-Nd-Authorization")
-        {
-          AuthService.shared.adoptRefreshedToken(refreshed, from: authSession)
-        }
-        ConnectivityMonitor.shared.record(
-          response: response.response, error: response.error?.underlyingError)
-        completion(response)
-      }
+      .serializingDecodable(T.self, automaticallyCancelling: false).response
+    if response.error == nil,
+      let refreshed = response.response?.value(forHTTPHeaderField: "X-Nd-Authorization")
+    {
+      AuthService.shared.adoptRefreshedToken(refreshed, from: authSession)
+    }
+    ConnectivityMonitor.shared.record(
+      response: response.response, error: response.error?.underlyingError)
+    return response
   }
 
   func subsonicRequest<T: Decodable>(
-    endpoint: String, parameters: Parameters?,
-    completion: @escaping (DataResponse<T, AFError>) -> Void
-  ) {
+    endpoint: String, parameters: Parameters?
+  ) async -> DataResponse<T, AFError> {
     let authSession = AuthService.shared.sessionSnapshot()
     let url =
       "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(authSession.subsonicCredentials)"
 
-    session.request(url, parameters: parameters)
+    let response = await session.request(url, parameters: parameters)
       .validate(statusCode: 200..<300)
-      .responseDecodable(of: T.self) { response in
-        Self.notifyIfSessionExpired(
-          response: response.response, error: response.error, authSession: authSession)
-        ConnectivityMonitor.shared.record(
-          response: response.response, error: response.error?.underlyingError)
-        completion(response)
-      }
+      .serializingDecodable(T.self, automaticallyCancelling: false).response
+    Self.notifyIfSessionExpired(
+      response: response.response, error: response.error, authSession: authSession)
+    ConnectivityMonitor.shared.record(
+      response: response.response, error: response.error?.underlyingError)
+    return response
   }
 
   /// A Subsonic call without payload. Subsonic reports failures with HTTP
   /// 200, so only a body whose status is "ok" counts as success.
-  func subsonicAction(
-    endpoint: String, parameters: Parameters?,
-    completion: @escaping (Result<Void, Error>) -> Void
-  ) {
-    subsonicRequest(endpoint: endpoint, parameters: parameters) {
-      (response: DataResponse<SubsonicEnvelope<BasicResponse>, AFError>) in
-      switch response.result {
-      case .success(let body):
-        if let failure = body.failure {
-          completion(.failure(failure))
-        } else {
-          completion(.success(()))
-        }
-      case .failure(let error):
-        completion(.failure(error))
-      }
-    }
+  func subsonicAction(endpoint: String, parameters: Parameters?) async throws {
+    let response: DataResponse<SubsonicEnvelope<BasicResponse>, AFError> =
+      await subsonicRequest(endpoint: endpoint, parameters: parameters)
+    if let failure = try response.result.get().failure { throw failure }
   }
 
-  /// Downloads to a temporary file; progress, when asked for, is in percent.
-  /// A Subsonic error body, which arrives with status 200, or an empty file
-  /// fails like an HTTP error.
-  @discardableResult
+  /// Downloads to a temporary file. A Subsonic error body, which arrives with
+  /// status 200, or an empty file fails like an HTTP error. Cancelling the
+  /// awaiting task cancels the download.
   func subsonicDownload(
-    endpoint: String, parameters: Parameters?, allowsCellular: Bool = true,
-    progressUpdate: ((Double) -> Void)? = nil,
-    completion: @escaping (Result<URL, AFError>) -> Void
-  ) -> DownloadRequest {
+    endpoint: String, parameters: Parameters?, allowsCellular: Bool = true
+  ) async throws -> URL {
     let url =
       "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(AuthService.shared.sessionSnapshot().subsonicCredentials)"
 
-    let request = session.download(
+    let response = await session.download(
       url, parameters: parameters,
       requestModifier: {
         $0.timeoutInterval = 60
         $0.allowsCellularAccess = allowsCellular
-      })
-    if let progressUpdate {
-      request.downloadProgress { progressUpdate($0.fractionCompleted * 100) }
+      }
+    )
+    .validate { _, response, fileURL in
+      let isErrorBody = DownloadFailure.isErrorBody(response)
+      let code = isErrorBody ? fileURL.flatMap(DownloadFailure.subsonicCode(in:)) : nil
+      let bytes = fileURL.flatMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize }
+      guard
+        DownloadFailure.classify(
+          status: response.statusCode, isErrorBody: isErrorBody, subsonicCode: code,
+          bytes: Int64(bytes ?? 0)) == nil
+      else {
+        return .failure(SubsonicError(code: code ?? 0, message: "no file in the response"))
+      }
+      return .success(())
     }
-    return
-      request
-      .validate { _, response, fileURL in
-        let isErrorBody = DownloadFailure.isErrorBody(response)
-        let code = isErrorBody ? fileURL.flatMap(DownloadFailure.subsonicCode(in:)) : nil
-        let bytes = fileURL.flatMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize }
-        guard
-          DownloadFailure.classify(
-            status: response.statusCode, isErrorBody: isErrorBody, subsonicCode: code,
-            bytes: Int64(bytes ?? 0)) == nil
-        else {
-          return .failure(SubsonicError(code: code ?? 0, message: "no file in the response"))
-        }
-        return .success(())
-      }
-      .responseURL { response in
-        switch response.result {
-        case .success(let fileURL):
-          completion(.success(fileURL))
-        case .failure(let error):
-          // A rejected body would otherwise stay in the temporary folder.
-          if let file = response.fileURL { try? FileManager.default.removeItem(at: file) }
-          completion(.failure(error))
-        }
-      }
+    .serializingDownloadedFileURL().response
+
+    do {
+      return try response.result.get()
+    } catch {
+      // A rejected body would otherwise stay in the temporary folder.
+      if let file = response.fileURL { try? FileManager.default.removeItem(at: file) }
+      throw error
+    }
   }
 }
 
@@ -272,10 +249,9 @@ extension APIManager {
   }
 
   func login<T: Decodable>(
-    endpoint: String, parameters: Parameters?,
-    completion: @escaping (DataResponse<T, AFError>) -> Void
-  ) {
-    session.request(
+    endpoint: String, parameters: Parameters?
+  ) async -> DataResponse<T, AFError> {
+    await session.request(
       endpoint,
       method: .post,
       parameters: parameters,
@@ -285,9 +261,7 @@ extension APIManager {
       }
     )
     .validate(statusCode: 200..<300)
-    .responseDecodable(of: T.self) { response in
-      completion(response)
-    }
+    .serializingDecodable(T.self, automaticallyCancelling: false).response
   }
 }
 

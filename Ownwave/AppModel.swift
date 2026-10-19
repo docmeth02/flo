@@ -70,11 +70,10 @@ final class AppModel: ObservableObject {
   /// only the songs downloaded here. Without the server, the songs known.
   func songs(of album: Album) async -> [Song] {
     guard ConnectivityMonitor.shared.canReachServer else { return album.songs }
-    let fetched = await withCheckedContinuation { continuation in
-      AlbumService.shared.getSongFromAlbum(id: album.id) { continuation.resume(returning: $0) }
-    }
     // An empty answer (the album gone from the server) keeps what is known.
-    guard let songs = try? fetched.get(), !songs.isEmpty else { return album.songs }
+    guard let songs = try? await AlbumService.shared.getSongFromAlbum(id: album.id),
+      !songs.isEmpty
+    else { return album.songs }
     return songs
   }
 

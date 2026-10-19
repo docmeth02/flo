@@ -3,7 +3,6 @@
 //  flo
 //
 
-import Alamofire
 import CoreData
 import Foundation
 
@@ -33,7 +32,7 @@ class StreamCacheManager {
   // for again gets a new attempt, so the old one's late completion leaves the
   // new one's registration and record alone.
   private var inFlightAttempts: [String: UUID] = [:]
-  private var inFlightDownloads: [String: DownloadRequest] = [:]
+  private var inFlightDownloads: [String: Task<Void, Never>] = [:]
   private var currentlyPlayingSongId: String?
 
   /// CacheEntity.state.
@@ -169,10 +168,12 @@ class StreamCacheManager {
       CoreDataManager.shared.saveRecord()
     }
 
-    let request = APIManager.shared.subsonicDownload(
-      endpoint: source.endpoint, parameters: source.parameters,
-      allowsCellular: TranscodingSettings.streamsOverCellular
-    ) { [weak self] result in
+    let allowsCellular = TranscodingSettings.streamsOverCellular
+    let download = Task { @MainActor [weak self] in
+      let result = await Result {
+        try await APIManager.shared.subsonicDownload(
+          endpoint: source.endpoint, parameters: source.parameters, allowsCellular: allowsCellular)
+      }
       guard let self = self else { return }
       // A cancelled attempt's record is gone, or is the next attempt's.
       guard self.endAttempt(attempt, key: key) else {
@@ -186,35 +187,33 @@ class StreamCacheManager {
 
         guard (try? LocalFileManager.shared.moveFile(source: tempFile, target: target)) != nil
         else {
-          DispatchQueue.main.async { self.removeCacheRecord(key: key) }
+          self.removeCacheRecord(key: key)
           return
         }
         let fileSize =
           (try? self.fileManager.attributesOfItem(atPath: target.path)[.size] as? Int64) ?? 0
 
-        DispatchQueue.main.async {
-          let records = CoreDataManager.shared.getRecordByKey(
-            entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1)
-          if let record = records.first {
-            record.state = State.ready.rawValue
-            record.fileSize = fileSize
-            CoreDataManager.shared.saveRecord()
-          }
-
-          self.evictIfNeeded()
+        let records = CoreDataManager.shared.getRecordByKey(
+          entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1)
+        if let record = records.first {
+          record.state = State.ready.rawValue
+          record.fileSize = fileSize
+          CoreDataManager.shared.saveRecord()
         }
 
+        self.evictIfNeeded()
+
       case .failure:
-        DispatchQueue.main.async { self.removeCacheRecord(key: key) }
+        self.removeCacheRecord(key: key)
       }
     }
 
     syncQueue.sync {
       // A cancel may have come while the request was set up.
       if inFlightAttempts[key] == attempt {
-        inFlightDownloads[key] = request
+        inFlightDownloads[key] = download
       } else {
-        request.cancel()
+        download.cancel()
       }
     }
   }

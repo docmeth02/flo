@@ -12,7 +12,9 @@ final class StarStoreTests: XCTestCase {
   private func makeStore(defaults: UserDefaults? = nil) -> StarStore {
     StarStore(
       defaults: defaults ?? makeDefaults(), canSend: { [unowned self] in self.reachable },
-      send: { [unowned self] _, _, completion in self.answers.append(completion) })
+      send: { @MainActor [unowned self] _, _ in
+        try await answeredByTest { self.answers.append($0) }
+      })
   }
 
   /// A song liked offline is still known as a song after a relaunch, so a
@@ -24,6 +26,7 @@ final class StarStoreTests: XCTestCase {
 
     reachable = true
     let store = makeStore(defaults: defaults)
+    await settle()
     answers[0](.success(()))
     await settle()
     XCTAssertTrue(store.isStarred("s1", listed: false))
@@ -38,6 +41,7 @@ final class StarStoreTests: XCTestCase {
     store.setSong(true, id: "s1")
     let list = store.listRevision
     let lookup = store.editCount
+    await settle()
     answers[0](.success(()))
     await settle()
 
@@ -63,6 +67,7 @@ final class StarStoreTests: XCTestCase {
   func testConfirmedStarWinsOverTheListedState() async {
     let store = makeStore()
     store.set(false, id: "s1")
+    await settle()
     answers[0](.success(()))
     await settle()
     XCTAssertFalse(store.isStarred("s1", listed: true))
@@ -71,6 +76,7 @@ final class StarStoreTests: XCTestCase {
   func testPendingEditWinsOverAConfirmedStar() async {
     let store = makeStore()
     store.set(true, id: "s1")
+    await settle()
     answers[0](.success(()))
     await settle()
 
@@ -82,6 +88,7 @@ final class StarStoreTests: XCTestCase {
   func testFreshServerStateReplacesAnEarlierConfirmation() async {
     let store = makeStore()
     store.set(true, id: "s1")
+    await settle()
     answers[0](.success(()))
     await settle()
 
@@ -134,6 +141,7 @@ final class StarStoreTests: XCTestCase {
     let store = makeStore()
     store.set(true, id: "al1")
     store.set(false, id: "ar1")
+    await settle()
     answers[0](.success(()))
     answers[1](.success(()))
     await settle()
@@ -162,6 +170,7 @@ final class StarStoreTests: XCTestCase {
     let taken = makeStore()
     let before = taken.listRevision
     taken.set(true, id: "ar1")
+    await settle()
     answers[0](.success(()))
     await settle()
     taken.adoptServerList([("ar1", false)], since: before)

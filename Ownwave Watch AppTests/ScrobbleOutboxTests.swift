@@ -6,6 +6,7 @@ import XCTest
   @testable import Ownwave_Watch_App
 #endif
 
+@MainActor
 final class ScrobbleOutboxTests: XCTestCase {
   /// A store on a memory container whose saves can be made to fail.
   private final class Store: CoreDataManager {
@@ -46,8 +47,9 @@ final class ScrobbleOutboxTests: XCTestCase {
       store: store,
       receipts: ScrobbleReceipts(fileURL: receiptsURL),
       accountKey: { [unowned self] in account },
-      send: { [unowned self] songId, _, completion in
-        sends.append((songId, store.countRecords(entity: ScrobbleEntity.self), completion))
+      send: { @MainActor [unowned self] songId, _ in
+        let storedRows = self.store.countRecords(entity: ScrobbleEntity.self)
+        try await answeredByTest { self.sends.append((songId, storedRows, $0)) }
       },
       canReachServer: { [unowned self] in reachable },
       probeServer: { [unowned self] in probes += 1 },
@@ -68,37 +70,39 @@ final class ScrobbleOutboxTests: XCTestCase {
     return ScrobblePayload(nowPlaying: row, accountGeneration: outbox.accountGeneration)!
   }
 
-  /// Lets the outbox handle a send result, which it takes on the main queue.
-  private func answer(_ index: Int, _ result: Result<Void, Error>) {
+  /// Lets the outbox handle a send result, which it takes on the main actor.
+  private func answer(_ index: Int, _ result: Result<Void, Error>) async {
     sends[index].complete(result)
-    let handled = expectation(description: "main queue")
-    DispatchQueue.main.async { handled.fulfill() }
-    wait(for: [handled], timeout: 1)
+    await settle()
   }
 
   private var storedRows: [ScrobbleEntity] {
     store.getRecordsByEntity(entity: ScrobbleEntity.self)
   }
 
-  func testEnqueueStoresBeforeSending() {
+  func testEnqueueStoresBeforeSending() async {
     outbox.enqueue(payload("a"))
+    await settle()
     XCTAssertEqual(sends.map(\.songId), ["a"])
     XCTAssertEqual(sends[0].storedRows, 1)
   }
 
-  func testUnreachableServerKeepsTheEntryUnsent() {
+  func testUnreachableServerKeepsTheEntryUnsent() async {
     reachable = false
     outbox.enqueue(payload("a"))
+    await settle()
     XCTAssertTrue(sends.isEmpty)
     XCTAssertEqual(storedRows.map(\.songId), ["a"])
 
     // A trigger while still unreachable asks for a probe instead of sending.
     triggers.send()
+    await settle()
     XCTAssertTrue(sends.isEmpty)
     XCTAssertEqual(probes, 1)
 
     reachable = true
     triggers.send()
+    await settle()
     XCTAssertEqual(sends.map(\.songId), ["a"])
   }
 
@@ -111,58 +115,66 @@ final class ScrobbleOutboxTests: XCTestCase {
     XCTAssertEqual(Set(storedRows.compactMap(\.songId)), ["a", "b"])
   }
 
-  func testDeliveredEntryIsDeleted() {
+  func testDeliveredEntryIsDeleted() async {
     outbox.enqueue(payload("a"))
-    answer(0, .success(()))
+    await settle()
+    await answer(0, .success(()))
     XCTAssertEqual(outbox.pendingCount, 0)
     XCTAssertTrue(storedRows.isEmpty)
   }
 
-  func testPermanentFailureDropsTheEntry() {
+  func testPermanentFailureDropsTheEntry() async {
     outbox.enqueue(payload("a"))
-    answer(0, .failure(SubsonicError(code: 70, message: "not found")))
+    await settle()
+    await answer(0, .failure(SubsonicError(code: 70, message: "not found")))
     XCTAssertEqual(outbox.pendingCount, 0)
     XCTAssertTrue(storedRows.isEmpty)
   }
 
-  func testTransientFailureKeepsTheEntryAndBacksOff() {
+  func testTransientFailureKeepsTheEntryAndBacksOff() async {
     let initialDelay = outbox.retryDelay
     outbox.enqueue(payload("a"))
-    answer(0, .failure(URLError(.timedOut)))
+    await settle()
+    await answer(0, .failure(URLError(.timedOut)))
     XCTAssertEqual(outbox.pendingCount, 1)
     XCTAssertEqual(storedRows.count, 1)
     XCTAssertEqual(outbox.retryDelay, initialDelay * 2)
 
     // The next chance sends it again; once delivered the delay starts over.
     triggers.send()
+    await settle()
     XCTAssertEqual(sends.map(\.songId), ["a", "a"])
-    answer(1, .success(()))
+    await answer(1, .success(()))
     XCTAssertTrue(storedRows.isEmpty)
     XCTAssertEqual(outbox.retryDelay, initialDelay)
   }
 
-  func testAcceptedEntryWhoseDeleteFailedIsNotSentAgain() {
+  func testAcceptedEntryWhoseDeleteFailedIsNotSentAgain() async {
     outbox.enqueue(payload("a"))
+    await settle()
     store.failSaves = true
-    answer(0, .success(()))
+    await answer(0, .success(()))
     // The failed save rolled the delete back.
     XCTAssertEqual(outbox.pendingCount, 1)
 
     store.failSaves = false
     triggers.send()
+    await settle()
     XCTAssertEqual(sends.count, 1)
     XCTAssertEqual(outbox.pendingCount, 0)
     XCTAssertTrue(storedRows.isEmpty)
   }
 
-  func testAcceptedEntryIsNotResentAfterARelaunch() {
+  func testAcceptedEntryIsNotResentAfterARelaunch() async {
     outbox.enqueue(payload("a"))
+    await settle()
     store.failSaves = true
-    answer(0, .success(()))
+    await answer(0, .success(()))
 
     // Relaunched while deletes still fail: the receipt keeps it from the server.
     makeOutbox()
     triggers.send()
+    await settle()
     XCTAssertEqual(sends.count, 1)
     XCTAssertEqual(outbox.pendingCount, 1)
 
@@ -170,21 +182,24 @@ final class ScrobbleOutboxTests: XCTestCase {
     store.failSaves = false
     makeOutbox()
     triggers.send()
+    await settle()
     XCTAssertEqual(sends.count, 1)
     XCTAssertTrue(storedRows.isEmpty)
     XCTAssertEqual(try Data(contentsOf: receiptsURL), Data("[]".utf8))
   }
 
   /// A delivered row is never sent again, also not under the next account.
-  func testADeliveredRowIsNotResentUnderAnotherAccount() {
+  func testADeliveredRowIsNotResentUnderAnotherAccount() async {
     outbox.enqueue(payload("a"))
+    await settle()
     store.failSaves = true
-    answer(0, .success(()))
+    await answer(0, .success(()))
 
     store.failSaves = false
     account = "server|b"
     makeOutbox()
     triggers.send()
+    await settle()
     XCTAssertEqual(sends.map(\.songId), ["a"])
   }
 
@@ -197,7 +212,7 @@ final class ScrobbleOutboxTests: XCTestCase {
     XCTAssertFalse(ScrobbleReceipts(fileURL: receiptsURL).contains(stale))
   }
 
-  func testUnsavedReceiptStillProtectsThisProcess() throws {
+  func testUnsavedReceiptStillProtectsThisProcess() async throws {
     // A regular file where the receipts directory should be.
     let blocker = receiptsURL.deletingLastPathComponent()
     try FileManager.default.createDirectory(
@@ -206,24 +221,28 @@ final class ScrobbleOutboxTests: XCTestCase {
     makeOutbox()
 
     outbox.enqueue(payload("a"))
+    await settle()
     store.failSaves = true
-    answer(0, .success(()))
+    await answer(0, .success(()))
     XCTAssertEqual(outbox.pendingCount, 1)
 
     store.failSaves = false
     triggers.send()
+    await settle()
     XCTAssertEqual(sends.count, 1)
     XCTAssertTrue(storedRows.isEmpty)
   }
 
-  func testNothingIsSentWithoutALogin() {
+  func testNothingIsSentWithoutALogin() async {
     account = nil
     outbox.enqueue(payload("a"))
+    await settle()
     XCTAssertTrue(sends.isEmpty)
     XCTAssertEqual(outbox.pendingCount, 1)
 
     account = "server|a"
     triggers.send()
+    await settle()
     XCTAssertEqual(sends.map(\.songId), ["a"])
   }
 

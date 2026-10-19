@@ -187,9 +187,9 @@ import Foundation
     let confirmations = confirmedEdits
     let cacheGeneration = LibraryCacheManager.shared.generation
 
-    async let ratedSongs = Self.fetch(AlbumService.shared.getRatedSongs)
-    async let ratedAlbums = Self.fetch(AlbumService.shared.getRatedAlbums)
-    async let ratedArtists = Self.fetch(AlbumService.shared.getRatedArtists)
+    async let ratedSongs = AlbumService.shared.getRatedSongs()
+    async let ratedAlbums = AlbumService.shared.getRatedAlbums()
+    async let ratedArtists = AlbumService.shared.getRatedArtists()
     guard let songs = try? await ratedSongs, let albums = try? await ratedAlbums,
       let artists = try? await ratedArtists
     else {
@@ -207,14 +207,6 @@ import Foundation
       LibraryCacheManager.shared.save(albums, forKey: .ratedAlbums, generation: cacheGeneration)
       LibraryCacheManager.shared.save(artists, forKey: .ratedArtists, generation: cacheGeneration)
     }.value
-  }
-
-  private nonisolated static func fetch<T>(
-    _ request: (@escaping (Result<T, Error>) -> Void) -> Void
-  ) async throws -> T {
-    try await withCheckedThrowingContinuation { continuation in
-      request { continuation.resume(with: $0) }
-    }
   }
 
   private func publish() {

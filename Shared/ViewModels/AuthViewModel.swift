@@ -131,26 +131,31 @@ class AuthViewModel: ObservableObject {
     isReauthenticating = true
     let generation = sessionGeneration
 
-    AuthService.shared.login(serverUrl: serverUrl, username: stored.username, password: password) {
-      [weak self] result in
-      Task { @MainActor in
-        guard let self = self else { return }
-        self.isReauthenticating = false
+    Task { @MainActor [weak self] in
+      let result: Result<UserAuth, AuthError>
+      do throws(AuthError) {
+        result = .success(
+          try await AuthService.shared.login(
+            serverUrl: serverUrl, username: stored.username, password: password))
+      } catch {
+        result = .failure(error)
+      }
+      guard let self = self else { return }
+      self.isReauthenticating = false
 
-        // A logout or an interactive login into another account while this was
-        // in flight must never be overwritten by the stale completion.
-        guard self.isLoggedIn, self.sessionGeneration == generation else { return }
+      // A logout or an interactive login into another account while this was
+      // in flight must never be overwritten by the stale answer.
+      guard self.isLoggedIn, self.sessionGeneration == generation else { return }
 
-        switch result {
-        case .success(let data):
-          self.needsReauthentication = false
-          self.persistAuthData(data, serverUrl: serverUrl)
-        case .failure(.invalidCredentials):
-          self.logout()
-        case .failure:
-          self.needsReauthentication = true
-          AuthService.shared.abandonRenewal()
-        }
+      switch result {
+      case .success(let data):
+        self.needsReauthentication = false
+        self.persistAuthData(data, serverUrl: serverUrl)
+      case .failure(.invalidCredentials):
+        self.logout()
+      case .failure:
+        self.needsReauthentication = true
+        AuthService.shared.abandonRenewal()
       }
     }
   }
@@ -205,47 +210,43 @@ class AuthViewModel: ObservableObject {
     serverUrl = serverUrl.trimmingCharacters(in: .whitespacesAndNewlines)
     while serverUrl.hasSuffix("/") { serverUrl.removeLast() }
 
-    AuthService.shared.login(serverUrl: serverUrl, username: username, password: password) {
-      result in
-      // Published state changes on main, whichever queue Alamofire answered on.
-      // The view model lives as long as the app, and the login must be saved.
-      Task { @MainActor in
-        switch result {
-        case .success(let data):
-          self.persistAuthData(data, serverUrl: self.serverUrl)
-          self.needsReauthentication = false
+    // The view model lives as long as the app, and the login must be saved.
+    Task { @MainActor in
+      do throws(AuthError) {
+        let data = try await AuthService.shared.login(
+          serverUrl: serverUrl, username: username, password: password)
+        self.persistAuthData(data, serverUrl: self.serverUrl)
+        self.needsReauthentication = false
 
-          // Without it the session cannot be renewed and ends with the token.
-          do {
-            try KeychainManager.setAuthPassword(newValue: self.password)
-          } catch {
-            debugLog("error saving password to Keychain: \(error)")
-          }
-
-          self.isSubmitting = false
-          self.isLoggedIn = true
-          self.username = ""
-          self.password = ""
-          self.serverUrl = ""
-
-        case .failure(let error):
-          self.isSubmitting = false
-
-          switch error {
-          case .server(let message), .invalidCredentials(let message):
-            self.alertMessage = message
-
-          case .sessionExpired:
-            // A bare 401/403 without Navidrome's error body, e.g. from a
-            // reverse proxy in front of the server.
-            self.alertMessage = "The server refused the request. Please try again."
-
-          case .unknown:
-            self.alertMessage = "Unknown error occurred"
-          }
-
-          self.showAlert = true
+        // Without it the session cannot be renewed and ends with the token.
+        do {
+          try KeychainManager.setAuthPassword(newValue: self.password)
+        } catch {
+          debugLog("error saving password to Keychain: \(error)")
         }
+
+        self.isSubmitting = false
+        self.isLoggedIn = true
+        self.username = ""
+        self.password = ""
+        self.serverUrl = ""
+      } catch {
+        self.isSubmitting = false
+
+        switch error {
+        case .server(let message), .invalidCredentials(let message):
+          self.alertMessage = message
+
+        case .sessionExpired:
+          // A bare 401/403 without Navidrome's error body, e.g. from a
+          // reverse proxy in front of the server.
+          self.alertMessage = "The server refused the request. Please try again."
+
+        case .unknown:
+          self.alertMessage = "Unknown error occurred"
+        }
+
+        self.showAlert = true
       }
     }
   }

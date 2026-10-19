@@ -353,11 +353,7 @@ final class SmartPlaybackService {
   private func fetchStarred(generation: Int) async {
     let requestedAt = Date()
     let since = await MainActor.run { StarStore.shared.listRevision }
-    guard
-      let (songs, collections) = try? await withCheckedThrowingContinuation({ continuation in
-        AlbumService.shared.getStarred { continuation.resume(with: $0) }
-      })
-    else { return }
+    guard let (songs, collections) = try? await AlbumService.shared.getStarred() else { return }
     // The Liked Songs screen may have taken a newer list meanwhile.
     let songsAreNewest = await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .utility).async {
@@ -384,11 +380,9 @@ final class SmartPlaybackService {
       )
     }
 
-    guard
-      let stamp = try? await withCheckedThrowingContinuation({ continuation in
-        AlbumService.shared.getLibraryStamp(entity: "song") { continuation.resume(with: $0) }
-      })
-    else { return cached }
+    guard let stamp = try? await AlbumService.shared.getLibraryStamp(entity: "song") else {
+      return cached
+    }
 
     // Stars leave updatedAt alone, so the starred list is refreshed on every
     // run that reaches the server; the cached library's own flags go stale.
@@ -471,11 +465,9 @@ final class SmartPlaybackService {
 
     while pages < Self.songPageCap, total.map({ start < $0 }) ?? true {
       let end = start + pageSize
-      guard
-        let page = try? await withCheckedThrowingContinuation({ continuation in
-          AlbumService.shared.getSongsPage(start: start, end: end) { continuation.resume(with: $0) }
-        })
-      else { return nil }
+      guard let page = try? await AlbumService.shared.getSongsPage(start: start, end: end) else {
+        return nil
+      }
       pages += 1
 
       var reachedOlder = false

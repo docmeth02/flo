@@ -41,7 +41,7 @@
         // make one authenticated request to provoke the 401.
         DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
           AuthService.shared.invalidateNDTokenForTesting()
-          AlbumService.shared.isStarred(songId: "debug") { _ in }
+          Task { _ = await AlbumService.shared.isStarred(songId: "debug") }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in
           let renewed = AuthService.shared.sessionSnapshot().ndToken != "expired"

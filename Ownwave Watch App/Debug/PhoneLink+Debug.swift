@@ -40,11 +40,7 @@
     }
 
     private func deliverDebugFiles(albumId: String) async {
-      let songs = await withCheckedContinuation { continuation in
-        AlbumService.shared.getSongFromAlbum(id: albumId) {
-          continuation.resume(returning: (try? $0.get()) ?? [])
-        }
-      }
+      let songs = (try? await AlbumService.shared.getSongFromAlbum(id: albumId)) ?? []
       guard let key = AuthService.shared.accountKey, let first = songs.first else {
         return debugLog("phone link: no songs or no account")
       }

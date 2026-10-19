@@ -249,11 +249,7 @@ actor ListeningHistoryStore {
       let size = progress.bootstrapComplete && pages == 0 ? Self.firstPageSize : Self.pageSize
       let page: (rows: [ScrobbleRow], total: Int?)
       do {
-        page = try await withCheckedThrowingContinuation { continuation in
-          AlbumService.shared.getScrobblePage(start: start, end: start + size) {
-            continuation.resume(with: $0)
-          }
-        }
+        page = try await AlbumService.shared.getScrobblePage(start: start, end: start + size)
       } catch {
         guard isCurrent(key) else { return }
         await publishState(key, phase: .failed(Self.shortReason(error)), pages: pages)

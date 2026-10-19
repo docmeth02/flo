@@ -36,12 +36,12 @@ import Foundation
   init(
     defaults: UserDefaults = .standard,
     canSend: @escaping () -> Bool = PendingEdits<Bool>.serverReachable,
-    send: @escaping PendingEdits<Bool>.Send = { id, starred, completion in
+    send: @escaping PendingEdits<Bool>.Send = { id, starred in
       // Navidrome takes songs, albums and artists alike as `id`.
       if starred {
-        AlbumService.shared.star(id: id, completion: completion)
+        try await AlbumService.shared.star(id: id)
       } else {
-        AlbumService.shared.unstar(id: id, completion: completion)
+        try await AlbumService.shared.unstar(id: id)
       }
     }
   ) {

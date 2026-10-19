@@ -12,7 +12,9 @@ final class RatingStoreTests: XCTestCase {
   private func makeStore(defaults: UserDefaults? = nil) -> RatingStore {
     RatingStore(
       defaults: defaults ?? makeDefaults(), canSend: { [unowned self] in self.reachable },
-      send: { [unowned self] _, _, completion in self.answers.append(completion) })
+      send: { @MainActor [unowned self] _, _ in
+        try await answeredByTest { self.answers.append($0) }
+      })
   }
 
   private func song(
@@ -142,6 +144,7 @@ final class RatingStoreTests: XCTestCase {
     let defaults = makeDefaults()
     let store = makeStore(defaults: defaults)
     store.setArtist(4, artistId: "ar1")
+    await settle()
     answers[0](.success(()))
     await settle()
     XCTAssertFalse(store.isPending("ar1"))

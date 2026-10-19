@@ -14,26 +14,20 @@ enum PlaybackReportState: String {
 class ScrobbleAPI {
   static let shared: ScrobbleAPI = ScrobbleAPI()
 
-  func scrobbleToBuiltinEndpoint(
-    submission: Bool, songId: String, time: Date? = nil,
-    completion: @escaping (Result<Void, Error>) -> Void
-  ) {
+  func scrobbleToBuiltinEndpoint(submission: Bool, songId: String, time: Date? = nil) async throws {
     var params: [String: Any] = ["submission": String(submission), "id": songId]
 
     if submission {
       params["time"] = Int64((time ?? Date()).timeIntervalSince1970 * 1000)
     }
 
-    APIManager.shared.subsonicAction(
-      endpoint: API.SubsonicEndpoint.scrobble, parameters: params, completion: completion)
+    try await APIManager.shared.subsonicAction(
+      endpoint: API.SubsonicEndpoint.scrobble, parameters: params)
   }
 
   /// Tells the server where playback of a song stands, for its now playing
   /// list. Plays are counted by scrobbles alone, so the report never counts one.
-  func reportPlayback(
-    mediaId: String, positionMs: Int, state: PlaybackReportState,
-    completion: @escaping (Result<Void, Error>) -> Void
-  ) {
+  func reportPlayback(mediaId: String, positionMs: Int, state: PlaybackReportState) async throws {
     let params: [String: Any] = [
       "mediaId": mediaId, "mediaType": "song", "positionMs": positionMs,
       "state": state.rawValue, "ignoreScrobble": "true",
@@ -42,8 +36,8 @@ class ScrobbleAPI {
       debugLogReport(params)
     #endif
 
-    APIManager.shared.subsonicAction(
-      endpoint: API.SubsonicEndpoint.reportPlayback, parameters: params, completion: completion)
+    try await APIManager.shared.subsonicAction(
+      endpoint: API.SubsonicEndpoint.reportPlayback, parameters: params)
   }
 
   /// Whether a failed scrobble, star or rating edit can never succeed and

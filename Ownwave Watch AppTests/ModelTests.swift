@@ -16,11 +16,13 @@ final class ModelTests: XCTestCase {
       #"{"subsonic-response":{"status":"failed","error":{"code":40,"message":"Wrong password"}}}"#)
     XCTAssertEqual(failed.failure?.code, 40)
     XCTAssertNil(failed.data)
+    XCTAssertThrowsError(try failed.payload { $0?.songs ?? [] })
 
     let ok = try decode(
       #"{"subsonic-response":{"status":"ok","starred2":{"album":[{"id":"al"}]}}}"#)
     XCTAssertNil(ok.failure)
     XCTAssertEqual(ok.data?.collections.albums, ["al"])
+    XCTAssertEqual(try ok.payload { $0?.collections.albums }, ["al"])
 
     XCTAssertEqual(SubsonicError(status: "failed", error: nil)?.code, 0)
     XCTAssertNil(SubsonicError(status: "ok", error: nil))

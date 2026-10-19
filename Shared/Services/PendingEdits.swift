@@ -10,9 +10,7 @@ import Foundation
 /// ratings and the stars. `Value` must be a property list type, since the
 /// edits are stored in UserDefaults.
 @MainActor final class PendingEdits<Value: Equatable> {
-  typealias Send = (
-    _ id: String, _ value: Value, _ completion: @escaping (Result<Void, Error>) -> Void
-  ) -> Void
+  typealias Send = (_ id: String, _ value: Value) async throws -> Void
 
   /// The latest unconfirmed edit per id.
   private(set) var values: [String: Value]
@@ -71,10 +69,9 @@ import Foundation
     for (id, value) in values where !inFlight.contains(id) {
       inFlight.insert(id)
       let generation = account
-      send(id, value) { result in
-        Task { @MainActor [weak self] in
-          self?.finish(value, id: id, result: result, account: generation)
-        }
+      Task { [weak self, send] in
+        let result = await Result { try await send(id, value) }
+        self?.finish(value, id: id, result: result, account: generation)
       }
     }
   }

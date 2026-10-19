@@ -30,17 +30,17 @@
         albums.albums = await albums.loadedOrCached(albums.albums, .albums)
         paths[.home, default: NavigationPath()].append(Route.watch)
       case "album":
-        let albums: [Album] = await Self.debugLoad(AlbumService.shared.getAlbum)
+        let albums: [Album] = (try? await AlbumService.shared.getAlbum()) ?? []
         if let album = pick(albums) {
           paths[.home, default: NavigationPath()].append(Route.album(album))
         }
       case "artist":
-        let artists: [Artist] = await Self.debugLoad(AlbumService.shared.getArtists)
+        let artists: [Artist] = (try? await AlbumService.shared.getArtists()) ?? []
         if let artist = pick(artists) {
           paths[.home, default: NavigationPath()].append(Route.artist(artist))
         }
       case "playlist":
-        let playlists: [Playlist] = await Self.debugLoad(AlbumService.shared.getPlaylists)
+        let playlists: [Playlist] = (try? await AlbumService.shared.getPlaylists()) ?? []
         if let playlist = pick(playlists) {
           paths[.home, default: NavigationPath()].append(Route.playlist(playlist))
         }
@@ -49,14 +49,6 @@
       default: break
       }
       debugLog("screen hook: \(screen)")
-    }
-
-    private static func debugLoad<T>(
-      _ load: (@escaping (Result<[T], Error>) -> Void) -> Void
-    ) async -> [T] {
-      await withCheckedContinuation { continuation in
-        load { continuation.resume(returning: (try? $0.get()) ?? []) }
-      }
     }
   }
 #endif

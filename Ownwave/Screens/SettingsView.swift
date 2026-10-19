@@ -134,7 +134,7 @@ struct SettingsView: View {
     }
     .onAppear {
       if case .found(let login) = KeychainManager.loadAuth() { username = login.username }
-      AlbumService.shared.serverVersion { serverVersion = $0 }
+      Task { serverVersion = await AlbumService.shared.serverVersion() }
       refreshStorage()
     }
     .alert("Change Server?", isPresented: $confirmsLogout) {
