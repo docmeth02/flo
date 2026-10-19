@@ -16,10 +16,7 @@ final class QueueEditingTests: XCTestCase {
   private func entries(_ ids: String...) -> [QueueEntity] {
     ids.map {
       service.makeEntry(
-        song: Song(
-          id: $0, title: "Song \($0)", albumId: "album", albumName: "Album", artist: "Artist",
-          trackNumber: 1, discNumber: 1, bitRate: 320, sampleRate: 44100, suffix: "mp3",
-          duration: 200, mediaFileId: ""),
+        song: Song.fixture($0, album: "album"),
         context: "Album", isFromPlaylist: false)
     }
   }

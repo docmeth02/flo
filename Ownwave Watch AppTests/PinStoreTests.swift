@@ -6,13 +6,6 @@ import XCTest
 
 @MainActor
 final class PinStoreTests: XCTestCase {
-  /// A fresh defaults suite, removed when the test ends.
-  private func makeDefaults() -> UserDefaults {
-    let name = "PinStoreTests.\(UUID().uuidString)"
-    addTeardownBlock { UserDefaults().removePersistentDomain(forName: name) }
-    return UserDefaults(suiteName: name)!
-  }
-
   func testToggleAddsAndRemovesAPin() {
     let store = PinStore(defaults: makeDefaults(), account: { "server|alice" })
     store.toggle("al1", .album)

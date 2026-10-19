@@ -14,10 +14,8 @@ final class LibrarySearchTests: XCTestCase {
   }
 
   private func song(_ id: String, _ title: String, by artist: String, on album: String) -> Song {
-    Song(
-      id: id, title: title, albumId: "al-\(album)", albumName: album, artist: artist,
-      trackNumber: 1, discNumber: 1, bitRate: 320, sampleRate: 44100, suffix: "mp3",
-      duration: 200, mediaFileId: id)
+    Song.fixture(
+      id, title: title, artist: artist, album: "al-\(album)", albumName: album, mediaFileId: id)
   }
 
   private func search(

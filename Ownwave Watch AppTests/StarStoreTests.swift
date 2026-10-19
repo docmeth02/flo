@@ -15,12 +15,6 @@ final class StarStoreTests: XCTestCase {
       send: { [unowned self] _, _, completion in self.answers.append(completion) })
   }
 
-  private func makeDefaults() -> UserDefaults {
-    let name = "StarStoreTests.\(UUID().uuidString)"
-    addTeardownBlock { UserDefaults().removePersistentDomain(forName: name) }
-    return UserDefaults(suiteName: name)!
-  }
-
   /// A song liked offline is still known as a song after a relaunch, so a
   /// liked list that lacks it once the like was taken clears it.
   func testAPendingSongLikeSurvivesARelaunch() async {
@@ -31,7 +25,7 @@ final class StarStoreTests: XCTestCase {
     reachable = true
     let store = makeStore(defaults: defaults)
     answers[0](.success(()))
-    for _ in 0..<5 { await Task.yield() }
+    await settle()
     XCTAssertTrue(store.isStarred("s1", listed: false))
 
     store.adoptServerStars([], since: store.listRevision)
@@ -45,7 +39,7 @@ final class StarStoreTests: XCTestCase {
     let list = store.listRevision
     let lookup = store.editCount
     answers[0](.success(()))
-    for _ in 0..<5 { await Task.yield() }
+    await settle()
 
     store.adoptServerStars([], since: list)
     XCTAssertTrue(store.isStarred("s1", listed: false))
@@ -70,7 +64,7 @@ final class StarStoreTests: XCTestCase {
     let store = makeStore()
     store.set(false, id: "s1")
     answers[0](.success(()))
-    for _ in 0..<5 { await Task.yield() }
+    await settle()
     XCTAssertFalse(store.isStarred("s1", listed: true))
   }
 
@@ -78,7 +72,7 @@ final class StarStoreTests: XCTestCase {
     let store = makeStore()
     store.set(true, id: "s1")
     answers[0](.success(()))
-    for _ in 0..<5 { await Task.yield() }
+    await settle()
 
     reachable = false
     store.set(false, id: "s1")
@@ -89,7 +83,7 @@ final class StarStoreTests: XCTestCase {
     let store = makeStore()
     store.set(true, id: "s1")
     answers[0](.success(()))
-    for _ in 0..<5 { await Task.yield() }
+    await settle()
 
     // Unliked elsewhere meanwhile: the server's answer wins, also over a
     // list loaded before.
@@ -142,7 +136,7 @@ final class StarStoreTests: XCTestCase {
     store.set(false, id: "ar1")
     answers[0](.success(()))
     answers[1](.success(()))
-    for _ in 0..<5 { await Task.yield() }
+    await settle()
 
     store.adoptServerList([("al1", false), ("al2", true)], since: store.listRevision)
     store.adoptServerList([("ar1", true)], since: store.listRevision)
@@ -169,7 +163,7 @@ final class StarStoreTests: XCTestCase {
     let before = taken.listRevision
     taken.set(true, id: "ar1")
     answers[0](.success(()))
-    for _ in 0..<5 { await Task.yield() }
+    await settle()
     taken.adoptServerList([("ar1", false)], since: before)
     XCTAssertTrue(taken.isStarred("ar1", listed: false))
   }

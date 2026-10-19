@@ -62,10 +62,7 @@ final class MixRankerTests: XCTestCase {
   }
 
   private func song(_ id: String, artist: String, album: String, plays: Int = 0) -> Song {
-    var song = Song(
-      id: id, title: "Song \(id)", albumId: album, albumName: album, artist: artist,
-      trackNumber: 1, discNumber: 1, bitRate: 320, sampleRate: 44100, suffix: "mp3",
-      duration: 200, mediaFileId: "")
+    var song = Song.fixture(id, artist: artist, album: album, albumName: album)
     song.artistId = "ar-\(artist)"
     song.genre = "Rock"
     song.playCount = plays

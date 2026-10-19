@@ -15,20 +15,11 @@ final class RatingStoreTests: XCTestCase {
       send: { [unowned self] _, _, completion in self.answers.append(completion) })
   }
 
-  private func makeDefaults() -> UserDefaults {
-    let name = "RatingStoreTests.\(UUID().uuidString)"
-    addTeardownBlock { UserDefaults().removePersistentDomain(forName: name) }
-    return UserDefaults(suiteName: name)!
-  }
-
   private func song(
     _ id: String, album: String, rating: Int? = nil, artist: String = "Artist",
     artistId: String? = nil
   ) -> Song {
-    var song = Song(
-      id: id, title: id, albumId: album, albumName: album, artist: artist, trackNumber: 1,
-      discNumber: 1, bitRate: 320, sampleRate: 44100, suffix: "mp3", duration: 200,
-      mediaFileId: "")
+    var song = Song.fixture(id, title: id, artist: artist, album: album, albumName: album)
     song.rating = rating
     song.artistId = artistId
     return song
@@ -152,7 +143,7 @@ final class RatingStoreTests: XCTestCase {
     let store = makeStore(defaults: defaults)
     store.setArtist(4, artistId: "ar1")
     answers[0](.success(()))
-    for _ in 0..<5 { await Task.yield() }
+    await settle()
     XCTAssertFalse(store.isPending("ar1"))
     XCTAssertEqual(store.artistRating("ar1"), 4)
 

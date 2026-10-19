@@ -14,13 +14,6 @@ final class PendingEditsTests: XCTestCase {
 
   private let key = "pending"
 
-  /// A fresh defaults suite, removed when the test ends.
-  private func makeDefaults() -> UserDefaults {
-    let name = "PendingEditsTests.\(UUID().uuidString)"
-    addTeardownBlock { UserDefaults().removePersistentDomain(forName: name) }
-    return UserDefaults(suiteName: name)!
-  }
-
   private func makeEdits(
     _ server: FakeServer, defaults: UserDefaults
   ) -> (PendingEdits<Int>, settled: () -> [(String, Int, Bool)]) {
@@ -30,11 +23,6 @@ final class PendingEditsTests: XCTestCase {
     var settled: [(String, Int, Bool)] = []
     edits.onSettle = { settled.append(($0, $1, $2)) }
     return (edits, { settled })
-  }
-
-  /// Lets the answer's hop to the main actor run.
-  private func settle() async {
-    for _ in 0..<5 { await Task.yield() }
   }
 
   func testPendingEditSurvivesANewInstance() {

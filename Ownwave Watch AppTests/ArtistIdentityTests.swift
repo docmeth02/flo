@@ -16,10 +16,7 @@ final class ArtistIdentityTests: XCTestCase {
   }
 
   private func song(_ artist: String, artistId: String?) -> Song {
-    var song = Song(
-      id: "s", title: "Song", albumId: "al", albumName: "Album", artist: artist,
-      trackNumber: 1, discNumber: 1, bitRate: 320, sampleRate: 44100, suffix: "mp3",
-      duration: 200, mediaFileId: "")
+    var song = Song.fixture("s", artist: artist)
     song.artistId = artistId
     return song
   }

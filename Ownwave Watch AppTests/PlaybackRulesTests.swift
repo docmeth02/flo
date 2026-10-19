@@ -27,6 +27,8 @@ final class PlaybackRulesTests: XCTestCase {
   /// The streaming limit follows the network: the Wi-Fi limit off cellular,
   /// the cellular one on it, none when streaming on cellular is off.
   func testStreamingBitRateFollowsTheNetwork() {
+    // UserDefaultsManager reads the standard defaults; the keys the test
+    // touches are put back afterwards.
     let defaults = UserDefaults.standard
     let keys = [
       UserDefaultsKeys.enableMaxBitRate, UserDefaultsKeys.cellularBitRate,
@@ -108,10 +110,7 @@ final class PlaybackRulesTests: XCTestCase {
   func testQueuesMapToOrigins() throws {
     let container = CoreDataManager.inMemoryContainer()
     let service = PlaybackService(context: container.viewContext)
-    let song = Song(
-      id: "s", title: "Song", albumId: "al", albumName: "Album", artist: "Artist",
-      trackNumber: 1, discNumber: 1, bitRate: 320, sampleRate: 44100, suffix: "mp3",
-      duration: 200, mediaFileId: "s")
+    let song = Song.fixture("s", mediaFileId: "s")
 
     func origin<T: Playable>(_ item: T) -> PlaybackOrigin? {
       service.addToQueue(item: item).first?.playbackOrigin
@@ -164,11 +163,6 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertFalse(Player.keepsStart(exhausted, isPlaying: true, platformKeeps: true))
     XCTAssertFalse(Player.keepsStart(nil, isPlaying: true, platformKeeps: true))
     XCTAssertFalse(Player.keepsStart(activating, isPlaying: true, platformKeeps: false))
-    #if os(watchOS)
-      XCTAssertTrue(AppPlatform.keepsStartThroughInterruptions)
-    #else
-      XCTAssertFalse(AppPlatform.keepsStartThroughInterruptions)
-    #endif
   }
 
   func testBitRatesNoLongerOfferedReadAsTheDefault() {

@@ -227,6 +227,7 @@
 		98F0F9A0C2430EE20934D58A /* Playable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4824D222CE8C41D003EAB52 /* Playable.swift */; };
 		992FBC8C7EF31D1111B9D173 /* ScrobbleReceipts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29E53048E3A319C3B7EA7D87 /* ScrobbleReceipts.swift */; };
 		9A5C1F8746EC3424630445C2 /* PlayerViewModel+QueueEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CA1E05BC293CD0606FB46EC /* PlayerViewModel+QueueEditing.swift */; };
+		9D2E83272519615CD2A7B39B /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0B22011B0001E9EBC3CF78 /* TestSupport.swift */; };
 		9D36BC43132063B3F683F082 /* PlaySomethingNowIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBD2A02BF7748F60EE82FA7A /* PlaySomethingNowIntent.swift */; };
 		9E2978ECF52F4F441930EDE3 /* FloooViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD502D3264AE00644E68 /* FloooViewModel.swift */; };
 		9F9608E66FC97A4172919B11 /* Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41470BA2CE65808008BDCE8 /* Artist.swift */; };
@@ -257,6 +258,7 @@
 		B458CDCD89BB0979C6011286 /* PlaylistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2002653E7063326C1B10DD9 /* PlaylistView.swift */; };
 		B54DA88DE8B66A3A9EBEFF43 /* ListState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2554DC27ECB5A5E01810A5FA /* ListState.swift */; };
 		B62E3BF5B8243555564FE400 /* PlayerViewModel+QueueEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CA1E05BC293CD0606FB46EC /* PlayerViewModel+QueueEditing.swift */; };
+		B72BB02DDE82E2D3D760247E /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0B22011B0001E9EBC3CF78 /* TestSupport.swift */; };
 		B79714F3F5F63456D47E434F /* CoverBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A7C08695326856038595DD6 /* CoverBackdrop.swift */; };
 		B7E723543926C8FCE748FF5B /* NowPlayingTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFFB8E4411B7DE421406E089 /* NowPlayingTarget.swift */; };
 		B876AD294F7A331482FAE064 /* MiniPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 639E407CBF5AE3682C7D8D83 /* MiniPlayer.swift */; };
@@ -526,6 +528,7 @@
 		A47046B69F3F233D98063F27 /* LibrarySearchTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LibrarySearchTests.swift; sourceTree = "<group>"; };
 		A6F09C76B3A34989432889B8 /* MenuTarget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MenuTarget.swift; sourceTree = "<group>"; };
 		AAB103792407F3592AC4D765 /* KeychainReadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeychainReadTests.swift; sourceTree = "<group>"; };
+		AB0B22011B0001E9EBC3CF78 /* TestSupport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
 		AE14A16046E582F7D4BC4C23 /* ConnectivityMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectivityMonitor.swift; sourceTree = "<group>"; };
 		AECF8CB7692F9868CA958B5B /* TourStep.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TourStep.swift; sourceTree = "<group>"; };
 		AF66688A924A53978D5BBCA3 /* WatchDiagnosticsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDiagnosticsView.swift; sourceTree = "<group>"; };
@@ -863,6 +866,7 @@
 				FF45D97BBCDF015177721AFE /* TasteTests.swift */,
 				D6699C44D5AD9144242023B3 /* WatchLinkTests.swift */,
 				3D2F9F871B146ABAB706FD3E /* ModelTests.swift */,
+				AB0B22011B0001E9EBC3CF78 /* TestSupport.swift */,
 			);
 			name = "Ownwave Watch AppTests";
 			path = "Ownwave Watch AppTests";
@@ -1415,6 +1419,7 @@
 				6C1B1B11C7FD2B44B110BA51 /* Timeout.swift in Sources */,
 				DF2F45CCB9C706023B607EB2 /* ListeningHistoryStore+Debug.swift in Sources */,
 				26F7307E4A23E34BC2D76B89 /* ScrobbleAPI+Debug.swift in Sources */,
+				9D2E83272519615CD2A7B39B /* TestSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1687,6 +1692,7 @@
 				01CEBAC6C1B6CF76106BFA3C /* TasteTests.swift in Sources */,
 				F9A7ACDB28E6BF251B18C16D /* WatchLinkTests.swift in Sources */,
 				2D6205B25402169754A8AB7C /* ModelTests.swift in Sources */,
+				B72BB02DDE82E2D3D760247E /* TestSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

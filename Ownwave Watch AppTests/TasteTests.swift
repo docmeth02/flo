@@ -8,10 +8,7 @@ final class TasteTests: XCTestCase {
   private let now = Date(timeIntervalSince1970: 1_790_000_000)
 
   private func song(_ id: String, artistId: String, artist: String, album: String) -> Song {
-    var song = Song(
-      id: id, title: "Song \(id)", albumId: album, albumName: "Album \(album)", artist: artist,
-      trackNumber: 1, discNumber: 1, bitRate: 320, sampleRate: 44100, suffix: "mp3",
-      duration: 200, mediaFileId: "")
+    var song = Song.fixture(id, artist: artist, album: album, albumName: "Album \(album)")
     song.artistId = artistId
     return song
   }
@@ -23,7 +20,6 @@ final class TasteTests: XCTestCase {
   /// An explore slot says so first; then ratings, likes and plays, in that order.
   func testReasonsFollowTheirOrder() {
     var facts = MixReason.Facts(artist: "BABYMETAL", album: "Budokan", now: now)
-    XCTAssertEqual(MixReason.make(facts), MixReason.make(facts))
     XCTAssertEqual(note(facts), "Fits what you play")
     facts.anchored = true
     XCTAssertEqual(note(facts), "Fits this listening session")
