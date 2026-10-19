@@ -178,7 +178,8 @@ import WatchConnectivity
   }
 
   /// Recomputes a send's progress: its songs count once downloaded and once
-  /// delivered. A transfer that just finished may still be listed.
+  /// transferred, by the bytes sent. A transfer that just finished may still
+  /// be listed.
   func updateProgress(_ collectionId: String, excluding finished: WCSessionFileTransfer? = nil) {
     guard let index = sends.firstIndex(where: { $0.id == collectionId }) else { return }
     let songs = sends[index].songs
@@ -186,12 +187,13 @@ import WatchConnectivity
     let transferring = session.outstandingFileTransfers.filter { transfer in
       guard transfer !== finished, let info = Self.info(of: transfer) else { return false }
       return info.collectionId == collectionId && info.kind == .song
-    }.count
-    guard downloading + transferring > 0 else {
+    }
+    guard downloading + transferring.count > 0 else {
       sends.remove(at: index)
       return
     }
-    sends[index].progress = Double(2 * songs - 2 * downloading - transferring) / Double(2 * songs)
+    let unsent = transferring.reduce(0) { $0 + 1 - $1.progress.fractionCompleted }
+    sends[index].progress = (Double(2 * songs - 2 * downloading) - unsent) / Double(2 * songs)
   }
 
   /// Ends a send that cannot finish, with what is on the way.
@@ -324,9 +326,17 @@ private final class Receiver: NSObject, WCSessionDelegate {
     RequestLog.shared.note(
       "watch link: activated \(state.rawValue) paired=\(session.isPaired) "
         + "installed=\(session.isWatchAppInstalled) "
-        + "outstanding=\(session.outstandingFileTransfers.count)"
+        + "outstanding=\(session.outstandingFileTransfers.count) \(Self.sent(session))"
         + (error.map { " error=\($0.localizedDescription)" } ?? ""))
     Task { @MainActor in WatchLink.shared.activated() }
+  }
+
+  /// How far the system got with what is still outstanding, e.g. "sent=12%".
+  static func sent(_ session: WCSession) -> String {
+    let transfers = session.outstandingFileTransfers
+    guard !transfers.isEmpty else { return "" }
+    let done = transfers.reduce(0) { $0 + $1.progress.fractionCompleted } / Double(transfers.count)
+    return "sent=\(Int(done * 100))%"
   }
 
   func sessionDidBecomeInactive(_ session: WCSession) {}

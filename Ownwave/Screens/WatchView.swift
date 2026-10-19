@@ -55,6 +55,13 @@ struct WatchView: View {
       albumViewModel.fetchDownloadedAlbums()
       await albumViewModel.loadRecentAlbums()
     }
+    // The system reports no transfer progress by itself; the bars follow it here.
+    .task(id: link.sends.isEmpty) {
+      while !link.sends.isEmpty, !Task.isCancelled {
+        try? await Task.sleep(for: .seconds(2))
+        link.sends.map(\.id).forEach { link.updateProgress($0) }
+      }
+    }
   }
 
   // MARK: - Status
