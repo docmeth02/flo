@@ -57,31 +57,9 @@ struct TasteView: View {
   }
 
   private var segments: some View {
-    HStack(spacing: 2) {
-      ForEach(TasteSegment.allCases) { item in
-        let selected = item == segment
-        Button {
-          segment = item
-        } label: {
-          Text(item.title)
-            .font(.meta.weight(.semibold))
-            .foregroundStyle(selected ? palette.text : palette.secondary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 9)
-            .background(
-              selected ? palette.surface2 : .clear,
-              in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-      }
-    }
-    .padding(3)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    Segmented(
+      options: TasteSegment.allCases.map { ($0, $0.title) }, selection: $segment, filled: false,
+      font: .meta.weight(.semibold))
   }
 
   @ViewBuilder private func content(_ summary: TasteSummary) -> some View {
