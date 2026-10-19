@@ -13,6 +13,10 @@
   // scores; FLO_DEBUG_MIX_TIMING=1 also times the ranker on a library
   // inflated to 20k songs.
   extension SmartPlaybackService {
+    static var debugSeed: UInt64? {
+      ProcessInfo.processInfo.environment["FLO_DEBUG_RNG_SEED"].flatMap(UInt64.init)
+    }
+
     func runDebugLaunchActions() {
       let env = ProcessInfo.processInfo.environment
       guard let kind = env["FLO_DEBUG_MIX"] else { return }

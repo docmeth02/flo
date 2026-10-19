@@ -39,9 +39,7 @@ class ScrobbleAPI {
       "state": state.rawValue, "ignoreScrobble": "true",
     ]
     #if DEBUG
-      if ProcessInfo.processInfo.environment["FLO_DEBUG_REPORT"] == "1" {
-        debugLog("reportPlayback \(params.sorted { $0.key < $1.key })")
-      }
+      debugLogReport(params)
     #endif
 
     APIManager.shared.subsonicAction(

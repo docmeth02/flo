@@ -159,7 +159,11 @@ final class SmartPlaybackService {
     let (ratings, starred) = await MainActor.run { [songs, starredIds] in
       (Self.effectiveRatings(of: songs, index: index), StarStore.shared.starred(listed: starredIds))
     }
-    var rng = SplitMix64(seed: Self.debugSeed ?? .random(in: .min ... .max))
+    var seed = UInt64.random(in: .min ... .max)
+    #if DEBUG
+      seed = Self.debugSeed ?? seed
+    #endif
+    var rng = SplitMix64(seed: seed)
 
     let started = DispatchTime.now().uptimeNanoseconds
     let (picked, record) = MixRanker().rank(
@@ -233,14 +237,6 @@ final class SmartPlaybackService {
     listens.reduce(into: [:]) { latest, listen in
       latest[listen.songId] = max(latest[listen.songId] ?? listen.at, listen.at)
     }
-  }
-
-  private static var debugSeed: UInt64? {
-    #if DEBUG
-      ProcessInfo.processInfo.environment["FLO_DEBUG_RNG_SEED"].flatMap(UInt64.init)
-    #else
-      nil
-    #endif
   }
 
   /// Refetches the cached song library in the background, e.g. when its
