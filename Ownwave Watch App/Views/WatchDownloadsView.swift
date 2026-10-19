@@ -21,7 +21,6 @@ struct WatchDownloadsView: View {
             message: "Download an album or playlist to play it without a connection."))
       } else {
         List {
-          // Cached songs section
           if !cachedSongs.isEmpty {
             NavigationLink(destination: WatchCachedSongsView(songs: cachedSongs)) {
               CoverRow(
