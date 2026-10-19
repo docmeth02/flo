@@ -156,6 +156,61 @@ struct MixRanker {
   /// Which caps a refill may step over.
   private enum Relax { case none, genre, all }
 
+  private typealias Entry = SmartPlaybackService.LibraryIndex.Entry
+
+  /// The snapshots one ranking works from, as `rank` takes them.
+  private struct Input {
+    let library: [Song]
+    let index: SmartPlaybackService.LibraryIndex
+    let affinity: AffinitySnapshot
+    let journal: JournalSnapshot
+    let pendingPlays: [String: Date]
+    let recentPlays: [String: Int]
+    let ratings: [String: Rating]
+    let starred: Set<String>
+    let likedAlbums: Set<String>
+    let likedArtists: Set<String>
+    let context: SmartPlaybackService.KeepPlayingContext?
+    let count: Int
+    let now: Date
+  }
+
+  /// What the first pass over the library learns: each song's keys, plays
+  /// and latest listen, and the server's counts summed into priors.
+  private struct Scan {
+    let ids: [String]
+    let entries: [Entry]
+    let titles: Titles
+    /// The decayed history of all songs, and how far it is trusted over the
+    /// server's play counts.
+    let totalWeight: Double
+    let trust: Double
+    let artists: [String: ArtistStats]
+    let albumPrior: [String: Double]
+    let genrePrior: [String: Double]
+    let eraPrior: [String: Double]
+    /// The artists with history in each genre.
+    let genreArtists: [String: Set<String>]
+    /// Liked artists and those of songs rated up or liked.
+    let favouredArtists: Set<String>
+    /// Artist keys of the folded names the skips and the seed give.
+    let artistIds: [String: String]
+    let seedArtist: String?
+    let lifetimePlays: [Int]
+    let songWeights: [Double]
+    let heardAt: [Date?]
+  }
+
+  /// What the scoring knows of the artists, albums, genres and eras.
+  private struct Standing {
+    let artists: [String: ArtistStats]
+    let albumFeature: [String: Double]
+    let eraFeature: [String: Double]
+    let genres: [String: (feature: Double, cluster: Bool)]
+    /// Skip load per song.
+    let songSkip: [String: Double]
+  }
+
   // MARK: - Ranking
 
   /// `pendingPlays` are the latest listens per song still in the outbox: the
@@ -172,261 +227,27 @@ struct MixRanker {
     rng: inout some RandomNumberGenerator
   ) -> (songs: [Song], record: MixRecord) {
     let cfg = config
-    var notes: [String] = []
-
-    let artistAgg = Self.artistAffinity(affinity.aggregates[.artist] ?? [:], index: index)
-    let albumAgg = affinity.aggregates[.album] ?? [:]
-    let genreAgg = affinity.aggregates[.genre] ?? [:]
-    let eraAgg = affinity.aggregates[.era] ?? [:]
-    let songAgg = affinity.aggregates[.song] ?? [:]
-
-    // How far the log is trusted over the server's play counts.
-    let totalWeight = songAgg.values.reduce(0) { $0 + $1.weight }
-    var trust = min(1, totalWeight / cfg.fullTrustWeight)
-    if !affinity.state.bootstrapComplete { trust = min(trust, cfg.partialImportTrust) }
-
     var context: SmartPlaybackService.KeepPlayingContext?
     if case .keepPlaying(let keep) = mode { context = keep }
     let modeName = context == nil ? "playSomething" : "keepPlaying"
+    let input = Input(
+      library: library, index: index, affinity: affinity, journal: journal,
+      pendingPlays: pendingPlays, recentPlays: recentPlays, ratings: ratings, starred: starred,
+      likedAlbums: likedAlbums, likedArtists: likedArtists, context: context, count: count,
+      now: now)
+    var notes: [String] = []
 
-    // Skips and the seed name artists; the library maps names to artist keys.
-    var wantedNames = Set<String>()
-    if let context, let name = ArtistIdentity.key(name: context.seed.artist, mbid: nil) {
-      wantedNames.insert(name)
-    }
-    for (id, events) in journal.skips where index.songs[id] == nil {
-      wantedNames.formUnion(events.map(\.artistKey))
-    }
-    wantedNames.remove("")
-
-    // Pass 1: keys, server-count priors, catalogue plays and title cooldowns.
-    let ids = library.map(\.playbackID)
-    let entries = library.indices.map {
-      index.songs[ids[$0]]
-        ?? SmartPlaybackService.LibraryIndex.Entry(library[$0], artistKeys: index.artistKeys)
-    }
-    var artists: [String: ArtistStats] = [:]
-    var albumPrior: [String: Double] = [:]
-    var genrePrior: [String: Double] = [:]
-    var eraPrior: [String: Double] = [:]
-    var artistIds: [String: String] = [:]
-    var foldedNames: [String: String] = [:]
-    var genreArtists: [String: Set<String>] = [:]
-    var favouredArtists = likedArtists
-    var recentTitles: [String: Date] = [:]
-    var recentTitleArtists = Set<String>()
-    var recentTitleStarts = Set<String>()
-    var titleKeys: [Int: String] = [:]
-    var lifetimePlays = [Int](repeating: 0, count: library.count)
-    var songWeights = [Double](repeating: 0, count: library.count)
-    var heardAt = [Date?](repeating: nil, count: library.count)
-
-    func titleKey(_ i: Int) -> String {
-      if let key = titleKeys[i] { return key }
-      let key = entries[i].artistKey + "|" + SmartPlaybackService.normalizeTitle(library[i].title)
-      titleKeys[i] = key
-      return key
-    }
-
-    // Normalizing keeps a title's first character unless it opens with a
-    // bracket or a space; anything else starting differently cannot be a
-    // sibling of a recent title, and skips the slow normalization.
-    func mayShareTitle(_ i: Int) -> Bool {
-      guard recentTitleArtists.contains(entries[i].artistKey),
-        let first = library[i].title.first.map({ $0.lowercased() })
-      else { return false }
-      return first == "(" || first == "[" || first.allSatisfy(\.isWhitespace)
-        || recentTitleStarts.contains(entries[i].artistKey + "|" + first)
-    }
-
-    for i in library.indices {
-      let song = library[i]
-      let entry = entries[i]
-      let aggregate = songAgg[ids[i]]
-      let prior = Double(min(song.playCount ?? 0, cfg.priorPlayCap))
-      songWeights[i] = aggregate?.weight ?? 0
-      albumPrior[entry.albumId, default: 0] += prior
-      for genre in entry.genres {
-        genrePrior[genre, default: 0] += prior
-        if aggregate != nil { genreArtists[genre, default: []].insert(entry.artistKey) }
-      }
-      if let era = entry.era { eraPrior[era, default: 0] += prior }
-
-      // The server's count already includes the plays the log mirrors.
-      let plays = max(aggregate?.plays ?? 0, song.playCount ?? 0)
-      lifetimePlays[i] = plays
-      artists[entry.artistKey, default: ArtistStats()].prior += prior
-      artists[entry.artistKey, default: ArtistStats()].songs += 1
-      artists[entry.artistKey, default: ArtistStats()].plays.append(plays)
-
-      let rating = ratings[ids[i]]?.stars ?? 0
-      if rating >= 4 || starred.contains(ids[i]) { favouredArtists.insert(entry.artistKey) }
-
-      if !wantedNames.isEmpty {
-        // Folding is slow; a library repeats few artist spellings.
-        let name =
-          foldedNames[song.artist] ?? ArtistIdentity.key(name: song.artist, mbid: nil) ?? ""
-        foldedNames[song.artist] = name
-        if wantedNames.contains(name), artistIds[name] == nil { artistIds[name] = entry.artistKey }
-      }
-
-      // Each source of a play cools it down once: the latest of them counts.
-      let heard = [aggregate?.lastPlayAt, journal.lastHeardAt[ids[i]], pendingPlays[ids[i]]]
-        .compactMap { $0 }.max()
-      heardAt[i] = heard
-      if let heard, now.timeIntervalSince(heard) < cfg.titleCooldownWindow {
-        let key = titleKey(i)
-        let title = key.dropFirst(entry.artistKey.count + 1)
-        if let first = title.first {
-          recentTitles[key] = max(recentTitles[key] ?? heard, heard)
-          recentTitleArtists.insert(entry.artistKey)
-          recentTitleStarts.insert(entry.artistKey + "|" + String(first))
-        }
-      }
-    }
-
-    // Skip pressure per song, and per artist once several of its songs were
-    // skipped. Each song adds at most 1 to its artist; the artist's decayed
-    // affinity weight (the snapshot's, 60-day half-life) dampens the pressure,
-    // so an artist played a lot shrugs off a few skips.
-    var songSkip: [String: Double] = [:]
-    var artistSkips: [String: (songs: Int, load: Double)] = [:]
-    for (id, events) in journal.skips {
-      let load = skipLoad(events, now: now)
-      songSkip[id] = load
-      let name = events.first?.artistKey ?? ""
-      let artist = index.songs[id]?.artistKey ?? artistIds[name] ?? name
-      guard !artist.isEmpty else { continue }
-      artistSkips[artist, default: (0, 0)].songs += 1
-      artistSkips[artist, default: (0, 0)].load += min(1, load)
-    }
-
-    let seedArtist = context.map {
-      let name = ArtistIdentity.key(name: $0.seed.artist, mbid: nil) ?? ""
-      return artistIds[name] ?? name
-    }
+    let scan = scanLibrary(input)
+    let standing = weigh(scan, input)
+    var candidates = score(input, scan, standing)
+    let entries = scan.entries
+    let ids = scan.ids
+    let lifetimePlays = scan.lifetimePlays
+    let heardAt = scan.heardAt
+    let artists = standing.artists
+    let seedArtist = scan.seedArtist
     let anchorGenres = context?.anchorGenres ?? []
-    let queueIds = context?.queueIds ?? []
-
-    // Features blend the log with the server's counts, once per key.
-    func feature(_ weight: Double?, _ prior: Double, _ k: Double) -> Double {
-      trust * saturate(weight ?? 0, k) + (1 - trust) * saturate(prior, k)
-    }
-    func features(
-      _ aggregates: [String: AffinitySnapshot.Aggregate], _ priors: [String: Double], _ k: Double
-    )
-      -> [String: Double]
-    {
-      priors.reduce(into: [:]) { $0[$1.key] = feature(aggregates[$1.key]?.weight, $1.value, k) }
-    }
-    let albumFeature = features(albumAgg, albumPrior, cfg.albumK)
-    let eraFeature = features(eraAgg, eraPrior, cfg.eraK)
-
-    // Clusters: artists played a fair amount, liked or with a favoured song,
-    // and genres played a fair amount across several artists.
-    for (key, var artist) in artists {
-      let weight = artistAgg[key]?.weight
-      artist.feature = feature(weight, artist.prior, cfg.artistK)
-      artist.cluster = (weight ?? 0) >= cfg.clusterArtistWeight || favouredArtists.contains(key)
-      if artist.plays.count >= 2 {
-        artist.lowerHalf = artist.plays.sorted()[artist.plays.count / 2 - 1]
-      }
-      if let skips = artistSkips[key], skips.songs >= cfg.artistSkipMinSongs {
-        artist.pressure =
-          cfg.artistSkipPenalty * skips.load / (skips.load + (weight ?? 0) + cfg.artistSkipDamping)
-      }
-      artist.plays = []
-      artists[key] = artist
-    }
-    let genreStats = genrePrior.reduce(into: [String: (feature: Double, cluster: Bool)]()) {
-      let weight = genreAgg[$1.key]?.weight ?? 0
-      $0[$1.key] = (
-        feature(weight, $1.value, cfg.genreK),
-        weight >= cfg.clusterGenreWeight
-          && (genreArtists[$1.key]?.count ?? 0) >= cfg.clusterGenreArtists
-      )
-    }
-
-    // Pass 2: features, cooldowns and the weights of both pools.
-    var candidates: [Candidate] = []
-    candidates.reserveCapacity(library.count)
-    for i in library.indices {
-      let song = library[i]
-      let entry = entries[i]
-      let id = ids[i]
-      // Lookups in empty dictionaries still hash, and most of these are empty.
-      let rated = ratings.isEmpty ? nil : ratings[id]
-      let rating = rated?.stars ?? 0
-      if rating == 1 || (!queueIds.isEmpty && (queueIds.contains(song.id) || queueIds.contains(id)))
-      {
-        continue
-      }
-
-      var c = Candidate(index: i)
-      let artist = artists[entry.artistKey] ?? ArtistStats()
-      // A liked album's own songs count as a cluster.
-      var inCluster = artist.cluster || likedAlbums.contains(entry.albumId)
-      c.artist = artist.feature
-      c.album = albumFeature[entry.albumId] ?? 0
-      for genre in entry.genres {
-        guard let stats = genreStats[genre] else { continue }
-        c.genre = max(c.genre, stats.feature)
-        inCluster = inCluster || stats.cluster
-      }
-      c.era = entry.era.flatMap { eraFeature[$0] } ?? 0
-      c.song = feature(
-        songWeights[i], Double(min(song.playCount ?? 0, cfg.priorPlayCap)), cfg.songK)
-      c.rating = rating
-      c.ratingSource = rated?.source ?? .song
-      c.starred = !starred.isEmpty && starred.contains(id)
-      c.likedAlbum = !likedAlbums.isEmpty && likedAlbums.contains(entry.albumId)
-      c.likedArtist = !likedArtists.isEmpty && likedArtists.contains(entry.artistKey)
-      c.collection = min(
-        cfg.collectionBonusCap,
-        (c.likedAlbum ? cfg.likedAlbumBonus : 0) + (c.likedArtist ? cfg.likedArtistBonus : 0))
-      c.skip = songSkip.isEmpty ? 0 : cfg.skipPenalty * min(cfg.skipLoadCap, songSkip[id] ?? 0)
-      c.pressure = artist.pressure
-
-      if let heard = heardAt[i] {
-        let hours = max(0, now.timeIntervalSince(heard)) / 3600
-        c.cool = cfg.cooldownFloor + (1 - cfg.cooldownFloor) * (1 - exp(-hours / cfg.cooldownHours))
-      }
-      if !recentTitles.isEmpty, mayShareTitle(i), let heard = recentTitles[titleKey(i)] {
-        let hours = max(0, now.timeIntervalSince(heard)) / 3600
-        c.cool = min(
-          c.cool,
-          cfg.titleCooldownFloor + (1 - cfg.titleCooldownFloor)
-            * (1 - exp(-hours / cfg.titleCooldownHours)))
-      }
-
-      if let context {
-        c.anchored = entry.genres.contains { anchorGenres.contains($0) }
-        c.seedArtist = !entry.artistKey.isEmpty && entry.artistKey == seedArtist
-        let seedAlbum = !context.seed.albumId.isEmpty && entry.albumId == context.seed.albumId
-        c.context =
-          (c.anchored ? cfg.anchorGenreBonus : 0) + (c.seedArtist ? cfg.seedArtistBonus : 0)
-          - (seedAlbum ? cfg.seedAlbumPenalty : 0)
-      }
-
-      let base =
-        cfg.baseWeight + cfg.artistWeight * c.artist + cfg.albumWeight * c.album
-        + cfg.genreWeight * c.genre + cfg.eraWeight * c.era + cfg.songWeight * c.song
-        + (c.starred ? cfg.starWeight : 0) + c.collection + ratingBonus(rating) - c.skip
-        - c.pressure + c.context
-      c.preferred = c.cool * ratingMultiplier(rating) * max(0.01, base)
-
-      // Lesser-played songs from the listener's own clusters, never one rated
-      // down; skips hold them back as they do preferred songs.
-      let plays = lifetimePlays[i]
-      let lessPlayed = plays <= cfg.exploreMaxPlays || artist.lowerHalf.map { plays <= $0 } ?? false
-      if inCluster, lessPlayed, rating == 0 || rating >= 3 {
-        c.explore =
-          c.cool
-          * max(0, cfg.exploreBase + c.artist + c.genre + max(0, c.context) - c.skip - c.pressure)
-          / (1 + Double(plays)).squareRoot()
-      }
-      candidates.append(c)
-    }
+    func titleKey(_ i: Int) -> String { scan.titles.key(i) }
 
     // The session's genres bound a continuation while enough songs share
     // them, by enough artists to fill the mix within the artist cap.
@@ -450,7 +271,7 @@ struct MixRanker {
     // widened to their artists and then their genres; with neither, every
     // artist is equally likely.
     var bootstrap = false
-    if totalWeight < cfg.coldStartWeight {
+    if scan.totalWeight < cfg.coldStartWeight {
       let favoured = candidates.filter { $0.rating >= 4 || $0.starred || $0.collection > 0 }
       let counted = candidates.filter { lifetimePlays[$0.index] > 0 }
       let seeds = favoured.isEmpty ? counted : favoured
@@ -716,11 +537,282 @@ struct MixRanker {
     }
   }
 
+  // MARK: - Passes
+
+  /// Pass 1: keys, server-count priors, catalogue plays and title cooldowns.
+  private func scanLibrary(_ input: Input) -> Scan {
+    let cfg = config
+    let library = input.library
+    let now = input.now
+    let songAgg = input.affinity.aggregates[.song] ?? [:]
+
+    // How far the log is trusted over the server's play counts.
+    let totalWeight = songAgg.values.reduce(0) { $0 + $1.weight }
+    var trust = min(1, totalWeight / cfg.fullTrustWeight)
+    if !input.affinity.state.bootstrapComplete { trust = min(trust, cfg.partialImportTrust) }
+
+    // Skips and the seed name artists; the library maps names to artist keys.
+    var wantedNames = Set<String>()
+    if let context = input.context,
+      let name = ArtistIdentity.key(name: context.seed.artist, mbid: nil)
+    {
+      wantedNames.insert(name)
+    }
+    for (id, events) in input.journal.skips where input.index.songs[id] == nil {
+      wantedNames.formUnion(events.map(\.artistKey))
+    }
+    wantedNames.remove("")
+
+    let ids = library.map(\.playbackID)
+    let entries = library.indices.map {
+      input.index.songs[ids[$0]] ?? Entry(library[$0], artistKeys: input.index.artistKeys)
+    }
+    let titles = Titles(library: library, entries: entries)
+    var artists: [String: ArtistStats] = [:]
+    var albumPrior: [String: Double] = [:]
+    var genrePrior: [String: Double] = [:]
+    var eraPrior: [String: Double] = [:]
+    var artistIds: [String: String] = [:]
+    var foldedNames: [String: String] = [:]
+    var genreArtists: [String: Set<String>] = [:]
+    var favouredArtists = input.likedArtists
+    var lifetimePlays = [Int](repeating: 0, count: library.count)
+    var songWeights = [Double](repeating: 0, count: library.count)
+    var heardAt = [Date?](repeating: nil, count: library.count)
+
+    for i in library.indices {
+      let song = library[i]
+      let entry = entries[i]
+      let aggregate = songAgg[ids[i]]
+      let prior = Double(min(song.playCount ?? 0, cfg.priorPlayCap))
+      songWeights[i] = aggregate?.weight ?? 0
+      albumPrior[entry.albumId, default: 0] += prior
+      for genre in entry.genres {
+        genrePrior[genre, default: 0] += prior
+        if aggregate != nil { genreArtists[genre, default: []].insert(entry.artistKey) }
+      }
+      if let era = entry.era { eraPrior[era, default: 0] += prior }
+
+      // The server's count already includes the plays the log mirrors.
+      let plays = max(aggregate?.plays ?? 0, song.playCount ?? 0)
+      lifetimePlays[i] = plays
+      artists[entry.artistKey, default: ArtistStats()].prior += prior
+      artists[entry.artistKey, default: ArtistStats()].songs += 1
+      artists[entry.artistKey, default: ArtistStats()].plays.append(plays)
+
+      let rating = input.ratings[ids[i]]?.stars ?? 0
+      if rating >= 4 || input.starred.contains(ids[i]) { favouredArtists.insert(entry.artistKey) }
+
+      if !wantedNames.isEmpty {
+        // Folding is slow; a library repeats few artist spellings.
+        let name =
+          foldedNames[song.artist] ?? ArtistIdentity.key(name: song.artist, mbid: nil) ?? ""
+        foldedNames[song.artist] = name
+        if wantedNames.contains(name), artistIds[name] == nil { artistIds[name] = entry.artistKey }
+      }
+
+      // Each source of a play cools it down once: the latest of them counts.
+      let heard =
+        [aggregate?.lastPlayAt, input.journal.lastHeardAt[ids[i]], input.pendingPlays[ids[i]]]
+        .compactMap { $0 }.max()
+      heardAt[i] = heard
+      if let heard, now.timeIntervalSince(heard) < cfg.titleCooldownWindow {
+        titles.noteHeard(i, at: heard)
+      }
+    }
+
+    let seedArtist = input.context.map {
+      let name = ArtistIdentity.key(name: $0.seed.artist, mbid: nil) ?? ""
+      return artistIds[name] ?? name
+    }
+    return Scan(
+      ids: ids, entries: entries, titles: titles, totalWeight: totalWeight, trust: trust,
+      artists: artists, albumPrior: albumPrior, genrePrior: genrePrior, eraPrior: eraPrior,
+      genreArtists: genreArtists, favouredArtists: favouredArtists, artistIds: artistIds,
+      seedArtist: seedArtist, lifetimePlays: lifetimePlays, songWeights: songWeights,
+      heardAt: heardAt)
+  }
+
+  /// Skip load per song, and per artist the songs skipped and their load,
+  /// each song adding at most 1.
+  private func weighSkips(_ input: Input, _ scan: Scan) -> (
+    songs: [String: Double], artists: [String: (songs: Int, load: Double)]
+  ) {
+    var songs: [String: Double] = [:]
+    var artists: [String: (songs: Int, load: Double)] = [:]
+    for (id, events) in input.journal.skips {
+      let load = skipLoad(events, now: input.now)
+      songs[id] = load
+      let name = events.first?.artistKey ?? ""
+      let artist = input.index.songs[id]?.artistKey ?? scan.artistIds[name] ?? name
+      guard !artist.isEmpty else { continue }
+      artists[artist, default: (0, 0)].songs += 1
+      artists[artist, default: (0, 0)].load += min(1, load)
+    }
+    return (songs, artists)
+  }
+
+  /// Features blend the log with the server's counts, once per key.
+  /// Clusters: artists played a fair amount, liked or with a favoured song,
+  /// and genres played a fair amount across several artists.
+  private func weigh(_ scan: Scan, _ input: Input) -> Standing {
+    let cfg = config
+    let artistAgg = Self.artistAffinity(
+      input.affinity.aggregates[.artist] ?? [:], index: input.index)
+    let genreAgg = input.affinity.aggregates[.genre] ?? [:]
+    let skips = weighSkips(input, scan)
+
+    func features(_ kind: AffinitySnapshot.Kind, _ priors: [String: Double], _ k: Double)
+      -> [String: Double]
+    {
+      let aggregates = input.affinity.aggregates[kind] ?? [:]
+      return priors.reduce(into: [:]) {
+        $0[$1.key] = feature(aggregates[$1.key]?.weight, $1.value, k, trust: scan.trust)
+      }
+    }
+
+    var artists = scan.artists
+    for (key, var artist) in artists {
+      let weight = artistAgg[key]?.weight
+      artist.feature = feature(weight, artist.prior, cfg.artistK, trust: scan.trust)
+      artist.cluster =
+        (weight ?? 0) >= cfg.clusterArtistWeight || scan.favouredArtists.contains(key)
+      if artist.plays.count >= 2 {
+        artist.lowerHalf = artist.plays.sorted()[artist.plays.count / 2 - 1]
+      }
+      // Once several of its songs were skipped. The artist's decayed
+      // affinity weight (the snapshot's, 60-day half-life) dampens the
+      // pressure, so an artist played a lot shrugs off a few skips.
+      if let skipped = skips.artists[key], skipped.songs >= cfg.artistSkipMinSongs {
+        artist.pressure =
+          cfg.artistSkipPenalty * skipped.load
+          / (skipped.load + (weight ?? 0) + cfg.artistSkipDamping)
+      }
+      artists[key] = artist
+    }
+    let genres = scan.genrePrior.reduce(into: [String: (feature: Double, cluster: Bool)]()) {
+      let weight = genreAgg[$1.key]?.weight ?? 0
+      $0[$1.key] = (
+        feature(weight, $1.value, cfg.genreK, trust: scan.trust),
+        weight >= cfg.clusterGenreWeight
+          && (scan.genreArtists[$1.key]?.count ?? 0) >= cfg.clusterGenreArtists
+      )
+    }
+    return Standing(
+      artists: artists, albumFeature: features(.album, scan.albumPrior, cfg.albumK),
+      eraFeature: features(.era, scan.eraPrior, cfg.eraK), genres: genres,
+      songSkip: skips.songs)
+  }
+
+  /// Pass 2: features, cooldowns and the weights of both pools. Songs rated
+  /// down and songs already queued drop out.
+  private func score(_ input: Input, _ scan: Scan, _ standing: Standing) -> [Candidate] {
+    let cfg = config
+    let library = input.library
+    let queueIds = input.context?.queueIds ?? []
+    var candidates: [Candidate] = []
+    candidates.reserveCapacity(library.count)
+    for i in library.indices {
+      let song = library[i]
+      let entry = scan.entries[i]
+      let id = scan.ids[i]
+      // Lookups in empty dictionaries still hash, and most of these are empty.
+      let rated = input.ratings.isEmpty ? nil : input.ratings[id]
+      let rating = rated?.stars ?? 0
+      if rating == 1 || (!queueIds.isEmpty && (queueIds.contains(song.id) || queueIds.contains(id)))
+      {
+        continue
+      }
+
+      var c = Candidate(index: i)
+      let artist = standing.artists[entry.artistKey] ?? ArtistStats()
+      // A liked album's own songs count as a cluster.
+      var inCluster = artist.cluster || input.likedAlbums.contains(entry.albumId)
+      c.artist = artist.feature
+      c.album = standing.albumFeature[entry.albumId] ?? 0
+      for genre in entry.genres {
+        guard let stats = standing.genres[genre] else { continue }
+        c.genre = max(c.genre, stats.feature)
+        inCluster = inCluster || stats.cluster
+      }
+      c.era = entry.era.flatMap { standing.eraFeature[$0] } ?? 0
+      c.song = feature(
+        scan.songWeights[i], Double(min(song.playCount ?? 0, cfg.priorPlayCap)), cfg.songK,
+        trust: scan.trust)
+      c.rating = rating
+      c.ratingSource = rated?.source ?? .song
+      c.starred = !input.starred.isEmpty && input.starred.contains(id)
+      c.likedAlbum = !input.likedAlbums.isEmpty && input.likedAlbums.contains(entry.albumId)
+      c.likedArtist = !input.likedArtists.isEmpty && input.likedArtists.contains(entry.artistKey)
+      c.collection = min(
+        cfg.collectionBonusCap,
+        (c.likedAlbum ? cfg.likedAlbumBonus : 0) + (c.likedArtist ? cfg.likedArtistBonus : 0))
+      c.skip =
+        standing.songSkip.isEmpty
+        ? 0 : cfg.skipPenalty * min(cfg.skipLoadCap, standing.songSkip[id] ?? 0)
+      c.pressure = artist.pressure
+      c.cool = cool(i, scan, now: input.now)
+
+      if let context = input.context {
+        c.anchored = entry.genres.contains { context.anchorGenres.contains($0) }
+        c.seedArtist = !entry.artistKey.isEmpty && entry.artistKey == scan.seedArtist
+        let seedAlbum = !context.seed.albumId.isEmpty && entry.albumId == context.seed.albumId
+        c.context =
+          (c.anchored ? cfg.anchorGenreBonus : 0) + (c.seedArtist ? cfg.seedArtistBonus : 0)
+          - (seedAlbum ? cfg.seedAlbumPenalty : 0)
+      }
+
+      let base =
+        cfg.baseWeight + cfg.artistWeight * c.artist + cfg.albumWeight * c.album
+        + cfg.genreWeight * c.genre + cfg.eraWeight * c.era + cfg.songWeight * c.song
+        + (c.starred ? cfg.starWeight : 0) + c.collection + ratingBonus(rating) - c.skip
+        - c.pressure + c.context
+      c.preferred = c.cool * ratingMultiplier(rating) * max(0.01, base)
+
+      // Lesser-played songs from the listener's own clusters, never one rated
+      // down; skips hold them back as they do preferred songs.
+      let plays = scan.lifetimePlays[i]
+      let lessPlayed = plays <= cfg.exploreMaxPlays || artist.lowerHalf.map { plays <= $0 } ?? false
+      if inCluster, lessPlayed, rating == 0 || rating >= 3 {
+        c.explore =
+          c.cool
+          * max(0, cfg.exploreBase + c.artist + c.genre + max(0, c.context) - c.skip - c.pressure)
+          / (1 + Double(plays)).squareRoot()
+      }
+      candidates.append(c)
+    }
+    return candidates
+  }
+
+  /// How far a song is cooled down by its own latest listen and by a title
+  /// sibling's.
+  private func cool(_ i: Int, _ scan: Scan, now: Date) -> Double {
+    let cfg = config
+    var cool = 1.0
+    if let heard = scan.heardAt[i] {
+      let hours = max(0, now.timeIntervalSince(heard)) / 3600
+      cool = cfg.cooldownFloor + (1 - cfg.cooldownFloor) * (1 - exp(-hours / cfg.cooldownHours))
+    }
+    if let heard = scan.titles.siblingHeardAt(i) {
+      let hours = max(0, now.timeIntervalSince(heard)) / 3600
+      cool = min(
+        cool,
+        cfg.titleCooldownFloor + (1 - cfg.titleCooldownFloor)
+          * (1 - exp(-hours / cfg.titleCooldownHours)))
+    }
+    return cool
+  }
+
   // MARK: - Helpers
 
   /// f(x; k) = min(1, ln(1+x) / ln(1+k)).
   private func saturate(_ x: Double, _ k: Double) -> Double {
     min(1, log1p(max(0, x)) / log1p(k))
+  }
+
+  /// A feature blends the log with the server's counts by the log's trust.
+  private func feature(_ weight: Double?, _ prior: Double, _ k: Double, trust: Double) -> Double {
+    trust * saturate(weight ?? 0, k) + (1 - trust) * saturate(prior, k)
   }
 
   private func pickWeighted(_ weights: [Double], rng: inout some RandomNumberGenerator) -> Int {
@@ -836,6 +928,59 @@ struct MixRanker {
         weight: group.weight + row.value.weight,
         lastPlayAt: [group.lastPlayAt, row.value.lastPlayAt].compactMap { $0 }.max(),
         plays: group.plays + row.value.plays)
+    }
+  }
+
+  // MARK: - Working state
+
+  /// Title keys, "artist key|normalized title", each built once and only
+  /// when needed, since normalizing is slow; and the titles heard within the
+  /// cooldown window.
+  private final class Titles {
+    private let library: [Song]
+    private let entries: [Entry]
+    private var keys: [Int: String] = [:]
+    private var recent: [String: Date] = [:]
+    private var recentArtists = Set<String>()
+    private var recentStarts = Set<String>()
+
+    init(library: [Song], entries: [Entry]) {
+      self.library = library
+      self.entries = entries
+    }
+
+    func key(_ i: Int) -> String {
+      if let key = keys[i] { return key }
+      let key = entries[i].artistKey + "|" + SmartPlaybackService.normalizeTitle(library[i].title)
+      keys[i] = key
+      return key
+    }
+
+    func noteHeard(_ i: Int, at heard: Date) {
+      let key = self.key(i)
+      let artistKey = entries[i].artistKey
+      guard let first = key.dropFirst(artistKey.count + 1).first else { return }
+      recent[key] = max(recent[key] ?? heard, heard)
+      recentArtists.insert(artistKey)
+      recentStarts.insert(artistKey + "|" + String(first))
+    }
+
+    /// When a song of the same title by the same artist was heard last
+    /// within the window, the song itself included.
+    func siblingHeardAt(_ i: Int) -> Date? {
+      guard !recent.isEmpty, mayShare(i) else { return nil }
+      return recent[key(i)]
+    }
+
+    // Normalizing keeps a title's first character unless it opens with a
+    // bracket or a space; anything else starting differently cannot be a
+    // sibling of a recent title, and skips the slow normalization.
+    private func mayShare(_ i: Int) -> Bool {
+      guard recentArtists.contains(entries[i].artistKey),
+        let first = library[i].title.first.map({ $0.lowercased() })
+      else { return false }
+      return first == "(" || first == "[" || first.allSatisfy(\.isWhitespace)
+        || recentStarts.contains(entries[i].artistKey + "|" + first)
     }
   }
 }
