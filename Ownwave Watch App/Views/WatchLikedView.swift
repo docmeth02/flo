@@ -9,11 +9,16 @@ import SwiftUI
 /// the library lists on the watch, StarStore's edits over their listed stars.
 struct WatchLikedView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
+  @EnvironmentObject var playerViewModel: PlayerViewModel
   @ObservedObject private var starStore = StarStore.shared
 
   @State private var openedAlbum: Album?
   @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
+
+  private var hasSongs: Bool {
+    albumViewModel.starredSongs.contains { playerViewModel.isStarred($0) }
+  }
 
   private var albums: [Album] {
     albumViewModel.albums.filter { starStore.isStarred($0.id, listed: $0.starred) }
@@ -31,17 +36,18 @@ struct WatchLikedView: View {
   }
 
   var body: some View {
+    let hasSongs = hasSongs
     let albums = albums
     let artists = artists
     LibraryList(
       title: "Liked", state: state,
-      isEmpty: albumViewModel.starredSongs.isEmpty && albums.isEmpty && artists.isEmpty,
+      isEmpty: !hasSongs && albums.isEmpty && artists.isEmpty,
       empty: .empty(
         systemImage: "heart.fill", tint: .floLiked, title: "Nothing liked yet",
         message: "Liked songs, albums and artists show up here."),
       refresh: refresh
     ) {
-      if !albumViewModel.starredSongs.isEmpty {
+      if hasSongs {
         NavigationLink(destination: WatchStarredSongsView()) {
           FloNavRow(title: "Songs", systemImage: "heart.fill", tint: .floLiked)
         }
