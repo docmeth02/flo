@@ -6,7 +6,7 @@
 import Foundation
 
 enum API {
-  static let NDAuthHeader = "X-ND-Authorization"
+  static let ndAuthHeader = "X-ND-Authorization"
 
   enum NDEndpoint {
     static let login = "/auth/login"

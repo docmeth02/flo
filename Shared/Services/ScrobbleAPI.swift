@@ -1,5 +1,5 @@
 //
-//  FloooService.swift
+//  ScrobbleAPI.swift
 //  flo
 //
 
@@ -11,8 +11,8 @@ enum PlaybackReportState: String {
   case starting, playing, paused, stopped
 }
 
-class FloooService {
-  static let shared: FloooService = FloooService()
+class ScrobbleAPI {
+  static let shared: ScrobbleAPI = ScrobbleAPI()
 
   func scrobbleToBuiltinEndpoint(
     submission: Bool, songId: String, time: Date? = nil,
@@ -24,7 +24,7 @@ class FloooService {
       params["time"] = Int64((time ?? Date()).timeIntervalSince1970 * 1000)
     }
 
-    APIManager.shared.SubsonicActionRequest(
+    APIManager.shared.subsonicAction(
       endpoint: API.SubsonicEndpoint.scrobble, parameters: params, completion: completion)
   }
 
@@ -44,7 +44,7 @@ class FloooService {
       }
     #endif
 
-    APIManager.shared.SubsonicActionRequest(
+    APIManager.shared.subsonicAction(
       endpoint: API.SubsonicEndpoint.reportPlayback, parameters: params, completion: completion)
   }
 

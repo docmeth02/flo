@@ -65,7 +65,7 @@ final class ScrobbleQueueManager {
     receipts: ScrobbleReceipts = ScrobbleReceipts(),
     accountKey: @escaping () -> String? = { AuthService.shared.accountKey },
     send: @escaping Send = { songId, time, completion in
-      FloooService.shared.scrobbleToBuiltinEndpoint(
+      ScrobbleAPI.shared.scrobbleToBuiltinEndpoint(
         submission: true, songId: songId, time: time, completion: completion)
     },
     canReachServer: @escaping () -> Bool = { ConnectivityMonitor.shared.canReachServer },
@@ -251,7 +251,7 @@ final class ScrobbleQueueManager {
           if self.delete(entry) { self.receipts.remove(receipt) }
           self.submitPending(remaining)
 
-        case .failure(let error) where FloooService.shared.isPermanentFailure(error):
+        case .failure(let error) where ScrobbleAPI.shared.isPermanentFailure(error):
           self.delete(entry)
           self.submitPending(remaining)
 

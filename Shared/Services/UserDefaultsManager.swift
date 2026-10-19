@@ -5,7 +5,7 @@
 
 import Foundation
 
-class UserDefaultsManager {
+enum UserDefaultsManager {
   private static let sharedDefaults =
     UserDefaults(suiteName: "de.m2-entertainment.ownwave.settings") ?? UserDefaults.standard
 

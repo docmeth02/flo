@@ -167,7 +167,7 @@ class StreamCacheManager {
       CoreDataManager.shared.saveRecord()
     }
 
-    let request = APIManager.shared.SubsonicEndpointDownload(
+    let request = APIManager.shared.subsonicDownload(
       endpoint: source.endpoint, parameters: source.parameters,
       allowsCellular: TranscodingSettings.streamsOverCellular
     ) { [weak self] result in

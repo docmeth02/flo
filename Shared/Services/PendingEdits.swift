@@ -99,7 +99,7 @@ import Foundation
     case .failure(let error):
       // An item the server no longer knows cannot take the edit; anything
       // else waits for the next flush.
-      guard FloooService.shared.isPermanentFailure(error) else {
+      guard ScrobbleAPI.shared.isPermanentFailure(error) else {
         debugLog("\(name) pending: \(id)=\(value) (\(error.localizedDescription))")
         // A newer edit made meanwhile goes now; this one waits for the next flush.
         if let newer = values[id], newer != value { flush() }

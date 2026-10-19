@@ -29,7 +29,7 @@ enum KeychainRead<Value> {
 
 /// Credentials live in the Keychain, readable after first unlock and never
 /// migrated to another device.
-class KeychainManager {
+enum KeychainManager {
   private static let keychain = Keychain(service: KeychainKeys.service)
     .accessibility(.afterFirstUnlockThisDeviceOnly)
 

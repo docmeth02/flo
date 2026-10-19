@@ -15,7 +15,7 @@
 		039F16C6B65D4284E6989F70 /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134522C15BE0C00CCF2EB /* Strings.swift */; };
 		056C155907BF6274DD03FEA2 /* ExplicitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */; };
 		07ED0C480D40258172E1CE00 /* PlaybackJournal.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */; };
-		0D25BDE8239F8A39D2BC630E /* FloooService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* FloooService.swift */; };
+		0D25BDE8239F8A39D2BC630E /* ScrobbleAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* ScrobbleAPI.swift */; };
 		0D6128A378A210204972A3B6 /* SmartPlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C533CDA257C450543A1A341D /* SmartPlaybackService.swift */; };
 		0E7069062C0087E6B0C519E3 /* PlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88D8350161966488618D240F /* PlayerViewModel.swift */; };
 		0EC318E71C2B0274B97EB198 /* RecommendationLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1388C037165FF767131D19D /* RecommendationLog.swift */; };
@@ -107,7 +107,7 @@
 		57C779390DEEF1A321CB1C69 /* WidgetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E17F37100EDEC1FD86D314 /* WidgetViews.swift */; };
 		57D805A2215E047ACD99D945 /* LocalFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C401D0992C5AED9F009F91C7 /* LocalFileManager.swift */; };
 		57E2CE9B46E1AC2BBD638CC2 /* ListState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2554DC27ECB5A5E01810A5FA /* ListState.swift */; };
-		58034E0ED29E21DFD56A8E55 /* FloooService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* FloooService.swift */; };
+		58034E0ED29E21DFD56A8E55 /* ScrobbleAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* ScrobbleAPI.swift */; };
 		59DCE38BFFD4CF0982FE4AEE /* MenuTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6F09C76B3A34989432889B8 /* MenuTarget.swift */; };
 		5A6FBD57C4ECDA2296B278AE /* AlbumService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875DFF2C149D9000D9BAEB /* AlbumService.swift */; };
 		5ACBA34308664067A08DC3ED /* AppPlatform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26163837D2FCC0CB8BFD57A8 /* AppPlatform.swift */; };
@@ -128,7 +128,7 @@
 		62F4DD11E524061F6A975D7F /* WatchRadiosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F94DAD74D58A8EBD6F580A81 /* WatchRadiosView.swift */; };
 		63A1B90CFD9377D5412DC10B /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 0999B8791FAC684FA329D412 /* KeychainAccess */; };
 		63C3892123DA08061304A5FE /* DownloadSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */; };
-		642E9B5066F8E4E542BD1FB0 /* FloooService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* FloooService.swift */; };
+		642E9B5066F8E4E542BD1FB0 /* ScrobbleAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F870CD2CEFCC5B00312F8A /* ScrobbleAPI.swift */; };
 		66045036487541DE285FDF6D /* QueueOrdersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C4C47133E096CE3E8B1ABE /* QueueOrdersTests.swift */; };
 		661094F80AAC9D9F0A69A088 /* ArtistIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3183470828F81D158DB4A77D /* ArtistIdentity.swift */; };
 		66380EE4E0D0C2A12F5785B5 /* LibraryCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */; };
@@ -558,7 +558,7 @@
 		C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackService.swift; sourceTree = "<group>"; };
 		C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
 		C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplicitStatus.swift; sourceTree = "<group>"; };
-		C4F870CD2CEFCC5B00312F8A /* FloooService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloooService.swift; sourceTree = "<group>"; };
+		C4F870CD2CEFCC5B00312F8A /* ScrobbleAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrobbleAPI.swift; sourceTree = "<group>"; };
 		C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsManager.swift; sourceTree = "<group>"; };
 		C4FE524C2C14E71B0053763A /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
 		C533CDA257C450543A1A341D /* SmartPlaybackService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SmartPlaybackService.swift; sourceTree = "<group>"; };
@@ -969,7 +969,7 @@
 				C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */,
 				0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */,
 				3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */,
-				C4F870CD2CEFCC5B00312F8A /* FloooService.swift */,
+				C4F870CD2CEFCC5B00312F8A /* ScrobbleAPI.swift */,
 				C4FE524C2C14E71B0053763A /* KeychainManager.swift */,
 				0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */,
 				BA6E4B95E86671912ADCC03D /* LibrarySearch.swift */,
@@ -1340,7 +1340,7 @@
 				FA198610D686489E5659D3BC /* CoreDataManager.swift in Sources */,
 				8DEEF2A2C4E6F60BF0FEE4EA /* CoverArtCacheManager.swift in Sources */,
 				C3B5961929B42666CBDC9103 /* DownloadSession.swift in Sources */,
-				58034E0ED29E21DFD56A8E55 /* FloooService.swift in Sources */,
+				58034E0ED29E21DFD56A8E55 /* ScrobbleAPI.swift in Sources */,
 				7D87394F39E56EBF59731319 /* KeychainManager.swift in Sources */,
 				66380EE4E0D0C2A12F5785B5 /* LibraryCacheManager.swift in Sources */,
 				CFB3CC406C299B4E43BD8FA5 /* LibrarySearch.swift in Sources */,
@@ -1462,7 +1462,7 @@
 				57D805A2215E047ACD99D945 /* LocalFileManager.swift in Sources */,
 				A08ED21ABC61336BDD76B09E /* KeychainManager.swift in Sources */,
 				854D35E557CBD828EC654F35 /* UserDefaultsManager.swift in Sources */,
-				0D25BDE8239F8A39D2BC630E /* FloooService.swift in Sources */,
+				0D25BDE8239F8A39D2BC630E /* ScrobbleAPI.swift in Sources */,
 				918D91B96EB2612541200A7F /* Constants.swift in Sources */,
 				E8AB6CFDF3CCA70D9FD9E2F9 /* Errors.swift in Sources */,
 				039F16C6B65D4284E6989F70 /* Strings.swift in Sources */,
@@ -1551,7 +1551,7 @@
 				DF582CB138B4DE0245C3365A /* LocalFileManager.swift in Sources */,
 				B95C8F04548D149EF08DD0ED /* KeychainManager.swift in Sources */,
 				BE5763369D202A92AFF403CC /* UserDefaultsManager.swift in Sources */,
-				642E9B5066F8E4E542BD1FB0 /* FloooService.swift in Sources */,
+				642E9B5066F8E4E542BD1FB0 /* ScrobbleAPI.swift in Sources */,
 				91E6CD21EBBEB6B5D29DD82D /* Constants.swift in Sources */,
 				8F885BCF58A794D47C8EEE14 /* Errors.swift in Sources */,
 				DFAFDE4E036B82E291567101 /* Strings.swift in Sources */,

@@ -28,7 +28,7 @@ class APIManager {
       eventMonitors: [RequestLog.shared.monitor])
   }
 
-  func NDEndpointRequest<T: Decodable>(
+  func ndRequest<T: Decodable>(
     endpoint: String, parameters: Parameters?,
     completion: @escaping (DataResponse<T, AFError>) -> Void
   ) {
@@ -36,7 +36,7 @@ class APIManager {
     let token = authSession.ndToken
 
     let url = "\(UserDefaultsManager.serverBaseURL)\(endpoint)"
-    let headers: HTTPHeaders = [API.NDAuthHeader: "Bearer \(token)"]
+    let headers: HTTPHeaders = [API.ndAuthHeader: "Bearer \(token)"]
 
     session.request(url, parameters: parameters, headers: headers)
     .validate(statusCode: 200..<300)
@@ -52,7 +52,7 @@ class APIManager {
     }
   }
 
-  func SubsonicEndpointRequest<T: Decodable>(
+  func subsonicRequest<T: Decodable>(
     endpoint: String, parameters: Parameters?,
     completion: @escaping (DataResponse<T, AFError>) -> Void
   ) {
@@ -73,11 +73,11 @@ class APIManager {
 
   /// A Subsonic call without payload. Subsonic reports failures with HTTP
   /// 200, so only a body whose status is "ok" counts as success.
-  func SubsonicActionRequest(
+  func subsonicAction(
     endpoint: String, parameters: Parameters?,
     completion: @escaping (Result<Void, Error>) -> Void
   ) {
-    SubsonicEndpointRequest(endpoint: endpoint, parameters: parameters) {
+    subsonicRequest(endpoint: endpoint, parameters: parameters) {
       (response: DataResponse<SubsonicEnvelope<BasicResponse>, AFError>) in
       switch response.result {
       case .success(let body):
@@ -96,7 +96,7 @@ class APIManager {
   /// A Subsonic error body, which arrives with status 200, or an empty file
   /// fails like an HTTP error.
   @discardableResult
-  func SubsonicEndpointDownload(
+  func subsonicDownload(
     endpoint: String, parameters: Parameters?, allowsCellular: Bool = true,
     progressUpdate: ((Double) -> Void)? = nil,
     completion: @escaping (Result<URL, AFError>) -> Void
@@ -244,14 +244,14 @@ final class NDSessionInterceptor: RequestInterceptor {
   }
 
   private static func bearerToken(in request: URLRequest?) -> String? {
-    guard var value = request?.headers.value(for: API.NDAuthHeader) else { return nil }
+    guard var value = request?.headers.value(for: API.ndAuthHeader) else { return nil }
     if value.hasPrefix("Bearer ") { value.removeFirst("Bearer ".count) }
     return value.isEmpty ? nil : value
   }
 
   private static func applying(_ token: String, to request: URLRequest) -> URLRequest {
     var request = request
-    request.headers.update(name: API.NDAuthHeader, value: "Bearer \(token)")
+    request.headers.update(name: API.ndAuthHeader, value: "Bearer \(token)")
     return request
   }
 }

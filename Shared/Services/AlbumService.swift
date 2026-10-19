@@ -292,7 +292,7 @@ class AlbumService {
       "_start": 0, "_end": 1, "id": songId,
     ]
 
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
+    APIManager.shared.ndRequest(endpoint: API.NDEndpoint.getSong, parameters: params) {
       (response: DataResponse<[Song], AFError>) in
       switch response.result {
       case .success(let songs):
@@ -305,19 +305,19 @@ class AlbumService {
 
   /// Stars a song, album or artist; Navidrome takes all three as `id`.
   func star(id: String, completion: @escaping (Result<Void, Error>) -> Void) {
-    APIManager.shared.SubsonicActionRequest(
+    APIManager.shared.subsonicAction(
       endpoint: API.SubsonicEndpoint.star, parameters: ["id": id], completion: completion)
   }
 
   func unstar(id: String, completion: @escaping (Result<Void, Error>) -> Void) {
-    APIManager.shared.SubsonicActionRequest(
+    APIManager.shared.subsonicAction(
       endpoint: API.SubsonicEndpoint.unstar, parameters: ["id": id], completion: completion)
   }
 
   /// Rates a song, album or artist 1 to 5; 0 removes its rating. Navidrome
   /// takes all three as `id`.
   func setRating(id: String, rating: Int, completion: @escaping (Result<Void, Error>) -> Void) {
-    APIManager.shared.SubsonicActionRequest(
+    APIManager.shared.subsonicAction(
       endpoint: API.SubsonicEndpoint.setRating, parameters: ["id": id, "rating": rating],
       completion: completion)
   }
@@ -339,7 +339,7 @@ class AlbumService {
 
   /// The server's version, nil when it does not say or does not answer.
   func serverVersion(completion: @escaping (String?) -> Void) {
-    APIManager.shared.SubsonicEndpointRequest(endpoint: API.SubsonicEndpoint.ping, parameters: nil) {
+    APIManager.shared.subsonicRequest(endpoint: API.SubsonicEndpoint.ping, parameters: nil) {
       (response: DataResponse<SubsonicEnvelope<BasicResponse>, AFError>) in
       completion(response.value?.subsonicResponse.serverVersion)
     }
@@ -349,7 +349,7 @@ class AlbumService {
   func getStarred(
     completion: @escaping (Result<(songs: [Song], collections: StarredCollections), Error>) -> Void
   ) {
-    APIManager.shared.SubsonicEndpointRequest(
+    APIManager.shared.subsonicRequest(
       endpoint: API.SubsonicEndpoint.getStarred2, parameters: nil
     ) {
       (response: DataResponse<SubsonicEnvelope<Starred2>, AFError>) in
@@ -415,7 +415,7 @@ class AlbumService {
     _ endpoint: String, _ parameters: [String: Any],
     _ completion: @escaping (Result<[T], Error>) -> Void
   ) {
-    APIManager.shared.NDEndpointRequest(endpoint: endpoint, parameters: parameters) {
+    APIManager.shared.ndRequest(endpoint: endpoint, parameters: parameters) {
       (response: DataResponse<[T], AFError>) in
       completion(response.result.mapError { $0 })
     }
@@ -428,7 +428,7 @@ class AlbumService {
   ) {
     let params: [String: Any] = ["_start": 0, "_end": 1, "_sort": "updated_at", "_order": "DESC"]
 
-    APIManager.shared.NDEndpointRequest(endpoint: "/api/\(entity)", parameters: params) {
+    APIManager.shared.ndRequest(endpoint: "/api/\(entity)", parameters: params) {
       (response: DataResponse<[UpdatedAtOnly], AFError>) in
       switch response.result {
       case .success(let items):
@@ -459,7 +459,7 @@ class AlbumService {
   ) {
     let params: [String: Any] = ["_start": start, "_end": end, "_sort": "id", "_order": "DESC"]
 
-    APIManager.shared.NDEndpointRequest(endpoint: API.NDEndpoint.getScrobbles, parameters: params) {
+    APIManager.shared.ndRequest(endpoint: API.NDEndpoint.getScrobbles, parameters: params) {
       (response: DataResponse<[ScrobbleRow], AFError>) in
       switch response.result {
       case .success(let rows):
@@ -546,7 +546,7 @@ class AlbumService {
   ) {
     let params: [String: Any] = ["id": artId, "size": AppPlatform.coverArtSize]
 
-    APIManager.shared.SubsonicEndpointDownload(
+    APIManager.shared.subsonicDownload(
       endpoint: API.SubsonicEndpoint.coverArt, parameters: params
     ) { result in
       switch result {

@@ -15,7 +15,7 @@ struct AuthSessionSnapshot: Equatable {
 class AuthService {
   static let shared = AuthService()
 
-  private var NDToken: String?
+  private var ndToken: String?
   private var subsonicParams: String?
   private var userId: String?
   private var credentialGeneration: UInt64 = 0
@@ -71,7 +71,7 @@ class AuthService {
     defer { credentialsLock.unlock() }
     return AuthSessionSnapshot(
       generation: credentialGeneration,
-      ndToken: NDToken ?? "",
+      ndToken: ndToken ?? "",
       subsonicCredentials: subsonicParams ?? ""
     )
   }
@@ -100,7 +100,7 @@ class AuthService {
 
     credentialsLock.lock()
     credentialGeneration &+= 1
-    self.NDToken = data.token
+    self.ndToken = data.token
     self.subsonicParams = subsonicParams
     self.userId = data.id
     tokenNeedsPersisting = false
@@ -117,7 +117,7 @@ class AuthService {
     completion: @escaping (Bool) -> Void
   ) {
     credentialsLock.lock()
-    let token = NDToken ?? ""
+    let token = ndToken ?? ""
     if token.isEmpty {
       credentialsLock.unlock()
       completion(false)
@@ -154,11 +154,11 @@ class AuthService {
 
     credentialsLock.lock()
     // An answer to a request of an earlier login must not replace a newer one.
-    guard !token.isEmpty, credentialGeneration == snapshot.generation, NDToken != token else {
+    guard !token.isEmpty, credentialGeneration == snapshot.generation, ndToken != token else {
       credentialsLock.unlock()
       return
     }
-    NDToken = token
+    ndToken = token
     tokenNeedsPersisting = true
     let waiters = drainWaiters()
     credentialsLock.unlock()
@@ -172,7 +172,7 @@ class AuthService {
   func persistRenewedToken() {
     credentialsLock.lock()
     defer { credentialsLock.unlock() }
-    guard tokenNeedsPersisting, let token = NDToken, !token.isEmpty,
+    guard tokenNeedsPersisting, let token = ndToken, !token.isEmpty,
       case .found(let stored) = KeychainManager.loadAuth(), stored.id == userId
     else { return }
 
@@ -217,14 +217,14 @@ class AuthService {
     func invalidateNDTokenForTesting() {
       credentialsLock.lock()
       defer { credentialsLock.unlock() }
-      NDToken = "expired"
+      ndToken = "expired"
     }
   #endif
 
   func clearCreds() {
     credentialsLock.lock()
     credentialGeneration &+= 1
-    NDToken = nil
+    ndToken = nil
     subsonicParams = nil
     userId = nil
     tokenNeedsPersisting = false

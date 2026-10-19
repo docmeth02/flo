@@ -12,7 +12,7 @@ final class PlaybackRulesTests: XCTestCase {
   }
 
   func testOnlyRejectionsDropAScrobble() {
-    let service = FloooService.shared
+    let service = ScrobbleAPI.shared
     XCTAssertTrue(service.isPermanentFailure(SubsonicError(code: 10, message: nil)))
     XCTAssertTrue(service.isPermanentFailure(SubsonicError(code: 70, message: nil)))
     XCTAssertFalse(service.isPermanentFailure(SubsonicError(code: 0, message: nil)))
