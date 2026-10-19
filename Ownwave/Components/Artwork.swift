@@ -3,7 +3,6 @@
 //  Ownwave
 //
 
-import ImageIO
 import SwiftUI
 
 /// An album's cover from the download or the cover cache, decoded off the
@@ -64,7 +63,8 @@ struct CoverArt: View {
         let pixels = Int(side * scale)
         let path = await CoverTint.coverFile(albumId: albumId, url: url)
         let image = await Task.detached(priority: .userInitiated) {
-          path.flatMap { Self.thumbnail(path: $0, pixels: pixels) }
+          path.flatMap { Thumbnail.image(URL(fileURLWithPath: $0), pixels: pixels) }
+            .map(UIImage.init(cgImage:))
         }.value
         guard !Task.isCancelled else { return }
         if let image, let cgImage = image.cgImage {
@@ -74,20 +74,6 @@ struct CoverArt: View {
         loaded = (key, image)
       }
       .onDisappear { loaded = nil }
-  }
-
-  /// The file decoded at `pixels` on its longer side.
-  nonisolated private static func thumbnail(path: String, pixels: Int) -> UIImage? {
-    guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil)
-    else { return nil }
-    let options: [CFString: Any] = [
-      kCGImageSourceCreateThumbnailFromImageAlways: true,
-      kCGImageSourceThumbnailMaxPixelSize: pixels,
-      kCGImageSourceCreateThumbnailWithTransform: true,
-      kCGImageSourceShouldCacheImmediately: true,
-    ]
-    return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
-      .map(UIImage.init(cgImage:))
   }
 }
 
