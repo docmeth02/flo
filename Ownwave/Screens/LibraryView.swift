@@ -327,19 +327,20 @@ private struct DownloadRow: View {
   @EnvironmentObject private var downloads: DownloadSession
   @Environment(\.palette) private var palette
 
+  private var downloading: Bool { downloads.isDownloading(collectionId: album.id) }
+  private var failed: Bool { !downloading && downloads.hasFailed(collectionId: album.id) }
+
   var body: some View {
-    let downloading = downloads.isDownloading(collectionId: album.id)
-    let failed = !downloading && downloads.hasFailed(collectionId: album.id)
     Group {
       // A failed album retries in place.
       if failed {
         Button {
           app.download(album)
         } label: {
-          row(downloading: false, failed: true)
+          row
         }
       } else {
-        NavigationLink(value: Route.album(album)) { row(downloading: downloading, failed: failed) }
+        NavigationLink(value: Route.album(album)) { row }
       }
     }
     .buttonStyle(.plain)
@@ -347,7 +348,7 @@ private struct DownloadRow: View {
     .itemMenu(.album(album))
   }
 
-  private func row(downloading: Bool, failed: Bool) -> some View {
+  private var row: some View {
     let percent = downloads.progress(collectionId: album.id) * 100
     return HStack(spacing: 12) {
       CoverArt(albumId: album.id, radius: 7).frame(width: 46, height: 46)
