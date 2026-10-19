@@ -11,7 +11,6 @@ import MediaPlayer
 /// model so that only the views showing them redraw that often.
 final class PlayerClock: ObservableObject {
   @Published var progress: Double = 0.0
-  @Published var currentTimeString: String = "00:00"
 
   var clampedProgress: Double { progress.isFinite ? min(max(progress, 0), 1) : 0 }
 }
@@ -47,10 +46,6 @@ class PlayerViewModel: ObservableObject {
   var progress: Double {
     get { clock.progress }
     set { clock.progress = newValue }
-  }
-  var currentTimeString: String {
-    get { clock.currentTimeString }
-    set { clock.currentTimeString = newValue }
   }
   /// The now playing cover, resolved once per song rather than on every redraw.
   @Published var coverArt: String = ""
@@ -364,7 +359,6 @@ class PlayerViewModel: ObservableObject {
       UserDefaultsManager.nowPlayingListened = 0
     }
     self.pendingStartPosition = self.progress * self.totalDuration
-    self.currentTimeString = timeString(for: self.pendingStartPosition)
     // The first tick after a restore must not count the way to the position.
     self.lastObservedTime = self.pendingStartPosition
 
@@ -444,7 +438,6 @@ class PlayerViewModel: ObservableObject {
       } else {
         self.progress = 0.0
       }
-      self.currentTimeString = timeString(for: currentTime)
 
       // The observer also fires on seeks and rate changes. Count only small
       // forward steps while playing; a seek jumps further or backwards.
@@ -633,7 +626,6 @@ class PlayerViewModel: ObservableObject {
     // Starting the song over is a new listen, which may count again.
     pendingStartPosition = 0
     progress = 0
-    currentTimeString = timeString(for: 0)
     hasQualified = false
     secondsListened = 0
     lastObservedTime = 0
@@ -661,7 +653,6 @@ class PlayerViewModel: ObservableObject {
 
     let target = progress * totalDuration
     self.progress = progress
-    currentTimeString = timeString(for: target)
 
     if playerItem == nil, !isPlaying {
       // A load still under way would attach at its old target, and without an

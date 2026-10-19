@@ -318,17 +318,12 @@ private struct TimeLine: View {
     }
   }
 
-  /// "00:18" as "0:18".
   private var elapsed: String {
-    let time = clock.currentTimeString
-    return time.count > 4 && time.hasPrefix("0") ? String(time.dropFirst()) : time
+    (clock.clampedProgress * duration).minuteSecond
   }
 
   private var remaining: String {
-    let left =
-      duration.isFinite && duration > 0 ? max(duration * (1 - clock.clampedProgress), 0) : 0
-    let seconds = Int(left.rounded())
-    return String(format: "-%d:%02d", seconds / 60, seconds % 60)
+    "-" + (duration * (1 - clock.clampedProgress)).minuteSecond
   }
 }
 

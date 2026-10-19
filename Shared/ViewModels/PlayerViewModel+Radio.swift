@@ -49,7 +49,6 @@ extension PlayerViewModel {
     self.isMediaFailed = false
     self.totalDuration = self.nowPlaying.duration
     self.progress = 0.0
-    self.currentTimeString = "00:00"
 
     self.play()
 

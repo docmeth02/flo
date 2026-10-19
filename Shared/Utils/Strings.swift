@@ -7,15 +7,11 @@
 
 import Foundation
 
-func timeString(for seconds: Double) -> String {
-  if seconds.isFinite, !seconds.isNaN {
-    let minutes = Int(seconds) / 60
-    let seconds = Int(seconds) % 60
-
-    return String(format: "%02d:%02d", minutes, seconds)
+extension Double {
+  /// "3:45", as track lists and the players show a time in seconds.
+  var minuteSecond: String {
+    Duration.seconds(isFinite ? max(self, 0) : 0).formatted(.time(pattern: .minuteSecond))
   }
-
-  return "00:00"
 }
 
 func bytesToMBOrGB(_ bytes: Int64) -> String {

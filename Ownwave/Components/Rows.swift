@@ -154,10 +154,3 @@ struct StateView: View {
     .padding(.vertical, 40)
   }
 }
-
-extension Double {
-  /// "3:45", as track lists and the scrubber show a time in seconds.
-  var minuteSecond: String {
-    Duration.seconds(isFinite ? max(self, 0) : 0).formatted(.time(pattern: .minuteSecond))
-  }
-}
