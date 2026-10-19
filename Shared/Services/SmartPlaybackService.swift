@@ -187,8 +187,9 @@ final class SmartPlaybackService {
   /// the artist (ArtistIdentity) speaks for all; unrated songs are absent.
   /// `store` is for tests.
   @MainActor static func effectiveRatings(
-    of songs: [Song], index: LibraryIndex, store: RatingStore = .shared
+    of songs: [Song], index: LibraryIndex, store: RatingStore? = nil
   ) -> [String: MixRanker.Rating] {
+    let store = store ?? .shared
     // Spellings rated differently: the lowest wins, so a boosted spelling
     // never brings back an avoided artist.
     let artistRatings = store.artistRatings.reduce(into: [String: Int]()) { result, rating in

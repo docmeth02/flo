@@ -193,7 +193,7 @@ final class PlaybackJournal {
     guard !CoreDataManager.shared.isUsingVolatileStore else { return }
     let current = AuthService.shared.accountKey
     Task {
-      await CoreDataManager.shared.performBackground { context in
+      _ = await CoreDataManager.shared.performBackground { context in
         context.batchDelete(
           "HistoryEntity",
           current.map { NSPredicate(format: "accountKey != %@", $0) } ?? NSPredicate(value: true))
