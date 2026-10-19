@@ -108,10 +108,9 @@ class AlbumService {
     [String: (task: Task<Result<TranscodeDecision, DecisionFailure>, Never>, at: Date)] = [:]
   // The token is signed for 48 hours.
   private static let decisionLifetime: TimeInterval = 24 * 3600
-  private var logoutObserver: NSObjectProtocol?
 
   private init() {
-    logoutObserver = NotificationCenter.default.addObserver(
+    NotificationCenter.default.addObserver(
       forName: .didLogout, object: nil, queue: .main
     ) { [weak self] _ in
       // A pending request must not retry for the next account.
