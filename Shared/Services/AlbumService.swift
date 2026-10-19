@@ -353,11 +353,9 @@ class AlbumService {
     ) {
       (response: DataResponse<SubsonicEnvelope<Starred2>, AFError>) in
       completion(
-        response.result.mapError { $0 as Error }.flatMap { reply in
-          if let failure = reply.failure { return .failure(failure) }
-          let starred = reply.data ?? Starred2(song: nil, album: nil, artist: nil)
-          return .success((starred.songs, starred.collections))
-        })
+        response.result.mapError { $0 as Error }
+          .flatMap { $0.result { $0 ?? Starred2(song: nil, album: nil, artist: nil) } }
+          .map { ($0.songs, $0.collections) })
     }
   }
 

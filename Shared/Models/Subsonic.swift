@@ -83,6 +83,12 @@ struct SubsonicEnvelope<T: SubsonicResponseData>: Decodable {
   }
 
   var data: T? { subsonicResponse.data }
+
+  /// The payload read through `value`, or the reported failure.
+  func result<Value>(_ value: (T?) -> Value) -> Result<Value, Error> {
+    if let failure { return .failure(failure) }
+    return .success(value(data))
+  }
 }
 
 /// The getStarred2 payload: the liked songs, albums and artists.
