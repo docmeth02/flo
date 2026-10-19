@@ -243,11 +243,16 @@ import Foundation
 
   private func loadCache() {
     let generation = account
-    Task.detached(priority: .utility) {
-      let songs = LibraryCacheManager.shared.load([Song].self, forKey: .ratedSongs)
-      let albums = LibraryCacheManager.shared.load([Album].self, forKey: .ratedAlbums)
-      let artists = LibraryCacheManager.shared.load([Artist].self, forKey: .ratedArtists)
-      await self.adoptCached(
+    Task(priority: .utility) {
+      let (songs, albums, artists) = await LibraryCacheManager.shared.read(qos: .utility) {
+        cache in
+        (
+          cache.load([Song].self, forKey: .ratedSongs),
+          cache.load([Album].self, forKey: .ratedAlbums),
+          cache.load([Artist].self, forKey: .ratedArtists)
+        )
+      }
+      self.adoptCached(
         songs: Self.ratings(of: songs ?? []), albums: Self.ratings(of: albums ?? []),
         artists: Self.ratings(of: artists ?? []), account: generation)
       // No cache yet (first launch with ratings, or an upgrade): the next

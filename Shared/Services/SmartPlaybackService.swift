@@ -214,12 +214,8 @@ final class SmartPlaybackService {
   /// keeps, overlaid with StarStore's. A liked album does not like its album
   /// artist, who on a compilation is not the artist of its songs.
   func likedCollections(index: LibraryIndex) async -> (albums: Set<String>, artists: Set<String>) {
-    let liked = await withCheckedContinuation { continuation in
-      DispatchQueue.global(qos: .userInitiated).async {
-        continuation.resume(
-          returning: LibraryCacheManager.shared.load(
-            StarredCollections.self, forKey: .starredCollections))
-      }
+    let liked = await LibraryCacheManager.shared.read {
+      $0.load(StarredCollections.self, forKey: .starredCollections)
     }
     // StarStore also knows songs; only the library's albums and artists count.
     let albumIds = Set(index.songs.values.map(\.albumId))
@@ -286,15 +282,11 @@ final class SmartPlaybackService {
     return Date().timeIntervalSince(written) > songCacheMaxAge
   }
 
-  /// Blocking JSON cache reads run on a GCD queue so the cooperative thread
-  /// pool never blocks on disk.
   func loadCachedLibrary() async -> (songs: [Song], starredIds: Set<String>) {
-    await withCheckedContinuation { continuation in
-      DispatchQueue.global(qos: .userInitiated).async {
-        let songs = LibraryCacheManager.shared.load([Song].self, forKey: .songs) ?? []
-        let starred = LibraryCacheManager.shared.load([Song].self, forKey: .starredSongs) ?? []
-        continuation.resume(returning: (songs, Set(starred.map { $0.playbackID })))
-      }
+    await LibraryCacheManager.shared.read { cache in
+      let songs = cache.load([Song].self, forKey: .songs) ?? []
+      let starred = cache.load([Song].self, forKey: .starredSongs) ?? []
+      return (songs, Set(starred.map { $0.playbackID }))
     }
   }
 
@@ -312,13 +304,12 @@ final class SmartPlaybackService {
     {
       return cached.index
     }
-    let (cached, format, artistKeys) = await withCheckedContinuation { continuation in
-      DispatchQueue.global(qos: .utility).async {
-        let songs = LibraryCacheManager.shared.load([Song].self, forKey: .songs) ?? []
-        let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: .songsStamp)
-        let artists = LibraryCacheManager.shared.load([Artist].self, forKey: .artists) ?? []
-        continuation.resume(returning: (songs, stamp?.format, ArtistIdentity.keys(of: artists)))
-      }
+    let (cached, format, artistKeys) = await LibraryCacheManager.shared.read(qos: .utility) {
+      cache in
+      let songs = cache.load([Song].self, forKey: .songs) ?? []
+      let stamp = cache.load(LibraryStamp.self, forKey: .songsStamp)
+      let artists = cache.load([Artist].self, forKey: .artists) ?? []
+      return (songs, stamp?.format, ArtistIdentity.keys(of: artists))
     }
     // Remembered as of before the songs were read: a sync landing meanwhile
     // leaves a newer stamp, so the next call builds the index again.
@@ -331,11 +322,8 @@ final class SmartPlaybackService {
       songs = await syncSongLibrary()
       // A failed sync hands back the old cache; plays folded from it would
       // keep missing genres and artist ids for good, so the import waits.
-      let synced = await withCheckedContinuation { continuation in
-        DispatchQueue.global(qos: .utility).async {
-          let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: .songsStamp)
-          continuation.resume(returning: stamp?.format == LibraryStamp.currentFormat)
-        }
+      let synced = await LibraryCacheManager.shared.read(qos: .utility) {
+        $0.load(LibraryStamp.self, forKey: .songsStamp)?.format == LibraryStamp.currentFormat
       }
       // A stamp can outlive an evicted song cache; an empty library is never
       // remembered as the index.
@@ -395,12 +383,11 @@ final class SmartPlaybackService {
   }
 
   private func performSongSync(force: Bool, generation: Int) async -> [Song] {
-    let (cached, cachedStamp) = await withCheckedContinuation { continuation in
-      DispatchQueue.global(qos: .userInitiated).async {
-        let songs = LibraryCacheManager.shared.load([Song].self, forKey: .songs) ?? []
-        let stamp = LibraryCacheManager.shared.load(LibraryStamp.self, forKey: .songsStamp)
-        continuation.resume(returning: (songs, stamp))
-      }
+    let (cached, cachedStamp) = await LibraryCacheManager.shared.read { cache in
+      (
+        cache.load([Song].self, forKey: .songs) ?? [],
+        cache.load(LibraryStamp.self, forKey: .songsStamp)
+      )
     }
 
     guard

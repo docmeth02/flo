@@ -432,9 +432,7 @@ class AlbumViewModel: ObservableObject {
   /// The cached copy of a library list, read off the main thread, for code
   /// without a view model (the App Intents).
   static func cached<T: Codable>(_ library: Library) async -> [T] {
-    await Task.detached {
-      LibraryCacheManager.shared.load([T].self, forKey: library.cacheKey) ?? []
-    }.value
+    await LibraryCacheManager.shared.read { $0.load([T].self, forKey: library.cacheKey) ?? [] }
   }
 
   /// The last four albums played, from the server's mirrored plays and the

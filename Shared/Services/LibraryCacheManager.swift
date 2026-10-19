@@ -41,6 +41,16 @@ class LibraryCacheManager {
     return try? JSONDecoder().decode(T.self, from: data)
   }
 
+  /// Runs `body`, which loads from the cache, on a GCD queue, so the
+  /// cooperative thread pool never blocks on disk.
+  func read<T>(
+    qos: DispatchQoS.QoSClass = .userInitiated, _ body: @escaping (LibraryCacheManager) -> T
+  ) async -> T {
+    await withCheckedContinuation { continuation in
+      DispatchQueue.global(qos: qos).async { continuation.resume(returning: body(self)) }
+    }
+  }
+
   /// When the entry for `key` was last written, or nil if there is none.
   func modificationDate(forKey key: Key) -> Date? {
     (try? fileManager.attributesOfItem(atPath: fileURL(key).path))?[.modificationDate] as? Date
