@@ -71,23 +71,14 @@ class LocalFileManager {
     return target
   }
 
-  func deleteDownloadedAlbums(completion: @escaping (Result<Bool, Error>) -> Void) {
+  func deleteDownloadedAlbums(completion: @escaping (Result<Void, Error>) -> Void) {
     let folderURL = fileURL(for: "Media")
-
     do {
       if fileManager.fileExists(atPath: folderURL.path) {
         try fileManager.removeItem(at: folderURL)
-        debugLog("Folder media deleted successfully")
-
-        completion(.success(true))
-      } else {
-        debugLog("Folder media somehow does not exist")
-
-        completion(.success(false))
       }
+      completion(.success(()))
     } catch {
-      debugLog("Error deleting folder: \(error.localizedDescription)")
-
       completion(.failure(error))
     }
   }

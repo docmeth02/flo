@@ -37,7 +37,7 @@ struct ImportState: Sendable, Equatable {
 
 /// Decayed listening aggregates of the logged-in account, evaluated at `now`.
 struct AffinitySnapshot: Sendable {
-  enum Kind: Int16, Sendable, CaseIterable {
+  enum Kind: Int16, Sendable {
     case artist = 0
     case album = 1
     case genre = 2

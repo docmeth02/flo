@@ -9,7 +9,7 @@ import Foundation
 /// How a song came to play. A skip says more about a song the app picked
 /// than about one the user did.
 enum PlaybackOrigin: String {
-  case smartShuffle, keepPlaying, album, playlist, starred, cached, manual
+  case smartShuffle, keepPlaying, album, playlist, starred, cached
 
   /// A mix or its Keep Playing continuation picked the song.
   var isMix: Bool { self == .smartShuffle || self == .keepPlaying }

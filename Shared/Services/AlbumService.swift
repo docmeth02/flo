@@ -694,7 +694,7 @@ class AlbumService {
   /// records. Records go even when a folder is already missing, so nothing is
   /// left dangling.
   func removeDownloadedCollection(
-    id: String, completion: @escaping (Result<Bool, Error>) -> Void
+    id: String, completion: @escaping (Result<Void, Error>) -> Void
   ) {
     // A song still downloading would bring the collection back.
     DownloadSession.shared.cancel(collectionId: id)
@@ -723,6 +723,6 @@ class AlbumService {
       entity: SongEntity.self, key: \SongEntity.albumId, value: id)
     DownloadSession.shared.downloadsRemoved.send()
 
-    completion(.success(true))
+    completion(.success(()))
   }
 }
