@@ -4,7 +4,6 @@
 //
 
 import SwiftUI
-import WatchKit
 
 /// Connection state, the history import, the latest mix and server requests,
 /// to tell a slow or broken server from an app problem on the device itself.
@@ -19,7 +18,7 @@ struct WatchDiagnosticsView: View {
   var body: some View {
     List {
       Section {
-        ShareLink(item: Self.exportText(), subject: Text("Ownwave log")) {
+        ShareLink(item: DiagnosticsReport.text(), subject: Text("Ownwave log")) {
           Label("Share log", systemImage: "square.and.arrow.up")
             .font(.floRow)
             .foregroundStyle(Color.floLilac)
@@ -75,12 +74,6 @@ struct WatchDiagnosticsView: View {
     }
     .floNavigationTitle("Diagnostics")
     .task { await ListeningHistoryStore.shared.publishStoredState() }
-  }
-
-  /// The report as plain text, for Share log and the debug dump.
-  static func exportText() -> String {
-    let device = WKInterfaceDevice.current()
-    return DiagnosticsReport.text(system: "\(device.systemName) \(device.systemVersion)")
   }
 
   private func row(_ title: String, _ value: String) -> some View {

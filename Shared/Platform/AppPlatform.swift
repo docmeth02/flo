@@ -31,6 +31,12 @@ enum AppPlatform {
       WKApplication.shared().applicationState == .background
     }
 
+    /// The OS and its version for the diagnostics, e.g. "watchOS 26.6".
+    @MainActor static var systemDescription: String {
+      let device = WKInterfaceDevice.current()
+      return "\(device.systemName) \(device.systemVersion)"
+    }
+
     /// Activates the session and connects an output, asking for a device
     /// when none is in reach. Reports `false` without an error when the
     /// user dismissed the device list.
@@ -59,6 +65,11 @@ enum AppPlatform {
 
     static var isInBackground: Bool {
       UIApplication.shared.applicationState == .background
+    }
+
+    @MainActor static var systemDescription: String {
+      let device = UIDevice.current
+      return "\(device.systemName) \(device.systemVersion)"
     }
 
     static func activateAudio(_ done: @escaping (Bool, Error?) -> Void) {

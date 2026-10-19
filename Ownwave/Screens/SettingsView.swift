@@ -277,7 +277,7 @@ struct DiagnosticsView: View {
   var body: some View {
     List {
       Section {
-        ShareLink(item: Self.exportText(), subject: Text("Ownwave log")) {
+        ShareLink(item: DiagnosticsReport.text(), subject: Text("Ownwave log")) {
           Label("Share log", systemImage: "square.and.arrow.up").foregroundStyle(palette.accent)
         }
         ForEach(DiagnosticsReport.connectionLines(), id: \.0) { LabeledContent($0.0, value: $0.1) }
@@ -309,10 +309,5 @@ struct DiagnosticsView: View {
     .navigationTitle("Diagnostics")
     .navigationBarTitleDisplayMode(.inline)
     .task { await ListeningHistoryStore.shared.publishStoredState() }
-  }
-
-  private static func exportText() -> String {
-    let device = UIDevice.current
-    return DiagnosticsReport.text(system: "\(device.systemName) \(device.systemVersion)")
   }
 }

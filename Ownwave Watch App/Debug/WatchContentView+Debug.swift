@@ -162,7 +162,7 @@
         }
       }
 
-      let export = WatchDiagnosticsView.exportText()
+      let export = DiagnosticsReport.text()
       debugLog("share log: \(export.count) characters")
       for line in export.split(separator: "\n", omittingEmptySubsequences: false).prefix(10) {
         debugLog("  | \(line)")
@@ -227,7 +227,7 @@
       else { return }
       try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
       showsDebugDiagnostics = true
-      let export = WatchDiagnosticsView.exportText()
+      let export = DiagnosticsReport.text()
       debugLog(
         "diagnostics: share log \(export.count) characters, "
           + "last mixes=\(export.contains("\nLast mixes\n") || export.hasSuffix("\nLast mixes"))")

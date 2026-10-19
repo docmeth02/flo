@@ -90,15 +90,14 @@ enum DiagnosticsReport {
     return parts.joined(separator: " · ")
   }
 
-  /// The report as plain text with the request log newest first; `system`
-  /// is the OS name and version, e.g. "watchOS 26.6".
-  static func text(system: String) -> String {
+  /// The report as plain text with the request log newest first.
+  static func text() -> String {
     let info = Bundle.main.infoDictionary
     let version = info?["CFBundleShortVersionString"] as? String ?? "?"
     let build = info?["CFBundleVersion"] as? String ?? "?"
     var lines = [
       "Ownwave \(version) (\(build)), \(Date().formatted(.iso8601))",
-      "\(system), \(hardwareModel)",
+      "\(AppPlatform.systemDescription), \(hardwareModel)",
     ]
     lines += connectionLines().map { "\($0.0): \($0.1)" }
     lines.append("")
