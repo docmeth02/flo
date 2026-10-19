@@ -142,7 +142,7 @@ class UserDefaultsManager {
   static var streamCacheMaxSize: Int64 {
     get {
       let stored = UserDefaults.standard.object(forKey: UserDefaultsKeys.streamCacheMaxSize)
-      return (stored as? Int64) ?? 524_288_000  // default 500 MB
+      return (stored as? Int64) ?? 500 * 1024 * 1024
     }
     set {
       UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.streamCacheMaxSize)

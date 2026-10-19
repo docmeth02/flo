@@ -33,7 +33,6 @@ final class SmartPlaybackService {
     case keepPlaying(KeepPlayingContext)
   }
 
-  /// Build a fresh mix of `count` songs for a listening mode.
   /// The cached library keyed by playback id, with the keys listening history
   /// is aggregated under: plays mirrored from the server join songs through it.
   struct LibraryIndex: Sendable {
@@ -61,7 +60,7 @@ final class SmartPlaybackService {
         if genres.isEmpty, let genre = song.genre { genres = [genre] }
         if artistId.isEmpty {
           artistKey = ArtistIdentity.key(name: song.artist, mbid: nil) ?? ""
-          // The key history was stored under before ArtistIdentity.
+          // The folded name, which history rows of songs without an artist id use.
           historyArtistKey = song.artist
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
             .trimmingCharacters(in: .whitespaces)

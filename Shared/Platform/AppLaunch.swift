@@ -19,7 +19,7 @@ enum AppLaunch {
     // knows whether it is on cellular.
     _ = AppPlatform.isOnCellular
     StreamCacheManager.shared.reconcile()
-    // Earlier builds cached API requests with credentials in Cache.db.
+    // Responses carry credentials, which must not stay in the shared disk cache.
     URLCache.shared.removeAllCachedResponses()
 
     // Deliver scrobbles queued in an earlier session; the outbox otherwise only
