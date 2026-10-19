@@ -122,6 +122,7 @@ import WatchConnectivity
       streamingBitRate: UserDefaultsManager.cellularBitRate,
       downloadBitRate: UserDefaultsManager.downloadBitRate,
       keepPlaying: UserDefaultsManager.keepPlaying,
+      downloadOverCellular: UserDefaultsManager.downloadOverCellular,
       sending: Self.songs(of: sends))
     do {
       try session.updateApplicationContext(Link.encode(phone))

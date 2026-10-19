@@ -45,6 +45,7 @@ final class WatchLinkTests: XCTestCase {
     XCTAssertNil(Link.decode(Link.PhoneState.self, from: ["payload": Data("{}".utf8)]))
     let phone = Link.PhoneState(
       share: true, streamingBitRate: "160", downloadBitRate: "0", keepPlaying: false,
+      downloadOverCellular: true,
       sending: ["a1": 9])
     XCTAssertEqual(Link.decode(Link.PhoneState.self, from: Link.encode(phone)), phone)
     XCTAssertNil(Link.decode(Link.FileInfo.self, from: Link.encode(phone)))

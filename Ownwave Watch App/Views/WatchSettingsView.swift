@@ -55,20 +55,23 @@ struct WatchSettingsView: View {
         Group {
           bitRatePicker("Streaming", stored: $maxBitRate)
           bitRatePicker("Downloads", stored: $downloadBitRate)
+          Toggle(isOn: $downloadOverCellular) {
+            VStack(alignment: .leading, spacing: 1) {
+              Text("Cellular Downloads")
+                .font(.floRow)
+              Text("Wi-Fi and iPhone are used first")
+                .font(.caption2)
+                .foregroundStyle(Color.floSecondary)
+            }
+          }
+          .tint(.floLilac)
+          .floRow()
         }
         .disabled(settingsFollowPhone)
-        Toggle(isOn: $downloadOverCellular) {
-          VStack(alignment: .leading, spacing: 1) {
-            Text("Cellular Downloads")
-              .font(.floRow)
-            Text("Wi-Fi and iPhone are used first")
-              .font(.caption2)
-              .foregroundStyle(Color.floSecondary)
-          }
+        // A value the iPhone applies restarts the downloads there.
+        .onChange(of: downloadOverCellular) {
+          if !settingsFollowPhone { DownloadSession.shared.cellularAccessChanged() }
         }
-        .tint(.floLilac)
-        .floRow()
-        .onChange(of: downloadOverCellular) { DownloadSession.shared.cellularAccessChanged() }
       } header: {
         FloSectionHeader("Bitrate & Data")
       } footer: {

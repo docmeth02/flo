@@ -40,6 +40,8 @@ enum Link {
     let streamingBitRate: String
     let downloadBitRate: String
     let keepPlaying: Bool
+    /// Nil from a phone before build 43.
+    var downloadOverCellular: Bool? = nil
     /// The songs of each album the phone is sending; an album it gave up on
     /// drops out.
     var sending: [String: Int] = [:]

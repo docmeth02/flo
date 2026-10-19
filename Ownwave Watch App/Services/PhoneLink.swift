@@ -136,6 +136,12 @@ import WatchKit
       UserDefaultsManager.maxBitRate = phone.streamingBitRate
       UserDefaultsManager.downloadBitRate = phone.downloadBitRate
       UserDefaultsManager.keepPlaying = phone.keepPlaying
+      if let cellular = phone.downloadOverCellular,
+        cellular != UserDefaultsManager.downloadOverCellular
+      {
+        UserDefaultsManager.downloadOverCellular = cellular
+        DownloadSession.shared.cellularAccessChanged()
+      }
     }
     UserDefaultsManager.settingsFollowPhone = phone.share
     sending = phone.sending

@@ -127,6 +127,7 @@ struct SettingsView: View {
     .onChange(of: downloadOverCellular) {
       DownloadSession.shared.cellularAccessChanged()
       WatchSend.shared.cellularAccessChanged()
+      WatchLink.shared.updateWatch()
     }
     .onChange(of: cacheLimit) {
       StreamCacheManager.shared.setLimit(Int64(cacheLimit))

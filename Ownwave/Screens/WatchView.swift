@@ -141,7 +141,7 @@ struct WatchView: View {
     Toggle(isOn: $shareSettings) {
       VStack(alignment: .leading, spacing: 2) {
         Text("Share settings").font(.rowTitle.weight(.semibold))
-        Text("Bitrates and Keep Playing follow this iPhone")
+        Text("Bitrates, Keep Playing and cellular downloads follow this iPhone")
           .font(.rowSubtitle)
           .foregroundStyle(palette.secondary)
       }
