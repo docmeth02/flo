@@ -88,6 +88,7 @@ struct AppTabs: View {
   @State var tab = TabID.home
   @State var paths: [TabID: NavigationPath] = [:]
   @SceneStorage("libraryChip") private var libraryChip = LibraryChip.albums
+  @AppStorage("tourSeen") private var tourSeen = false
 
   var body: some View {
     TabView(selection: $tab) {
@@ -112,12 +113,82 @@ struct AppTabs: View {
     .tabBarMinimizeBehavior(.onScrollDown)
     .tabViewBottomAccessory { MiniPlayer() }
     .toastOverlay(app.toast, bottom: 140)
+    .tourOverlay(tourStep)
     .fullScreenCover(isPresented: $app.isNowPlayingPresented) {
       NowPlayingView()
     }
+    .onOpenURL(perform: open)
+    .onChange(of: app.tour) { follow($1) }
+    .task { await startTourOnce() }
     #if DEBUG
       .task { await runDebugScreen() }
     #endif
+  }
+
+  /// The widgets' links: `ownwave://nowplaying`, `ownwave://album/<id>`, and
+  /// `ownwave://`, which only brings the app forward.
+  private func open(_ url: URL) {
+    guard url.scheme == "ownwave" else { return }
+    switch url.host() {
+    case "nowplaying":
+      if app.player.hasNowPlaying() { app.isNowPlayingPresented = true }
+    case "album":
+      let id = url.lastPathComponent
+      Task {
+        let albums: [Album] = await app.albums.loadedOrCached(app.albums.albums, .albums)
+        guard
+          let album = app.albums.recentAlbums.first(where: { $0.id == id })
+            ?? albums.first(where: { $0.id == id })
+        else { return }
+        app.isNowPlayingPresented = false
+        tab = .home
+        paths[.home, default: NavigationPath()].append(Route.album(album))
+      }
+    default: break
+    }
+  }
+
+  /// The tour's step shown over the tabs; open Now Playing shows its own.
+  private var tourStep: TourStep? {
+    guard let step = app.tour, !(step.isOnNowPlaying && app.isNowPlayingPresented) else { return nil }
+    return step
+  }
+
+  /// The tour starts once, shortly after the tabs first show.
+  private func startTourOnce() async {
+    var step = tourSeen ? nil : TourStep.play
+    #if DEBUG
+      step = await debugTourStep() ?? step
+    #endif
+    guard let step, app.tour == nil else { return }
+    // The tabs went away meanwhile (a logout): no tour over the login.
+    do { try await Task.sleep(for: .seconds(0.7)) } catch { return }
+    app.tour = step
+  }
+
+  /// Takes the tour to its step's screen; its end returns to Home.
+  private func follow(_ step: TourStep?) {
+    switch step {
+    case .rate?, .why?, .peek?:
+      // With nothing queued Now Playing closes itself, and the card stays
+      // on the tabs.
+      if app.player.hasNowPlaying() { app.isNowPlayingPresented = true }
+      return
+    case .play?: show(.home)
+    case .taste?: show(.taste)
+    case .send?: show(.home, Route.watch)
+    case nil:
+      // A logout ends the tour without it counting as seen.
+      if app.auth.isLoggedIn { tourSeen = true }
+      show(.home)
+    }
+    app.isNowPlayingPresented = false
+  }
+
+  /// Selects the tab `id` with only `routes` on its stack.
+  private func show(_ id: TabID, _ routes: Route...) {
+    tab = id
+    paths[id] = NavigationPath(routes)
   }
 
   /// iOS 27 draws a search role tab inside the bar; the prominent role keeps

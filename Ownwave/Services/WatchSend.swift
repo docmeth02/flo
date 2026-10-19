@@ -3,8 +3,7 @@
 //  Ownwave
 //
 
-import ImageIO
-import UniformTypeIdentifiers
+import Foundation
 
 /// Downloads the songs of albums going to the watch, at the watch's bitrate,
 /// into an outbox of their own, and hands each to `WatchLink` once it is
@@ -290,30 +289,11 @@ final class WatchSend: NSObject {
       if source == nil { source = await CoverArtCacheManager.shared.coverPath(albumId: album.id) }
       guard let source,
         await Task.detached(priority: .utility, operation: {
-          Self.writeThumbnail(of: URL(fileURLWithPath: source), to: target)
+          Thumbnail.write(URL(fileURLWithPath: source), to: target, pixels: 200, type: .png)
         }).value
       else { return }
       Self.transfer(target, .cover, album: album, songCount: songCount, suffix: "png", kbps: 0)
     }
-  }
-
-  private static func writeThumbnail(of file: URL, to target: URL) -> Bool {
-    let options: [CFString: Any] = [
-      kCGImageSourceCreateThumbnailFromImageAlways: true,
-      kCGImageSourceThumbnailMaxPixelSize: 200,
-      kCGImageSourceCreateThumbnailWithTransform: true,
-    ]
-    guard let source = CGImageSourceCreateWithURL(file as CFURL, nil),
-      let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
-    else { return false }
-    try? FileManager.default.createDirectory(
-      at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-    guard
-      let destination = CGImageDestinationCreateWithURL(
-        target as CFURL, UTType.png.identifier as CFString, 1, nil)
-    else { return false }
-    CGImageDestinationAddImage(destination, image, nil)
-    return CGImageDestinationFinalize(destination)
   }
 }
 

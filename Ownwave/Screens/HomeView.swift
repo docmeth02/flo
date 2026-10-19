@@ -93,6 +93,7 @@ struct HomeView: View {
       }
       .buttonStyle(FillButtonStyle())
       .disabled(player.isGeneratingMix)
+      .tourAnchor(.play)
       .padding(
         hasNowPlaying ? EdgeInsets(top: 16, leading: 14, bottom: 14, trailing: 14) : EdgeInsets())
     }

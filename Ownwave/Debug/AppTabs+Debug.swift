@@ -7,9 +7,9 @@
   import SwiftUI
 
   // Simulator verification only. FLO_DEBUG_SCREEN=home|library|taste|search|
-  // settings|watch|album|artist|playlist|nowplaying opens that screen once the
-  // library answered (album, artist and playlist: the first of each, or the
-  // one named by FLO_DEBUG_SCREEN_ID), for screenshots.
+  // settings|watch|album|artist|playlist|nowplaying|widgets opens that screen
+  // once the library answered (album, artist and playlist: the first of each,
+  // or the one named by FLO_DEBUG_SCREEN_ID), for screenshots.
   extension AppTabs {
     func runDebugScreen() async {
       let env = ProcessInfo.processInfo.environment
@@ -43,6 +43,7 @@
           paths[.home, default: NavigationPath()].append(Route.playlist(playlist))
         }
       case "nowplaying": app.isNowPlayingPresented = true
+      case "widgets": WidgetGallery.present()
       default: break
       }
       debugLog("screen hook: \(screen)")

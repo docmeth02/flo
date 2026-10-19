@@ -5,9 +5,11 @@
 
 import SwiftUI
 
-/// The player, and one page down Up Next. Both live in one scroll view that
-/// snaps between the player and the top of the queue, so the queue scrolls
-/// freely below it and pulling down at its top returns to the player.
+/// The player, and one page down Up Next. The player follows a vertical
+/// drag through a rubber band, so the queue opens, and a pull down closes the
+/// player, only past a point; short of it the player springs back. The queue
+/// scrolls on its own, and pulling down at its top returns to the player
+/// through the system's own bounce.
 struct NowPlayingView: View {
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var player: PlayerViewModel
@@ -15,11 +17,17 @@ struct NowPlayingView: View {
   @Environment(\.colorScheme) private var scheme
   @Environment(\.dismiss) private var dismiss
 
+  /// A drag commits once its damped distance passes this, about 165 pt of
+  /// finger travel.
+  static let threshold: CGFloat = 70
+
   @State private var hue: Double?
-  @State private var position = ScrollPosition(edge: .top)
-  // Where the last drag began, so the snap knows the page it started on.
-  @State private var dragStart: CGFloat = 0
-  @State private var isPastPeek = false
+  @State private var showsQueue = false
+  /// The damped drag on the player; positive toward the queue. A gesture
+  /// state, so an interrupted pull (the phone locked mid-drag) springs back.
+  @GestureState(resetTransaction: Transaction(animation: .spring(duration: 0.4)))
+  private var drag: CGFloat = 0
+  @State private var queuePosition = ScrollPosition(edge: .top)
 
   // nowPlaying indexes the queue, which can be empty here.
   private var albumId: String { player.hasNowPlaying() ? player.nowPlaying.albumId ?? "" : "" }
@@ -29,53 +37,53 @@ struct NowPlayingView: View {
     GeometryReader { proxy in
       let insets = proxy.safeAreaInsets
       let page = proxy.size.height + insets.top + insets.bottom
-      ScrollView {
-        if player.hasNowPlaying() {
-          VStack(spacing: 0) {
-            PlayerPage(
-              tint: shades?.tint ?? palette.accent, isPastPeek: isPastPeek,
-              close: { dismiss() }, showQueue: { scroll(to: page) }
-            )
-            .padding(.top, insets.top)
-            .padding(.bottom, max(insets.bottom, 20))
-            .frame(height: page)
-            // A station has no queue to show.
-            if !player.isLiveRadio {
-              UpNextPage(tint: shades?.tint ?? palette.accent, showPlayer: { scroll(to: 0) })
+      if player.hasNowPlaying() {
+        VStack(spacing: 0) {
+          PlayerPage(
+            tint: shades?.tint ?? palette.accent, isPastPeek: drag > Self.threshold,
+            close: { dismiss() }, showQueue: { show(queue: true) }
+          )
+          .padding(.top, insets.top)
+          .padding(.bottom, max(insets.bottom, 20))
+          .frame(height: page)
+          .contentShape(Rectangle())
+          .gesture(playerDrag)
+          // A station has no queue to show.
+          if !player.isLiveRadio {
+            ScrollView {
+              UpNextPage(tint: shades?.tint ?? palette.accent, showPlayer: { show(queue: false) })
                 .padding(.top, insets.top)
                 .padding(.bottom, insets.bottom + 24)
-                .frame(minHeight: page, alignment: .top)
             }
+            .ignoresSafeArea()
+            .scrollIndicators(.hidden)
+            .scrollPosition($queuePosition)
+            .onScrollPhaseChange { old, _, context in
+              if old == .interacting, context.geometry.contentOffset.y < -Self.threshold {
+                show(queue: false)
+              }
+            }
+            .frame(height: page)
           }
         }
+        .offset(y: (showsQueue ? -page : 0) - drag)
+        .frame(height: page, alignment: .top)
+        .ignoresSafeArea()
+        #if DEBUG
+          .task { await runDebugUpNext { show(queue: true) } }
+        #endif
       }
-      .ignoresSafeArea()
-      .scrollIndicators(.hidden)
-      .scrollPosition($position)
-      .scrollTargetBehavior(PagerSnap(page: page, start: dragStart))
-      .onScrollPhaseChange { old, phase, context in
-        let offset = context.geometry.contentOffset.y
-        if phase == .interacting { dragStart = offset }
-        // Pulled down past the top of the player, as a sheet is dismissed.
-        if old == .interacting, offset < -PagerSnap.threshold { dismiss() }
-      }
-      .onScrollGeometryChange(for: Bool.self) {
-        (PagerSnap.threshold..<page).contains($0.contentOffset.y)
-      } action: {
-        isPastPeek = $1
-      }
-      #if DEBUG
-        .task { await runDebugUpNext { scroll(to: page) } }
-      #endif
-      // Keeps the queue's rows from running under the status bar.
-      .overlay(alignment: .top) {
+    }
+    // Keeps the queue's rows from running under the status bar.
+    .overlay(alignment: .top) {
+      GeometryReader { proxy in
         LinearGradient(
           colors: [backdropTop, backdropTop.opacity(0)], startPoint: .top, endPoint: .bottom
         )
-        .frame(height: insets.top + 8)
+        .frame(height: proxy.safeAreaInsets.top + 8)
         .ignoresSafeArea()
-        .allowsHitTesting(false)
       }
+      .allowsHitTesting(false)
     }
     .background {
       LinearGradient(
@@ -84,8 +92,10 @@ struct NowPlayingView: View {
       )
       .ignoresSafeArea()
     }
-    // The tabs' toast sits under this cover.
+    // The tabs' toast and tour sit under this cover. A step of the tabs shows
+    // here too while something else opened the cover, not while it closes.
     .toastOverlay(app.toast, bottom: 24)
+    .tourOverlay(app.tour.flatMap { $0.isOnNowPlaying || app.isNowPlayingPresented ? $0 : nil })
     .task(id: albumId) { hue = await CoverTint.hue(albumId: albumId, url: player.coverArt) }
     .onChange(of: player.hasNowPlaying(), initial: true) { _, playing in
       if !playing { dismiss() }
@@ -94,28 +104,37 @@ struct NowPlayingView: View {
 
   private var backdropTop: Color { shades?.background ?? palette.surface }
 
-  private func scroll(to y: CGFloat) {
-    withAnimation(.smooth(duration: 0.5)) { position.scrollTo(y: y) }
+  /// Up toward the queue, down to close; the scrubber's own drag wins on it.
+  private var playerDrag: some Gesture {
+    DragGesture(minimumDistance: 10)
+      .updating($drag) { value, drag, _ in drag = damped(value) }
+      .onEnded { value in
+        let pulled = damped(value)
+        if pulled > Self.threshold, !player.isLiveRadio {
+          show(queue: true)
+        } else if pulled < -Self.threshold {
+          dismiss()
+        }
+      }
   }
-}
 
-/// Between the player at 0 and the queue's top at `page` a released drag
-/// snaps to one of them, to the other page once it went `threshold` past the
-/// one it started on. Further down the queue scrolls freely, and a fling up
-/// from there stops at its top.
-private struct PagerSnap: ScrollTargetBehavior {
-  static let threshold: CGFloat = 70
+  private func damped(_ value: DragGesture.Value) -> CGFloat {
+    let travel = -value.translation.height
+    // A station has no queue: the pull up only gives.
+    return Self.rubberBand(player.isLiveRadio ? min(travel, 0) : travel)
+  }
 
-  let page: CGFloat
-  let start: CGFloat
+  private func show(queue: Bool) {
+    withAnimation(.smooth(duration: 0.5)) { showsQueue = queue }
+    if !queue { queuePosition.scrollTo(edge: .top) }
+  }
 
-  func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
-    let y = target.rect.minY
-    guard y < page else { return }
-    let fromPlayer = start < page / 2
-    let toQueue =
-      if fromPlayer { y > Self.threshold } else { start > page + 1 || y > page - Self.threshold }
-    target.rect.origin.y = toQueue ? page : 0
+  /// The design's resistance: the farther the finger, the less the player
+  /// follows, up to 320 pt. 0.55 is the system's own overscroll factor.
+  static func rubberBand(_ travel: CGFloat) -> CGFloat {
+    let limit: CGFloat = 320
+    let damped = (1 - 1 / (abs(travel) * 0.55 / limit + 1)) * limit
+    return travel < 0 ? -damped : damped
   }
 }
 
@@ -232,6 +251,7 @@ private struct PlayerPage: View {
       .padding(.vertical, 9)
       .padding(.horizontal, 12)
       .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .tourAnchor(.why)
       .padding(.top, -6)
   }
 
@@ -310,6 +330,7 @@ private struct PlayerPage: View {
     }
     .padding(.top, 4)
     .padding(.bottom, 6)
+    .tourAnchor(.rate)
   }
 
   /// Tapping the current rating again clears it.
@@ -342,6 +363,7 @@ private struct PlayerPage: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .tourAnchor(.peek)
   }
 
   private var nextUp: String {

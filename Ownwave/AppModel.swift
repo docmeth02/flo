@@ -7,7 +7,7 @@ import SwiftUI
 
 /// Owns the view models for the app's whole life, so intents and widgets can
 /// reach the player without a view, and the state every screen shares: the
-/// Now Playing cover and the toast.
+/// Now Playing cover, the toast and the first-run tour.
 @MainActor
 final class AppModel: ObservableObject {
   static let shared = AppModel()
@@ -19,6 +19,9 @@ final class AppModel: ObservableObject {
 
   @Published var isNowPlayingPresented = false
   @Published private(set) var toast: Toast?
+  /// The first-run tour's step on screen; nil while no tour runs. The tabs
+  /// take the tour to each step's screen.
+  @Published var tour: TourStep?
 
   struct Toast: Identifiable, Equatable {
     let id = UUID()
@@ -30,7 +33,13 @@ final class AppModel: ObservableObject {
 
   private var toastDismissal: Task<Void, Never>?
 
-  private init() {}
+  private init() {
+    // A logout ends a tour; `tourSeen` is only set at its end, so it starts
+    // over after the next login instead of halfway.
+    NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
+      Task { @MainActor in AppModel.shared.tour = nil }
+    }
+  }
 
   /// Shows `text` at the bottom for a few seconds, with Undo when given.
   func show(_ text: String, undo: (() -> Void)? = nil) {
