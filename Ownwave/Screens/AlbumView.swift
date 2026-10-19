@@ -275,8 +275,6 @@ private struct TrackRow: View {
     }
     .frame(minHeight: 52)
     .contentShape(Rectangle())
-    .onTapGesture(perform: play)
-    .accessibilityAddTraits(.isButton)
-    .itemMenu(menu)
+    .songActions(menu, play: play)
   }
 }

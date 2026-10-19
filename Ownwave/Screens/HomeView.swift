@@ -146,16 +146,13 @@ struct HomeView: View {
         .padding(.trailing, 4)
         VStack(spacing: 8) {
           ForEach(Array(songs.prefix(3).enumerated()), id: \.element.id) { index, song in
-            ItemRow(
-              art: .cover(albumId: song.albumId), title: song.title, subtitle: song.artist,
-              isPlaying: player.isCurrent(song), artSize: 44
-            ) {
+            let menu = MenuTarget.song(
+              song, context: SongCollection.Name.liked, isFromPlaylist: false)
+            SongRow(song: song, menu: menu, onCard: true) {
+              app.play(SongCollection.liked(songs), startingAt: index)
+            } trailing: {
               Image(systemName: "heart.fill").foregroundStyle(Color.floLiked)
             }
-            .card()
-            .onTapGesture { app.play(SongCollection.liked(songs), startingAt: index) }
-            .accessibilityAddTraits(.isButton)
-            .itemMenu(.song(song, context: SongCollection.Name.liked, isFromPlaylist: false))
           }
         }
       }

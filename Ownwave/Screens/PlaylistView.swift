@@ -9,7 +9,6 @@ struct PlaylistView: View {
   let playlist: Playlist
 
   @EnvironmentObject private var app: AppModel
-  @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @Environment(\.palette) private var palette
 
@@ -52,15 +51,11 @@ struct PlaylistView: View {
             // A playlist can hold a song twice.
             ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
               let menu = MenuTarget.song(song, context: playlist.name, isFromPlaylist: true)
-              ItemRow(
-                art: .cover(albumId: song.albumId), title: song.title, subtitle: song.artist,
-                isPlaying: player.isCurrent(song), artSize: 44
-              ) {
+              SongRow(song: song, menu: menu) {
+                app.play(Album(from: displayPlaylist), startingAt: index)
+              } trailing: {
                 ItemMenuButton(target: menu)
               }
-              .onTapGesture { app.play(Album(from: displayPlaylist), startingAt: index) }
-              .accessibilityAddTraits(.isButton)
-              .itemMenu(menu)
             }
           }
         }

@@ -184,17 +184,15 @@ struct LibraryView: View {
       }
       LazyVStack(spacing: 8) {
         ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-          ItemRow(
-            art: .cover(albumId: song.albumId), title: song.title,
-            subtitle: "\(song.artist) · song",
-            isPlaying: player.isCurrent(song), artSize: 46
+          let menu = MenuTarget.song(
+            song, context: SongCollection.Name.liked, isFromPlaylist: false)
+          SongRow(
+            song: song, menu: menu, subtitle: "\(song.artist) · song", artSize: 46, onCard: true
           ) {
+            app.play(SongCollection.liked(songs), startingAt: index)
+          } trailing: {
             heart
           }
-          .card()
-          .onTapGesture { app.play(SongCollection.liked(songs), startingAt: index) }
-          .accessibilityAddTraits(.isButton)
-          .itemMenu(.song(song, context: SongCollection.Name.liked, isFromPlaylist: false))
         }
         ForEach(albums) { album in
           NavigationLink(value: Route.album(album)) {
@@ -394,23 +392,19 @@ private struct CachedSongsView: View {
   let songs: [Song]
 
   @EnvironmentObject private var app: AppModel
-  @EnvironmentObject private var player: PlayerViewModel
   @Environment(\.palette) private var palette
 
   var body: some View {
     ScrollView {
       Platter {
         ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-          ItemRow(
-            art: .cover(albumId: song.albumId), title: song.title, subtitle: song.artist,
-            isPlaying: player.isCurrent(song), artSize: 44
-          ) {
-            ItemMenuButton(
-              target: .song(song, context: SongCollection.Name.cached, isFromPlaylist: false))
+          let menu = MenuTarget.song(
+            song, context: SongCollection.Name.cached, isFromPlaylist: false)
+          SongRow(song: song, menu: menu) {
+            app.play(SongCollection.cached(songs), startingAt: index)
+          } trailing: {
+            ItemMenuButton(target: menu)
           }
-          .onTapGesture { app.play(SongCollection.cached(songs), startingAt: index) }
-          .accessibilityAddTraits(.isButton)
-          .itemMenu(.song(song, context: SongCollection.Name.cached, isFromPlaylist: false))
         }
       }
       .padding(16)

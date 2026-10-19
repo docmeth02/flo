@@ -107,19 +107,13 @@ struct ArtistView: View {
       Platter {
         ForEach(Array(topSongs.enumerated()), id: \.element.id) { index, song in
           let menu = MenuTarget.song(song, context: artist.name, isFromPlaylist: false)
-          ItemRow(
-            art: .cover(albumId: song.albumId), title: song.title, subtitle: song.albumName,
-            isPlaying: player.isCurrent(song), artSize: 40
-          ) {
-            ItemMenuButton(target: menu)
-          }
-          .onTapGesture {
+          SongRow(song: song, menu: menu, subtitle: song.albumName, artSize: 40) {
             app.play(
               SongCollection.artist(id: artist.id, name: artist.name, songs: topSongs),
               startingAt: index)
+          } trailing: {
+            ItemMenuButton(target: menu)
           }
-          .accessibilityAddTraits(.isButton)
-          .itemMenu(menu)
         }
       }
     }

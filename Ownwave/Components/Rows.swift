@@ -59,6 +59,43 @@ extension ItemRow where Trailing == EmptyView {
   }
 }
 
+/// A song with its cover, and the artist under it unless `subtitle` says
+/// otherwise. A row on a card of its own takes the card along, so the card
+/// is tappable and shows in the menu's preview.
+struct SongRow<Trailing: View>: View {
+  let song: Song
+  let menu: MenuTarget
+  var subtitle: String?
+  var artSize: CGFloat = 44
+  var onCard = false
+  let play: () -> Void
+  @ViewBuilder var trailing: Trailing
+
+  @EnvironmentObject private var player: PlayerViewModel
+
+  var body: some View {
+    let row = ItemRow(
+      art: .cover(albumId: song.albumId), title: song.title, subtitle: subtitle ?? song.artist,
+      isPlaying: player.isCurrent(song), artSize: artSize
+    ) {
+      trailing
+    }
+    Group {
+      if onCard { row.card() } else { row }
+    }
+    .songActions(menu, play: play)
+  }
+}
+
+extension View {
+  /// A song row's actions: a tap plays, a long press opens the item menu.
+  func songActions(_ menu: MenuTarget, play: @escaping () -> Void) -> some View {
+    onTapGesture(perform: play)
+      .accessibilityAddTraits(.isButton)
+      .itemMenu(menu)
+  }
+}
+
 /// Rows on one platter with hairlines between them, as the design groups
 /// lists.
 struct Platter<Content: View>: View {
