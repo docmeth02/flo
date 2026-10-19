@@ -508,7 +508,7 @@ class PlayerViewModel: ObservableObject {
     AppPlatform.activateAudio { [weak self] success, error in
       // The callback may arrive off-main; playGeneration is only read or written
       // on the main queue.
-      DispatchQueue.main.async {
+      Task { @MainActor in
         guard let self = self else { return }
         RequestLog.shared.note(
           "audio activated \(gen) success=\(success) current=\(self.playGeneration)"
@@ -791,11 +791,10 @@ class PlayerViewModel: ObservableObject {
     self.isShuffling.toggle()
 
     if self.isShuffling {
-      // Save original order and current song
       self.unshuffledQueue = self.queue
       let currentSong = self.queue[self.activeQueueIdx]
 
-      // Shuffle remaining tracks, keep current song at position 0
+      // The song playing leads the shuffled order and plays on.
       var remaining = self.queue
       remaining.remove(at: self.activeQueueIdx)
       remaining.shuffle()

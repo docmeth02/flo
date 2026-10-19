@@ -65,7 +65,7 @@ extension PlayerViewModel {
   /// Publishes the current song's cover for the player, and its title,
   /// artist, duration and artwork for the system's Now Playing.
   func publishNowPlaying(title: String, artist: String, duration: Double) {
-    // Set title/artist/duration immediately so Now Playing is never empty
+    // The text goes out at once; the artwork may have to be fetched.
     var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
     nowPlayingInfo[MPMediaItemPropertyTitle] = title
     nowPlayingInfo[MPMediaItemPropertyArtist] = artist
@@ -122,45 +122,41 @@ extension PlayerViewModel {
 
     // Remote commands can arrive off the main thread; every handler hops to
     // main before touching playback or published state.
-    commandCenter.playCommand.isEnabled = true
-    commandCenter.playCommand.addTarget { [weak self] event in
+    commandCenter.playCommand.addTarget { [weak self] _ in
       guard let self = self else { return .commandFailed }
-      DispatchQueue.main.async {
+      Task { @MainActor in
         RequestLog.shared.note("audio remote play playing=\(self.isPlaying)")
         self.play()
       }
       return .success
     }
 
-    commandCenter.pauseCommand.addTarget { [weak self] event in
+    commandCenter.pauseCommand.addTarget { [weak self] _ in
       guard let self = self else { return .commandFailed }
-      DispatchQueue.main.async {
+      Task { @MainActor in
         RequestLog.shared.note("audio remote pause playing=\(self.isPlaying)")
         self.pause()
       }
       return .success
     }
 
-    commandCenter.nextTrackCommand.isEnabled = true
-    commandCenter.nextTrackCommand.addTarget { [weak self] event in
+    commandCenter.nextTrackCommand.addTarget { [weak self] _ in
       guard let self = self else { return .commandFailed }
-      DispatchQueue.main.async { self.nextSong(userInitiated: true) }
+      Task { @MainActor in self.nextSong(userInitiated: true) }
       return .success
     }
 
-    commandCenter.previousTrackCommand.isEnabled = true
-    commandCenter.previousTrackCommand.addTarget { [weak self] event in
+    commandCenter.previousTrackCommand.addTarget { [weak self] _ in
       guard let self = self else { return .commandFailed }
-      DispatchQueue.main.async { self.prevSong() }
+      Task { @MainActor in self.prevSong() }
       return .success
     }
 
-    commandCenter.changePlaybackPositionCommand.isEnabled = true
     commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
       guard let self = self, let event = event as? MPChangePlaybackPositionCommandEvent
       else { return .commandFailed }
       let positionTime = event.positionTime
-      DispatchQueue.main.async {
+      Task { @MainActor in
         guard !self.isLiveRadio, self.totalDuration > 0 else { return }
         self.seek(to: positionTime / self.totalDuration)
       }
@@ -192,7 +188,7 @@ extension PlayerViewModel {
     }
   }
 
-  /// Rates the now playing song from the rating dialog or the remote like
+  /// Rates the now playing song, from the player's stars or the remote like
   /// and dislike; 0 clears the rating.
   @MainActor func rateNowPlaying(_ rating: Int) {
     guard hasNowPlaying(), !isLiveRadio else { return }
