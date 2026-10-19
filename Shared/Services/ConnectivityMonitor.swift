@@ -10,7 +10,10 @@ import Foundation
 /// while audio is streaming; outside of that a path monitor stays unsatisfied
 /// even with a working connection. Connectivity is therefore judged by plain
 /// HTTP requests to the server, which every app may make.
-final class ConnectivityMonitor: ObservableObject {
+///
+/// Its state lives on the main queue; the methods callable from any thread
+/// hop there, hence `@unchecked Sendable`.
+final class ConnectivityMonitor: ObservableObject, @unchecked Sendable {
   static let shared = ConnectivityMonitor()
 
   @Published private(set) var isOnline: Bool = true
