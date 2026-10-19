@@ -227,19 +227,14 @@ class PlayerViewModel: ObservableObject {
       self.progress = UserDefaultsManager.nowPlayingProgress
       self.playbackMode = UserDefaultsManager.playbackMode
       // A queue shuffled in the player goes on in the order it was heard in;
-      // the stored queue keeps the original order. Read before addToQueue
-      // forgets it.
+      // the stored queue keeps the original order.
       let order = (UserDefaults.standard.array(forKey: Self.shuffleOrderKey) as? [Int])
         .flatMap { $0.sorted() == Array(lastPlayData.indices) ? $0 : nil }
-      self.addToQueue(
-        idx: order?.firstIndex(of: queueActiveIdx) ?? queueActiveIdx,
-        item: order?.map { lastPlayData[$0] } ?? lastPlayData, playAudio: false)
-      if order != nil {
-        self.unshuffledQueue = lastPlayData
-        self.isShuffling = true
-        self.persistActiveIndex()
-        self.persistShuffleOrder()
-      }
+      self.replaceQueue(
+        order?.map { lastPlayData[$0] } ?? lastPlayData,
+        at: order?.firstIndex(of: queueActiveIdx) ?? queueActiveIdx,
+        unshuffled: order == nil ? [] : lastPlayData)
+      self.setNowPlaying(playAudio: false)
       // A song that already counted must not count again after a relaunch,
       // and one that did not yet keeps the listening time it had.
       self.hasQualified = UserDefaultsManager.nowPlayingQualified
@@ -303,15 +298,21 @@ class PlayerViewModel: ObservableObject {
     }
   }
 
-  func addToQueue(idx: Int, item: [QueueEntity], playAudio: Bool = true) {
-    // A new queue starts unshuffled; the saved order belongs to the old one.
-    self.isShuffling = false
-    self.unshuffledQueue = []
-    self.persistShuffleOrder()
-    self.consecutiveFailures = 0
-    self.activeQueueIdx = idx
-    self.queue = item
-    self.setNowPlaying(playAudio: playAudio)
+  func addToQueue(idx: Int, item: [QueueEntity]) {
+    replaceQueue(item, at: idx)
+    setNowPlaying()
+  }
+
+  /// Takes `items` as the queue in play order. A new queue starts unshuffled,
+  /// since a saved order belongs to the old one; only a restored one passes
+  /// its stored order as `unshuffled`.
+  func replaceQueue(_ items: [QueueEntity], at idx: Int, unshuffled: [QueueEntity] = []) {
+    isShuffling = !unshuffled.isEmpty
+    unshuffledQueue = unshuffled
+    consecutiveFailures = 0
+    activeQueueIdx = idx
+    queue = items
+    persistShuffleOrder()
   }
 
   func hasNowPlaying() -> Bool {

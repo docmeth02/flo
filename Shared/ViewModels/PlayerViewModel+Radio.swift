@@ -35,8 +35,7 @@ extension PlayerViewModel {
     let queue = PlaybackService.shared.addToQueue(item: item)
     guard !queue.isEmpty else { return false }
 
-    self.activeQueueIdx = 0
-    self.queue = queue
+    replaceQueue(queue, at: 0)
     self.hasQualified = false
 
     // A queued end notification from the previous track must not advance the
