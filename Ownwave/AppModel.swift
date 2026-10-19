@@ -79,8 +79,11 @@ final class AppModel: ObservableObject {
   /// Downloads the songs of an album the phone does not have yet.
   func download(_ album: Album) {
     var album = album
+    let account = AuthService.shared.accountKey
     Task {
       album.songs = await songs(of: album)
+      // A logout meanwhile: these are the previous account's songs.
+      guard AuthService.shared.accountKey == account else { return }
       guard !album.songs.isEmpty else { return show("Not available offline") }
       let onPhone = AlbumService.shared.downloadedMediaFileIds(collectionId: album.id)
       guard album.songs.contains(where: { !onPhone.contains($0.playbackID) }) else {
