@@ -18,6 +18,8 @@ struct AlbumView: View {
 
   @State private var songs: [Song] = []
   @State private var isLoaded = false
+  /// Bumped by a removed download, which loads the screen again.
+  @State private var reloads = 0
   @State private var shades: CoverShades?
   @State private var downloadedIds: Set<String> = []
 
@@ -77,7 +79,7 @@ struct AlbumView: View {
     // Once: a return from a screen pushed on top keeps the loaded tracks,
     // also offline. A load cut short by that push or left empty runs again,
     // and so does one after a removed download.
-    .task(id: isLoaded) {
+    .task(id: reloads) {
       guard !isLoaded else { return }
       for await songs in albumViewModel.loadSongs(of: album) { self.songs = songs }
       isLoaded = !Task.isCancelled && !songs.isEmpty
@@ -172,7 +174,10 @@ struct AlbumView: View {
     case .done:
       Menu {
         Button("Remove Download", systemImage: "trash", role: .destructive) {
-          albumViewModel.removeDownload(id: album.id) { isLoaded = false }
+          albumViewModel.removeDownload(id: album.id) {
+            isLoaded = false
+            reloads += 1
+          }
           refreshDownloadState()
         }
       } label: {

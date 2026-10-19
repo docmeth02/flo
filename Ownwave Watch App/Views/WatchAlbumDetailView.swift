@@ -13,6 +13,8 @@ struct WatchAlbumDetailView: View {
 
   @State private var songs: [Song] = []
   @State private var isLoaded = false
+  /// Bumped by a removed download, which loads the screen again.
+  @State private var reloads = 0
   @State private var tint: Color = .floLilac
 
   /// The album with the tracks shown, as the player and downloads take it.
@@ -41,7 +43,12 @@ struct WatchAlbumDetailView: View {
       trackNumber: { _, song in song.trackNumber },
       playable: { loadedAlbum },
       onDownload: { downloads.enqueue(loadedAlbum) },
-      onRemove: { albumViewModel.removeDownload(id: album.id) { isLoaded = false } }
+      onRemove: {
+        albumViewModel.removeDownload(id: album.id) {
+          isLoaded = false
+          reloads += 1
+        }
+      }
     ) {
       Spacer().frame(height: 58)
     }
@@ -50,7 +57,7 @@ struct WatchAlbumDetailView: View {
     // Once: a return from a screen pushed on top keeps the loaded tracks,
     // also offline. A load cut short by that push or left empty runs again,
     // and so does one after a removed download.
-    .task(id: isLoaded) {
+    .task(id: reloads) {
       guard !isLoaded else { return }
       for await songs in albumViewModel.loadSongs(of: album) { self.songs = songs }
       isLoaded = !Task.isCancelled && !songs.isEmpty

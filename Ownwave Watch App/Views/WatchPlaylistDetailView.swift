@@ -13,6 +13,8 @@ struct WatchPlaylistDetailView: View {
 
   @State private var songs: [Song] = []
   @State private var isLoaded = false
+  /// Bumped by a removed download, which loads the screen again.
+  @State private var reloads = 0
 
   /// The playlist with the songs shown, as the player and downloads take it.
   private var loadedPlaylist: Playlist {
@@ -36,7 +38,12 @@ struct WatchPlaylistDetailView: View {
       trackNumber: { index, _ in index + 1 },
       playable: { Album(from: loadedPlaylist) },
       onDownload: { downloads.enqueue(loadedPlaylist) },
-      onRemove: { albumViewModel.removeDownload(id: playlist.id) { isLoaded = false } }
+      onRemove: {
+        albumViewModel.removeDownload(id: playlist.id) {
+          isLoaded = false
+          reloads += 1
+        }
+      }
     ) {
       Image(systemName: "music.note.list")
         .font(.system(size: 34))
@@ -49,7 +56,7 @@ struct WatchPlaylistDetailView: View {
         .padding(.bottom, 6)
     }
     // Once, as an album.
-    .task(id: isLoaded) {
+    .task(id: reloads) {
       guard !isLoaded else { return }
       for await songs in albumViewModel.loadSongs(of: playlist) { self.songs = songs }
       isLoaded = !Task.isCancelled && !songs.isEmpty
