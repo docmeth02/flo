@@ -12,7 +12,7 @@ class CoverArtCacheManager {
   private let cacheDirectory: URL?
   private var inFlightIds: Set<String> = []
   private var waiters: [String: [(String?) -> Void]] = [:]
-  private let syncQueue = DispatchQueue(label: "net.faultables.flo.coverartcache")
+  private let syncQueue = DispatchQueue(label: "flo.coverartcache")
 
   private init() {
     self.cacheDirectory =

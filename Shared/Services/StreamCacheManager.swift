@@ -28,7 +28,7 @@ class StreamCacheManager {
 
   private let fileManager = FileManager.default
   private let cacheDirectory: URL?
-  private let syncQueue = DispatchQueue(label: "net.faultables.flo.streamcache")
+  private let syncQueue = DispatchQueue(label: "flo.streamcache")
   private var inFlightDownloads: [String: DownloadRequest] = [:]
   private var inFlightKeys: Set<String> = []
   private var currentlyPlayingSongId: String?

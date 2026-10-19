@@ -251,5 +251,5 @@ final class ConnectivityMonitor: ObservableObject {
 }
 
 extension Notification.Name {
-  static let networkBecameOnline = Notification.Name("net.faultables.flo.networkBecameOnline")
+  static let networkBecameOnline = Notification.Name("flo.networkBecameOnline")
 }
