@@ -80,7 +80,9 @@ import WidgetKit
     Task {
       let missing = albums.filter(Self.coverMissing)
       for albumId in missing { await Self.writeCover(albumId) }
-      guard generation == self.generation, AppModel.shared.auth.isLoggedIn else { return }
+      // A logout during the writes leaves none of the account's covers.
+      guard AppModel.shared.auth.isLoggedIn else { return Self.removeAllCovers() }
+      guard generation == self.generation else { return }
       Self.removeCovers(except: Set(albums))
       snapshot.save()
       // Covers that came only now need their widgets redrawn too.
@@ -91,9 +93,9 @@ import WidgetKit
 
   /// Signed out: the widgets say so, and the account's covers go.
   private func clear() {
+    Self.removeAllCovers()
     let empty = WidgetSnapshot()
     guard last != empty else { return }
-    if let covers = WidgetSnapshot.coversFolder { try? FileManager.default.removeItem(at: covers) }
     empty.save()
     reload(from: last, to: empty)
     last = empty
@@ -112,6 +114,10 @@ import WidgetKit
     if signedIn || old.recent != new.recent {
       center.reloadTimelines(ofKind: WidgetSnapshot.Kind.recentlyPlayed)
     }
+  }
+
+  private static func removeAllCovers() {
+    if let covers = WidgetSnapshot.coversFolder { try? FileManager.default.removeItem(at: covers) }
   }
 
   /// Covers no widget shows any more only take room in the App Group.

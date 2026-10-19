@@ -23,8 +23,10 @@ struct NowPlayingView: View {
 
   @State private var hue: Double?
   @State private var showsQueue = false
-  /// The damped drag on the player; positive toward the queue.
-  @State private var drag: CGFloat = 0
+  /// The damped drag on the player; positive toward the queue. A gesture
+  /// state, so an interrupted pull (the phone locked mid-drag) springs back.
+  @GestureState(resetTransaction: Transaction(animation: .spring(duration: 0.4)))
+  private var drag: CGFloat = 0
   @State private var queuePosition = ScrollPosition(edge: .top)
 
   // nowPlaying indexes the queue, which can be empty here.
@@ -105,27 +107,25 @@ struct NowPlayingView: View {
   /// Up toward the queue, down to close; the scrubber's own drag wins on it.
   private var playerDrag: some Gesture {
     DragGesture(minimumDistance: 10)
-      .onChanged { value in
-        let travel = -value.translation.height
-        // A station has no queue: the pull up only gives.
-        drag = Self.rubberBand(player.isLiveRadio ? min(travel, 0) : travel)
-      }
-      .onEnded { _ in
-        if drag > Self.threshold, !player.isLiveRadio {
+      .updating($drag) { value, drag, _ in drag = damped(value) }
+      .onEnded { value in
+        let pulled = damped(value)
+        if pulled > Self.threshold, !player.isLiveRadio {
           show(queue: true)
-        } else if drag < -Self.threshold {
+        } else if pulled < -Self.threshold {
           dismiss()
-        } else {
-          withAnimation(.spring(duration: 0.4)) { drag = 0 }
         }
       }
   }
 
+  private func damped(_ value: DragGesture.Value) -> CGFloat {
+    let travel = -value.translation.height
+    // A station has no queue: the pull up only gives.
+    return Self.rubberBand(player.isLiveRadio ? min(travel, 0) : travel)
+  }
+
   private func show(queue: Bool) {
-    withAnimation(.smooth(duration: 0.5)) {
-      showsQueue = queue
-      drag = 0
-    }
+    withAnimation(.smooth(duration: 0.5)) { showsQueue = queue }
     if !queue { queuePosition.scrollTo(edge: .top) }
   }
 
