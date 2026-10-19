@@ -32,12 +32,10 @@ struct WatchLoginView: View {
         }
         .padding(.horizontal, 8)
       }
-      .alert(isPresented: $viewModel.showAlert) {
-        Alert(
-          title: Text("Login Failed"),
-          message: Text(viewModel.alertMessage),
-          dismissButton: .default(Text("OK"))
-        )
+      .alert("Login Failed", isPresented: $viewModel.showAlert) {
+        Button("OK") {}
+      } message: {
+        Text(viewModel.alertMessage)
       }
     }
   }
