@@ -77,10 +77,8 @@ struct ArtistView: View {
           let songs = await radio.fetchArtistRadio(artist: artist)
           if songs.isEmpty {
             showsRadioError = true
-          } else if player.playItem(
-            item: SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs))
-          {
-            app.isNowPlayingPresented = true
+          } else {
+            app.play(SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs))
           }
         }
       } label: {
@@ -94,11 +92,7 @@ struct ArtistView: View {
       // Top songs online, else the artist's songs on the phone, as Siri plays
       // an artist.
       Button {
-        Task {
-          if await player.playArtist(id: artist.id, name: artist.name) {
-            app.isNowPlayingPresented = true
-          }
-        }
+        Task { await app.playArtist(id: artist.id, name: artist.name) }
       } label: {
         Label("Top Songs", systemImage: "music.note.list").foregroundStyle(palette.accent)
       }
@@ -120,10 +114,9 @@ struct ArtistView: View {
             ItemMenuButton(target: menu)
           }
           .onTapGesture {
-            let playable = SongCollection.artist(id: artist.id, name: artist.name, songs: topSongs)
-            if player.playItem(item: playable, startingAt: index) {
-              app.isNowPlayingPresented = true
-            }
+            app.play(
+              SongCollection.artist(id: artist.id, name: artist.name, songs: topSongs),
+              startingAt: index)
           }
           .accessibilityAddTraits(.isButton)
           .itemMenu(menu)

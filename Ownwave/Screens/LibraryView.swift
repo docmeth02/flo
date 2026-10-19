@@ -169,17 +169,13 @@ struct LibraryView: View {
       if !songs.isEmpty {
         HStack(spacing: 10) {
           Button {
-            if player.playItem(item: SongCollection.liked(songs)) {
-              app.isNowPlayingPresented = true
-            }
+            app.play(SongCollection.liked(songs))
           } label: {
             Label("Play", systemImage: "play.fill")
           }
           .buttonStyle(FillButtonStyle(height: 50))
           Button {
-            if player.shuffleItem(item: SongCollection.liked(songs)) {
-              app.isNowPlayingPresented = true
-            }
+            app.shuffle(SongCollection.liked(songs))
           } label: {
             Label("Shuffle", systemImage: "shuffle").foregroundStyle(palette.accent)
           }
@@ -196,11 +192,7 @@ struct LibraryView: View {
             heart
           }
           .card()
-          .onTapGesture {
-            if player.playItem(item: SongCollection.liked(songs), startingAt: index) {
-              app.isNowPlayingPresented = true
-            }
-          }
+          .onTapGesture { app.play(SongCollection.liked(songs), startingAt: index) }
           .accessibilityAddTraits(.isButton)
           .itemMenu(.song(song, context: SongCollection.Name.liked, isFromPlaylist: false))
         }
@@ -416,10 +408,7 @@ private struct CachedSongsView: View {
             ItemMenuButton(
               target: .song(song, context: SongCollection.Name.cached, isFromPlaylist: false))
           }
-          .onTapGesture {
-            let cached = SongCollection.cached(songs)
-            if player.playItem(item: cached, startingAt: index) { app.isNowPlayingPresented = true }
-          }
+          .onTapGesture { app.play(SongCollection.cached(songs), startingAt: index) }
           .accessibilityAddTraits(.isButton)
           .itemMenu(.song(song, context: SongCollection.Name.cached, isFromPlaylist: false))
         }

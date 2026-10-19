@@ -185,8 +185,7 @@ struct SearchView: View {
       if case .song(let song, _, _) = target {
         Button {
           remember(query)
-          let search = SongCollection.search(song)
-          if player.playItem(item: search) { app.isNowPlayingPresented = true }
+          app.play(SongCollection.search(song))
         } label: {
           label
         }

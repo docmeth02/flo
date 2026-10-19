@@ -35,17 +35,13 @@ struct PlaylistView: View {
         }
         HStack(spacing: 10) {
           Button {
-            if player.playItem(item: Album(from: displayPlaylist)) {
-              app.isNowPlayingPresented = true
-            }
+            app.play(Album(from: displayPlaylist))
           } label: {
             Label("Play", systemImage: "play.fill")
           }
           .buttonStyle(FillButtonStyle())
           Button {
-            if player.shuffleItem(item: Album(from: displayPlaylist)) {
-              app.isNowPlayingPresented = true
-            }
+            app.shuffle(Album(from: displayPlaylist))
           } label: {
             Label("Shuffle", systemImage: "shuffle").foregroundStyle(palette.accent)
           }
@@ -62,11 +58,7 @@ struct PlaylistView: View {
               ) {
                 ItemMenuButton(target: menu)
               }
-              .onTapGesture {
-                if player.playItem(item: Album(from: displayPlaylist), startingAt: index) {
-                  app.isNowPlayingPresented = true
-                }
-              }
+              .onTapGesture { app.play(Album(from: displayPlaylist), startingAt: index) }
               .accessibilityAddTraits(.isButton)
               .itemMenu(menu)
             }

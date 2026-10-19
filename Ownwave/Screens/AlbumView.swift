@@ -109,13 +109,13 @@ struct AlbumView: View {
   private var buttons: some View {
     HStack(spacing: 10) {
       Button {
-        if player.playItem(item: displayAlbum) { app.isNowPlayingPresented = true }
+        app.play(displayAlbum)
       } label: {
         Label("Play", systemImage: "play.fill")
       }
       .buttonStyle(FillButtonStyle(tint: tint))
       Button {
-        if player.shuffleItem(item: displayAlbum) { app.isNowPlayingPresented = true }
+        app.shuffle(displayAlbum)
       } label: {
         Label("Shuffle", systemImage: "shuffle").foregroundStyle(palette.accent)
       }
@@ -224,9 +224,7 @@ struct AlbumView: View {
             number: song.trackNumber, song: song, tint: tint,
             menu: .song(song, context: album.name, isFromPlaylist: false)
           ) {
-            if player.playItem(item: displayAlbum, startingAt: index) {
-              app.isNowPlayingPresented = true
-            }
+            app.play(displayAlbum, startingAt: index)
           }
         }
       }

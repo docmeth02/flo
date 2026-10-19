@@ -95,8 +95,29 @@ final class AppModel: ObservableObject {
     }
   }
 
-  /// Plays a station and shows the player; a station is a live stream, so
-  /// nothing plays while streaming is off on cellular.
+  // MARK: - Playing
+
+  // Each shows the player once something plays.
+
+  func play(_ item: some Playable, startingAt index: Int = 0) {
+    if player.playItem(item: item, startingAt: index) { isNowPlayingPresented = true }
+  }
+
+  func shuffle(_ item: some Playable) {
+    if player.shuffleItem(item: item) { isNowPlayingPresented = true }
+  }
+
+  func playSomething() async {
+    if await player.playSomething() { isNowPlayingPresented = true }
+  }
+
+  /// Top songs online, else the artist's songs on the phone.
+  func playArtist(id: String, name: String) async {
+    if await player.playArtist(id: id, name: name) { isNowPlayingPresented = true }
+  }
+
+  /// A station is a live stream, so nothing plays while streaming is off on
+  /// cellular.
   func play(_ radio: Radio) {
     guard TranscodingSettings.streamingBitRate != nil else {
       return show("Streaming on cellular is off")
@@ -104,17 +125,15 @@ final class AppModel: ObservableObject {
     if player.playRadioItem(radio: radio) { isNowPlayingPresented = true }
   }
 
-  /// Plays what Siri, Shortcuts or the Action Button asked for and shows the
-  /// player. Logged out, the request is dropped.
+  /// Plays what Siri, Shortcuts or the Action Button asked for. Logged out,
+  /// the request is dropped.
   func takePlayRequest() {
     guard let request = PlayRequest.take(), auth.isLoggedIn else { return }
     Task {
-      let played =
-        switch request {
-        case .something: await player.playSomething()
-        case .artist(let id, let name): await player.playArtist(id: id, name: name)
-        }
-      if played { isNowPlayingPresented = true }
+      switch request {
+      case .something: await playSomething()
+      case .artist(let id, let name): await playArtist(id: id, name: name)
+      }
     }
   }
 }

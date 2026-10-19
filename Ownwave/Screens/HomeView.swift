@@ -87,7 +87,7 @@ struct HomeView: View {
     return VStack(spacing: 0) {
       if hasNowPlaying { NowPlayingCard() }
       Button {
-        Task { if await player.playSomething() { app.isNowPlayingPresented = true } }
+        Task { await app.playSomething() }
       } label: {
         Label(player.isGeneratingMix ? "Building mix…" : "Play Something", systemImage: "sparkles")
       }
@@ -128,18 +128,14 @@ struct HomeView: View {
             .font(.rowSubtitle)
             .foregroundStyle(palette.accent)
           Button {
-            if player.shuffleItem(item: SongCollection.liked(songs)) {
-              app.isNowPlayingPresented = true
-            }
+            app.shuffle(SongCollection.liked(songs))
           } label: {
             Image(systemName: "shuffle")
           }
           .buttonStyle(CircleButtonStyle(size: 36, foreground: palette.accent))
           .accessibilityLabel("Shuffle Liked Songs")
           Button {
-            if player.playItem(item: SongCollection.liked(songs)) {
-              app.isNowPlayingPresented = true
-            }
+            app.play(SongCollection.liked(songs))
           } label: {
             Image(systemName: "play.fill").font(.system(size: 15, weight: .semibold))
           }
@@ -157,11 +153,7 @@ struct HomeView: View {
               Image(systemName: "heart.fill").foregroundStyle(Color.floLiked)
             }
             .card()
-            .onTapGesture {
-              if player.playItem(item: SongCollection.liked(songs), startingAt: index) {
-                app.isNowPlayingPresented = true
-              }
-            }
+            .onTapGesture { app.play(SongCollection.liked(songs), startingAt: index) }
             .accessibilityAddTraits(.isButton)
             .itemMenu(.song(song, context: SongCollection.Name.liked, isFromPlaylist: false))
           }
