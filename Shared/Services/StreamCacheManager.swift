@@ -10,6 +10,22 @@ import Foundation
 class StreamCacheManager {
   static let shared = StreamCacheManager()
 
+  /// A size limit Settings offers for the cache; 0 turns it off.
+  struct Limit {
+    let bytes: Int64
+    let label: String
+  }
+
+  /// The limits Settings offers, up to what the device has room for.
+  static let cacheLimits = [
+    Limit(bytes: 0, label: "Off"),
+    Limit(bytes: 262_144_000, label: "250 MB"),
+    Limit(bytes: 524_288_000, label: "500 MB"),
+    Limit(bytes: 1_073_741_824, label: "1 GB"),
+    Limit(bytes: 2_147_483_648, label: "2 GB"),
+    Limit(bytes: 5_368_709_120, label: "5 GB"),
+  ].filter { $0.bytes <= AppPlatform.largestStreamCache }
+
   private let fileManager = FileManager.default
   private let cacheDirectory: URL?
   private let syncQueue = DispatchQueue(label: "net.faultables.flo.streamcache")

@@ -90,10 +90,7 @@ struct WatchSettingsView: View {
 
       Section {
         Picker("Limit", selection: $selectedCacheSize) {
-          Text("Off").tag(Int64(0))
-          Text("250 MB").tag(Int64(262_144_000))
-          Text("500 MB").tag(Int64(524_288_000))
-          Text("1 GB").tag(Int64(1_073_741_824))
+          ForEach(StreamCacheManager.cacheLimits, id: \.bytes) { Text($0.label).tag($0.bytes) }
         }
         .tint(.floLilac)
         .floRow()
