@@ -35,7 +35,9 @@ struct Wordmark: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    (Text("Own").foregroundStyle(palette.text) + Text("wave").foregroundStyle(palette.accent))
+    let own = Text("Own").foregroundStyle(palette.text)
+    let wave = Text("wave").foregroundStyle(palette.accent)
+    Text("\(own)\(wave)")
       .font(.wordmark)
       .tracking(-0.035 * 26)
   }

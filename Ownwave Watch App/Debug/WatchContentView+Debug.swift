@@ -263,19 +263,19 @@
       guard parts.count == 2 else { return nil }
       switch (parts[0], LikeTarget(rawValue: parts[1]), RateTarget(rawValue: parts[1])) {
       case ("like", let target?, _):
-        var intent = LikeIntent()
+        let intent = LikeIntent()
         intent.target = target
         return await intent.reply()
       case ("unlike", let target?, _):
-        var intent = UnlikeIntent()
+        let intent = UnlikeIntent()
         intent.target = target
         return await intent.reply()
       case ("boost", _, let target?):
-        var intent = BoostIntent()
+        let intent = BoostIntent()
         intent.target = target
         return await intent.reply()
       case ("avoid", _, let target?):
-        var intent = AvoidIntent()
+        let intent = AvoidIntent()
         intent.target = target
         return await intent.reply()
       default:
