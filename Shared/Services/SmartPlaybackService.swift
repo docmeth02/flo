@@ -217,7 +217,7 @@ final class SmartPlaybackService {
   /// keeps, overlaid with StarStore's. A liked album does not like its album
   /// artist, who on a compilation is not the artist of its songs.
   func likedCollections(index: LibraryIndex) async -> (albums: Set<String>, artists: Set<String>) {
-    let liked = await LibraryCacheManager.shared.read {
+    let liked = await LibraryCacheManager.read {
       $0.load(StarredCollections.self, forKey: .starredCollections)
     }
     // StarStore also knows songs; only the library's albums and artists count.
@@ -278,7 +278,7 @@ final class SmartPlaybackService {
   }
 
   func loadCachedLibrary() async -> (songs: [Song], starredIds: Set<String>) {
-    await LibraryCacheManager.shared.read { cache in
+    await LibraryCacheManager.read { cache in
       let songs = cache.load([Song].self, forKey: .songs) ?? []
       let starred = cache.load([Song].self, forKey: .starredSongs) ?? []
       return (songs, Set(starred.map { $0.playbackID }))
@@ -299,8 +299,7 @@ final class SmartPlaybackService {
     {
       return cached.index
     }
-    let (cached, format, artistKeys) = await LibraryCacheManager.shared.read(qos: .utility) {
-      cache in
+    let (cached, format, artistKeys) = await LibraryCacheManager.read(qos: .utility) { cache in
       let songs = cache.load([Song].self, forKey: .songs) ?? []
       let stamp = cache.load(LibraryStamp.self, forKey: .songsStamp)
       let artists = cache.load([Artist].self, forKey: .artists) ?? []
@@ -317,7 +316,7 @@ final class SmartPlaybackService {
       songs = await syncSongLibrary()
       // A failed sync hands back the old cache; plays folded from it would
       // keep missing genres and artist ids for good, so the import waits.
-      let synced = await LibraryCacheManager.shared.read(qos: .utility) {
+      let synced = await LibraryCacheManager.read(qos: .utility) {
         $0.load(LibraryStamp.self, forKey: .songsStamp)?.format == LibraryStamp.currentFormat
       }
       // A stamp can outlive an evicted song cache; an empty library is never
@@ -378,7 +377,7 @@ final class SmartPlaybackService {
   }
 
   private func performSongSync(force: Bool, generation: Int) async -> [Song] {
-    let (cached, cachedStamp) = await LibraryCacheManager.shared.read { cache in
+    let (cached, cachedStamp) = await LibraryCacheManager.read { cache in
       (
         cache.load([Song].self, forKey: .songs) ?? [],
         cache.load(LibraryStamp.self, forKey: .songsStamp)

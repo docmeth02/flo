@@ -43,11 +43,11 @@ class LibraryCacheManager {
 
   /// Runs `body`, which loads from the cache, on a GCD queue, so the
   /// cooperative thread pool never blocks on disk.
-  func read<T>(
+  static func read<T>(
     qos: DispatchQoS.QoSClass = .userInitiated, _ body: @escaping (LibraryCacheManager) -> T
   ) async -> T {
     await withCheckedContinuation { continuation in
-      DispatchQueue.global(qos: qos).async { continuation.resume(returning: body(self)) }
+      DispatchQueue.global(qos: qos).async { continuation.resume(returning: body(shared)) }
     }
   }
 

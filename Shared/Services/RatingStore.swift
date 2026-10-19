@@ -236,8 +236,7 @@ import Foundation
   private func loadCache() {
     let generation = account
     Task(priority: .utility) {
-      let (songs, albums, artists) = await LibraryCacheManager.shared.read(qos: .utility) {
-        cache in
+      let (songs, albums, artists) = await LibraryCacheManager.read(qos: .utility) { cache in
         (
           cache.load([Song].self, forKey: .ratedSongs),
           cache.load([Album].self, forKey: .ratedAlbums),
