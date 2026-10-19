@@ -918,7 +918,7 @@ class PlayerViewModel: ObservableObject {
   }
 }
 
-// What the player screens show about the queue.
+// The player screens of both apps: the play button and what they show of the song.
 extension PlayerViewModel {
   func togglePlayback() {
     if isPlaying { pause() } else { play() }
