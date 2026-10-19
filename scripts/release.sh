@@ -69,7 +69,8 @@ xcodebuild archive -project Ownwave.xcodeproj -scheme "Ownwave" -configuration R
   -destination "generic/platform=iOS" -archivePath "$work/ownwave.xcarchive" "${auth[@]}" \
   >"$log" 2>&1 || fail "archive failed, see $log"
 
-for path in "Ownwave.app/Ownwave" "Ownwave Watch App.app/Ownwave Watch App"; do
+for path in "Ownwave.app/Ownwave" "OwnwaveWidgets.appex/OwnwaveWidgets" \
+  "Ownwave Watch App.app/Ownwave Watch App"; do
   binary=$(find "$work/ownwave.xcarchive" -type f -path "*/$path" | head -1)
   [[ -n "$binary" ]] || fail "no $path in the archive"
   # Through a file: grep -q ending a pipe early could fail the check open.

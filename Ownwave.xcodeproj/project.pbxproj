@@ -31,6 +31,7 @@
 		14C4C9E074827F44DE88B4CF /* TasteSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C96562CD0A8D9817861D2D2 /* TasteSummary.swift */; };
 		15FA0C09EBF4343013580642 /* PlayerViewModel+Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9031A01F807A324732CB2878 /* PlayerViewModel+Radio.swift */; };
 		196DD496A42ABD3D798925BE /* MixRanker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2805B2B3AE86B8713D6AEA /* MixRanker.swift */; };
+		1D67C50A9490E10B5B0B1849 /* PlaySomethingNowIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBD2A02BF7748F60EE82FA7A /* PlaySomethingNowIntent.swift */; };
 		1DD438B1C8D7D5AEC7562A6A /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FB5C179BC0B76201835B86 /* WatchContentView.swift */; };
 		1F2AF157393CFE996E714307 /* TasteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF45D97BBCDF015177721AFE /* TasteTests.swift */; };
 		1FCFD7713BB71B71D0D62F2E /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B141FB86DC651B0C3F5D31BA /* RootView.swift */; };
@@ -78,6 +79,7 @@
 		3F35CD551304D09E6BC220C2 /* AlbumView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 395047701354C7333EF3EA04 /* AlbumView.swift */; };
 		3FED4C4043890696D075FFBC /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
 		4049DD24CBF7DFA414843CF2 /* RatingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17258430B8997B70CB97CC82 /* RatingStore.swift */; };
+		4090A65DA12839C37BB431FF /* FamiljenGrotesk[wght].ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7A3C1E5D9B2F4A6C8E0D1F24 /* FamiljenGrotesk[wght].ttf */; };
 		417A146C53E75C74B313D47D /* RadiosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */; };
 		42DB94B1BA0D3F39BA741C49 /* LibraryParts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C1611BCD0864A0BF006A78 /* LibraryParts.swift */; };
 		47C01357AD85942388E58843 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FD82C15D58E00E712BE /* Errors.swift */; };
@@ -86,6 +88,7 @@
 		4C77F53713E06140DACCB7AD /* JetBrainsMono-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E2B7F2105E47E05FA46FF9AE /* JetBrainsMono-Medium.ttf */; };
 		4CC28174B1DBFE6CDF8AD636 /* WatchStarredSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5055C3CF1C4E3BB88F96CCCD /* WatchStarredSongsView.swift */; };
 		4D8CC4F1DB294CEF5F9F63DD /* DiagnosticsReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A59D47FB2CC1314CD1F3C3 /* DiagnosticsReport.swift */; };
+		4DC167FE18C8D5E1D1937AC5 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668E440FB8404045701CA47B /* WidgetSnapshot.swift */; };
 		4DE465B1CC1E6A07B1AAF79C /* WatchDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF66688A924A53978D5BBCA3 /* WatchDiagnosticsView.swift */; };
 		4ED53DB55FA2B05CE17D1DD4 /* PhoneLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEDED51722CC7DC620CD7124 /* PhoneLink.swift */; };
 		4F8E0BD04AC14F52D5C8E033 /* ExplicitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */; };
@@ -141,6 +144,7 @@
 		70FED9A0D6A0CD11FA743E95 /* ArtistAppEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41ED1C069984CF677281CBB3 /* ArtistAppEntity.swift */; };
 		71E5AE62700E44A2453DD260 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE42C6B2949C82757B70A06 /* SearchView.swift */; };
 		72BA7D08725FBAD688E7CA87 /* MixReason.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9587C95A4A56BBCF8534381A /* MixReason.swift */; };
+		734600D63D4F9E1F336CE758 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E8C96A88970CAD2828E8A3 /* WidgetKit.framework */; };
 		73554894FB6B5120D1353BDA /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
 		754E081C9CFA57DEE40A7197 /* PendingEdits.swift in Sources */ = {isa = PBXBuildFile; fileRef = C82E4A2833D5B79A9B7841EB /* PendingEdits.swift */; };
 		756478A3866CAEE05EB5E04F /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 1E22C1780DE530F41F928A95 /* KeychainAccess */; };
@@ -167,6 +171,8 @@
 		813C0D874EE795C206E5B9F4 /* FamiljenGrotesk[wght].ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7A3C1E5D9B2F4A6C8E0D1F24 /* FamiljenGrotesk[wght].ttf */; };
 		820CF1F7C2C32C0139F50730 /* PlayerViewModel+Recovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 753A1F5C3EC0F41E987BAB31 /* PlayerViewModel+Recovery.swift */; };
 		821B4C756EE59E921E0EB36B /* Song.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FDC2C15E1C300E712BE /* Song.swift */; };
+		83F6066B8DB782A3922B169B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09347E6D5C7F849494095622 /* SwiftUI.framework */; };
+		8432B77A5AF51BE7E5BB07E3 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668E440FB8404045701CA47B /* WidgetSnapshot.swift */; };
 		848051F636753EB89EED94A9 /* ArtistRadio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */; };
 		84AD877E79AEDEECFE0F9A27 /* SmartPlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C533CDA257C450543A1A341D /* SmartPlaybackService.swift */; };
 		854D35E557CBD828EC654F35 /* UserDefaultsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */; };
@@ -209,9 +215,11 @@
 		98F0F9A0C2430EE20934D58A /* Playable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4824D222CE8C41D003EAB52 /* Playable.swift */; };
 		992FBC8C7EF31D1111B9D173 /* ScrobbleReceipts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29E53048E3A319C3B7EA7D87 /* ScrobbleReceipts.swift */; };
 		9A5C1F8746EC3424630445C2 /* PlayerViewModel+QueueEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CA1E05BC293CD0606FB46EC /* PlayerViewModel+QueueEditing.swift */; };
+		9D36BC43132063B3F683F082 /* PlaySomethingNowIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBD2A02BF7748F60EE82FA7A /* PlaySomethingNowIntent.swift */; };
 		9E2978ECF52F4F441930EDE3 /* FloooViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD502D3264AE00644E68 /* FloooViewModel.swift */; };
 		9F9608E66FC97A4172919B11 /* Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41470BA2CE65808008BDCE8 /* Artist.swift */; };
 		A08ED21ABC61336BDD76B09E /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524C2C14E71B0053763A /* KeychainManager.swift */; };
+		A10330172351A9F1AA2E18A3 /* OwnwaveWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08BC56044217EF03B120ED91 /* OwnwaveWidgets.swift */; };
 		A17D1214FCC88CB88C5E1E7C /* PlaybackJournal.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */; };
 		A1E7A7FD78DB99C307639D7E /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
 		A29325BB4B873F908E8C854B /* flo.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */; };
@@ -225,6 +233,7 @@
 		AB128564F2F5628F184B5756 /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134522C15BE0C00CCF2EB /* Strings.swift */; };
 		AC55BF9DA8F03D696B917C74 /* RateIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA19B96B3927E5638EBB93C1 /* RateIntents.swift */; };
 		AD62670C9AD1BC6C85BC9779 /* AlbumService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875DFF2C149D9000D9BAEB /* AlbumService.swift */; };
+		AD6E053D10D9E9231A6B485A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 650FF0208FB53E12E0416CA9 /* Foundation.framework */; };
 		ADC990DEAE33749FF281E185 /* WatchLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6699C44D5AD9144242023B3 /* WatchLinkTests.swift */; };
 		AF8F4066A6464664404ECF80 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C33E4D7DFB09BB760978CACE /* Assets.xcassets */; };
 		B0330DD0198F131B14456A89 /* WatchAlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66B14F36AC2C06239FAD68BF /* WatchAlbumDetailView.swift */; };
@@ -258,6 +267,7 @@
 		C49F698F7C861FE281739025 /* ScrobbleReceipts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29E53048E3A319C3B7EA7D87 /* ScrobbleReceipts.swift */; };
 		C4FB2DE7F87F422FACBA155E /* RadioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAC2F321697002A5FBB /* RadioService.swift */; };
 		C7C90882C5C6B5A496B623D6 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F54D2C11908100E3E1D2 /* AuthViewModel.swift */; };
+		C873E2F5AD2A6F7005D4E402 /* OwnwaveWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0A85DB7BF9FF7869EE9F6B9B /* OwnwaveWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C93EA14B14F48858BF066452 /* PlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */; };
 		C95CCD886CD51F97613E4057 /* DiagnosticsReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A59D47FB2CC1314CD1F3C3 /* DiagnosticsReport.swift */; };
 		C9CAB3113F8295CB12A9CE87 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 177180DFFCFB2A20113DD4D2 /* NowPlayingView.swift */; };
@@ -272,6 +282,7 @@
 		D493E3043CDDF727DCE79E63 /* Ownwave Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 9A72287ACF3C11B43C138CED /* Ownwave Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D56D8D67004B7A3F15CA1FB8 /* WatchArtistsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0727D9D472758F5B95F301F6 /* WatchArtistsListView.swift */; };
 		D64FF90374238D7CCEBB5C2D /* TasteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBEDF2A669F7923F874BBEC /* TasteView.swift */; };
+		D85959F8008E2D392FC76CED /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F22C3ED6FCC61583D5185D /* Palette.swift */; };
 		D897DDB13AB5E4AEB0BADF4F /* AppTabs+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23779BCA4AD2CD905771DC4F /* AppTabs+Debug.swift */; };
 		D957F801D3A1DA274CAA0864 /* Song.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4120FDC2C15E1C300E712BE /* Song.swift */; };
 		D990D07BDC3E9BA0B765EC45 /* LibraryCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */; };
@@ -341,6 +352,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		5CC529CF5BF500AB8F5C2DD5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C4E8D9502B763BA900C2353E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 574198AC9562B5A5245A4483;
+			remoteInfo = OwnwaveWidgets;
+		};
 		737973B441EAA48F9A3C0997 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = C4E8D9502B763BA900C2353E /* Project object */;
@@ -369,12 +387,26 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E5AD2E1848098CEFD07EC742 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C873E2F5AD2A6F7005D4E402 /* OwnwaveWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		04D7F2D730CBA0C23440C40A /* PlaybackRulesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaybackRulesTests.swift; sourceTree = "<group>"; };
 		0727D9D472758F5B95F301F6 /* WatchArtistsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchArtistsListView.swift; sourceTree = "<group>"; };
+		08BC56044217EF03B120ED91 /* OwnwaveWidgets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OwnwaveWidgets.swift; sourceTree = "<group>"; };
 		08F2C213C08E776F8F5BD78A /* ScrobbleOutboxTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScrobbleOutboxTests.swift; sourceTree = "<group>"; };
+		09347E6D5C7F849494095622 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		0A85DB7BF9FF7869EE9F6B9B /* OwnwaveWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OwnwaveWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0B1E5DC701F43EEC205C57C3 /* LibraryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		0BAA3FBF223B4846D4BAC9C7 /* StarStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StarStoreTests.swift; sourceTree = "<group>"; };
 		0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCacheManager.swift; sourceTree = "<group>"; };
@@ -397,6 +429,7 @@
 		29E53048E3A319C3B7EA7D87 /* ScrobbleReceipts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrobbleReceipts.swift; sourceTree = "<group>"; };
 		2C69EE166F61D61C8CC0A1D4 /* PinnedList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PinnedList.swift; sourceTree = "<group>"; };
 		2D16BEDC0E729D620EA52DD1 /* flo 4.xcdatamodel */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcdatamodel; path = "flo 4.xcdatamodel"; sourceTree = "<group>"; };
+		2F9282961923EA948BA18DCF /* Ownwave.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = Ownwave.entitlements; sourceTree = "<group>"; };
 		3183470828F81D158DB4A77D /* ArtistIdentity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtistIdentity.swift; sourceTree = "<group>"; };
 		3218989327BEB845A9A2ACFF /* Ownwave Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Ownwave Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		332FFE057C54639E0112CB1F /* WatchLikedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLikedView.swift; sourceTree = "<group>"; };
@@ -422,10 +455,13 @@
 		638B2D1AECAA38268427598A /* WatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
 		639E407CBF5AE3682C7D8D83 /* MiniPlayer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MiniPlayer.swift; sourceTree = "<group>"; };
 		64FB5C179BC0B76201835B86 /* WatchContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
+		650FF0208FB53E12E0416CA9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ListeningHistoryStore.swift; sourceTree = "<group>"; };
 		6543C7E35E9DD723A4C89C0F /* PinStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PinStore.swift; sourceTree = "<group>"; };
 		664CAB98EC12ABB56EB036FA /* flo 3.xcdatamodel */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcdatamodel; path = "flo 3.xcdatamodel"; sourceTree = "<group>"; };
+		668E440FB8404045701CA47B /* WidgetSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
 		66B14F36AC2C06239FAD68BF /* WatchAlbumDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumDetailView.swift; sourceTree = "<group>"; };
+		67B8D88A1EDD15DAF9EF6465 /* OwnwaveWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = OwnwaveWidgets.entitlements; sourceTree = "<group>"; };
 		6989F498260D9E6D5D7FF9E6 /* AppModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		6BA1FE065DD75DDA1AAA1508 /* PinStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PinStoreTests.swift; sourceTree = "<group>"; };
 		6CA1E05BC293CD0606FB46EC /* PlayerViewModel+QueueEditing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "PlayerViewModel+QueueEditing.swift"; sourceTree = "<group>"; };
@@ -509,11 +545,13 @@
 		C82E4A2833D5B79A9B7841EB /* PendingEdits.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PendingEdits.swift; sourceTree = "<group>"; };
 		CAF04201D7CDA9A5BCB5EBB8 /* NowPlayingView+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "NowPlayingView+Debug.swift"; sourceTree = "<group>"; };
 		CCECEB2E491539A0CCEFF67F /* NowPlayingIndicator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NowPlayingIndicator.swift; sourceTree = "<group>"; };
+		D0E8C96A88970CAD2828E8A3 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		D1388C037165FF767131D19D /* RecommendationLog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecommendationLog.swift; sourceTree = "<group>"; };
 		D1C49ED21B57D55485FE8A43 /* WatchSend.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSend.swift; sourceTree = "<group>"; };
 		D6699C44D5AD9144242023B3 /* WatchLinkTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLinkTests.swift; sourceTree = "<group>"; };
 		DB244999A6DB433F2FCE3BBA /* OwnwaveApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OwnwaveApp.swift; sourceTree = "<group>"; };
 		DBBEDF2A669F7923F874BBEC /* TasteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteView.swift; sourceTree = "<group>"; };
+		DBD2A02BF7748F60EE82FA7A /* PlaySomethingNowIntent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaySomethingNowIntent.swift; sourceTree = "<group>"; };
 		DEDED51722CC7DC620CD7124 /* PhoneLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhoneLink.swift; sourceTree = "<group>"; };
 		DFB35A7F59E1A97C0988F15B /* Theme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		E0CE0078920231694ED30C83 /* LoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -522,6 +560,7 @@
 		E3B67A5AB0BB9835696DB660 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E54EF9E850C784520CE5E75A /* ItemMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ItemMenu.swift; sourceTree = "<group>"; };
 		E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaybackJournal.swift; sourceTree = "<group>"; };
+		E88DB86D1E8D8655D964135F /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		EA601DF6D60F70D262CE557B /* TrackRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrackRowView.swift; sourceTree = "<group>"; };
 		EBB2DF36BC3392244E112731 /* PlaySomethingIntent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaySomethingIntent.swift; sourceTree = "<group>"; };
 		F10A00000000000000000001 /* Theme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -578,9 +617,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E1FA44749F740A9E597A26E2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AD6E053D10D9E9231A6B485A /* Foundation.framework in Frameworks */,
+				734600D63D4F9E1F336CE758 /* WidgetKit.framework in Frameworks */,
+				83F6066B8DB782A3922B169B /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0B927662D32C46CA258E20F4 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				650FF0208FB53E12E0416CA9 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 		266545FC8AD22DE6287C0C46 /* Design */ = {
 			isa = PBXGroup;
 			children = (
@@ -653,9 +710,20 @@
 				E84048E4D8939E04AFE0AB22 /* Debug */,
 				C8BDFEA1A3A5737C278DF45A /* Fonts */,
 				759DB69DA09A9F187266D5A2 /* Services */,
+				2F9282961923EA948BA18DCF /* Ownwave.entitlements */,
 			);
 			name = Ownwave;
 			path = Ownwave;
+			sourceTree = "<group>";
+		};
+		532AAECC4BA8E1559B120C0A /* Surfaces */ = {
+			isa = PBXGroup;
+			children = (
+				DBD2A02BF7748F60EE82FA7A /* PlaySomethingNowIntent.swift */,
+				668E440FB8404045701CA47B /* WidgetSnapshot.swift */,
+			);
+			name = Surfaces;
+			path = Surfaces;
 			sourceTree = "<group>";
 		};
 		618CC93703E8877FFCDE4789 /* Intents */ = {
@@ -677,6 +745,17 @@
 			);
 			name = Library;
 			path = Library;
+			sourceTree = "<group>";
+		};
+		70DC42AFF3B2B24582E271F8 /* OwnwaveWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				E88DB86D1E8D8655D964135F /* Info.plist */,
+				67B8D88A1EDD15DAF9EF6465 /* OwnwaveWidgets.entitlements */,
+				08BC56044217EF03B120ED91 /* OwnwaveWidgets.swift */,
+			);
+			name = OwnwaveWidgets;
+			path = OwnwaveWidgets;
 			sourceTree = "<group>";
 		};
 		759DB69DA09A9F187266D5A2 /* Services */ = {
@@ -903,6 +982,8 @@
 				E9D6B1F2C4106FA2C9676FF9 /* Frameworks */,
 				9A6871995C89601B907000E3 /* Ownwave Watch AppTests */,
 				5098C64A59979BB7F393051B /* Ownwave */,
+				70DC42AFF3B2B24582E271F8 /* OwnwaveWidgets */,
+				532AAECC4BA8E1559B120C0A /* Surfaces */,
 			);
 			sourceTree = "<group>";
 		};
@@ -913,6 +994,7 @@
 				4A0A3A849C5FEAFB7E57BE5C /* Ownwave.app */,
 				3218989327BEB845A9A2ACFF /* Ownwave Watch AppTests.xctest */,
 				24225EFDED10604EAEDC16B0 /* Ownwave EngineTests.xctest */,
+				0A85DB7BF9FF7869EE9F6B9B /* OwnwaveWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -969,6 +1051,9 @@
 			isa = PBXGroup;
 			children = (
 				99C512802A8D10FE8D9D5EE8 /* watchOS */,
+				0B927662D32C46CA258E20F4 /* iOS */,
+				D0E8C96A88970CAD2828E8A3 /* WidgetKit.framework */,
+				09347E6D5C7F849494095622 /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -1016,11 +1101,13 @@
 				D51E95323C0292B480C45024 /* Frameworks */,
 				C0B2F17FDC7E286A263EA133 /* Resources */,
 				E1CC4580D66755B6FDAEA436 /* Embed Watch Content */,
+				E5AD2E1848098CEFD07EC742 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				8C86730EA0E14E37FA55D0E7 /* PBXTargetDependency */,
+				95A4A1918C01E4507B1548F0 /* PBXTargetDependency */,
 			);
 			name = Ownwave;
 			packageProductDependencies = (
@@ -1030,6 +1117,23 @@
 			productName = Ownwave;
 			productReference = 4A0A3A849C5FEAFB7E57BE5C /* Ownwave.app */;
 			productType = "com.apple.product-type.application";
+		};
+		574198AC9562B5A5245A4483 /* OwnwaveWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C4164C5EDFAAEDD8BB8090B2 /* Build configuration list for PBXNativeTarget "OwnwaveWidgets" */;
+			buildPhases = (
+				84E96DA5EEB5D895A974CDC0 /* Sources */,
+				E1FA44749F740A9E597A26E2 /* Frameworks */,
+				414703AE36409F8C00996128 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OwnwaveWidgets;
+			productName = OwnwaveWidgets;
+			productReference = 0A85DB7BF9FF7869EE9F6B9B /* OwnwaveWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		5AB19BECD599778687B82C4E /* Ownwave Watch AppTests */ = {
 			isa = PBXNativeTarget;
@@ -1111,6 +1215,7 @@
 				5347DDA072AEC3079466EC5A /* Ownwave */,
 				5AB19BECD599778687B82C4E /* Ownwave Watch AppTests */,
 				156F6FE3F1F5C91CAC91D18E /* Ownwave EngineTests */,
+				574198AC9562B5A5245A4483 /* OwnwaveWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -1120,6 +1225,14 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		414703AE36409F8C00996128 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4090A65DA12839C37BB431FF /* FamiljenGrotesk[wght].ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1473,6 +1586,19 @@
 				5DFD5A2EDFBB42B7A6C59AC9 /* WatchLink.swift in Sources */,
 				E8EE72CC55301808ADC6ADC2 /* WatchSend.swift in Sources */,
 				EAB22607D871B50C771A7305 /* WatchView.swift in Sources */,
+				1D67C50A9490E10B5B0B1849 /* PlaySomethingNowIntent.swift in Sources */,
+				4DC167FE18C8D5E1D1937AC5 /* WidgetSnapshot.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		84E96DA5EEB5D895A974CDC0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D85959F8008E2D392FC76CED /* Palette.swift in Sources */,
+				9D36BC43132063B3F683F082 /* PlaySomethingNowIntent.swift in Sources */,
+				8432B77A5AF51BE7E5BB07E3 /* WidgetSnapshot.swift in Sources */,
+				A10330172351A9F1AA2E18A3 /* OwnwaveWidgets.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1506,6 +1632,12 @@
 			name = "Ownwave Watch App";
 			target = 7CC9530350C4CC7D7AC9BC22 /* Ownwave Watch App */;
 			targetProxy = 73FDF984DE28DB5AE8911740 /* PBXContainerItemProxy */;
+		};
+		95A4A1918C01E4507B1548F0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = OwnwaveWidgets;
+			target = 574198AC9562B5A5245A4483 /* OwnwaveWidgets */;
+			targetProxy = 5CC529CF5BF500AB8F5C2DD5 /* PBXContainerItemProxy */;
 		};
 		EFCCC5C5F7E95B67BF3A9220 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1562,6 +1694,37 @@
 			};
 			name = Release;
 		};
+		67FF1AD14A3EB82C93D8112D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = OwnwaveWidgets/OwnwaveWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 38;
+				DEVELOPMENT_TEAM = 7K3G973VGB;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OwnwaveWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ownwave;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.m2-entertainment.ownwave.widgets";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = WIDGET_EXTENSION;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		6E27C25575D3A99CC61E9866 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1604,6 +1767,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = Ownwave/Ownwave.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = 7K3G973VGB;
@@ -1638,6 +1802,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = Ownwave/Ownwave.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = 7K3G973VGB;
@@ -1789,6 +1954,36 @@
 			};
 			name = Release;
 		};
+		E778CA2AADCF1948C7EFCA14 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = OwnwaveWidgets/OwnwaveWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 38;
+				DEVELOPMENT_TEAM = 7K3G973VGB;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OwnwaveWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ownwave;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.m2-entertainment.ownwave.widgets";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG WIDGET_EXTENSION";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 		FAE7F18442AAF1911AC0FAE8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1867,6 +2062,15 @@
 			buildConfigurations = (
 				8D9FFD74093E4723854CC58E /* Release */,
 				87F9A307070CCD1154265E86 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C4164C5EDFAAEDD8BB8090B2 /* Build configuration list for PBXNativeTarget "OwnwaveWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				67FF1AD14A3EB82C93D8112D /* Release */,
+				E778CA2AADCF1948C7EFCA14 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
