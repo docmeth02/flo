@@ -103,7 +103,7 @@ struct LibraryView: View {
               ItemRow(
                 art: .glyph(.artist), title: artist.name,
                 subtitle: counted(artist.albumCount, "album"), artSize: 46
-              ) { EmptyView() }
+              )
             }
             .buttonStyle(.plain)
             .card()
@@ -122,7 +122,7 @@ struct LibraryView: View {
               ItemRow(
                 art: .glyph(.playlist), title: playlist.name,
                 subtitle: playlist.comment.isEmpty ? "Playlist" : playlist.comment, artSize: 46
-              ) { EmptyView() }
+              )
             }
             .buttonStyle(.plain)
             .card()
@@ -139,9 +139,7 @@ struct LibraryView: View {
             Button {
               app.play(radio)
             } label: {
-              ItemRow(
-                art: .glyph(.radio), title: radio.name, subtitle: "Internet radio", artSize: 46
-              ) { EmptyView() }
+              ItemRow(art: .glyph(.radio), title: radio.name, subtitle: "Internet radio", artSize: 46)
             }
             .buttonStyle(.plain)
             .card()

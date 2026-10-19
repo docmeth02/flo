@@ -54,8 +54,8 @@ struct ItemRow<Trailing: View>: View {
 }
 
 extension ItemRow where Trailing == EmptyView {
-  init(art: RowArt, title: String, subtitle: String = "", isPlaying: Bool = false) {
-    self.init(art: art, title: title, subtitle: subtitle, isPlaying: isPlaying) { EmptyView() }
+  init(art: RowArt, title: String, subtitle: String = "", artSize: CGFloat = 48) {
+    self.init(art: art, title: title, subtitle: subtitle, artSize: artSize) { EmptyView() }
   }
 }
 
