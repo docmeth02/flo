@@ -11,7 +11,7 @@ struct AlbumView: View {
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
-  @EnvironmentObject private var downloadViewModel: DownloadViewModel
+  @EnvironmentObject private var downloads: DownloadSession
   // Redraws the track hearts when a song is liked from its menu.
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
@@ -82,7 +82,7 @@ struct AlbumView: View {
     .onReceive(albumViewModel.$album) { updated in
       if updated.id == album.id, !updated.songs.isEmpty { localAlbum = updated }
     }
-    .onReceive(downloadViewModel.downloadFinished) { id in
+    .onReceive(downloads.downloadFinished) { id in
       if id == album.id { refreshDownloadState() }
     }
   }
@@ -138,11 +138,11 @@ struct AlbumView: View {
   /// As the watch's download control: an interrupted download leaves some
   /// tracks behind and offers the rest.
   private var downloadState: DownloadState {
-    if downloadViewModel.isDownloading(collectionId: album.id) {
+    if downloads.isDownloading(collectionId: album.id) {
       return .downloading(
-        percent: Int(downloadViewModel.getDownloadedTrackProgress(collectionId: album.id)))
+        percent: Int(downloads.progress(collectionId: album.id) * 100))
     }
-    if downloadViewModel.hasFailed(collectionId: album.id) { return .failed }
+    if downloads.hasFailed(collectionId: album.id) { return .failed }
     // Unknown until the tracks are loaded.
     guard downloaded, !displayAlbum.songs.isEmpty else { return .none }
     let missing = displayAlbum.songs.contains { !downloadedIds.contains($0.playbackID) }
@@ -162,7 +162,7 @@ struct AlbumView: View {
     case .downloading:
       Menu {
         Button("Cancel Download", systemImage: "xmark", role: .destructive) {
-          downloadViewModel.cancelCurrentAlbumDownload(collectionId: album.id)
+          downloads.cancel(collectionId: album.id)
         }
       } label: {
         Image(systemName: "arrow.down")

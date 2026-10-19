@@ -10,7 +10,7 @@ import SwiftUI
 /// download and removal calls, which differ between albums and playlists.
 struct CollectionDetailView<Artwork: View>: View {
   @EnvironmentObject var playerViewModel: PlayerViewModel
-  @EnvironmentObject var downloadViewModel: DownloadViewModel
+  @EnvironmentObject var downloads: DownloadSession
   @ObservedObject private var phone = PhoneLink.shared
 
   let collectionId: String
@@ -39,9 +39,9 @@ struct CollectionDetailView<Artwork: View>: View {
   }
 
   private var downloadState: DownloadControl.State {
-    if downloadViewModel.isDownloading(collectionId: collectionId) {
+    if downloads.isDownloading(collectionId: collectionId) {
       return .downloading(
-        percent: Int(downloadViewModel.getDownloadedTrackProgress(collectionId: collectionId)))
+        percent: Int(downloads.progress(collectionId: collectionId) * 100))
     }
     // Songs the iPhone is still sending are on their way, not missing.
     if phone.isReceiving(collectionId: collectionId) {
@@ -92,7 +92,7 @@ struct CollectionDetailView<Artwork: View>: View {
         DownloadControl(
           state: downloadState,
           onDownload: onDownload,
-          onCancel: { downloadViewModel.cancelCurrentAlbumDownload(collectionId: collectionId) },
+          onCancel: { downloads.cancel(collectionId: collectionId) },
           onRemove: {
             onRemove()
             downloaded = false
@@ -123,7 +123,7 @@ struct CollectionDetailView<Artwork: View>: View {
     }
     .itemMenu($menu)
     .onAppear { refreshDownloadState() }
-    .onReceive(downloadViewModel.downloadFinished) { id in
+    .onReceive(downloads.downloadFinished) { id in
       if id == collectionId { refreshDownloadState() }
     }
   }

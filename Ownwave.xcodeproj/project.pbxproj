@@ -149,7 +149,6 @@
 		71E5AE62700E44A2453DD260 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE42C6B2949C82757B70A06 /* SearchView.swift */; };
 		72BA7D08725FBAD688E7CA87 /* MixReason.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9587C95A4A56BBCF8534381A /* MixReason.swift */; };
 		734600D63D4F9E1F336CE758 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E8C96A88970CAD2828E8A3 /* WidgetKit.framework */; };
-		73554894FB6B5120D1353BDA /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
 		754E081C9CFA57DEE40A7197 /* PendingEdits.swift in Sources */ = {isa = PBXBuildFile; fileRef = C82E4A2833D5B79A9B7841EB /* PendingEdits.swift */; };
 		756478A3866CAEE05EB5E04F /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 1E22C1780DE530F41F928A95 /* KeychainAccess */; };
 		757E8B897B4A9B47143D8CCF /* WatchAlbumsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703CA328A69040E6CCF954B4 /* WatchAlbumsListView.swift */; };
@@ -226,7 +225,6 @@
 		A08ED21ABC61336BDD76B09E /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524C2C14E71B0053763A /* KeychainManager.swift */; };
 		A10330172351A9F1AA2E18A3 /* OwnwaveWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08BC56044217EF03B120ED91 /* OwnwaveWidgets.swift */; };
 		A17D1214FCC88CB88C5E1E7C /* PlaybackJournal.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */; };
-		A1E7A7FD78DB99C307639D7E /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
 		A29325BB4B873F908E8C854B /* flo.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */; };
 		A3019F40AF02587D934ECE45 /* AuthViewModel+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10E00000000000000000003 /* AuthViewModel+Debug.swift */; };
 		A41E9729ECD9216622752F1D /* WatchAlbumArtView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC2E67CCE3ED944C69F8973 /* WatchAlbumArtView.swift */; };
@@ -304,7 +302,6 @@
 		E09F669977950E432ABA0F32 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B67A5AB0BB9835696DB660 /* SettingsView.swift */; };
 		E0D9C52A13756CF9925D50C1 /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		E0E2051C2ECAE641EC151B62 /* WatchLinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21A03CD944EFA80449CFC2FC /* WatchLinkProtocol.swift */; };
-		E1063EA5095B4D971222FBD8 /* DownloadViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */; };
 		E1442A8B84C01EE321E02C9C /* PhoneLink+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D7E85400EE91596AC2581D9 /* PhoneLink+Debug.swift */; };
 		E1B367AFC26C1744F16F61BF /* ListeningHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */; };
 		E24C603537870EB856422528 /* StarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3A20AA7BB94954318E4D4A8 /* StarStore.swift */; };
@@ -550,7 +547,6 @@
 		C4D7F84C2C7F2AE900165EFD /* flo.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = flo.xcdatamodel; sourceTree = "<group>"; };
 		C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackService.swift; sourceTree = "<group>"; };
 		C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataManager.swift; sourceTree = "<group>"; };
-		C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadViewModel.swift; sourceTree = "<group>"; };
 		C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplicitStatus.swift; sourceTree = "<group>"; };
 		C4F870CD2CEFCC5B00312F8A /* FloooService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloooService.swift; sourceTree = "<group>"; };
 		C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsManager.swift; sourceTree = "<group>"; };
@@ -803,7 +799,6 @@
 				C4289F472C12391300C3A4FD /* AlbumViewModel.swift */,
 				B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */,
 				C415F54D2C11908100E3E1D2 /* AuthViewModel.swift */,
-				C4DFFA202D32E769003B9C4E /* DownloadViewModel.swift */,
 				C467AD502D3264AE00644E68 /* FloooViewModel.swift */,
 				B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */,
 				88D8350161966488618D240F /* PlayerViewModel.swift */,
@@ -1358,7 +1353,6 @@
 				299975E3C1980D2753E11EBB /* AlbumViewModel.swift in Sources */,
 				5400FE99025BD6DBFB215DDB /* ArtistDetailViewModel.swift in Sources */,
 				BD9E0599F88E85031B3CDCAB /* AuthViewModel.swift in Sources */,
-				E1063EA5095B4D971222FBD8 /* DownloadViewModel.swift in Sources */,
 				341D1640D04F0BBE24D349AD /* FloooViewModel.swift in Sources */,
 				7934D8994C38143773A4CE01 /* RadiosViewModel.swift in Sources */,
 				0E7069062C0087E6B0C519E3 /* PlayerViewModel.swift in Sources */,
@@ -1422,7 +1416,6 @@
 				4CC28174B1DBFE6CDF8AD636 /* WatchStarredSongsView.swift in Sources */,
 				E630217EDD6F3306103C7C1D /* WatchDownloadsView.swift in Sources */,
 				D25AF44BCEB4F1ECC4EAA971 /* WatchSettingsView.swift in Sources */,
-				A1E7A7FD78DB99C307639D7E /* DownloadViewModel.swift in Sources */,
 				7CB0AF2CAF287CB275F8E58B /* PlayerViewModel.swift in Sources */,
 				BD0EE3C15900C43F8F8F05A2 /* NowPlayingIndicator.swift in Sources */,
 				D349080D92950A1C67EDADB6 /* TrackRowView.swift in Sources */,
@@ -1517,7 +1510,6 @@
 				E2B4A133D2D8768643352D37 /* AuthViewModel+Debug.swift in Sources */,
 				DD6017A7AFE1204716C31205 /* SmartPlaybackService+Debug.swift in Sources */,
 				DBF220BA6665F3A0099C9D5C /* PlayerViewModel+QueueDebug.swift in Sources */,
-				73554894FB6B5120D1353BDA /* DownloadViewModel.swift in Sources */,
 				8BA5F4E0B72A103972EA256B /* PlayerViewModel.swift in Sources */,
 				821B4C756EE59E921E0EB36B /* Song.swift in Sources */,
 				B0611701133028FDB6E3471F /* Album.swift in Sources */,

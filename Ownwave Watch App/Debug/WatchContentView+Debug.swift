@@ -57,7 +57,7 @@
         first.songs = await songs { AlbumService.shared.getSongsByPlaylist(id: first.id, completion: $0) }
         playlist = first
         album = Album(from: first)
-        albumViewModel.downloadPlaylist(first)
+        DownloadSession.shared.enqueue(first)
       } else {
         let albums: [Album] = await withCheckedContinuation { continuation in
           AlbumService.shared.getAlbum { result in
@@ -77,13 +77,12 @@
         }
         guard let smallest else { return debugLog("no albums") }
         album = smallest
-        albumViewModel.downloadAlbum(album)
+        DownloadSession.shared.enqueue(album)
       }
 
       debugLog("downloading \(kind) \(album.id) with \(album.songs.count) songs")
-      downloadViewModel.addItem(album, isFromPlaylist: playlist != nil)
 
-      for _ in 0..<120 where downloadViewModel.isDownloading(collectionId: album.id) {
+      for _ in 0..<120 where DownloadSession.shared.isDownloading(collectionId: album.id) {
         try? await Task.sleep(nanoseconds: 1_000_000_000)
       }
       try? await Task.sleep(nanoseconds: 2_000_000_000)
@@ -111,11 +110,12 @@
         sampleRate: 0, suffix: "mp3", duration: 0, mediaFileId: "flo-debug-missing")
       let album = Album(id: "flo-debug-badid", name: "Bad id", songs: [song])
       debugLog("bad id download: queued")
-      downloadViewModel.addItem(album)
-      for _ in 0..<600 where downloadViewModel.isDownloading(collectionId: album.id) {
+      DownloadSession.shared.enqueue(album)
+      for _ in 0..<600 where DownloadSession.shared.isDownloading(collectionId: album.id) {
         try? await Task.sleep(nanoseconds: 1_000_000_000)
       }
-      debugLog("bad id download: failed=\(downloadViewModel.hasFailed(collectionId: album.id))")
+      let failed = DownloadSession.shared.hasFailed(collectionId: album.id)
+      debugLog("bad id download: failed=\(failed)")
     }
 
     // FLO_DEBUG_SYNC=1|force syncs the song library and logs what it cached.

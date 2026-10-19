@@ -15,7 +15,6 @@ final class AppModel: ObservableObject {
   let auth = AuthViewModel()
   let player = PlayerViewModel()
   let albums = AlbumViewModel()
-  let downloads = DownloadViewModel()
 
   @Published var isNowPlayingPresented = false
   @Published private(set) var toast: Toast?
@@ -79,8 +78,7 @@ final class AppModel: ObservableObject {
       guard album.songs.contains(where: { !onPhone.contains($0.playbackID) }) else {
         return show("Already on this iPhone")
       }
-      albums.downloadAlbum(album)
-      downloads.addItem(album)
+      DownloadSession.shared.enqueue(album)
       let bitRate = UserDefaultsManager.downloadBitRate
       if AppPlatform.isOnCellular, !UserDefaultsManager.downloadOverCellular {
         show("Downloads when on Wi-Fi")

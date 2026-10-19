@@ -17,7 +17,7 @@ struct LibraryView: View {
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
-  @EnvironmentObject private var downloadViewModel: DownloadViewModel
+  @EnvironmentObject private var downloadSession: DownloadSession
   @EnvironmentObject private var storage: FloooViewModel
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
@@ -43,7 +43,7 @@ struct LibraryView: View {
     .refreshable { await refresh() }
     .task(id: chip) { load() }
     // An album being downloaded shows up with its first song.
-    .onReceive(downloadViewModel.downloadFinished) { id in
+    .onReceive(downloadSession.downloadFinished) { id in
       guard chip == .downloads else { return }
       if !albumViewModel.downloadedAlbums.contains(where: { $0.id == id }) {
         albumViewModel.fetchDownloadedAlbums()
@@ -336,12 +336,12 @@ private struct DownloadRow: View {
   let album: Album
 
   @EnvironmentObject private var app: AppModel
-  @EnvironmentObject private var downloadViewModel: DownloadViewModel
+  @EnvironmentObject private var downloads: DownloadSession
   @Environment(\.palette) private var palette
 
   var body: some View {
-    let downloading = downloadViewModel.isDownloading(collectionId: album.id)
-    let failed = !downloading && downloadViewModel.hasFailed(collectionId: album.id)
+    let downloading = downloads.isDownloading(collectionId: album.id)
+    let failed = !downloading && downloads.hasFailed(collectionId: album.id)
     Group {
       // A failed album retries in place.
       if failed {
@@ -360,7 +360,7 @@ private struct DownloadRow: View {
   }
 
   private func row(downloading: Bool, failed: Bool) -> some View {
-    let percent = downloadViewModel.getDownloadedTrackProgress(collectionId: album.id)
+    let percent = downloads.progress(collectionId: album.id) * 100
     return HStack(spacing: 12) {
       CoverArt(albumId: album.id, radius: 7).frame(width: 46, height: 46)
       VStack(alignment: .leading, spacing: 2) {

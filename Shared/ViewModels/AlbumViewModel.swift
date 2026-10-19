@@ -294,51 +294,6 @@ class AlbumViewModel: ObservableObject {
 
   // MARK: - Fetch methods
 
-  func downloadAlbum(_ albumToDownload: Album) {
-    // The album record must exist even when its cover cannot be fetched,
-    // otherwise its downloaded songs never show up in Downloads.
-    AlbumService.shared.saveAlbum(albumToDownload)
-
-    AlbumService.shared.downloadCover(
-      artId: "al-\(albumToDownload.id)", as: albumToDownload.id
-    ) { result in
-      if case .failure(let error) = result {
-        debugLog("Failed to save album cover: \(error.localizedDescription)")
-      }
-    }
-  }
-
-  func downloadPlaylist(_ playlistToDownload: Playlist) {
-    let id = playlistToDownload.id
-    AlbumService.shared.savePlaylist(playlistToDownload)
-
-    // The playlist's own cover lives next to its tracks so the Downloads tab
-    // can pick it up; failure must not affect the song downloads.
-    AlbumService.shared.downloadCover(
-      artId: playlistToDownload.coverArtId ?? (id.hasPrefix("pl-") ? id : "pl-\(id)"), as: id
-    ) { result in
-      if case .failure(let error) = result {
-        debugLog("Failed to save playlist cover: \(error.localizedDescription)")
-      }
-    }
-
-    // The tracks' album covers, once per album and one at a time, so they
-    // neither time out queued behind each other nor crowd the songs; a
-    // stored one stays.
-    let albumIds = Set(playlistToDownload.songs.map(\.albumId)).filter {
-      !$0.isEmpty && AlbumService.shared.downloadedCoverPath(albumId: $0) == nil
-    }
-    Task {
-      for albumId in albumIds {
-        await withCheckedContinuation { done in
-          AlbumService.shared.downloadCover(artId: "al-\(albumId)", as: albumId, overwrite: false) {
-            _ in done.resume()
-          }
-        }
-      }
-    }
-  }
-
   func removeDownloadedAlbum(album: Album) {
     AlbumService.shared.removeDownloadedCollection(id: album.id) { result in
       DispatchQueue.main.async {

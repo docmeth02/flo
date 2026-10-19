@@ -215,12 +215,56 @@ final class DownloadSession: NSObject, ObservableObject {
       pending: Set(jobs.filter { $0.collectionId == collectionId }.map(\.id)))
   }
 
-  /// Queues the songs of `collection` that are not on the watch yet. A song
+  /// Downloads an album, or the missing songs of a downloaded playlist opened
+  /// as one. The record comes first: without it the songs never show up in
+  /// Downloads, and the cover may fail.
+  func enqueue(_ album: Album) {
+    if !album.isPlaylist {
+      AlbumService.shared.saveAlbum(album)
+      Self.downloadCover(artId: "al-\(album.id)", as: album.id)
+    }
+    queueSongs(of: album)
+  }
+
+  /// Downloads a playlist with its own cover, which Downloads shows, and the
+  /// covers of its tracks' albums.
+  func enqueue(_ playlist: Playlist) {
+    let id = playlist.id
+    AlbumService.shared.savePlaylist(playlist)
+    Self.downloadCover(
+      artId: playlist.coverArtId ?? (id.hasPrefix("pl-") ? id : "pl-\(id)"), as: id)
+
+    // Once per album and one at a time, so they neither time out queued
+    // behind each other nor crowd the songs; a stored one stays.
+    let albumIds = Set(playlist.songs.map(\.albumId)).filter {
+      !$0.isEmpty && AlbumService.shared.downloadedCoverPath(albumId: $0) == nil
+    }
+    Task {
+      for albumId in albumIds {
+        await withCheckedContinuation { done in
+          AlbumService.shared.downloadCover(artId: "al-\(albumId)", as: albumId, overwrite: false) {
+            _ in done.resume()
+          }
+        }
+      }
+    }
+    queueSongs(of: Album(from: playlist))
+  }
+
+  private static func downloadCover(artId: String, as id: String) {
+    AlbumService.shared.downloadCover(artId: artId, as: id) { result in
+      if case .failure(let error) = result {
+        debugLog("cover \(id) not saved: \(error.localizedDescription)")
+      }
+    }
+  }
+
+  /// Queues the songs of `collection` that are not on the device yet. A song
   /// queued already keeps its job; failed ones start over at the current
   /// bitrate.
-  func enqueue(_ collection: Album, isPlaylist: Bool) {
+  private func queueSongs(of collection: Album) {
     let wanted = DownloadJob.jobs(
-      for: collection, isPlaylist: isPlaylist,
+      for: collection, isPlaylist: collection.isPlaylist,
       kbps: Int(UserDefaultsManager.downloadBitRate) ?? 0,
       downloaded: AlbumService.shared.downloadedMediaFileIds(collectionId: collection.id))
     let continuing = isDownloading(collectionId: collection.id)

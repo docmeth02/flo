@@ -7,7 +7,7 @@ import SwiftUI
 
 struct WatchDownloadsView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
-  @EnvironmentObject var downloadViewModel: DownloadViewModel
+  @EnvironmentObject var downloads: DownloadSession
   @ObservedObject private var phone = PhoneLink.shared
 
   @State private var cachedSongs: [Song] = []
@@ -36,15 +36,15 @@ struct WatchDownloadsView: View {
               CoverRow(tile: .album(album.id), title: album.name, subtitle: album.albumArtist) {
                 // An album shows up here with its first song, so the check
                 // waits until its download has finished without a failure.
-                if downloadViewModel.isDownloading(collectionId: album.id) {
-                  Text("\(Int(downloadViewModel.getDownloadedTrackProgress(collectionId: album.id)))%")
+                if downloads.isDownloading(collectionId: album.id) {
+                  Text("\(Int(downloads.progress(collectionId: album.id) * 100))%")
                     .font(.system(.footnote, weight: .semibold).monospacedDigit())
                     .foregroundStyle(Color.floLilac)
                 } else if phone.isReceiving(collectionId: album.id) {
                   Image(systemName: "iphone.and.arrow.forward")
                     .font(.system(size: 14))
                     .foregroundStyle(Color.floLilac)
-                } else if downloadViewModel.hasFailed(collectionId: album.id) {
+                } else if downloads.hasFailed(collectionId: album.id) {
                   Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 16))
                     .foregroundStyle(Color.floDestructive)
@@ -66,7 +66,7 @@ struct WatchDownloadsView: View {
       cachedSongs = StreamCacheManager.shared.getCachedSongs()
     }
     // An album being downloaded shows up here with its first song.
-    .onReceive(downloadViewModel.downloadFinished) { id in
+    .onReceive(downloads.downloadFinished) { id in
       if !albumViewModel.downloadedAlbums.contains(where: { $0.id == id }) {
         albumViewModel.fetchDownloadedAlbums()
       }

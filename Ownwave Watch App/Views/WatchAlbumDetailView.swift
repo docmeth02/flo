@@ -7,7 +7,7 @@ import SwiftUI
 
 struct WatchAlbumDetailView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
-  @EnvironmentObject var downloadViewModel: DownloadViewModel
+  @EnvironmentObject var downloads: DownloadSession
 
   let album: Album
 
@@ -37,7 +37,7 @@ struct WatchAlbumDetailView: View {
       onCover: true,
       trackNumber: { _, song in song.trackNumber },
       playable: { displayAlbum },
-      onDownload: { downloadCollection() },
+      onDownload: { downloads.enqueue(displayAlbum) },
       onRemove: { albumViewModel.removeDownloadedAlbum(album: album) }
     ) {
       Spacer().frame(height: 58)
@@ -47,17 +47,6 @@ struct WatchAlbumDetailView: View {
     .onAppear { albumViewModel.setActiveAlbum(album: album) }
     .onReceive(albumViewModel.$album) { updated in
       if updated.id == album.id { localAlbum = updated }
-    }
-  }
-
-  /// Downloaded playlists open here from Downloads; they keep playlist
-  /// semantics (playlist folder, media ids) when missing tracks are fetched.
-  private func downloadCollection() {
-    if AlbumService.shared.isPlaylistDownload(id: album.id) {
-      downloadViewModel.addItem(displayAlbum, isFromPlaylist: true)
-    } else {
-      albumViewModel.downloadAlbum(displayAlbum)
-      downloadViewModel.addItem(displayAlbum)
     }
   }
 }

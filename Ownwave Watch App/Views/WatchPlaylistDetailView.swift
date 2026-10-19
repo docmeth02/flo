@@ -7,7 +7,7 @@ import SwiftUI
 
 struct WatchPlaylistDetailView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
-  @EnvironmentObject var downloadViewModel: DownloadViewModel
+  @EnvironmentObject var downloads: DownloadSession
 
   let playlist: Playlist
 
@@ -21,12 +21,6 @@ struct WatchPlaylistDetailView: View {
     return count > 0 ? counted(count, "song") : ""
   }
 
-  private func downloadPlaylist() {
-    let playablePlaylist = Album(from: displayPlaylist)
-    albumViewModel.downloadPlaylist(displayPlaylist)
-    downloadViewModel.addItem(playablePlaylist, isFromPlaylist: true)
-  }
-
   var body: some View {
     CollectionDetailView(
       collectionId: playlist.id,
@@ -35,7 +29,7 @@ struct WatchPlaylistDetailView: View {
       songs: displayPlaylist.songs,
       trackNumber: { index, _ in index + 1 },
       playable: { Album(from: displayPlaylist) },
-      onDownload: { downloadPlaylist() },
+      onDownload: { downloads.enqueue(displayPlaylist) },
       onRemove: { albumViewModel.removeDownloadedPlaylist(playlist: playlist) }
     ) {
       Image(systemName: "music.note.list")
