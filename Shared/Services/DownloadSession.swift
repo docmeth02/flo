@@ -545,16 +545,13 @@ extension DownloadSession: URLSessionDownloadDelegate {
     {
       return fail(job, failure)
     }
-    LocalFileManager.shared.moveFile(
-      source: location, target: LocalFileManager.shared.fileURL(for: destination(of: job))
-    ) { result in
-      switch result {
-      case .success:
-        self.finish(job)
-      case .failure(let error):
-        // Downloading again would not help a full disk.
-        self.markFailed(job, reason: "not moved: \(error.localizedDescription)")
-      }
+    do {
+      try LocalFileManager.shared.moveFile(
+        source: location, target: LocalFileManager.shared.fileURL(for: destination(of: job)))
+      finish(job)
+    } catch {
+      // Downloading again would not help a full disk.
+      markFailed(job, reason: "not moved: \(error.localizedDescription)")
     }
   }
 

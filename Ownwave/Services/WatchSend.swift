@@ -311,11 +311,8 @@ extension WatchSend: URLSessionDownloadDelegate {
     {
       return failed(job, failure)
     }
-    var moved = false
-    LocalFileManager.shared.moveFile(source: location, target: job.file) {
-      if case .success = $0 { moved = true }
-    }
-    guard moved else { return failSend(job.album.id) }
+    guard (try? LocalFileManager.shared.moveFile(source: location, target: job.file)) != nil
+    else { return failSend(job.album.id) }
     update(job.id) { $0.downloaded = true }
     handOver()
   }

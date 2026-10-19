@@ -186,27 +186,23 @@ class StreamCacheManager {
 
         let target = dir.appendingPathComponent("\(key).\(suffix)")
 
-        LocalFileManager.shared.moveFile(source: tempFile, target: target) { moveResult in
-          switch moveResult {
-          case .success:
-            let fileSize =
-              (try? self.fileManager.attributesOfItem(atPath: target.path)[.size] as? Int64) ?? 0
+        guard (try? LocalFileManager.shared.moveFile(source: tempFile, target: target)) != nil else {
+          DispatchQueue.main.async { self.removeCacheRecord(key: key) }
+          return
+        }
+        let fileSize =
+          (try? self.fileManager.attributesOfItem(atPath: target.path)[.size] as? Int64) ?? 0
 
-            DispatchQueue.main.async {
-              let records = CoreDataManager.shared.getRecordByKey(
-                entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1)
-              if let record = records.first {
-                record.state = "ready"
-                record.fileSize = fileSize
-                CoreDataManager.shared.saveRecord()
-              }
-
-              self.evictIfNeeded()
-            }
-
-          case .failure:
-            DispatchQueue.main.async { self.removeCacheRecord(key: key) }
+        DispatchQueue.main.async {
+          let records = CoreDataManager.shared.getRecordByKey(
+            entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1)
+          if let record = records.first {
+            record.state = "ready"
+            record.fileSize = fileSize
+            CoreDataManager.shared.saveRecord()
           }
+
+          self.evictIfNeeded()
         }
 
       case .failure:

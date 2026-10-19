@@ -300,12 +300,11 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
       case .cover: AlbumService.coverPath(id: info.collectionId)
       }
     guard let path else { return }
-    var moved = false
-    LocalFileManager.shared.moveFile(source: file, target: LocalFileManager.shared.fileURL(for: path)) {
-      if case .failure(let error) = $0 { return debugLog("phone link: file not moved: \(error)") }
-      moved = true
+    do {
+      try LocalFileManager.shared.moveFile(source: file, target: LocalFileManager.shared.fileURL(for: path))
+    } catch {
+      return debugLog("phone link: file not moved: \(error)")
     }
-    guard moved else { return }
     lock.withLock { deliveries += 1 }
     Task { @MainActor in PhoneLink.shared.save(info) }
   }

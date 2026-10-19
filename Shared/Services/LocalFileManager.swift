@@ -58,31 +58,19 @@ class LocalFileManager {
     fileManager.fileExists(atPath: fileURL(for: fileName).path)
   }
 
-  func moveFile(
-    source: URL, target: URL, forceOverride: Bool = true,
-    completion: @escaping (Result<URL, Error>) -> Void
-  ) {
-    do {
-      let parentDirectory = target.deletingLastPathComponent()
-
-      if !self.fileManager.fileExists(atPath: parentDirectory.path) {
-        try self.fileManager.createDirectory(
-          at: parentDirectory, withIntermediateDirectories: true, attributes: nil)
-      }
-
-      if forceOverride {
-        if fileManager.fileExists(atPath: target.path) {
-          try self.fileManager.removeItem(at: target)
-        }
-      }
-
-      try self.fileManager.moveItem(at: source, to: target)
-      try? self.fileManager.setAttributes(
-        [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: target.path)
-      completion(.success(target))
-    } catch {
-      completion(.failure(error))
+  /// Moves the file into place with its parent folders, replacing what is
+  /// there unless `forceOverride` is false.
+  @discardableResult
+  func moveFile(source: URL, target: URL, forceOverride: Bool = true) throws -> URL {
+    try fileManager.createDirectory(
+      at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+    if forceOverride, fileManager.fileExists(atPath: target.path) {
+      try fileManager.removeItem(at: target)
     }
+    try fileManager.moveItem(at: source, to: target)
+    try? fileManager.setAttributes(
+      [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: target.path)
+    return target
   }
 
   func deleteDownloadedAlbums(completion: @escaping (Result<Bool, Error>) -> Void) {
