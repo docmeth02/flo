@@ -33,29 +33,20 @@ import Foundation
     }
   }
 
-  /// A connection break waits this long, uncounted, like DownloadSession's.
-  private static let connectionRetry: TimeInterval = 30
-  private static let jobsURL = URL.applicationSupportDirectory
-    .appendingPathComponent("watch-sends.json")
+  private static let jobFile = JobFile<Job>(
+    fileURL: URL.applicationSupportDirectory.appendingPathComponent("watch-sends.json"),
+    label: "watch send jobs")
   fileprivate nonisolated static let outbox = URL.applicationSupportDirectory
     .appendingPathComponent("watch-outbox", isDirectory: true)
 
-  private lazy var session: URLSession = {
-    let configuration = URLSessionConfiguration.background(withIdentifier: Self.identifier)
-    configuration.sessionSendsLaunchEvents = true
-    configuration.isDiscretionary = false
-    // One transcode at a time, so a playing stream is not starved.
-    configuration.httpMaximumConnectionsPerHost = 1
-    configuration.timeoutIntervalForResource = 2 * 3600
-    return URLSession(configuration: configuration, delegate: self, delegateQueue: .main)
-  }()
+  private lazy var session = URLSession.background(identifier: Self.identifier, delegate: self)
 
   private var jobs: [Job]
   private var tasks: [String: URLSessionTask] = [:]
-  private var backgroundCompletions: [UUID: () -> Void] = [:]
+  private let backgroundEvents = BackgroundEventCompletions()
 
   override private init() {
-    jobs = (try? JSONDecoder().decode([Job].self, from: Data(contentsOf: Self.jobsURL))) ?? []
+    jobs = Self.jobFile.load()
     super.init()
     // Created at launch, so the events of a relaunch find their delegate.
     resume()
@@ -166,16 +157,8 @@ import Foundation
     }
   }
 
-  /// Keeps the system's wake-up until the session delivered its events; they
-  /// may have come before it (the session exists from launch), so a deadline
-  /// completes it in any case.
   func handleBackgroundEvents(completion: @escaping () -> Void) {
-    let id = UUID()
-    backgroundCompletions[id] = completion
-    Task {
-      try? await Task.sleep(for: .seconds(10))
-      backgroundCompletions.removeValue(forKey: id)?()
-    }
+    backgroundEvents.hold(completion)
   }
 
   // MARK: - Private
@@ -240,13 +223,7 @@ import Foundation
   }
 
   private func save() {
-    do {
-      try FileManager.default.createDirectory(
-        at: Self.jobsURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-      try JSONEncoder().encode(jobs).write(to: Self.jobsURL, options: .atomic)
-    } catch {
-      debugLog("watch send: jobs not saved: \(error)")
-    }
+    Self.jobFile.save(jobs)
   }
 
   private func job(of task: URLSessionTask) -> Job? {
@@ -288,7 +265,7 @@ import Foundation
     tasks[job.id] = nil
     switch failure {
     case .connection:
-      retry(job, after: Self.connectionRetry)
+      retry(job, after: DownloadRetry.delays[0])
     case .counted:
       guard let delay = DownloadRetry.delay(afterAttempts: job.attempts) else {
         return failSend(job.album.id)
@@ -349,9 +326,10 @@ extension WatchSend: URLSessionDownloadDelegate {
     didFinishDownloadingTo location: URL
   ) {
     let response = downloadTask.response as? HTTPURLResponse
-    let isErrorBody = ["json", "xml"].contains { response?.mimeType?.contains($0) == true }
+    let isErrorBody = DownloadFailure.isErrorBody(response)
     let failure = DownloadFailure.classify(
-      status: response?.statusCode ?? 0, isErrorBody: isErrorBody, subsonicCode: nil,
+      status: response?.statusCode ?? 0, isErrorBody: isErrorBody,
+      subsonicCode: isErrorBody ? DownloadFailure.subsonicCode(in: location) : nil,
       bytes: downloadTask.countOfBytesReceived)
     var file: URL?
     if failure == nil {
@@ -374,10 +352,6 @@ extension WatchSend: URLSessionDownloadDelegate {
   }
 
   nonisolated func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-    Task { @MainActor in
-      let completions = self.backgroundCompletions.values
-      self.backgroundCompletions = [:]
-      completions.forEach { $0() }
-    }
+    Task { @MainActor in self.backgroundEvents.complete() }
   }
 }
