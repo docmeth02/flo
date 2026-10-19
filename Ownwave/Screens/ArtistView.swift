@@ -17,6 +17,7 @@ struct ArtistView: View {
   @State private var topSongs: [Song] = []
   @State private var shades: CoverShades?
   @State private var showsRadioError = false
+  @State private var radioFailed = false
 
   /// The screen takes its backdrop and tint from the artist's first album.
   private var albums: [Album] { albumViewModel.albums(byArtist: artist.id) }
@@ -66,7 +67,7 @@ struct ArtistView: View {
     .alert(artist.name, isPresented: $showsRadioError) {
       Button("OK") {}
     } message: {
-      Text(ArtistDetailViewModel.noRadioMessage)
+      Text(ArtistDetailViewModel.noRadioMessage(failed: radioFailed))
     }
   }
 
@@ -75,10 +76,11 @@ struct ArtistView: View {
       Button {
         Task {
           let songs = await radio.fetchArtistRadio(artist: artist)
-          if songs.isEmpty {
-            showsRadioError = true
-          } else {
+          if let songs, !songs.isEmpty {
             app.play(SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs))
+          } else {
+            radioFailed = songs == nil
+            showsRadioError = true
           }
         }
       } label: {

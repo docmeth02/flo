@@ -13,6 +13,7 @@ struct WatchArtistDetailView: View {
   @StateObject var artistDetailViewModel = ArtistDetailViewModel()
 
   @State private var displayAlert: Bool = false
+  @State private var radioFailed = false
   @State private var isLoadingTopSongs = false
   @State private var openedAlbum: Album?
   @State private var menu: MenuTarget?
@@ -25,11 +26,12 @@ struct WatchArtistDetailView: View {
         Button(action: {
           Task {
             let songs = await artistDetailViewModel.fetchArtistRadio(artist: artist)
-            let radio = SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs)
-            if songs.isEmpty {
+            if let songs, !songs.isEmpty {
+              let radio = SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs)
+              if playerViewModel.playItem(item: radio) { showPlayer() }
+            } else {
+              radioFailed = songs == nil
               displayAlert = true
-            } else if playerViewModel.playItem(item: radio) {
-              showPlayer()
             }
           }
         }) {
@@ -83,7 +85,7 @@ struct WatchArtistDetailView: View {
     .alert(artist.name, isPresented: $displayAlert) {
       Button("OK") {}
     } message: {
-      Text(ArtistDetailViewModel.noRadioMessage)
+      Text(ArtistDetailViewModel.noRadioMessage(failed: radioFailed))
     }
   }
 }
