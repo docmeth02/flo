@@ -95,6 +95,7 @@ final class SmartPlaybackService {
   private static let incrementalPageSize = 200
   private static let songPageCap = 500
 
+  // Mixes, syncs and the index build run off the main actor, often at once.
   private let syncLock = NSLock()
   private let indexLock = NSLock()
   private let starredLock = NSLock()

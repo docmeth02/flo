@@ -19,6 +19,7 @@ class AuthService {
   private var subsonicParams: String?
   private var userId: String?
   private var credentialGeneration: UInt64 = 0
+  // Every request reads the credentials on Alamofire's queues.
   private let credentialsLock = NSLock()
   // A token renewed by the server since the stored login was last written.
   private var tokenNeedsPersisting = false

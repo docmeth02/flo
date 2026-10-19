@@ -162,6 +162,7 @@ final class ConnectionRetryPolicy: RetryPolicy {
 final class NDSessionInterceptor: RequestInterceptor {
   private let fallback = ConnectionRetryPolicy()
   private let renewalTimeout: TimeInterval = 15
+  // Alamofire calls adapt and retry on its own queues.
   private let lock = NSLock()
   // The token a server rejected; requests carrying it wait for its successor.
   private var rejectedToken: String?

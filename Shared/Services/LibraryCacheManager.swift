@@ -17,6 +17,7 @@ class LibraryCacheManager {
 
   private let fileManager = FileManager.default
   private let cacheDirectory = URL.cacheDirectory(named: "LibraryCache")
+  // Fetches save from any task, and reads run on a GCD queue.
   private let lock = NSLock()
   private var currentGeneration = 0
 
