@@ -10,7 +10,7 @@ import Foundation
 /// ratings and the stars. `Value` must be a property list type, since the
 /// edits are stored in UserDefaults.
 @MainActor final class PendingEdits<Value: Equatable> {
-  typealias Send = (_ id: String, _ value: Value) async throws -> Void
+  typealias Send = @MainActor (_ id: String, _ value: Value) async throws -> Void
 
   /// The latest unconfirmed edit per id.
   private(set) var values: [String: Value]

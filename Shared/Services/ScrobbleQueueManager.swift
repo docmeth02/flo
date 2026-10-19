@@ -29,7 +29,7 @@ struct ScrobblePayload {
   static let shared = ScrobbleQueueManager()
 
   /// Submits one listen to the server.
-  typealias Send = (_ songId: String, _ time: Date) async throws -> Void
+  typealias Send = @MainActor (_ songId: String, _ time: Date) async throws -> Void
 
   private static let initialRetryDelay: TimeInterval = 30
   private static let maxRetryDelay: TimeInterval = 30 * 60
