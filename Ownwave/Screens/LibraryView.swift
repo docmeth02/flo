@@ -363,7 +363,7 @@ private struct DownloadRow: View {
           } else {
             Text(
               counted(
-                AlbumService.shared.downloadedMediaFileIds(collectionId: album.id).count, "song"))
+                DownloadStore.downloadedMediaFileIds(collectionId: album.id).count, "song"))
           }
         }
         .font(.rowSubtitle)

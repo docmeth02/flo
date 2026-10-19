@@ -307,7 +307,7 @@ extension PlayerViewModel {
     let trackId = nowPlaying.id
     let songId = trackId ?? ""
 
-    if let fileURL = AlbumService.shared.localFileURL(mediaFileId: songId) {
+    if let fileURL = DownloadStore.localFileURL(mediaFileId: songId) {
       attachItem(
         url: fileURL, trackId: trackId, isRemote: false, isTranscoded: false, offset: 0,
         seekTo: position)

@@ -145,7 +145,7 @@ import WatchKit
 
   private func recountIncoming() {
     incoming = sending.reduce(into: [:]) { left, album in
-      let here = AlbumService.shared.downloadedMediaFileIds(collectionId: album.key).count
+      let here = DownloadStore.downloadedMediaFileIds(collectionId: album.key).count
       if album.value > here { left[album.key] = album.value - here }
     }
   }
@@ -160,11 +160,10 @@ import WatchKit
       receiver.finishedDelivery()
       completeTasksIfIdle()
     }
-    let service = AlbumService.shared
     if info.kind == .song, let song = info.song {
-      service.saveAlbum(info.album)
+      DownloadStore.saveAlbum(info.album)
       guard
-        service.saveDownload(
+        DownloadStore.saveDownload(
           albumId: info.collectionId, albumName: info.album.name, song: song, suffix: info.suffix,
           bitRate: info.kbps > 0 ? info.kbps : song.bitRate)
       else { return RequestLog.shared.note("phone song \(song.title) not saved") }
@@ -295,10 +294,10 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
       switch info.kind {
       case .song:
         info.song.map {
-          AlbumService.downloadPath(
+          DownloadStore.downloadPath(
             collectionId: info.collectionId, mediaFileId: $0.id, suffix: info.suffix)
         }
-      case .cover: AlbumService.coverPath(id: info.collectionId)
+      case .cover: DownloadStore.coverPath(id: info.collectionId)
       }
     guard let path else { return }
     do {

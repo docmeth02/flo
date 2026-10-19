@@ -86,7 +86,7 @@ final class AppModel: ObservableObject {
       // A logout meanwhile: these are the previous account's songs.
       guard AuthService.shared.accountKey == account else { return }
       guard !album.songs.isEmpty else { return show("Not available offline") }
-      let onPhone = AlbumService.shared.downloadedMediaFileIds(collectionId: album.id)
+      let onPhone = DownloadStore.downloadedMediaFileIds(collectionId: album.id)
       guard album.songs.contains(where: { !onPhone.contains($0.playbackID) }) else {
         return show("Already on this iPhone")
       }

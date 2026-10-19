@@ -101,7 +101,7 @@ class StreamCacheManager {
     guard ConnectivityMonitor.shared.isOnline else { return }
     // A downloaded song already plays from disk; caching it again would spend
     // storage and radio time on a second copy.
-    guard AlbumService.shared.downloadedFileURL(mediaFileId: mediaFileId) == nil else { return }
+    guard DownloadStore.downloadedFileURL(mediaFileId: mediaFileId) == nil else { return }
 
     guard let bitrate = TranscodingSettings.streamingBitRate else { return }
     let key = cacheKey(mediaFileId: mediaFileId, bitrate: bitrate)

@@ -235,7 +235,7 @@ final class DownloadSession: NSObject, ObservableObject {
   /// Downloads, and the cover may fail.
   func enqueue(_ album: Album) {
     if !album.isPlaylist {
-      AlbumService.shared.saveAlbum(album)
+      DownloadStore.saveAlbum(album)
       Self.downloadCover(artId: "al-\(album.id)", as: album.id)
     }
     queueSongs(of: album)
@@ -245,14 +245,14 @@ final class DownloadSession: NSObject, ObservableObject {
   /// covers of its tracks' albums.
   func enqueue(_ playlist: Playlist) {
     let id = playlist.id
-    AlbumService.shared.savePlaylist(playlist)
+    DownloadStore.savePlaylist(playlist)
     Self.downloadCover(
       artId: playlist.coverArtId ?? (id.hasPrefix("pl-") ? id : "pl-\(id)"), as: id)
 
     // Once per album and one at a time, so they neither time out queued
     // behind each other nor crowd the songs; a stored one stays.
     let albumIds = Set(playlist.songs.map(\.albumId)).filter {
-      !$0.isEmpty && AlbumService.shared.downloadedCoverPath(albumId: $0) == nil
+      !$0.isEmpty && DownloadStore.downloadedCoverPath(albumId: $0) == nil
     }
     Task {
       for albumId in albumIds {
@@ -280,7 +280,7 @@ final class DownloadSession: NSObject, ObservableObject {
     let wanted = DownloadJob.jobs(
       for: collection, isPlaylist: collection.isPlaylist,
       kbps: Int(UserDefaultsManager.downloadBitRate) ?? 0,
-      downloaded: AlbumService.shared.downloadedMediaFileIds(collectionId: collection.id))
+      downloaded: DownloadStore.downloadedMediaFileIds(collectionId: collection.id))
     let continuing = isDownloading(collectionId: collection.id)
 
     jobs.removeAll { $0.collectionId == collection.id && $0.failed }
@@ -423,7 +423,7 @@ final class DownloadSession: NSObject, ObservableObject {
   }
 
   private func destination(of job: DownloadJob) -> String {
-    AlbumService.downloadPath(
+    DownloadStore.downloadPath(
       collectionId: job.collectionId, mediaFileId: job.mediaFileId, suffix: job.suffix)
   }
 
@@ -431,7 +431,7 @@ final class DownloadSession: NSObject, ObservableObject {
     // An unsaved record keeps the job; the next activation finds the file
     // in place and saves it again.
     guard
-      AlbumService.shared.saveDownload(
+      DownloadStore.saveDownload(
         albumId: job.collectionId, albumName: job.collectionName, song: job.song,
         suffix: job.suffix, bitRate: job.kbps > 0 ? job.kbps : job.song.bitRate,
         isFromPlaylist: job.isPlaylist, playlistIndex: job.playlistIndex)

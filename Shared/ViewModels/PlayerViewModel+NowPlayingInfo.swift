@@ -77,7 +77,7 @@ extension PlayerViewModel {
     }
 
     let albumId = nowPlayingAlbumId
-    coverArt = AlbumService.shared.coverURL(albumId: albumId)
+    coverArt = DownloadStore.coverURL(albumId: albumId)
     if coverArt.hasPrefix("/") {
       if let image = UIImage(contentsOfFile: coverArt) { Self.setArtwork(image) }
     } else if !albumId.isEmpty {

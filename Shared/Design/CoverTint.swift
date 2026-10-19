@@ -18,7 +18,7 @@ enum CoverTint {
   static func coverFile(albumId: String, url: String = "") async -> String? {
     if url.hasPrefix("/"), FileManager.default.fileExists(atPath: url) { return url }
     guard !albumId.isEmpty else { return nil }
-    if let downloaded = AlbumService.shared.downloadedCoverPath(albumId: albumId) {
+    if let downloaded = DownloadStore.downloadedCoverPath(albumId: albumId) {
       return downloaded
     }
     return await CoverArtCacheManager.shared.coverPath(albumId: albumId)

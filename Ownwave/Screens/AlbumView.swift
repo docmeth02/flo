@@ -208,7 +208,7 @@ struct AlbumView: View {
   }
 
   private func refreshDownloadState() {
-    downloadedIds = AlbumService.shared.downloadedMediaFileIds(collectionId: album.id)
+    downloadedIds = DownloadStore.downloadedMediaFileIds(collectionId: album.id)
   }
 
   // MARK: - Tracks

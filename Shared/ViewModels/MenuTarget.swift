@@ -89,7 +89,7 @@ enum MenuTarget: Identifiable {
       if songs.isEmpty {
         // Offline: the downloaded tracks, which may be only some of them.
         // The view context, so on main.
-        songs = await MainActor.run { AlbumService.shared.getSongsByAlbumId(albumId: album.id) }
+        songs = await MainActor.run { DownloadStore.getSongsByAlbumId(albumId: album.id) }
       }
       return (
         songs.sorted { ($0.discNumber, $0.trackNumber) < ($1.discNumber, $1.trackNumber) },
@@ -116,7 +116,7 @@ enum MenuTarget: Identifiable {
       }
       if songs.isEmpty {
         songs = await MainActor.run {
-          AlbumService.shared.getPlaylistSongs(playlistId: playlist.id)
+          DownloadStore.getPlaylistSongs(playlistId: playlist.id)
         }
       }
       return (songs, playlist.name, true)

@@ -129,7 +129,7 @@ struct CollectionDetailView<Artwork: View>: View {
   }
 
   private func refreshDownloadState() {
-    downloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: collectionId)
-    downloadedIds = AlbumService.shared.downloadedMediaFileIds(collectionId: collectionId)
+    downloaded = DownloadStore.checkIfAlbumDownloaded(albumID: collectionId)
+    downloadedIds = DownloadStore.downloadedMediaFileIds(collectionId: collectionId)
   }
 }

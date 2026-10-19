@@ -79,7 +79,7 @@ class AlbumViewModel: ObservableObject {
     self.album = album
 
     if !album.id.isEmpty {
-      if AlbumService.shared.isPlaylistDownload(id: album.id) {
+      if DownloadStore.isPlaylistDownload(id: album.id) {
         self.album.isPlaylist = true
         fetchPlaylistSongs(id: album.id, isShown: { self.album.id == album.id }) {
           self.album.songs = $0
@@ -98,7 +98,7 @@ class AlbumViewModel: ObservableObject {
   }
 
   func fetchSongs(id: String) {
-    let checkLocalSongs = AlbumService.shared.getSongsByAlbumId(albumId: id)
+    let checkLocalSongs = DownloadStore.getSongsByAlbumId(albumId: id)
 
     self.album.songs = checkLocalSongs
 
@@ -130,14 +130,14 @@ class AlbumViewModel: ObservableObject {
   private func fetchPlaylistSongs(
     id: String, isShown: @escaping () -> Bool, assign: @escaping ([Song]) -> Void
   ) {
-    let localSongs = AlbumService.shared.getPlaylistSongs(playlistId: id)
+    let localSongs = DownloadStore.getPlaylistSongs(playlistId: id)
     assign(localSongs)
 
     Task { @MainActor in
       do {
         let remoteSongs = try await AlbumService.shared.getSongsByPlaylist(id: id)
         let merged = Self.mergePlaylistSongs(local: localSongs, remote: remoteSongs)
-        AlbumService.shared.updatePlaylistPositions(playlistId: id, songs: merged)
+        DownloadStore.updatePlaylistPositions(playlistId: id, songs: merged)
         guard isShown() else { return }
         assign(merged)
       } catch {
@@ -265,7 +265,7 @@ class AlbumViewModel: ObservableObject {
   // MARK: - Fetch methods
 
   func removeDownloadedAlbum(album: Album) {
-    AlbumService.shared.removeDownloadedCollection(id: album.id) { result in
+    DownloadStore.removeDownloadedCollection(id: album.id) { result in
       DispatchQueue.main.async {
         switch result {
         case .success:
@@ -278,7 +278,7 @@ class AlbumViewModel: ObservableObject {
   }
 
   func removeDownloadedPlaylist(playlist: Playlist) {
-    AlbumService.shared.removeDownloadedCollection(id: playlist.id) { result in
+    DownloadStore.removeDownloadedCollection(id: playlist.id) { result in
       DispatchQueue.main.async {
         switch result {
         case .success:
@@ -437,7 +437,7 @@ class AlbumViewModel: ObservableObject {
 
   func fetchDownloadedAlbums() {
     // One row per album is enough to tell it still has songs.
-    downloadedAlbums = AlbumService.shared.downloadedAlbums().filter { album in
+    downloadedAlbums = DownloadStore.downloadedAlbums().filter { album in
       !CoreDataManager.shared.getRecordByKey(
         entity: SongEntity.self, key: \SongEntity.albumId, value: album.id, limit: 1
       ).isEmpty
