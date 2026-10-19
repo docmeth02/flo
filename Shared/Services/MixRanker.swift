@@ -275,7 +275,8 @@ struct MixRanker {
 
   // MARK: - Passes
 
-  /// Pass 1: keys, server-count priors, catalogue plays and title cooldowns.
+  /// The first pass over the library: keys, server-count priors, catalogue
+  /// plays and title cooldowns.
   private func scanLibrary(_ input: Input) -> Scan {
     let cfg = config
     let library = input.library
@@ -440,8 +441,8 @@ struct MixRanker {
       songSkip: skips.songs)
   }
 
-  /// Pass 2: features, cooldowns and the weights of both pools. Songs rated
-  /// down and songs already queued drop out.
+  /// The second pass: features, cooldowns and the weights of both pools.
+  /// Songs rated down and songs already queued drop out.
   private func score(_ input: Input, _ scan: Scan, _ standing: Standing) -> [Candidate] {
     let cfg = config
     let library = input.library
