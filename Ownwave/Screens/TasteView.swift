@@ -49,6 +49,8 @@ struct TasteView: View {
       albumViewModel.fetchStarredSongsIfStale()
       await reload()
     }
+    // The tour's step here points at the recipe on Profile.
+    .onChange(of: app.tour, initial: true) { if $1 == .taste { segment = .profile } }
     #if DEBUG
       .onAppear { applyDebugSegment() }
     #endif
@@ -242,7 +244,7 @@ private struct TasteProfile: View {
 
   var body: some View {
     VStack(spacing: 12) {
-      RecipeCard(recipe: summary.recipe, size: summary.recipeSize)
+      RecipeCard(recipe: summary.recipe, size: summary.recipeSize).tourAnchor(.taste)
       soundCard
       LazyVGrid(
         columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12

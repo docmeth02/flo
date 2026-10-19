@@ -8,11 +8,13 @@ import SwiftUI
 /// The paired watch: whether it answers, what it holds and its room, its
 /// sign-in, whether it follows this phone's settings, and albums to send.
 struct WatchView: View {
+  @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @ObservedObject private var link = WatchLink.shared
   @Environment(\.palette) private var palette
 
   @State private var shareSettings = UserDefaultsManager.shareWatchSettings
+  @State private var position = ScrollPosition()
 
   var body: some View {
     ScrollView {
@@ -39,7 +41,12 @@ struct WatchView: View {
       .padding(.horizontal, 16)
       .padding(.bottom, 24)
     }
+    .scrollPosition($position)
     .navigationBarTitleDisplayMode(.inline)
+    // The tour's last step points at the albums to send, below the fold.
+    .onChange(of: app.tour == .send && !suggestions.isEmpty, initial: true) {
+      if $1 { withAnimation { position.scrollTo(id: TourStep.send, anchor: .top) } }
+    }
     .onChange(of: shareSettings) {
       UserDefaultsManager.shareWatchSettings = $1
       link.updateWatch()
@@ -186,6 +193,8 @@ struct WatchView: View {
           .itemMenu(.album(album))
         }
       }
+      .tourAnchor(.send)
+      .id(TourStep.send)
     }
   }
 
