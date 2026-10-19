@@ -140,6 +140,7 @@
 		6A17041A9B41B54D4EF1673F /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E032C149F9A00D9BAEB /* APIManager.swift */; };
 		6A2EF564353B85CC42DC0D43 /* PlayerViewModel+NowPlayingInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B1BF4972348FFB9FFB29036 /* PlayerViewModel+NowPlayingInfo.swift */; };
 		6B7AEE99DCD4C364CD2E086A /* LibrarySearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA6E4B95E86671912ADCC03D /* LibrarySearch.swift */; };
+		6C1B1B11C7FD2B44B110BA51 /* Timeout.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD32A475E766D40892B7EEC3 /* Timeout.swift */; };
 		6C373A219D2F64423F0170B4 /* ListeningHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */; };
 		6CA9DE4C5A8B4EBC97E8D972 /* FloooViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD502D3264AE00644E68 /* FloooViewModel.swift */; };
 		6DBC248357BEAC987BC20DED /* LibraryCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */; };
@@ -331,7 +332,9 @@
 		ECAFB6C32648B3A1587A499A /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C415F54D2C11908100E3E1D2 /* AuthViewModel.swift */; };
 		ECB57FFBAD96571A5F9199F4 /* PlayerViewModel+NowPlayingInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B1BF4972348FFB9FFB29036 /* PlayerViewModel+NowPlayingInfo.swift */; };
 		ECDD28A700FA4BD8E25DA504 /* TourStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AECF8CB7692F9868CA958B5B /* TourStep.swift */; };
+		EDF6B4671F7FFBDCC2F9AB44 /* Timeout.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD32A475E766D40892B7EEC3 /* Timeout.swift */; };
 		EE08B48F23FDA3A541E71596 /* Playable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4824D222CE8C41D003EAB52 /* Playable.swift */; };
+		EE1A59CAFF5138BDA9D754E3 /* Timeout.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD32A475E766D40892B7EEC3 /* Timeout.swift */; };
 		EE8257FFD4E35E3713B38C38 /* SmartPlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C533CDA257C450543A1A341D /* SmartPlaybackService.swift */; };
 		EF97020801F33FE05D5B6F6B /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 701D2E56428E6BED3D942740 /* HomeView.swift */; };
 		EFA482DA52C4F9F921FC9EAE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 62F2E157B5FB30433F46F877 /* Assets.xcassets */; };
@@ -569,6 +572,7 @@
 		DB244999A6DB433F2FCE3BBA /* OwnwaveApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OwnwaveApp.swift; sourceTree = "<group>"; };
 		DBBEDF2A669F7923F874BBEC /* TasteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteView.swift; sourceTree = "<group>"; };
 		DBD2A02BF7748F60EE82FA7A /* PlaySomethingNowIntent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaySomethingNowIntent.swift; sourceTree = "<group>"; };
+		DD32A475E766D40892B7EEC3 /* Timeout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Timeout.swift; sourceTree = "<group>"; };
 		DEDED51722CC7DC620CD7124 /* PhoneLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhoneLink.swift; sourceTree = "<group>"; };
 		DFB35A7F59E1A97C0988F15B /* Theme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		E0CE0078920231694ED30C83 /* LoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -929,6 +933,7 @@
 				C415F5592C11953000E3E1D2 /* Constants.swift */,
 				C4120FD82C15D58E00E712BE /* Errors.swift */,
 				C49134522C15BE0C00CCF2EB /* Strings.swift */,
+				DD32A475E766D40892B7EEC3 /* Timeout.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -1397,6 +1402,7 @@
 				ADC990DEAE33749FF281E185 /* WatchLinkTests.swift in Sources */,
 				898E65974F3238D4136AF627 /* ListState.swift in Sources */,
 				A482A937381B44A00E969BB8 /* ModelTests.swift in Sources */,
+				6C1B1B11C7FD2B44B110BA51 /* Timeout.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1511,6 +1517,7 @@
 				4ED53DB55FA2B05CE17D1DD4 /* PhoneLink.swift in Sources */,
 				E1442A8B84C01EE321E02C9C /* PhoneLink+Debug.swift in Sources */,
 				57E2CE9B46E1AC2BBD638CC2 /* ListState.swift in Sources */,
+				EDF6B4671F7FFBDCC2F9AB44 /* Timeout.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1628,6 +1635,7 @@
 				ECDD28A700FA4BD8E25DA504 /* TourStep.swift in Sources */,
 				373E350F4B437C89425F969F /* Thumbnail.swift in Sources */,
 				B54DA88DE8B66A3A9EBEFF43 /* ListState.swift in Sources */,
+				EE1A59CAFF5138BDA9D754E3 /* Timeout.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

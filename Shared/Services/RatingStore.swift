@@ -141,15 +141,7 @@ import Foundation
   /// past it the caller goes on with the ones known.
   func refreshIfStale(waitingAtMost limit: Duration) async {
     guard let refresh = refreshIfStale() else { return }
-    // A task group would wait for the refresh too; the stream ends the wait
-    // at whichever finishes first.
-    let (done, finish) = AsyncStream<Void>.makeStream()
-    Task { await refresh.value; finish.yield() }
-    Task {
-      try? await Task.sleep(for: limit)
-      finish.yield()
-    }
-    for await _ in done { break }
+    _ = await withTimeout(limit) { await refresh.value }
   }
 
   /// The server's ratings, newer than the cache and than every edit it took

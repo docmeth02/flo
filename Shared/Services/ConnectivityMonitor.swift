@@ -223,16 +223,7 @@ final class ConnectivityMonitor: ObservableObject {
   /// `canStream()`, or nil when no verdict came within `limit`; the probe
   /// goes on.
   func canStream(waitingAtMost limit: Duration) async -> Bool? {
-    // A task group would wait for the probe too; the stream ends the wait at
-    // whichever finishes first.
-    let (verdicts, deliver) = AsyncStream<Bool?>.makeStream()
-    Task { deliver.yield(await canStream()) }
-    Task {
-      try? await Task.sleep(for: limit)
-      deliver.yield(nil)
-    }
-    for await verdict in verdicts { return verdict }
-    return nil
+    await withTimeout(limit) { await self.canStream() }
   }
 
   private func deliverProbeResult() {
