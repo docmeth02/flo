@@ -103,7 +103,8 @@ struct CollectionDetailView<Artwork: View>: View {
           .frame(height: 1)
           .padding(4)
 
-        ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
+        // By position: a playlist can hold a song twice.
+        ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
           TrackRowView(
             trackNumber: trackNumber(index, song),
             title: song.title,
