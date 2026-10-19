@@ -168,22 +168,29 @@ class AuthService {
 
   /// Writes a renewed token back to the stored login, so a launch without a
   /// connection starts with it rather than one that may have expired. Called
-  /// on the main queue, like the logins that write the stored login.
+  /// on the main queue, like the logins and the logout that write the stored
+  /// login. The Keychain is read and written outside the lock, which every
+  /// request takes.
   func persistRenewedToken() {
-    credentialsLock.lock()
-    defer { credentialsLock.unlock() }
-    guard tokenNeedsPersisting, let token = ndToken, !token.isEmpty,
-      case .found(let stored) = KeychainManager.loadAuth(), stored.id == userId
+    let session = credentialsLock.withLock { () -> (token: String, userId: String?)? in
+      guard tokenNeedsPersisting, let token = ndToken, !token.isEmpty else { return nil }
+      return (token, userId)
+    }
+    guard let session, case .found(let stored) = KeychainManager.loadAuth(),
+      stored.id == session.userId
     else { return }
 
     let renewed = UserAuth(
       id: stored.id, username: stored.username, name: stored.name, isAdmin: stored.isAdmin,
       lastFMApiKey: stored.lastFMApiKey, subsonicSalt: stored.subsonicSalt,
-      subsonicToken: stored.subsonicToken, token: token)
+      subsonicToken: stored.subsonicToken, token: session.token)
     do {
       let jsonData = try JSONEncoder().encode(renewed)
       try KeychainManager.setAuthCreds(newValue: String(decoding: jsonData, as: UTF8.self))
-      tokenNeedsPersisting = false
+      // A token renewed meanwhile still needs writing.
+      credentialsLock.withLock {
+        if ndToken == session.token { tokenNeedsPersisting = false }
+      }
       debugLog("navidrome token persisted")
     } catch {
       debugLog("Error saving renewed token to Keychain: \(error)")
