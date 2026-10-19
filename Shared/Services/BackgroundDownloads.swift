@@ -43,15 +43,28 @@ enum DownloadFailure: Equatable {
     return nil
   }
 
+  /// The verdict on a delivered file and the Subsonic error code its body
+  /// carries, if it is one.
+  static func check(_ response: HTTPURLResponse?, file: URL?, bytes: Int64)
+    -> (failure: DownloadFailure?, subsonicCode: Int?)
+  {
+    let isErrorBody = isErrorBody(response)
+    let code = isErrorBody ? file.flatMap(subsonicCode(in:)) : nil
+    let failure = classify(
+      status: response?.statusCode ?? 0, isErrorBody: isErrorBody, subsonicCode: code,
+      bytes: bytes)
+    return (failure, code)
+  }
+
   /// A Subsonic error comes as JSON or XML; an SVG cover is XML too, but an
   /// image.
-  static func isErrorBody(_ response: HTTPURLResponse?) -> Bool {
+  private static func isErrorBody(_ response: HTTPURLResponse?) -> Bool {
     guard let type = response?.mimeType, !type.hasPrefix("image/") else { return false }
     return type.contains("json") || type.contains("xml")
   }
 
   /// The code of a Subsonic JSON error body, nil when it cannot be read.
-  static func subsonicCode(in file: URL) -> Int? {
+  private static func subsonicCode(in file: URL) -> Int? {
     (try? JSONDecoder().decode(SubsonicEnvelope<BasicResponse>.self, from: Data(contentsOf: file)))?
       .subsonicResponse.error?.code
   }

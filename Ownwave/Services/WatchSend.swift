@@ -325,12 +325,10 @@ extension WatchSend: URLSessionDownloadDelegate {
     _ session: URLSession, downloadTask: URLSessionDownloadTask,
     didFinishDownloadingTo location: URL
   ) {
-    let response = downloadTask.response as? HTTPURLResponse
-    let isErrorBody = DownloadFailure.isErrorBody(response)
-    let failure = DownloadFailure.classify(
-      status: response?.statusCode ?? 0, isErrorBody: isErrorBody,
-      subsonicCode: isErrorBody ? DownloadFailure.subsonicCode(in: location) : nil,
-      bytes: downloadTask.countOfBytesReceived)
+    let failure = DownloadFailure.check(
+      downloadTask.response as? HTTPURLResponse, file: location,
+      bytes: downloadTask.countOfBytesReceived
+    ).failure
     var file: URL?
     if failure == nil {
       let aside = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

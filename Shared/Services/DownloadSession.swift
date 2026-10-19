@@ -431,16 +431,11 @@ extension DownloadSession: URLSessionDownloadDelegate {
     let response = downloadTask.response as? HTTPURLResponse
     let status = response?.statusCode ?? 0
     let bytes = downloadTask.countOfBytesReceived
-    let isErrorBody = DownloadFailure.isErrorBody(response)
-    let subsonicCode = isErrorBody ? DownloadFailure.subsonicCode(in: location) : nil
+    let (failure, subsonicCode) = DownloadFailure.check(response, file: location, bytes: bytes)
     log(job, "status=\(status) bytes=\(bytes)\(subsonicCode.map { " code=\($0)" } ?? "")")
     ConnectivityMonitor.shared.record(response: response, error: nil)
 
-    if let failure = DownloadFailure.classify(
-      status: status, isErrorBody: isErrorBody, subsonicCode: subsonicCode, bytes: bytes)
-    {
-      return fail(job, failure)
-    }
+    if let failure { return fail(job, failure) }
     do {
       try LocalFileManager.shared.moveFile(
         source: location, target: LocalFileManager.shared.fileURL(for: destination(of: job)))

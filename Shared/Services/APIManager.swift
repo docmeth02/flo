@@ -105,14 +105,10 @@ class APIManager {
       }
     )
     .validate { _, response, fileURL in
-      let isErrorBody = DownloadFailure.isErrorBody(response)
-      let code = isErrorBody ? fileURL.flatMap(DownloadFailure.subsonicCode(in:)) : nil
       let bytes = fileURL.flatMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize }
-      guard
-        DownloadFailure.classify(
-          status: response.statusCode, isErrorBody: isErrorBody, subsonicCode: code,
-          bytes: Int64(bytes ?? 0)) == nil
-      else {
+      let (failure, code) = DownloadFailure.check(
+        response, file: fileURL, bytes: Int64(bytes ?? 0))
+      guard failure == nil else {
         return .failure(SubsonicError(code: code ?? 0, message: "no file in the response"))
       }
       return .success(())
