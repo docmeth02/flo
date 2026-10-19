@@ -75,7 +75,7 @@ struct WatchNowPlayingView: View {
     .navigationTitle("")
     .toolbar {
       ToolbarItem(placement: .topBarLeading) {
-        if playerViewModel.hasNowPlaying() {
+        if playerViewModel.nowPlaying != nil {
           SystemVolumeControl(isFocused: ownsCrown && isShown, focusRequest: focusRequest)
             .frame(width: 26, height: 26)
         }

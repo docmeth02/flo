@@ -131,7 +131,7 @@ struct AppTabs: View {
     guard url.scheme == "ownwave" else { return }
     switch url.host() {
     case "nowplaying":
-      if app.player.hasNowPlaying() { app.isNowPlayingPresented = true }
+      if app.player.nowPlaying != nil { app.isNowPlayingPresented = true }
     case "album":
       let id = url.lastPathComponent
       Task {
@@ -174,7 +174,7 @@ struct AppTabs: View {
     case .rate?, .why?, .peek?:
       // With nothing queued Now Playing closes itself, and the card stays
       // on the tabs.
-      if app.player.hasNowPlaying() { app.isNowPlayingPresented = true }
+      if app.player.nowPlaying != nil { app.isNowPlayingPresented = true }
       return
     case .play?: show(.home)
     case .taste?: show(.taste)

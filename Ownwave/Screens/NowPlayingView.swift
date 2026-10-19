@@ -98,7 +98,7 @@ struct NowPlayingView: View {
     .toastOverlay(app.toast, bottom: 24)
     .tourOverlay(app.tour.flatMap { $0.isOnNowPlaying || app.isNowPlayingPresented ? $0 : nil })
     .coverShades($shades, albumId: albumId, url: player.coverArt)
-    .onChange(of: player.hasNowPlaying(), initial: true) { _, playing in
+    .onChange(of: player.nowPlaying != nil, initial: true) { _, playing in
       if !playing { dismiss() }
     }
   }

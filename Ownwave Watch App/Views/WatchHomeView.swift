@@ -22,7 +22,7 @@ struct WatchHomeView: View {
         }
       }
 
-      if playerViewModel.hasNowPlaying() {
+      if playerViewModel.nowPlaying != nil {
         Button(action: selectPlayerPage) {
           NowPlayingIndicator()
         }
@@ -102,7 +102,7 @@ struct WatchHomeView: View {
     .scrollContentBackground(.hidden)
     .background(alignment: .top) {
       // Fixed behind the list like the mockup: rows scroll over the cover.
-      if playerViewModel.hasNowPlaying() {
+      if playerViewModel.nowPlaying != nil {
         CoverBackdrop(
           albumId: playerViewModel.nowPlayingAlbumId,
           url: playerViewModel.coverArt, height: 190)

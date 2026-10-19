@@ -79,7 +79,7 @@ struct HomeView: View {
   }
 
   private var playCard: some View {
-    let hasNowPlaying = player.hasNowPlaying()
+    let hasNowPlaying = player.nowPlaying != nil
     return VStack(spacing: 0) {
       if hasNowPlaying { NowPlayingCard() }
       Button {

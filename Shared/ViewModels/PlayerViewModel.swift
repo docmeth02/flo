@@ -311,10 +311,6 @@ class PlayerViewModel: ObservableObject {
     persistShuffleOrder()
   }
 
-  func hasNowPlaying() -> Bool {
-    nowPlaying != nil
-  }
-
   var nowPlayingId: String? { nowPlaying?.id }
 
   func isCurrentTrack(_ id: String?) -> Bool {
@@ -534,7 +530,7 @@ class PlayerViewModel: ObservableObject {
         // music the user may pause meanwhile.
         self.resumeAfterInterruption = false
 
-        if self.playerItem == nil, self.hasNowPlaying(), !self.isLiveRadio {
+        if self.playerItem == nil, self.nowPlaying != nil, !self.isLiveRadio {
           self.isFinished = false
           self.isPlaying = true
           self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
