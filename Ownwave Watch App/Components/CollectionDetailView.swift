@@ -45,7 +45,7 @@ struct CollectionDetailView<Artwork: View>: View {
     }
     // Songs the iPhone is still sending are on their way, not missing.
     if phone.isReceiving(collectionId: collectionId) {
-      return .downloading(
+      return .receiving(
         percent: phone.progress(collectionId: collectionId, songs: downloadedIds.count))
     }
     // An interrupted download leaves some tracks behind; offer the rest.

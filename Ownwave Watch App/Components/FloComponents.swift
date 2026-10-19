@@ -311,6 +311,8 @@ struct DownloadControl: View {
   enum State: Equatable {
     case none
     case downloading(percent: Int)
+    /// Sent by the iPhone, which alone can stop it, so it has no Cancel.
+    case receiving(percent: Int)
     case partial(missing: Int)
     case done
   }
@@ -325,7 +327,7 @@ struct DownloadControl: View {
       switch state {
       case .none:
         row("Download", systemImage: "arrow.down.circle", tint: .floLilac, action: onDownload)
-      case .downloading(let percent):
+      case .downloading(let percent), .receiving(let percent):
         VStack(spacing: 6) {
           HStack(alignment: .firstTextBaseline) {
             Text("Downloading").font(.floRow)
@@ -336,9 +338,11 @@ struct DownloadControl: View {
           }
           ProgressView(value: Double(percent), total: 100)
             .tint(.floLilac)
-          Button("Cancel", action: onCancel)
-            .buttonStyle(
-              FloTintedButtonStyle(tint: .floDestructive, height: 36))
+          if case .downloading = state {
+            Button("Cancel", action: onCancel)
+              .buttonStyle(
+                FloTintedButtonStyle(tint: .floDestructive, height: 36))
+          }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
