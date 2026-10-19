@@ -48,14 +48,12 @@ struct WatchAlbumDetailView: View {
     .background(alignment: .top) { CoverBackdrop(albumId: album.id, height: 220) }
     .task(id: album.id) { tint = await CoverTint.color(albumId: album.id) ?? .floLilac }
     // Once: a return from a screen pushed on top keeps the loaded tracks,
-    // also offline. A load cut short by that push runs again, and so does
-    // one after a removed download, which keeps the tracks while offline.
+    // also offline. A load cut short by that push or left empty runs again,
+    // and so does one after a removed download.
     .task(id: isLoaded) {
       guard !isLoaded else { return }
-      for await songs in albumViewModel.loadSongs(of: album) where !songs.isEmpty {
-        self.songs = songs
-      }
-      isLoaded = !Task.isCancelled
+      for await songs in albumViewModel.loadSongs(of: album) { self.songs = songs }
+      isLoaded = !Task.isCancelled && !songs.isEmpty
     }
   }
 }

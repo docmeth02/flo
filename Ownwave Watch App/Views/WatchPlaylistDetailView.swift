@@ -51,10 +51,8 @@ struct WatchPlaylistDetailView: View {
     // Once, as an album.
     .task(id: isLoaded) {
       guard !isLoaded else { return }
-      for await songs in albumViewModel.loadSongs(of: playlist) where !songs.isEmpty {
-        self.songs = songs
-      }
-      isLoaded = !Task.isCancelled
+      for await songs in albumViewModel.loadSongs(of: playlist) { self.songs = songs }
+      isLoaded = !Task.isCancelled && !songs.isEmpty
     }
   }
 }

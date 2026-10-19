@@ -73,7 +73,7 @@ struct PlaylistView: View {
     .task(id: isLoaded) {
       guard !isLoaded else { return }
       for await songs in albumViewModel.loadSongs(of: playlist) { self.songs = songs }
-      isLoaded = !Task.isCancelled
+      isLoaded = !Task.isCancelled && !songs.isEmpty
     }
   }
 }
