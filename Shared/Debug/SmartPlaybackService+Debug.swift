@@ -71,7 +71,7 @@
             "skip \(id): \(events.count) events P_song="
               + String(format: "%.3f", MixRanker().skipPenalty(events, now: Date())))
         }
-        let pendingPlays = Self.latestListens(ScrobbleQueueManager.shared.pendingListens())
+        let pendingPlays = Self.latestListens(await ScrobbleQueueManager.shared.pendingListens())
         let liked = await likedCollections(index: index)
         let (ratings, starred) = await MainActor.run { [songs = library.songs] in
           (

@@ -12,14 +12,12 @@ struct ScrobblePayload {
   // belongs to the previous account and must not be queued.
   let accountGeneration: Int
 
-  init?(
-    nowPlaying: QueueEntity,
-    accountGeneration: Int = ScrobbleQueueManager.shared.accountGeneration
-  ) {
+  /// `accountGeneration` is for tests; the app takes the outbox's.
+  @MainActor init?(nowPlaying: QueueEntity, accountGeneration: Int? = nil) {
     guard let songId = nowPlaying.id, !songId.isEmpty else { return nil }
     self.songId = songId
     self.listenTime = Date()
-    self.accountGeneration = accountGeneration
+    self.accountGeneration = accountGeneration ?? ScrobbleQueueManager.shared.accountGeneration
   }
 }
 
@@ -27,7 +25,7 @@ struct ScrobblePayload {
 /// right away. Entries are deleted once the server acknowledges them, retried
 /// with a growing delay while the server is unreachable or no login can be
 /// read, and dropped only when the server says they can never succeed.
-final class ScrobbleQueueManager {
+@MainActor final class ScrobbleQueueManager {
   static let shared = ScrobbleQueueManager()
 
   /// Submits one listen to the server.
@@ -45,7 +43,6 @@ final class ScrobbleQueueManager {
   private(set) var accountGeneration = 0
   // What pendingListens returns, renewed with every reload.
   private var listens: [(songId: String, at: Date)] = []
-  private let listensLock = NSLock()
 
   private let store: CoreDataManager
   private let receipts: ScrobbleReceipts
@@ -88,7 +85,7 @@ final class ScrobbleQueueManager {
 
   /// Every return to the app, and every successful probe: ConnectivityMonitor
   /// probes the server on launch, when the network comes back and on demand.
-  static func appAndServerTriggers() -> AnyPublisher<Void, Never> {
+  nonisolated static func appAndServerTriggers() -> AnyPublisher<Void, Never> {
     NotificationCenter.default.publisher(for: AppPlatform.didBecomeActive)
       .map { _ in }
       .merge(
@@ -100,14 +97,14 @@ final class ScrobbleQueueManager {
       .eraseToAnyPublisher()
   }
 
-  /// Submissions waiting for the server. Main thread only.
+  /// Submissions waiting for the server.
   var pendingCount: Int { scrobbles.count }
 
   /// Counted plays still waiting in the outbox for the current account, as
-  /// (song playback id, listen time). Thread-safe snapshot.
+  /// (song playback id, listen time).
   func pendingListens() -> [(songId: String, at: Date)] {
     guard accountKey() != nil else { return [] }
-    return listensLock.withLock { listens }
+    return listens
   }
 
   func enqueue(_ payload: ScrobblePayload) {
@@ -156,10 +153,9 @@ final class ScrobbleQueueManager {
     scrobbles = store.getRecordsByEntity(
       entity: ScrobbleEntity.self,
       sortDescriptors: [NSSortDescriptor(key: "queuedAt", ascending: true)])
-    let listens = scrobbles.compactMap { entry in
+    listens = scrobbles.compactMap { entry in
       entry.songId.flatMap { songId in entry.listenTime.map { (songId: songId, at: $0) } }
     }
-    listensLock.withLock { self.listens = listens }
   }
 
   private static func rowID(_ entry: ScrobbleEntity) -> String {

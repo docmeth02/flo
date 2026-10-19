@@ -293,7 +293,7 @@ class AuthViewModel: ObservableObject {
     // would be submitted with the next account's credentials.
     LibraryCacheManager.shared.clearCache()
     StreamCacheManager.shared.clearCache()
-    ScrobbleQueueManager.shared.clearAll()
+    MainActor.assumeIsolated { ScrobbleQueueManager.shared.clearAll() }
     URLCache.shared.removeAllCachedResponses()
     CoverArtCacheManager.shared.clearCache()
     RequestLog.shared.clear()

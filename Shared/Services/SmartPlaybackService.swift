@@ -154,7 +154,7 @@ final class SmartPlaybackService {
       await RatingStore.shared.refreshIfStale(waitingAtMost: .seconds(3))
     }
     let index = await libraryIndex(allowSync: canStream)
-    let pendingPlays = Self.latestListens(ScrobbleQueueManager.shared.pendingListens())
+    let pendingPlays = Self.latestListens(await ScrobbleQueueManager.shared.pendingListens())
     let liked = await likedCollections(index: index)
     let (ratings, starred) = await MainActor.run { [songs, starredIds] in
       (Self.effectiveRatings(of: songs, index: index), StarStore.shared.starred(listed: starredIds))

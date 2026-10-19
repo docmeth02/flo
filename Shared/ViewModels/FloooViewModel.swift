@@ -72,8 +72,10 @@ class FloooViewModel: ObservableObject {
     }
   }
 
+  /// Main thread.
   func scrobble(submission: Bool, nowPlaying: QueueEntity) {
-    guard let payload = ScrobblePayload(nowPlaying: nowPlaying) else { return }
+    guard let payload = MainActor.assumeIsolated({ ScrobblePayload(nowPlaying: nowPlaying) })
+    else { return }
     processScrobble(submission: submission, payload: payload)
   }
 
@@ -85,7 +87,7 @@ class FloooViewModel: ObservableObject {
   func reportPlayback(state: PlaybackReportState, nowPlaying: QueueEntity, positionSeconds: Double)
   {
     guard AuthService.shared.accountKey != nil,
-      let payload = ScrobblePayload(nowPlaying: nowPlaying)
+      let payload = MainActor.assumeIsolated({ ScrobblePayload(nowPlaying: nowPlaying) })
     else { return }
     guard !reportPlaybackUnsupported else {
       if state == .starting { processScrobble(submission: false, payload: payload) }
@@ -164,7 +166,7 @@ class FloooViewModel: ObservableObject {
     // always scrobbles to the server. A submission goes through the outbox, so
     // it survives the app being killed while the request is in flight.
     if submission {
-      ScrobbleQueueManager.shared.enqueue(payload)
+      MainActor.assumeIsolated { ScrobbleQueueManager.shared.enqueue(payload) }
       return
     }
 
