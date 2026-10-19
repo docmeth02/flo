@@ -190,6 +190,7 @@
 		84AD877E79AEDEECFE0F9A27 /* SmartPlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C533CDA257C450543A1A341D /* SmartPlaybackService.swift */; };
 		854D35E557CBD828EC654F35 /* UserDefaultsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524A2C14E1F70053763A /* UserDefaultsManager.swift */; };
 		85B8F30F46DB2F7ADEAC9484 /* AppLaunch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B02F81DA77E17C53E948170B /* AppLaunch.swift */; };
+		85E420474FFBA63CE133C790 /* Navidrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02FB5282D598117B416D9D0 /* Navidrome.swift */; };
 		85E628463A4028603E20D286 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F22C3ED6FCC61583D5185D /* Palette.swift */; };
 		87B4830057DBBEFEBF0547F8 /* PlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84E2C7F2C5D00165EFD /* PlaybackService.swift */; };
 		88AECCD062F6B9089D3996F7 /* PlayerViewModel+KeepPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DB5FDCA757705B0741AF994 /* PlayerViewModel+KeepPlaying.swift */; };
@@ -234,6 +235,7 @@
 		9D36BC43132063B3F683F082 /* PlaySomethingNowIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBD2A02BF7748F60EE82FA7A /* PlaySomethingNowIntent.swift */; };
 		9E2978ECF52F4F441930EDE3 /* FloooViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C467AD502D3264AE00644E68 /* FloooViewModel.swift */; };
 		9F9608E66FC97A4172919B11 /* Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41470BA2CE65808008BDCE8 /* Artist.swift */; };
+		A0734F0E910B973C55257E26 /* Navidrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02FB5282D598117B416D9D0 /* Navidrome.swift */; };
 		A08ED21ABC61336BDD76B09E /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FE524C2C14E71B0053763A /* KeychainManager.swift */; };
 		A10330172351A9F1AA2E18A3 /* OwnwaveWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08BC56044217EF03B120ED91 /* OwnwaveWidgets.swift */; };
 		A17D1214FCC88CB88C5E1E7C /* PlaybackJournal.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6AF6E0F8A29AB9BC9EF2B1C /* PlaybackJournal.swift */; };
@@ -303,6 +305,7 @@
 		D493E3043CDDF727DCE79E63 /* Ownwave Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 9A72287ACF3C11B43C138CED /* Ownwave Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D56D8D67004B7A3F15CA1FB8 /* WatchArtistsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0727D9D472758F5B95F301F6 /* WatchArtistsListView.swift */; };
 		D64FF90374238D7CCEBB5C2D /* TasteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBEDF2A669F7923F874BBEC /* TasteView.swift */; };
+		D705401C446416D66A59398E /* Navidrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02FB5282D598117B416D9D0 /* Navidrome.swift */; };
 		D85959F8008E2D392FC76CED /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F22C3ED6FCC61583D5185D /* Palette.swift */; };
 		D897DDB13AB5E4AEB0BADF4F /* AppTabs+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23779BCA4AD2CD905771DC4F /* AppTabs+Debug.swift */; };
 		D8BA4D156C4070D95D7D89F8 /* ScrobbleAPI+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98AFFF79C9650BA2DF5E31FC /* ScrobbleAPI+Debug.swift */; };
@@ -587,6 +590,7 @@
 		C82E4A2833D5B79A9B7841EB /* PendingEdits.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PendingEdits.swift; sourceTree = "<group>"; };
 		CAF04201D7CDA9A5BCB5EBB8 /* NowPlayingView+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "NowPlayingView+Debug.swift"; sourceTree = "<group>"; };
 		CCECEB2E491539A0CCEFF67F /* NowPlayingIndicator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NowPlayingIndicator.swift; sourceTree = "<group>"; };
+		D02FB5282D598117B416D9D0 /* Navidrome.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Navidrome.swift; sourceTree = "<group>"; };
 		D0E8C96A88970CAD2828E8A3 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		D1388C037165FF767131D19D /* RecommendationLog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecommendationLog.swift; sourceTree = "<group>"; };
 		D1C49ED21B57D55485FE8A43 /* WatchSend.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSend.swift; sourceTree = "<group>"; };
@@ -954,6 +958,7 @@
 				C4120FDC2C15E1C300E712BE /* Song.swift */,
 				C467AD522D3267CE00644E68 /* Subsonic.swift */,
 				C446A6B62C08DE8800CC9787 /* UserAuth.swift */,
+				D02FB5282D598117B416D9D0 /* Navidrome.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -1439,6 +1444,7 @@
 				9D2E83272519615CD2A7B39B /* TestSupport.swift in Sources */,
 				E183C3A643387B5FC8E469F6 /* EngineRulesTests.swift in Sources */,
 				CC1A75378A2016068574E41B /* MixRankerGoldenTests.swift in Sources */,
+				A0734F0E910B973C55257E26 /* Navidrome.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1558,6 +1564,7 @@
 				1BD85C98D9B22446A88D33C4 /* ScrobbleAPI+Debug.swift in Sources */,
 				71016DDD8CDBDEE4F20FACB8 /* DownloadControl.swift in Sources */,
 				F0FCDB1640AE6E4510B166FC /* FloToast.swift in Sources */,
+				D705401C446416D66A59398E /* Navidrome.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1679,6 +1686,7 @@
 				7453D1FA13935C505BABDC07 /* ListeningHistoryStore+Debug.swift in Sources */,
 				D8BA4D156C4070D95D7D89F8 /* ScrobbleAPI+Debug.swift in Sources */,
 				20DE0DA5BF31EE7705D43772 /* Segmented.swift in Sources */,
+				85E420474FFBA63CE133C790 /* Navidrome.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

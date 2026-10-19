@@ -129,6 +129,17 @@ class APIManager {
   }
 }
 
+/// A Subsonic URL with the credentials (which start with "?") and the
+/// percent-encoded parameters in its query.
+func subsonicURL(endpoint: String, parameters: [String: Any]) -> String {
+  let query = parameters.sorted { $0.key < $1.key }
+    .flatMap { URLEncoding.queryString.queryComponents(fromKey: $0.key, value: $0.value) }
+    .map { "\($0)=\($1)" }
+    .joined(separator: "&")
+  return
+    "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(AuthService.shared.sessionSnapshot().subsonicCredentials)&\(query)"
+}
+
 /// One retry for transient connection failures. Time-outs are not retried,
 /// since the watch already waited the full request timeout, and scrobbles
 /// never are: a lost response would submit the same listen again.
