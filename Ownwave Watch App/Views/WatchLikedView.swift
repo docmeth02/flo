@@ -24,9 +24,9 @@ struct WatchLikedView: View {
   }
 
   /// Loading while any of the three lists loads, failed when any failed.
-  private var state: AlbumViewModel.ListState {
+  private var state: ListState {
     let states = [AlbumViewModel.Library.starredSongs, .albums, .artists].map(albumViewModel.state)
-    return AlbumViewModel.ListState(
+    return ListState(
       isLoading: states.contains(where: \.isLoading), failed: states.contains(where: \.failed))
   }
 

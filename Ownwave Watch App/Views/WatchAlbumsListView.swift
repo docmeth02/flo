@@ -37,7 +37,7 @@ struct WatchAlbumsListView: View {
 /// pull-to-refresh and a refresh button that shows the request under way.
 struct LibraryList<Rows: View>: View {
   let title: String
-  let state: AlbumViewModel.ListState
+  let state: ListState
   let isEmpty: Bool
   let empty: StateView.Kind
   let refresh: () async -> Void

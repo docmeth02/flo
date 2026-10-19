@@ -132,8 +132,7 @@ struct LibraryView: View {
       }
     case .radios:
       listed(
-        AlbumViewModel.ListState(isLoading: radios.isLoading, failed: radios.error != nil),
-        isEmpty: radios.radios.isEmpty, empty: "No radios on the server"
+        radios.state, isEmpty: radios.radios.isEmpty, empty: "No radios on the server"
       ) {
         LazyVStack(spacing: 8) {
           ForEach(radios.radios) { radio in
@@ -165,7 +164,7 @@ struct LibraryView: View {
     let artists = albumViewModel.artists.filter { stars.isStarred($0.id, listed: $0.starred) }
     let states = [AlbumViewModel.Library.starredSongs, .albums, .artists].map(albumViewModel.state)
     listed(
-      AlbumViewModel.ListState(
+      ListState(
         isLoading: states.contains(where: \.isLoading), failed: states.contains(where: \.failed)),
       isEmpty: songs.isEmpty && albums.isEmpty && artists.isEmpty, empty: "Nothing liked yet"
     ) {
@@ -279,7 +278,7 @@ struct LibraryView: View {
   /// The rows, or while there are none the list's loading, failed or empty
   /// state.
   @ViewBuilder private func listed(
-    _ state: AlbumViewModel.ListState, isEmpty: Bool, empty: String,
+    _ state: ListState, isEmpty: Bool, empty: String,
     @ViewBuilder rows: () -> some View
   ) -> some View {
     if !isEmpty {

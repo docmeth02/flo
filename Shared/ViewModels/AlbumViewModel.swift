@@ -39,14 +39,6 @@ class AlbumViewModel: ObservableObject {
 
   private static let reloadAfter: TimeInterval = 5 * 60
 
-  /// Loading and failure of one list, so a failed album fetch does not show
-  /// on the playlists.
-  struct ListState {
-    var isLoading = false
-    var failed = false
-    var loadedAt: Date?
-  }
-
   @Published private(set) var listStates: [Library: ListState] = [:]
 
   /// The artist whose albums `artistAlbums` holds, so a late answer for the

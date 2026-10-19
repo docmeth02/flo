@@ -15,8 +15,7 @@ struct WatchRadiosView: View {
   var body: some View {
     LibraryList(
       title: "Radios",
-      state: AlbumViewModel.ListState(
-        isLoading: viewModel.isLoading, failed: viewModel.error != nil),
+      state: viewModel.state,
       isEmpty: viewModel.radios.isEmpty,
       empty: .empty(
         systemImage: "dot.radiowaves.up.forward", tint: .floLilac, title: "No radios",
