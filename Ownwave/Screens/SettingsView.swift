@@ -14,13 +14,19 @@ struct SettingsView: View {
 
   @AppStorage("appearance") private var appearance = Appearance.system
   @AppStorage("tourSeen") private var tourSeen = false
-  @State private var keepPlaying = UserDefaultsManager.keepPlaying
-  @State private var showMixReasons = UserDefaultsManager.showMixReasons
-  @State private var streamOnCellular = UserDefaultsManager.streamOnCellular
-  @State private var wifiBitRate = UserDefaultsManager.maxBitRate
-  @State private var cellularBitRate = UserDefaultsManager.cellularBitRate
-  @State private var downloadBitRate = UserDefaultsManager.downloadBitRate
-  @State private var downloadOverCellular = UserDefaultsManager.downloadOverCellular
+  // UserDefaultsManager's settings, with its defaults. The bitrates are
+  // shown through `offered`, which reads a retired value as it does.
+  @AppStorage(UserDefaultsKeys.keepPlaying)
+  private var keepPlaying = UserDefaultsManager.keepPlaying
+  @AppStorage(UserDefaultsKeys.showMixReasons)
+  private var showMixReasons = UserDefaultsManager.showMixReasons
+  @AppStorage(UserDefaultsKeys.streamOnCellular)
+  private var streamOnCellular = UserDefaultsManager.streamOnCellular
+  @AppStorage(UserDefaultsKeys.downloadOverCellular)
+  private var downloadOverCellular = UserDefaultsManager.downloadOverCellular
+  @AppStorage(UserDefaultsKeys.enableMaxBitRate) private var wifiBitRate: String?
+  @AppStorage(UserDefaultsKeys.cellularBitRate) private var cellularBitRate: String?
+  @AppStorage(UserDefaultsKeys.downloadBitRate) private var downloadBitRate: String?
   @State private var username = ""
   @State private var serverVersion: String?
   @State private var cachedSongs = 0
@@ -62,14 +68,14 @@ struct SettingsView: View {
             "Stream on cellular", "Uses the cellular bitrate below", isOn: $streamOnCellular)
         }
         section("Streaming on Wi-Fi (kbps)") {
-          Segmented(options: Self.limitsWithOriginal, selection: $wifiBitRate)
+          Segmented(options: Self.limitsWithOriginal, selection: offered($wifiBitRate))
         }
         section("Streaming on cellular (kbps)") {
-          Segmented(options: Self.limits, selection: $cellularBitRate)
+          Segmented(options: Self.limits, selection: offered($cellularBitRate))
         }
         section("Downloads (kbps)") {
           // Original as on the watch: the phone has room for lossless files.
-          Segmented(options: Self.limitsWithOriginal, selection: $downloadBitRate)
+          Segmented(options: Self.limitsWithOriginal, selection: offered($downloadBitRate))
           toggle(
             "Download on cellular", "Downloads wait for Wi-Fi when this is off",
             isOn: $downloadOverCellular)
@@ -95,23 +101,10 @@ struct SettingsView: View {
     .navigationBarTitleDisplayMode(.inline)
     // Keep Playing and the cellular and download bitrates are what the watch
     // follows.
-    .onChange(of: keepPlaying) {
-      UserDefaultsManager.keepPlaying = $1
-      WatchLink.shared.updateWatch()
-    }
-    .onChange(of: showMixReasons) { UserDefaultsManager.showMixReasons = $1 }
-    .onChange(of: streamOnCellular) { UserDefaultsManager.streamOnCellular = $1 }
-    .onChange(of: wifiBitRate) { UserDefaultsManager.maxBitRate = $1 }
-    .onChange(of: cellularBitRate) {
-      UserDefaultsManager.cellularBitRate = $1
-      WatchLink.shared.updateWatch()
-    }
-    .onChange(of: downloadBitRate) {
-      UserDefaultsManager.downloadBitRate = $1
-      WatchLink.shared.updateWatch()
-    }
+    .onChange(of: keepPlaying) { WatchLink.shared.updateWatch() }
+    .onChange(of: cellularBitRate) { WatchLink.shared.updateWatch() }
+    .onChange(of: downloadBitRate) { WatchLink.shared.updateWatch() }
     .onChange(of: downloadOverCellular) {
-      UserDefaultsManager.downloadOverCellular = $1
       DownloadSession.shared.cellularAccessChanged()
       WatchSend.shared.cellularAccessChanged()
     }
@@ -203,6 +196,15 @@ struct SettingsView: View {
   private func refreshStorage() {
     flooo.getLocalStorageInformation()
     cachedSongs = StreamCacheManager.shared.getCachedSongs().count
+  }
+
+  /// A stored bitrate as its picker shows it.
+  private func offered(_ stored: Binding<String?>) -> Binding<String> {
+    Binding {
+      TranscodingSettings.offeredBitRate(stored.wrappedValue)
+    } set: {
+      stored.wrappedValue = $0
+    }
   }
 
   private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
