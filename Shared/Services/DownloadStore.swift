@@ -181,6 +181,13 @@ enum DownloadStore {
     ).first ?? PlaylistEntity(context: CoreDataManager.shared.viewContext)
   }
 
+  /// Whether the collection has its record, with or without songs.
+  static func hasRecord(collectionId: String) -> Bool {
+    !CoreDataManager.shared.getRecordByKey(
+      entity: PlaylistEntity.self, key: \PlaylistEntity.id, value: collectionId, limit: 1
+    ).isEmpty
+  }
+
   static func saveAlbum(_ albumToDownload: Album) {
     let album = collectionEntity(id: albumToDownload.id)
 

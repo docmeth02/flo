@@ -133,11 +133,14 @@ final class DownloadSession: NSObject, ObservableObject {
 
   /// Downloads an album, or the missing songs of a downloaded playlist opened
   /// as one. The record comes first: without it the songs never show up in
-  /// Downloads, and the cover may fail.
+  /// Downloads, and the cover may fail. A playlist removed since it was
+  /// opened gets its record back, built from what the screen shows.
   func enqueue(_ album: Album) {
-    if !album.isPlaylist {
+    let id = album.id
+    if !album.isPlaylist || !DownloadStore.hasRecord(collectionId: id) {
       DownloadStore.saveAlbum(album)
-      Self.downloadCover(artId: "al-\(album.id)", as: album.id)
+      let artId = album.isPlaylist ? (id.hasPrefix("pl-") ? id : "pl-\(id)") : "al-\(id)"
+      Self.downloadCover(artId: artId, as: id)
     }
     queueSongs(of: album)
   }
