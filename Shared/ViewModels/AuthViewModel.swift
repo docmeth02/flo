@@ -28,14 +28,17 @@ class AuthViewModel: ObservableObject {
   private var storedLoginUnreadable = false
 
   init() {
-    NotificationCenter.default.addObserver(
-      self, selector: #selector(handleSessionExpired(_:)), name: .sessionExpired, object: nil)
-    NotificationCenter.default.addObserver(
-      self, selector: #selector(handleNetworkBecameOnline), name: .networkBecameOnline,
-      object: nil)
-    NotificationCenter.default.addObserver(
-      self, selector: #selector(handleDidBecomeActive),
-      name: AppPlatform.didBecomeActive, object: nil)
+    let center = NotificationCenter.default
+    center.addObserver(forName: .sessionExpired, object: nil, queue: nil) { [weak self] in
+      self?.handleSessionExpired($0)
+    }
+    center.addObserver(forName: .networkBecameOnline, object: nil, queue: nil) { [weak self] _ in
+      self?.handleNetworkBecameOnline()
+    }
+    center.addObserver(forName: AppPlatform.didBecomeActive, object: nil, queue: nil) {
+      [weak self] _ in
+      self?.handleDidBecomeActive()
+    }
 
     // AuthService read the stored login when it was created.
     adopt(AuthService.shared.launchLogin)
@@ -83,7 +86,12 @@ class AuthViewModel: ObservableObject {
   /// "logged in" with every request going nowhere: they are removed and the
   /// result is false. An unreadable Keychain URL leaves everything as it is.
   private static func restoreServerURL() -> Bool {
-    guard let keychainURL = try? KeychainManager.getServerURL() ?? "" else { return true }
+    let keychainURL: String
+    do {
+      keychainURL = try KeychainManager.getServerURL() ?? ""
+    } catch {
+      return true
+    }
     if !UserDefaultsManager.serverBaseURL.isEmpty {
       if keychainURL.isEmpty {
         try? KeychainManager.setServerURL(newValue: UserDefaultsManager.serverBaseURL)
@@ -125,7 +133,7 @@ class AuthViewModel: ObservableObject {
 
     AuthService.shared.login(serverUrl: serverUrl, username: stored.username, password: password) {
       [weak self] result in
-      DispatchQueue.main.async {
+      Task { @MainActor in
         guard let self = self else { return }
         self.isReauthenticating = false
 
@@ -147,7 +155,7 @@ class AuthViewModel: ObservableObject {
     }
   }
 
-  @objc private func handleSessionExpired(_ notification: Notification) {
+  private func handleSessionExpired(_ notification: Notification) {
     // Without a readable login there is no session to renew or end.
     guard !storedLoginUnreadable,
       let requestSession = notification.object as? AuthSessionSnapshot,
@@ -163,7 +171,7 @@ class AuthViewModel: ObservableObject {
 
   /// An unreadable login is read again; a renewal that could not read the
   /// Keychain (locked watch) is tried again.
-  @objc private func handleDidBecomeActive() {
+  private func handleDidBecomeActive() {
     if storedLoginUnreadable {
       adopt(AuthService.shared.loadStoredLogin())
     } else if needsReauthentication {
@@ -182,7 +190,7 @@ class AuthViewModel: ObservableObject {
     }
   }
 
-  @objc private func handleNetworkBecameOnline() {
+  private func handleNetworkBecameOnline() {
     if needsReauthentication {
       reauthenticate()
     }
@@ -198,13 +206,14 @@ class AuthViewModel: ObservableObject {
     while serverUrl.hasSuffix("/") { serverUrl.removeLast() }
 
     AuthService.shared.login(serverUrl: serverUrl, username: username, password: password) {
-      result in
-      switch result {
-      case .success(let data):
-        // The success path mutates @Published state, so make sure it runs on
-        // the main actor regardless of which queue Alamofire delivered the
-        // response on.
-        DispatchQueue.main.async {
+      [weak self] result in
+      // Published state changes on main, whichever queue Alamofire answered on.
+      Task { @MainActor in
+        guard let self else { return }
+        self.isSubmitting = false
+
+        switch result {
+        case .success(let data):
           self.persistAuthData(data, serverUrl: self.serverUrl)
           self.needsReauthentication = false
 
@@ -215,30 +224,23 @@ class AuthViewModel: ObservableObject {
             debugLog("error saving password to Keychain: \(error)")
           }
 
-          self.isSubmitting = false
           self.isLoggedIn = true
           self.username = ""
           self.password = ""
           self.serverUrl = ""
-        }
 
-      case .failure(let error):
-        DispatchQueue.main.async {
-          self.isSubmitting = false
+        case .failure(.server(let message)), .failure(.invalidCredentials(let message)):
+          self.alertMessage = message
+          self.showAlert = true
 
-          switch error {
-          case .server(let message), .invalidCredentials(let message):
-            self.alertMessage = message
+        case .failure(.sessionExpired):
+          // A bare 401/403 without Navidrome's error body, e.g. from a
+          // reverse proxy in front of the server.
+          self.alertMessage = "The server refused the request. Please try again."
+          self.showAlert = true
 
-          case .sessionExpired:
-            // A bare 401/403 without Navidrome's error body, e.g. from a
-            // reverse proxy in front of the server.
-            self.alertMessage = "The server refused the request. Please try again."
-
-          case .unknown:
-            self.alertMessage = "Unknown error occurred"
-          }
-
+        case .failure(.unknown):
+          self.alertMessage = "Unknown error occurred"
           self.showAlert = true
         }
       }
@@ -297,10 +299,10 @@ class AuthViewModel: ObservableObject {
     NotificationCenter.default.post(name: .didLogout, object: nil)
   }
 
-  func persistAuthData(_ data: UserAuth, serverUrl: String) {
+  private func persistAuthData(_ data: UserAuth, serverUrl: String) {
     do {
       let jsonData = try JSONEncoder().encode(data)
-      let jsonString = String(data: jsonData, encoding: .utf8)!
+      let jsonString = String(decoding: jsonData, as: UTF8.self)
 
       do {
         try KeychainManager.setAuthCreds(newValue: jsonString)
@@ -319,5 +321,4 @@ class AuthViewModel: ObservableObject {
       debugLog("Error encoding auth data: \(error)")
     }
   }
-
 }
