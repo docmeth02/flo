@@ -107,9 +107,9 @@ private struct ItemMenuPresenter: ViewModifier {
   private func tile(_ target: MenuTarget) -> CoverRow<EmptyView>.Tile {
     switch target {
     case .song(let song, _, _):
-      .album(song.albumId)
+      .cover(albumId: song.albumId)
     case .album(let album):
-      .album(album.id)
+      .cover(albumId: album.id)
     case .artist:
       .artist
     case .playlist:

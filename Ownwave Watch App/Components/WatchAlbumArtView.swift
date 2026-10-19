@@ -7,7 +7,7 @@ import SwiftUI
 
 struct WatchAlbumArtView: View {
   let albumId: String
-  var size: CGFloat = 36
+  var size: CGFloat = FloLayout.thumbnail
 
   // The decoded cover, remembered together with the album it is for, so a
   // view reused for another album never shows the previous cover.

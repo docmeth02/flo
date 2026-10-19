@@ -8,16 +8,19 @@ import SwiftUI
 struct WatchSettingsView: View {
   @EnvironmentObject var authViewModel: AuthViewModel
   @EnvironmentObject var floooViewModel: FloooViewModel
-  // Applied settings from the iPhone refresh the rows.
-  @ObservedObject private var phone = PhoneLink.shared
 
-  @State private var selectedBitRate: String = UserDefaultsManager.maxBitRate
-  @State private var selectedDownloadBitRate: String = UserDefaultsManager.downloadBitRate
+  // Stored values, so settings the iPhone applies refresh the rows. A bitrate
+  // is read through offeredBitRate, as UserDefaultsManager reads it.
+  @AppStorage(UserDefaultsKeys.keepPlaying) private var keepPlaying = false
+  @AppStorage(UserDefaultsKeys.enableMaxBitRate) private var maxBitRate: String?
+  @AppStorage(UserDefaultsKeys.downloadBitRate) private var downloadBitRate: String?
+  @AppStorage(UserDefaultsKeys.downloadOverCellular) private var downloadOverCellular = false
+  @AppStorage(UserDefaultsKeys.settingsFollowPhone) private var settingsFollowPhone = false
+
   @State private var showLogoutAlert = false
   @State private var showClearAlert = false
   @State private var showClearCacheAlert = false
   @State private var showRebuildHistoryAlert = false
-  @State private var selectedCacheSize: Int64 = UserDefaultsManager.streamCacheMaxSize
 
   var body: some View {
     List {
@@ -28,12 +31,7 @@ struct WatchSettingsView: View {
       }
 
       Section {
-        Toggle(
-          isOn: Binding(
-            get: { UserDefaultsManager.keepPlaying },
-            set: { UserDefaultsManager.keepPlaying = $0 }
-          )
-        ) {
+        Toggle(isOn: $keepPlaying) {
           VStack(alignment: .leading, spacing: 1) {
             Text("Keep Playing")
               .font(.floRow)
@@ -44,7 +42,7 @@ struct WatchSettingsView: View {
         }
         .tint(.floLilac)
         .floRow()
-        .disabled(UserDefaultsManager.settingsFollowPhone)
+        .disabled(settingsFollowPhone)
       } header: {
         FloSectionHeader("Playback")
       } footer: {
@@ -53,25 +51,11 @@ struct WatchSettingsView: View {
 
       Section {
         Group {
-          bitRatePicker("Streaming", selection: $selectedBitRate)
-            .onChange(of: selectedBitRate) { _, newValue in
-              UserDefaultsManager.maxBitRate = newValue
-            }
-          bitRatePicker("Downloads", selection: $selectedDownloadBitRate)
-            .onChange(of: selectedDownloadBitRate) { _, newValue in
-              UserDefaultsManager.downloadBitRate = newValue
-            }
+          bitRatePicker("Streaming", stored: $maxBitRate)
+          bitRatePicker("Downloads", stored: $downloadBitRate)
         }
-        .disabled(UserDefaultsManager.settingsFollowPhone)
-        Toggle(
-          isOn: Binding(
-            get: { UserDefaultsManager.downloadOverCellular },
-            set: {
-              UserDefaultsManager.downloadOverCellular = $0
-              DownloadSession.shared.cellularAccessChanged()
-            }
-          )
-        ) {
+        .disabled(settingsFollowPhone)
+        Toggle(isOn: $downloadOverCellular) {
           VStack(alignment: .leading, spacing: 1) {
             Text("Cellular Downloads")
               .font(.floRow)
@@ -82,6 +66,7 @@ struct WatchSettingsView: View {
         }
         .tint(.floLilac)
         .floRow()
+        .onChange(of: downloadOverCellular) { DownloadSession.shared.cellularAccessChanged() }
       } header: {
         FloSectionHeader("Bitrate & Data")
       } footer: {
@@ -89,15 +74,11 @@ struct WatchSettingsView: View {
       }
 
       Section {
-        Picker("Limit", selection: $selectedCacheSize) {
+        Picker("Limit", selection: cacheLimit) {
           ForEach(StreamCacheManager.cacheLimits, id: \.bytes) { Text($0.label).tag($0.bytes) }
         }
         .tint(.floLilac)
         .floRow()
-        .onChange(of: selectedCacheSize) { _, newValue in
-          StreamCacheManager.shared.setLimit(newValue)
-          floooViewModel.getLocalStorageInformation()
-        }
 
         infoRow("Cache Used", floooViewModel.streamCacheSize)
 
@@ -151,11 +132,6 @@ struct WatchSettingsView: View {
       }
     }
     .floNavigationTitle("Settings")
-    .onReceive(phone.objectWillChange) {
-      // The values are in place before the link announces them.
-      selectedBitRate = UserDefaultsManager.maxBitRate
-      selectedDownloadBitRate = UserDefaultsManager.downloadBitRate
-    }
     .onAppear {
       floooViewModel.getLocalStorageInformation()
     }
@@ -194,16 +170,30 @@ struct WatchSettingsView: View {
     }
   }
 
+  /// Setting it trims the cache at once; the storage figures follow, and
+  /// their update redraws the picker.
+  private var cacheLimit: Binding<Int64> {
+    Binding(
+      get: { UserDefaultsManager.streamCacheMaxSize },
+      set: {
+        StreamCacheManager.shared.setLimit($0)
+        floooViewModel.getLocalStorageInformation()
+      })
+  }
+
   @ViewBuilder private var followsPhone: some View {
-    if UserDefaultsManager.settingsFollowPhone {
+    if settingsFollowPhone {
       Text("Follows your iPhone")
         .font(.caption2)
         .foregroundStyle(Color.floSecondary)
     }
   }
 
-  private func bitRatePicker(_ title: String, selection: Binding<String>) -> some View {
-    Picker(title, selection: selection) {
+  private func bitRatePicker(_ title: String, stored: Binding<String?>) -> some View {
+    let selection = Binding(
+      get: { TranscodingSettings.offeredBitRate(stored.wrappedValue) },
+      set: { stored.wrappedValue = $0 })
+    return Picker(title, selection: selection) {
       ForEach(TranscodingSettings.bitRates, id: \.self) { rate in
         Text(rate == TranscodingSettings.sourceBitRate ? "Original" : "\(rate) kbps")
           .tag(rate)
