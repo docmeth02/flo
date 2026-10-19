@@ -225,6 +225,17 @@ final class MixRankerGoldenTests: XCTestCase {
       Golden.smallLibrary)
   }
 
+  /// The skipped artists alone, two skipped songs starred: the skip penalty
+  /// shows in the weights, and both artists carry skip pressure.
+  func testSkipsHoldSongsBack() {
+    let songs = library().filter { $0.artistId == "ar4" || $0.artistId == "ar5" }
+    assertLines(
+      rank(
+        songs, affinity: history(bootstrapComplete: true), journal: journal(),
+        starred: ["s4-0", "s5-0"], count: 10, seed: 20),
+      Golden.skips)
+  }
+
   /// One genre and a pick from another: the genre ceiling gives way before
   /// the caps.
   func testGenreCeilingGivesWayFirst() {
@@ -410,6 +421,23 @@ private enum Golden {
     preferred s6-2 Song s6-2 / Artist 6 | history: Fits what you play | favourite genre | src=relaxed genre artist=.00 album=.00 genre=.11 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.13
     preferred s3-3 Song s3-3 / Artist 3 | history: Fits what you play | favourite genre | src=sampled artist=.06 album=.00 genre=.11 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.19
     explore s0-5 Song s0-5 / Artist 0 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.69 genre=.69 plays=2 rating=0 skip=-.00 press=-.00 cool=1.00 final=.94
+    """
+
+  static let skips = """
+    songs: s4-3 s5-0 s4-0 s5-2 s4-4 s5-3 s4-5 s5-1 s4-1 s5-5
+    playSomething at=1790000000.0 eligible=12 explore=0.2
+    note: explore pool: 6 songs by 2 artists, quota 2, taken 2
+    note: caps relaxed
+    preferred s4-3 Song s4-3 / Artist 4 | history: Fits what you play | favourite genre | src=sampled artist=.00 album=.00 genre=.08 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 cool=1.00 final=.09
+    preferred s5-0 Song s5-0 / Artist 5 | liked: You liked this song | liked | src=sampled artist=.00 album=.00 genre=.00 era=.00 song=.00 star=.25 coll=.00 rating=0+.00 skip=-.15 press=-.02 cool=1.00 final=.11
+    preferred s4-0 Song s4-0 / Artist 4 | liked: You liked this song | liked, favourite genre | src=relaxed caps artist=.00 album=.00 genre=.08 era=.00 song=.00 star=.25 coll=.00 rating=0+.00 skip=-.15 press=-.02 cool=1.00 final=.19
+    preferred s5-2 Song s5-2 / Artist 5 | history: Fits what you play | steady pick | src=relaxed caps artist=.00 album=.00 genre=.00 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 cool=1.00 final=.01
+    explore s4-4 Song s4-4 / Artist 4 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.00 genre=.52 plays=6 rating=0 skip=-.00 press=-.02 cool=1.00 final=.29
+    preferred s5-3 Song s5-3 / Artist 5 | history: Fits what you play | steady pick | src=relaxed caps artist=.00 album=.00 genre=.00 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 cool=1.00 final=.01
+    preferred s4-5 Song s4-5 / Artist 4 | history: Fits what you play | favourite genre | src=relaxed caps artist=.00 album=.00 genre=.08 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 cool=1.00 final=.09
+    preferred s5-1 Song s5-1 / Artist 5 | history: Fits what you play | steady pick | src=relaxed caps artist=.00 album=.00 genre=.00 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 cool=1.00 final=.01
+    preferred s4-1 Song s4-1 / Artist 4 | history: Fits what you play | favourite genre | src=relaxed caps artist=.00 album=.00 genre=.08 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.17 press=-.02 cool=1.00 final=.01
+    explore s5-5 Song s5-5 / Artist 5 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.00 genre=.00 plays=1 rating=0 skip=-.00 press=-.02 cool=1.00 final=.17
     """
 
   static let restAfterPool = """
