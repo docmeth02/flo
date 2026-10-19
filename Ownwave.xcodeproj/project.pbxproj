@@ -68,6 +68,7 @@
 		360F2C8F5ACDFAD3426F23E9 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875E012C149DDD00D9BAEB /* AuthService.swift */; };
 		361120398DA66CC056CBD519 /* PlayerViewModel+Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9031A01F807A324732CB2878 /* PlayerViewModel+Radio.swift */; };
 		364B9721ACBD3FD2F2316CF4 /* MenuTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6F09C76B3A34989432889B8 /* MenuTarget.swift */; };
+		373E350F4B437C89425F969F /* Thumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97F67EE8533EDB8DCA4A36A2 /* Thumbnail.swift */; };
 		377E5DD234BC7F8D66A4948C /* ExplicitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EXPLICIT002F4B0001AAAAAA /* ExplicitStatus.swift */; };
 		3911EF003135778456337152 /* ScrobbleQueueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */; };
 		3B2E32B9217BF519B4C0D093 /* PinStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6543C7E35E9DD723A4C89C0F /* PinStore.swift */; };
@@ -499,6 +500,7 @@
 		94682F31DD969BB7C5532773 /* ArtistIdentityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtistIdentityTests.swift; sourceTree = "<group>"; };
 		9587C95A4A56BBCF8534381A /* MixReason.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MixReason.swift; sourceTree = "<group>"; };
 		962CC9FEC81B29C1608ADC91 /* QueueEditingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QueueEditingTests.swift; sourceTree = "<group>"; };
+		97F67EE8533EDB8DCA4A36A2 /* Thumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Thumbnail.swift; sourceTree = "<group>"; };
 		9A72287ACF3C11B43C138CED /* Ownwave Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ownwave Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9B1BF4972348FFB9FFB29036 /* PlayerViewModel+NowPlayingInfo.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "PlayerViewModel+NowPlayingInfo.swift"; sourceTree = "<group>"; };
 		9CDB35CEF39647629BFCA841 /* flo 5.xcdatamodel */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcdatamodel; path = "flo 5.xcdatamodel"; sourceTree = "<group>"; };
@@ -779,6 +781,7 @@
 				8883E358F0C5AF828257EF31 /* WatchLink.swift */,
 				D1C49ED21B57D55485FE8A43 /* WatchSend.swift */,
 				7D8A2E20EE465B2E0CC6C462 /* WidgetPublisher.swift */,
+				97F67EE8533EDB8DCA4A36A2 /* Thumbnail.swift */,
 			);
 			name = Services;
 			path = Services;
@@ -1622,6 +1625,7 @@
 				7E1336B2ECAE238AAD91AD00 /* Tour+Debug.swift in Sources */,
 				1C91F7C3D898728FD91D429F /* TourOverlay.swift in Sources */,
 				ECDD28A700FA4BD8E25DA504 /* TourStep.swift in Sources */,
+				373E350F4B437C89425F969F /* Thumbnail.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

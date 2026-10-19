@@ -33,7 +33,13 @@ final class AppModel: ObservableObject {
 
   private var toastDismissal: Task<Void, Never>?
 
-  private init() {}
+  private init() {
+    // A logout ends a tour; `tourSeen` is only set at its end, so it starts
+    // over after the next login instead of halfway.
+    NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
+      Task { @MainActor in AppModel.shared.tour = nil }
+    }
+  }
 
   /// Shows `text` at the bottom for a few seconds, with Undo when given.
   func show(_ text: String, undo: (() -> Void)? = nil) {

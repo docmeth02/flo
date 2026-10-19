@@ -158,7 +158,8 @@ struct AppTabs: View {
       step = await debugTourStep() ?? step
     #endif
     guard let step, app.tour == nil else { return }
-    try? await Task.sleep(for: .seconds(0.7))
+    // The tabs went away meanwhile (a logout): no tour over the login.
+    do { try await Task.sleep(for: .seconds(0.7)) } catch { return }
     app.tour = step
   }
 

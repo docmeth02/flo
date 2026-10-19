@@ -29,7 +29,7 @@ enum TourStep: Int, CaseIterable {
     case .why: "Each song in a smart mix shows why it was picked."
     case .peek: "Pull up past the player to see and edit the queue."
     case .taste:
-      "What Play Something learns from: 60 days of plays, likes, ratings and skips. It lives on your server, so the watch uses the same taste. Anything here can be undone."
+      "What Play Something learns from: 60 days of plays, likes, ratings and skips. Plays, likes and ratings live on your server, so the watch uses the same taste. Anything here can be undone."
     case .send:
       "Albums download on this iPhone over fast Wi-Fi, then move to the watch in the background. You can sign the watch in from here too, without typing on the wrist."
     }

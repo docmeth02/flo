@@ -4,8 +4,7 @@
 //
 
 import Combine
-import ImageIO
-import UniformTypeIdentifiers
+import UIKit
 import WidgetKit
 
 /// Keeps the widgets' snapshot in the App Group: the song playing, the albums
@@ -19,6 +18,8 @@ import WidgetKit
 
   private var last = WidgetSnapshot.load()
   private var changes: AnyCancellable?
+  /// Bumped by every publish, so a slower earlier one never saves over it.
+  private var generation = 0
 
   private init() {}
 
@@ -33,12 +34,24 @@ import WidgetKit
     changes = song.combineLatest(app.albums.$recentAlbums, app.auth.$isLoggedIn)
       .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
       .sink { [weak self] songId, _, _ in self?.publish(songChanged: songId) }
+    // The last song counts as played only after it started, and a cover may
+    // have failed offline: leaving the app catches up on both.
+    NotificationCenter.default.addObserver(
+      forName: UIApplication.willResignActiveNotification, object: nil, queue: .main
+    ) { _ in
+      Task { @MainActor in
+        await AppModel.shared.albums.loadRecentAlbums()
+        WidgetPublisher.shared.publish(songChanged: WidgetPublisher.shared.lastSongId, retry: true)
+      }
+    }
   }
 
-  private var lastSongId: String?
+  fileprivate var lastSongId: String?
 
-  private func publish(songChanged songId: String?) {
+  fileprivate func publish(songChanged songId: String?, retry: Bool = false) {
     let app = AppModel.shared
+    generation += 1
+    let generation = generation
     if songId != lastSongId {
       lastSongId = songId
       if songId != nil { Task { await app.albums.loadRecentAlbums() } }
@@ -52,14 +65,18 @@ import WidgetKit
         title: song.songName ?? "", artist: song.artistName ?? "", albumId: song.albumId ?? "")
     }
     snapshot.recent = app.albums.recentAlbums.prefix(4).map { .init(id: $0.id, name: $0.name) }
-    guard snapshot != last else { return }
+    let albums = ([snapshot.nowPlaying?.albumId].compactMap { $0 } + snapshot.recent.map(\.id))
+      .filter { !$0.isEmpty }
+    guard snapshot != last || (retry && albums.contains(where: Self.coverMissing)) else { return }
 
-    let albums = [snapshot.nowPlaying?.albumId].compactMap { $0 } + snapshot.recent.map(\.id)
     Task {
-      for albumId in albums where !albumId.isEmpty { await Self.writeCover(albumId) }
+      let missing = albums.filter(Self.coverMissing)
+      for albumId in missing { await Self.writeCover(albumId) }
+      guard generation == self.generation, AppModel.shared.auth.isLoggedIn else { return }
       Self.removeCovers(except: Set(albums))
       snapshot.save()
-      reload(from: last, to: snapshot)
+      // Covers that came only now need their widgets redrawn too.
+      reload(from: missing.isEmpty ? last : WidgetSnapshot(), to: snapshot)
       last = snapshot
     }
   }
@@ -99,6 +116,11 @@ import WidgetKit
     }
   }
 
+  private static func coverMissing(_ albumId: String) -> Bool {
+    guard let url = WidgetSnapshot.coverURL(albumId: albumId) else { return false }
+    return !FileManager.default.fileExists(atPath: url.path)
+  }
+
   /// A small JPEG of the album's cover, fetched when the app has none yet.
   private static func writeCover(_ albumId: String) async {
     guard let target = WidgetSnapshot.coverURL(albumId: albumId),
@@ -109,23 +131,8 @@ import WidgetKit
     guard let source else { return }
     let pixels = coverPixels
     await Task.detached(priority: .utility) {
-      let options: [CFString: Any] = [
-        kCGImageSourceCreateThumbnailFromImageAlways: true,
-        kCGImageSourceThumbnailMaxPixelSize: pixels,
-        kCGImageSourceCreateThumbnailWithTransform: true,
-      ]
-      guard let image = CGImageSourceCreateWithURL(URL(fileURLWithPath: source) as CFURL, nil)
-        .flatMap({ CGImageSourceCreateThumbnailAtIndex($0, 0, options as CFDictionary) })
-      else { return }
-      try? FileManager.default.createDirectory(
-        at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-      guard
-        let destination = CGImageDestinationCreateWithURL(
-          target as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
-      else { return }
-      CGImageDestinationAddImage(
-        destination, image, [kCGImageDestinationLossyCompressionQuality: 0.8] as CFDictionary)
-      CGImageDestinationFinalize(destination)
+      _ = Thumbnail.write(
+        URL(fileURLWithPath: source), to: target, pixels: pixels, type: .jpeg, quality: 0.8)
     }.value
   }
 }
