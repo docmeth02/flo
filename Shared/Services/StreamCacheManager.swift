@@ -269,6 +269,12 @@ class StreamCacheManager {
     }
   }
 
+  /// Main thread. Off empties the cache, a lower limit trims it at once.
+  func setLimit(_ bytes: Int64) {
+    UserDefaultsManager.streamCacheMaxSize = bytes
+    if bytes == 0 { clearCache() } else { evictIfNeeded() }
+  }
+
   /// Main thread; the cache is empty on return.
   func clearCache() {
     cancelDownloads()

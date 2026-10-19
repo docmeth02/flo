@@ -95,12 +95,8 @@ struct WatchSettingsView: View {
         .tint(.floLilac)
         .floRow()
         .onChange(of: selectedCacheSize) { _, newValue in
-          UserDefaultsManager.streamCacheMaxSize = newValue
-          // Eviction only trims an enabled cache; turning it off frees it all.
-          if newValue == 0 {
-            StreamCacheManager.shared.clearCache()
-            floooViewModel.getLocalStorageInformation()
-          }
+          StreamCacheManager.shared.setLimit(newValue)
+          floooViewModel.getLocalStorageInformation()
         }
 
         infoRow("Cache Used", floooViewModel.streamCacheSize)
