@@ -52,9 +52,7 @@ struct MiniPlayer: View {
 
   private var playSomething: some View {
     Button {
-      Task {
-        if await player.playSomething() { app.isNowPlayingPresented = true }
-      }
+      Task { await app.playSomething() }
     } label: {
       HStack(spacing: 10) {
         Image(systemName: "sparkles").foregroundStyle(palette.accent)

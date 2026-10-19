@@ -26,12 +26,12 @@ struct SearchView: View {
   private static let maxRecents = 8
 
   /// What a search depends on: it runs again when the query or a list
-  /// changes.
+  /// changes. An unchanged list keeps its storage, so comparing it is cheap.
   private struct Input: Equatable {
     let query: String
-    let artists: Int
-    let albums: Int
-    let songs: Int?
+    let artists: [Artist]
+    let albums: [Album]
+    let songs: [Song]?
   }
 
   /// The results of the query that was searched, which lags the typed one.
@@ -87,11 +87,7 @@ struct SearchView: View {
       }
       songs = library
     }
-    .task(
-      id: Input(
-        query: query, artists: albums.artists.count, albums: albums.albums.count,
-        songs: songs?.count)
-    ) {
+    .task(id: Input(query: query, artists: albums.artists, albums: albums.albums, songs: songs)) {
       guard let songs else { return }
       // Typing restarts this task; only a query left alone for a moment is
       // searched, so no scan runs for every keystroke.
@@ -185,8 +181,7 @@ struct SearchView: View {
       if case .song(let song, _, _) = target {
         Button {
           remember(query)
-          let search = SongCollection.search(song)
-          if player.playItem(item: search) { app.isNowPlayingPresented = true }
+          app.play(SongCollection.search(song))
         } label: {
           label
         }

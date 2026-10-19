@@ -10,6 +10,7 @@ struct HomeView: View {
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @EnvironmentObject private var pins: PinStore
+  // Redraws the liked songs when one is unliked from its menu.
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
   @Environment(\.openLibrary) private var openLibrary
@@ -21,11 +22,6 @@ struct HomeView: View {
   @State private var albums: [Album] = []
   @State private var artists: [Artist] = []
   @State private var playlists: [Playlist] = []
-
-  /// Unliked songs leave at once, before the list reloads.
-  private var likedSongs: [Song] {
-    albumViewModel.starredSongs.filter { player.isStarred($0) }
-  }
 
   private var pinned: [MenuTarget] {
     func pinned<T: Identifiable>(_ items: [T], _ kind: PinStore.Kind) -> [T] where T.ID == String {
@@ -87,7 +83,7 @@ struct HomeView: View {
     return VStack(spacing: 0) {
       if hasNowPlaying { NowPlayingCard() }
       Button {
-        Task { if await player.playSomething() { app.isNowPlayingPresented = true } }
+        Task { await app.playSomething() }
       } label: {
         Label(player.isGeneratingMix ? "Building mix…" : "Play Something", systemImage: "sparkles")
       }
@@ -119,7 +115,7 @@ struct HomeView: View {
   }
 
   @ViewBuilder private var likedSection: some View {
-    let songs = likedSongs
+    let songs = app.likedSongs
     if !songs.isEmpty {
       VStack(spacing: 10) {
         HStack(spacing: 14) {
@@ -128,18 +124,14 @@ struct HomeView: View {
             .font(.rowSubtitle)
             .foregroundStyle(palette.accent)
           Button {
-            if player.shuffleItem(item: SongCollection.liked(songs)) {
-              app.isNowPlayingPresented = true
-            }
+            app.shuffle(SongCollection.liked(songs))
           } label: {
             Image(systemName: "shuffle")
           }
           .buttonStyle(CircleButtonStyle(size: 36, foreground: palette.accent))
           .accessibilityLabel("Shuffle Liked Songs")
           Button {
-            if player.playItem(item: SongCollection.liked(songs)) {
-              app.isNowPlayingPresented = true
-            }
+            app.play(SongCollection.liked(songs))
           } label: {
             Image(systemName: "play.fill").font(.system(size: 15, weight: .semibold))
           }
@@ -150,20 +142,13 @@ struct HomeView: View {
         .padding(.trailing, 4)
         VStack(spacing: 8) {
           ForEach(Array(songs.prefix(3).enumerated()), id: \.element.id) { index, song in
-            ItemRow(
-              art: .cover(albumId: song.albumId), title: song.title, subtitle: song.artist,
-              isPlaying: player.isCurrent(song), artSize: 44
-            ) {
+            let menu = MenuTarget.song(
+              song, context: SongCollection.Name.liked, isFromPlaylist: false)
+            SongRow(song: song, menu: menu, onCard: true) {
+              app.play(SongCollection.liked(songs), startingAt: index)
+            } trailing: {
               Image(systemName: "heart.fill").foregroundStyle(Color.floLiked)
             }
-            .card()
-            .onTapGesture {
-              if player.playItem(item: SongCollection.liked(songs), startingAt: index) {
-                app.isNowPlayingPresented = true
-              }
-            }
-            .accessibilityAddTraits(.isButton)
-            .itemMenu(.song(song, context: SongCollection.Name.liked, isFromPlaylist: false))
           }
         }
       }
@@ -188,13 +173,12 @@ private struct NowPlayingCard: View {
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var player: PlayerViewModel
   @Environment(\.palette) private var palette
-  @Environment(\.colorScheme) private var scheme
 
-  @State private var hue: Double?
+  @State private var shades: CoverShades?
 
   var body: some View {
     let albumId = player.nowPlayingAlbumId
-    let tint = hue.map { CoverShades(hue: $0, scheme: scheme).tint } ?? palette.accent
+    let tint = shades?.tint ?? palette.accent
     Button {
       app.isNowPlayingPresented = true
     } label: {
@@ -231,7 +215,7 @@ private struct NowPlayingCard: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .task(id: albumId) { hue = await CoverTint.hue(albumId: albumId, url: player.coverArt) }
+    .coverShades($shades, albumId: albumId, url: player.coverArt)
   }
 }
 
@@ -282,9 +266,9 @@ private struct PinLink: View {
   @ViewBuilder private var art: some View {
     switch target {
     case .album(let album): CoverArt(albumId: album.id, radius: 14)
-    case .artist: GlyphTile(systemImage: "music.mic", radius: 14)
-    case .playlist: GlyphTile(systemImage: "music.note.list", radius: 14)
-    case .radio: GlyphTile(systemImage: "dot.radiowaves.up.forward", radius: 14)
+    case .artist: GlyphTile.artist.squared(radius: 14)
+    case .playlist: GlyphTile.playlist.squared(radius: 14)
+    case .radio: GlyphTile.radio.squared(radius: 14)
     case .song: EmptyView()
     }
   }

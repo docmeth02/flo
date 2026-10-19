@@ -18,6 +18,7 @@ enum TasteSegment: String, CaseIterable, Identifiable {
 /// back here.
 struct TasteView: View {
   @EnvironmentObject private var app: AppModel
+  // Liked follows the heart of the song playing.
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @Environment(\.palette) private var palette
@@ -57,31 +58,9 @@ struct TasteView: View {
   }
 
   private var segments: some View {
-    HStack(spacing: 2) {
-      ForEach(TasteSegment.allCases) { item in
-        let selected = item == segment
-        Button {
-          segment = item
-        } label: {
-          Text(item.title)
-            .font(.meta.weight(.semibold))
-            .foregroundStyle(selected ? palette.text : palette.secondary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 9)
-            .background(
-              selected ? palette.surface2 : .clear,
-              in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-      }
-    }
-    .padding(3)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    Segmented(
+      options: TasteSegment.allCases.map { ($0, $0.title) }, selection: $segment, filled: false,
+      font: .meta.weight(.semibold))
   }
 
   @ViewBuilder private func content(_ summary: TasteSummary) -> some View {
@@ -89,7 +68,7 @@ struct TasteView: View {
     case .profile:
       TasteProfile(
         summary: summary,
-        likedCount: albumViewModel.starredSongs.filter { player.isStarred($0) }.count,
+        likedCount: app.likedSongs.count,
         openLiked: { openLibrary(.liked) }, open: { segment = $0 })
     case .top:
       list(isEmpty: summary.top.isEmpty, empty: "No plays in the last 60 days yet.") {
@@ -406,7 +385,7 @@ private struct Treemap: View {
     }
   }
 
-  static func layout(_ weights: [Double], in rect: CGRect) -> [CGRect] {
+  private static func layout(_ weights: [Double], in rect: CGRect) -> [CGRect] {
     var rest = rect
     var left = weights.reduce(0, +)
     return weights.indices.map { index in

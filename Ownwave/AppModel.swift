@@ -35,8 +35,13 @@ final class AppModel: ObservableObject {
   private init() {
     // A logout ends a tour; `tourSeen` is only set at its end, so it starts
     // over after the next login instead of halfway.
+    Self.onLogout { AppModel.shared.tour = nil }
+  }
+
+  /// Runs `action` on the main actor after every logout.
+  static func onLogout(_ action: @escaping @MainActor () -> Void) {
     NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
-      Task { @MainActor in AppModel.shared.tour = nil }
+      Task { @MainActor in action() }
     }
   }
 
@@ -57,22 +62,28 @@ final class AppModel: ObservableObject {
     toast = nil
   }
 
-  /// The album's songs; an album listed without them asks the server.
+  /// The liked songs as last listed, less those unliked since, which leave
+  /// at once. Views showing them observe StarStore for those changes.
+  var likedSongs: [Song] { albums.starredSongs.filter { player.isStarred($0) } }
+
+  /// The album's whole track list from the server: an album screen may show
+  /// only the songs downloaded here. Without the server, the songs known.
   func songs(of album: Album) async -> [Song] {
-    guard album.songs.isEmpty else { return album.songs }
-    return await withCheckedContinuation { continuation in
-      AlbumService.shared.getSongFromAlbum(id: album.id) {
-        continuation.resume(returning: (try? $0.get()) ?? [])
-      }
+    guard ConnectivityMonitor.shared.canReachServer else { return album.songs }
+    let fetched = await withCheckedContinuation { continuation in
+      AlbumService.shared.getSongFromAlbum(id: album.id) { continuation.resume(returning: $0) }
     }
+    return (try? fetched.get()) ?? album.songs
   }
 
-  /// Downloads an album to the phone, fetching its songs first when it was
-  /// listed without them.
+  /// Downloads the songs of an album the phone does not have yet.
   func download(_ album: Album) {
     var album = album
+    let account = AuthService.shared.accountKey
     Task {
       album.songs = await songs(of: album)
+      // A logout meanwhile: these are the previous account's songs.
+      guard AuthService.shared.accountKey == account else { return }
       guard !album.songs.isEmpty else { return show("Not available offline") }
       let onPhone = AlbumService.shared.downloadedMediaFileIds(collectionId: album.id)
       guard album.songs.contains(where: { !onPhone.contains($0.playbackID) }) else {
@@ -90,8 +101,29 @@ final class AppModel: ObservableObject {
     }
   }
 
-  /// Plays a station and shows the player; a station is a live stream, so
-  /// nothing plays while streaming is off on cellular.
+  // MARK: - Playing
+
+  // Each shows the player once something plays.
+
+  func play(_ item: some Playable, startingAt index: Int = 0) {
+    if player.playItem(item: item, startingAt: index) { isNowPlayingPresented = true }
+  }
+
+  func shuffle(_ item: some Playable) {
+    if player.shuffleItem(item: item) { isNowPlayingPresented = true }
+  }
+
+  func playSomething() async {
+    if await player.playSomething() { isNowPlayingPresented = true }
+  }
+
+  /// Top songs online, else the artist's songs on the phone.
+  func playArtist(id: String, name: String) async {
+    if await player.playArtist(id: id, name: name) { isNowPlayingPresented = true }
+  }
+
+  /// A station is a live stream, so nothing plays while streaming is off on
+  /// cellular.
   func play(_ radio: Radio) {
     guard TranscodingSettings.streamingBitRate != nil else {
       return show("Streaming on cellular is off")
@@ -99,17 +131,15 @@ final class AppModel: ObservableObject {
     if player.playRadioItem(radio: radio) { isNowPlayingPresented = true }
   }
 
-  /// Plays what Siri, Shortcuts or the Action Button asked for and shows the
-  /// player. Logged out, the request is dropped.
+  /// Plays what Siri, Shortcuts or the Action Button asked for. Logged out,
+  /// the request is dropped.
   func takePlayRequest() {
     guard let request = PlayRequest.take(), auth.isLoggedIn else { return }
     Task {
-      let played =
-        switch request {
-        case .something: await player.playSomething()
-        case .artist(let id, let name): await player.playArtist(id: id, name: name)
-        }
-      if played { isNowPlayingPresented = true }
+      switch request {
+      case .something: await playSomething()
+      case .artist(let id, let name): await playArtist(id: id, name: name)
+      }
     }
   }
 }

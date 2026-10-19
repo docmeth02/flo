@@ -15,19 +15,15 @@ struct AlbumView: View {
   // Redraws the track hearts when a song is liked from its menu.
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
-  @Environment(\.colorScheme) private var scheme
 
   // The loaded album stays with this screen when another one opens on top.
   @State private var localAlbum: Album?
-  @State private var hue: Double?
-  @State private var downloaded = false
+  @State private var shades: CoverShades?
   @State private var downloadedIds: Set<String> = []
 
   private var displayAlbum: Album { localAlbum ?? album }
 
-  private var tint: Color {
-    hue.map { CoverShades(hue: $0, scheme: scheme).tint } ?? palette.fill
-  }
+  private var tint: Color { shades?.tint ?? palette.fill }
 
   /// The album artist as the Artist screen takes it: the listed one when the
   /// library has it.
@@ -72,7 +68,7 @@ struct AlbumView: View {
         .accessibilityLabel("More")
       }
     }
-    .task(id: album.id) { hue = await CoverTint.hue(albumId: album.id) }
+    .coverShades($shades, albumId: album.id)
     .onAppear {
       // Once: a return from a screen pushed on top keeps the loaded tracks,
       // also offline.
@@ -112,13 +108,13 @@ struct AlbumView: View {
   private var buttons: some View {
     HStack(spacing: 10) {
       Button {
-        if player.playItem(item: displayAlbum) { app.isNowPlayingPresented = true }
+        app.play(displayAlbum)
       } label: {
         Label("Play", systemImage: "play.fill")
       }
       .buttonStyle(FillButtonStyle(tint: tint))
       Button {
-        if player.shuffleItem(item: displayAlbum) { app.isNowPlayingPresented = true }
+        app.shuffle(displayAlbum)
       } label: {
         Label("Shuffle", systemImage: "shuffle").foregroundStyle(palette.accent)
       }
@@ -144,7 +140,7 @@ struct AlbumView: View {
     }
     if downloads.hasFailed(collectionId: album.id) { return .failed }
     // Unknown until the tracks are loaded.
-    guard downloaded, !displayAlbum.songs.isEmpty else { return .none }
+    guard !displayAlbum.songs.isEmpty else { return .none }
     let missing = displayAlbum.songs.contains { !downloadedIds.contains($0.playbackID) }
     return missing ? .none : .done
   }
@@ -172,7 +168,7 @@ struct AlbumView: View {
       Menu {
         Button("Remove Download", systemImage: "trash", role: .destructive) {
           albumViewModel.removeDownloadedAlbum(album: album)
-          downloaded = false
+          refreshDownloadState()
         }
       } label: {
         Image(systemName: "checkmark.circle.fill")
@@ -212,7 +208,6 @@ struct AlbumView: View {
   }
 
   private func refreshDownloadState() {
-    downloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: album.id)
     downloadedIds = AlbumService.shared.downloadedMediaFileIds(collectionId: album.id)
   }
 
@@ -227,9 +222,7 @@ struct AlbumView: View {
             number: song.trackNumber, song: song, tint: tint,
             menu: .song(song, context: album.name, isFromPlaylist: false)
           ) {
-            if player.playItem(item: displayAlbum, startingAt: index) {
-              app.isNowPlayingPresented = true
-            }
+            app.play(displayAlbum, startingAt: index)
           }
         }
       }
@@ -280,8 +273,6 @@ private struct TrackRow: View {
     }
     .frame(minHeight: 52)
     .contentShape(Rectangle())
-    .onTapGesture(perform: play)
-    .accessibilityAddTraits(.isButton)
-    .itemMenu(menu)
+    .songActions(menu, play: play)
   }
 }

@@ -9,7 +9,6 @@ struct PlaylistView: View {
   let playlist: Playlist
 
   @EnvironmentObject private var app: AppModel
-  @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @Environment(\.palette) private var palette
 
@@ -22,7 +21,7 @@ struct PlaylistView: View {
     let songs = displayPlaylist.songs
     ScrollView {
       VStack(spacing: 18) {
-        GlyphTile(systemImage: "music.note.list", radius: 30)
+        GlyphTile.playlist.squared(radius: 30)
           .frame(width: 180, height: 180)
         VStack(spacing: 4) {
           Text(playlist.name)
@@ -35,17 +34,13 @@ struct PlaylistView: View {
         }
         HStack(spacing: 10) {
           Button {
-            if player.playItem(item: Album(from: displayPlaylist)) {
-              app.isNowPlayingPresented = true
-            }
+            app.play(Album(from: displayPlaylist))
           } label: {
             Label("Play", systemImage: "play.fill")
           }
           .buttonStyle(FillButtonStyle())
           Button {
-            if player.shuffleItem(item: Album(from: displayPlaylist)) {
-              app.isNowPlayingPresented = true
-            }
+            app.shuffle(Album(from: displayPlaylist))
           } label: {
             Label("Shuffle", systemImage: "shuffle").foregroundStyle(palette.accent)
           }
@@ -56,19 +51,11 @@ struct PlaylistView: View {
             // A playlist can hold a song twice.
             ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
               let menu = MenuTarget.song(song, context: playlist.name, isFromPlaylist: true)
-              ItemRow(
-                art: .cover(albumId: song.albumId), title: song.title, subtitle: song.artist,
-                isPlaying: player.isCurrent(song), artSize: 44
-              ) {
+              SongRow(song: song, menu: menu) {
+                app.play(Album(from: displayPlaylist), startingAt: index)
+              } trailing: {
                 ItemMenuButton(target: menu)
               }
-              .onTapGesture {
-                if player.playItem(item: Album(from: displayPlaylist), startingAt: index) {
-                  app.isNowPlayingPresented = true
-                }
-              }
-              .accessibilityAddTraits(.isButton)
-              .itemMenu(menu)
             }
           }
         }

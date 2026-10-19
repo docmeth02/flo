@@ -38,6 +38,7 @@
 		1F2AF157393CFE996E714307 /* TasteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF45D97BBCDF015177721AFE /* TasteTests.swift */; };
 		1FCFD7713BB71B71D0D62F2E /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B141FB86DC651B0C3F5D31BA /* RootView.swift */; };
 		20724CA5637F6DC864544A2E /* StarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3A20AA7BB94954318E4D4A8 /* StarStore.swift */; };
+		20DE0DA5BF31EE7705D43772 /* Segmented.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF22FDA6A6EC851C660ABF9 /* Segmented.swift */; };
 		22133D8791CE6FC99062B776 /* CoverArtCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */; };
 		23C9B289FFA2871535819E8A /* ScrobbleQueueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0FF0032F8B0001000000A3 /* ScrobbleQueueManager.swift */; };
 		23D2A27F19EB5767C39B30A8 /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
@@ -550,6 +551,7 @@
 		B27B0002A1B2C3D4E5F60002 /* RatingStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RatingStoreTests.swift; sourceTree = "<group>"; };
 		B41738B26DF74C4135ED3B6B /* WatchArtistDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchArtistDetailView.swift; sourceTree = "<group>"; };
 		BA6E4B95E86671912ADCC03D /* LibrarySearch.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LibrarySearch.swift; sourceTree = "<group>"; };
+		BBF22FDA6A6EC851C660ABF9 /* Segmented.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Segmented.swift; sourceTree = "<group>"; };
 		BCC2E67CCE3ED944C69F8973 /* WatchAlbumArtView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAlbumArtView.swift; sourceTree = "<group>"; };
 		BF2805B2B3AE86B8713D6AEA /* MixRanker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MixRanker.swift; sourceTree = "<group>"; };
 		C2002653E7063326C1B10DD9 /* PlaylistView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaylistView.swift; sourceTree = "<group>"; };
@@ -819,6 +821,7 @@
 				E54EF9E850C784520CE5E75A /* ItemMenu.swift */,
 				A0857971DC1FF8BBC593757B /* Rows.swift */,
 				DFB35A7F59E1A97C0988F15B /* Theme.swift */,
+				BBF22FDA6A6EC851C660ABF9 /* Segmented.swift */,
 			);
 			name = Components;
 			path = Components;
@@ -1670,6 +1673,7 @@
 				EE1A59CAFF5138BDA9D754E3 /* Timeout.swift in Sources */,
 				7453D1FA13935C505BABDC07 /* ListeningHistoryStore+Debug.swift in Sources */,
 				D8BA4D156C4070D95D7D89F8 /* ScrobbleAPI+Debug.swift in Sources */,
+				20DE0DA5BF31EE7705D43772 /* Segmented.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

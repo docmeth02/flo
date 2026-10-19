@@ -15,6 +15,7 @@ enum LibraryChip: String, CaseIterable, Identifiable {
 
 struct LibraryView: View {
   @EnvironmentObject private var app: AppModel
+  // Liked follows the heart of the song playing.
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @EnvironmentObject private var downloadSession: DownloadSession
@@ -103,7 +104,7 @@ struct LibraryView: View {
               ItemRow(
                 art: .glyph(.artist), title: artist.name,
                 subtitle: counted(artist.albumCount, "album"), artSize: 46
-              ) { EmptyView() }
+              )
             }
             .buttonStyle(.plain)
             .card()
@@ -122,7 +123,7 @@ struct LibraryView: View {
               ItemRow(
                 art: .glyph(.playlist), title: playlist.name,
                 subtitle: playlist.comment.isEmpty ? "Playlist" : playlist.comment, artSize: 46
-              ) { EmptyView() }
+              )
             }
             .buttonStyle(.plain)
             .card()
@@ -139,9 +140,7 @@ struct LibraryView: View {
             Button {
               app.play(radio)
             } label: {
-              ItemRow(
-                art: .glyph(.radio), title: radio.name, subtitle: "Internet radio", artSize: 46
-              ) { EmptyView() }
+              ItemRow(art: .glyph(.radio), title: radio.name, subtitle: "Internet radio", artSize: 46)
             }
             .buttonStyle(.plain)
             .card()
@@ -159,7 +158,7 @@ struct LibraryView: View {
   /// Liked songs, then liked albums and artists out of the library lists,
   /// StarStore's edits over their listed stars, as on the watch.
   @ViewBuilder private var liked: some View {
-    let songs = albumViewModel.starredSongs.filter { player.isStarred($0) }
+    let songs = app.likedSongs
     let albums = albumViewModel.albums.filter { stars.isStarred($0.id, listed: $0.starred) }
     let artists = albumViewModel.artists.filter { stars.isStarred($0.id, listed: $0.starred) }
     let states = [AlbumViewModel.Library.starredSongs, .albums, .artists].map(albumViewModel.state)
@@ -171,17 +170,13 @@ struct LibraryView: View {
       if !songs.isEmpty {
         HStack(spacing: 10) {
           Button {
-            if player.playItem(item: SongCollection.liked(songs)) {
-              app.isNowPlayingPresented = true
-            }
+            app.play(SongCollection.liked(songs))
           } label: {
             Label("Play", systemImage: "play.fill")
           }
           .buttonStyle(FillButtonStyle(height: 50))
           Button {
-            if player.shuffleItem(item: SongCollection.liked(songs)) {
-              app.isNowPlayingPresented = true
-            }
+            app.shuffle(SongCollection.liked(songs))
           } label: {
             Label("Shuffle", systemImage: "shuffle").foregroundStyle(palette.accent)
           }
@@ -190,21 +185,15 @@ struct LibraryView: View {
       }
       LazyVStack(spacing: 8) {
         ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-          ItemRow(
-            art: .cover(albumId: song.albumId), title: song.title,
-            subtitle: "\(song.artist) · song",
-            isPlaying: player.isCurrent(song), artSize: 46
+          let menu = MenuTarget.song(
+            song, context: SongCollection.Name.liked, isFromPlaylist: false)
+          SongRow(
+            song: song, menu: menu, subtitle: "\(song.artist) · song", artSize: 46, onCard: true
           ) {
+            app.play(SongCollection.liked(songs), startingAt: index)
+          } trailing: {
             heart
           }
-          .card()
-          .onTapGesture {
-            if player.playItem(item: SongCollection.liked(songs), startingAt: index) {
-              app.isNowPlayingPresented = true
-            }
-          }
-          .accessibilityAddTraits(.isButton)
-          .itemMenu(.song(song, context: SongCollection.Name.liked, isFromPlaylist: false))
         }
         ForEach(albums) { album in
           NavigationLink(value: Route.album(album)) {
@@ -338,19 +327,20 @@ private struct DownloadRow: View {
   @EnvironmentObject private var downloads: DownloadSession
   @Environment(\.palette) private var palette
 
+  private var downloading: Bool { downloads.isDownloading(collectionId: album.id) }
+  private var failed: Bool { !downloading && downloads.hasFailed(collectionId: album.id) }
+
   var body: some View {
-    let downloading = downloads.isDownloading(collectionId: album.id)
-    let failed = !downloading && downloads.hasFailed(collectionId: album.id)
     Group {
       // A failed album retries in place.
       if failed {
         Button {
           app.download(album)
         } label: {
-          row(downloading: false, failed: true)
+          row
         }
       } else {
-        NavigationLink(value: Route.album(album)) { row(downloading: downloading, failed: failed) }
+        NavigationLink(value: Route.album(album)) { row }
       }
     }
     .buttonStyle(.plain)
@@ -358,7 +348,7 @@ private struct DownloadRow: View {
     .itemMenu(.album(album))
   }
 
-  private func row(downloading: Bool, failed: Bool) -> some View {
+  private var row: some View {
     let percent = downloads.progress(collectionId: album.id) * 100
     return HStack(spacing: 12) {
       CoverArt(albumId: album.id, radius: 7).frame(width: 46, height: 46)
@@ -404,26 +394,19 @@ private struct CachedSongsView: View {
   let songs: [Song]
 
   @EnvironmentObject private var app: AppModel
-  @EnvironmentObject private var player: PlayerViewModel
   @Environment(\.palette) private var palette
 
   var body: some View {
     ScrollView {
       Platter {
         ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-          ItemRow(
-            art: .cover(albumId: song.albumId), title: song.title, subtitle: song.artist,
-            isPlaying: player.isCurrent(song), artSize: 44
-          ) {
-            ItemMenuButton(
-              target: .song(song, context: SongCollection.Name.cached, isFromPlaylist: false))
+          let menu = MenuTarget.song(
+            song, context: SongCollection.Name.cached, isFromPlaylist: false)
+          SongRow(song: song, menu: menu) {
+            app.play(SongCollection.cached(songs), startingAt: index)
+          } trailing: {
+            ItemMenuButton(target: menu)
           }
-          .onTapGesture {
-            let cached = SongCollection.cached(songs)
-            if player.playItem(item: cached, startingAt: index) { app.isNowPlayingPresented = true }
-          }
-          .accessibilityAddTraits(.isButton)
-          .itemMenu(.song(song, context: SongCollection.Name.cached, isFromPlaylist: false))
         }
       }
       .padding(16)

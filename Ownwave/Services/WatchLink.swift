@@ -48,9 +48,7 @@ import WatchConnectivity
     guard WCSession.isSupported() else { return }
     session.delegate = receiver
     session.activate()
-    NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
-      Task { @MainActor in WatchLink.shared.cancelSends() }
-    }
+    AppModel.onLogout { WatchLink.shared.cancelSends() }
     #if DEBUG
       runDebugLaunchActions()
     #endif
@@ -144,8 +142,12 @@ import WatchConnectivity
     guard !sends.contains(where: { $0.id == album.id }) else { return app.show("Already sending") }
     let kbps = Int(watch.downloadBitRate) ?? 0
     sends.append(Send(album: album, songs: max(1, album.songs.count)))
+    let account = AuthService.shared.accountKey
     Task {
       let songs = await app.songs(of: album)
+      // A logout meanwhile cleared the sends; these songs are the previous
+      // account's.
+      guard AuthService.shared.accountKey == account else { return }
       guard !songs.isEmpty else {
         sends.removeAll { $0.id == album.id }
         return app.show("Could not send \(album.name)")
@@ -171,7 +173,6 @@ import WatchConnectivity
   func transfer(_ file: URL, _ info: Link.FileInfo) {
     guard canTransfer else { return }
     session.transferFile(file, metadata: Link.encode(info))
-    updateProgress(info.collectionId)
   }
 
   /// Recomputes a send's progress: its songs count once downloaded and once
@@ -208,7 +209,8 @@ import WatchConnectivity
     sends.reduce(into: [:]) { $0[$1.id] = $1.songs }
   }
 
-  private var outgoing: [Link.FileInfo] {
+  /// What the system is still transferring, also from an earlier launch.
+  var outgoing: [Link.FileInfo] {
     session.outstandingFileTransfers.compactMap(Self.info)
   }
 

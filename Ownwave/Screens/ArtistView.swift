@@ -12,19 +12,16 @@ struct ArtistView: View {
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @Environment(\.palette) private var palette
-  @Environment(\.colorScheme) private var scheme
 
   @StateObject private var radio = ArtistDetailViewModel()
   @State private var topSongs: [Song] = []
-  @State private var hue: Double?
+  @State private var shades: CoverShades?
   @State private var showsRadioError = false
 
   /// The screen takes its backdrop and tint from the artist's first album.
   private var albums: [Album] { albumViewModel.albums(byArtist: artist.id) }
 
-  private var tint: Color {
-    hue.map { CoverShades(hue: $0, scheme: scheme).tint } ?? palette.accent
-  }
+  private var tint: Color { shades?.tint ?? palette.accent }
 
   private var meta: String {
     let albumCount = albums.isEmpty ? artist.albumCount : albums.count
@@ -65,9 +62,7 @@ struct ArtistView: View {
     .navigationBarTitleDisplayMode(.inline)
     .onAppear { albumViewModel.fetchAlbumsByArtist(id: artist.id) }
     .task(id: artist.id) { await loadTopSongs() }
-    .task(id: albums.first?.id) {
-      if let albumId = albums.first?.id { hue = await CoverTint.hue(albumId: albumId) }
-    }
+    .coverShades($shades, albumId: albums.first?.id ?? "")
     .alert(artist.name, isPresented: $showsRadioError) {
       Button("OK") {}
     } message: {
@@ -82,10 +77,8 @@ struct ArtistView: View {
           let songs = await radio.fetchArtistRadio(artist: artist)
           if songs.isEmpty {
             showsRadioError = true
-          } else if player.playItem(
-            item: SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs))
-          {
-            app.isNowPlayingPresented = true
+          } else {
+            app.play(SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs))
           }
         }
       } label: {
@@ -99,11 +92,7 @@ struct ArtistView: View {
       // Top songs online, else the artist's songs on the phone, as Siri plays
       // an artist.
       Button {
-        Task {
-          if await player.playArtist(id: artist.id, name: artist.name) {
-            app.isNowPlayingPresented = true
-          }
-        }
+        Task { await app.playArtist(id: artist.id, name: artist.name) }
       } label: {
         Label("Top Songs", systemImage: "music.note.list").foregroundStyle(palette.accent)
       }
@@ -118,20 +107,13 @@ struct ArtistView: View {
       Platter {
         ForEach(Array(topSongs.enumerated()), id: \.element.id) { index, song in
           let menu = MenuTarget.song(song, context: artist.name, isFromPlaylist: false)
-          ItemRow(
-            art: .cover(albumId: song.albumId), title: song.title, subtitle: song.albumName,
-            isPlaying: player.isCurrent(song), artSize: 40
-          ) {
+          SongRow(song: song, menu: menu, subtitle: song.albumName, artSize: 40) {
+            app.play(
+              SongCollection.artist(id: artist.id, name: artist.name, songs: topSongs),
+              startingAt: index)
+          } trailing: {
             ItemMenuButton(target: menu)
           }
-          .onTapGesture {
-            let playable = SongCollection.artist(id: artist.id, name: artist.name, songs: topSongs)
-            if player.playItem(item: playable, startingAt: index) {
-              app.isNowPlayingPresented = true
-            }
-          }
-          .accessibilityAddTraits(.isButton)
-          .itemMenu(menu)
         }
       }
     }

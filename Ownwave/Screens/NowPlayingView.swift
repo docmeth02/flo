@@ -14,14 +14,13 @@ struct NowPlayingView: View {
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var player: PlayerViewModel
   @Environment(\.palette) private var palette
-  @Environment(\.colorScheme) private var scheme
   @Environment(\.dismiss) private var dismiss
 
   /// A drag commits once its damped distance passes this, about 165 pt of
   /// finger travel.
-  static let threshold: CGFloat = 70
+  private static let threshold: CGFloat = 70
 
-  @State private var hue: Double?
+  @State private var shades: CoverShades?
   @State private var showsQueue = false
   /// The damped drag on the player; positive toward the queue. A gesture
   /// state, so an interrupted pull (the phone locked mid-drag) springs back.
@@ -30,7 +29,6 @@ struct NowPlayingView: View {
   @State private var queuePosition = ScrollPosition(edge: .top)
 
   private var albumId: String { player.nowPlayingAlbumId }
-  private var shades: CoverShades? { hue.map { CoverShades(hue: $0, scheme: scheme) } }
 
   var body: some View {
     GeometryReader { proxy in
@@ -95,7 +93,7 @@ struct NowPlayingView: View {
     // here too while something else opened the cover, not while it closes.
     .toastOverlay(app.toast, bottom: 24)
     .tourOverlay(app.tour.flatMap { $0.isOnNowPlaying || app.isNowPlayingPresented ? $0 : nil })
-    .task(id: albumId) { hue = await CoverTint.hue(albumId: albumId, url: player.coverArt) }
+    .coverShades($shades, albumId: albumId, url: player.coverArt)
     .onChange(of: player.hasNowPlaying(), initial: true) { _, playing in
       if !playing { dismiss() }
     }
@@ -130,7 +128,7 @@ struct NowPlayingView: View {
 
   /// The design's resistance: the farther the finger, the less the player
   /// follows, up to 320 pt. 0.55 is the system's own overscroll factor.
-  static func rubberBand(_ travel: CGFloat) -> CGFloat {
+  private static func rubberBand(_ travel: CGFloat) -> CGFloat {
     let limit: CGFloat = 320
     let damped = (1 - 1 / (abs(travel) * 0.55 / limit + 1)) * limit
     return travel < 0 ? -damped : damped

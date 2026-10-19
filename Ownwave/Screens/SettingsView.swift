@@ -14,23 +14,34 @@ struct SettingsView: View {
 
   @AppStorage("appearance") private var appearance = Appearance.system
   @AppStorage("tourSeen") private var tourSeen = false
-  @State private var keepPlaying = UserDefaultsManager.keepPlaying
-  @State private var showMixReasons = UserDefaultsManager.showMixReasons
-  @State private var streamOnCellular = UserDefaultsManager.streamOnCellular
-  @State private var wifiBitRate = UserDefaultsManager.maxBitRate
-  @State private var cellularBitRate = UserDefaultsManager.cellularBitRate
-  @State private var downloadBitRate = UserDefaultsManager.downloadBitRate
-  @State private var downloadOverCellular = UserDefaultsManager.downloadOverCellular
+  // UserDefaultsManager's settings, with its defaults. The bitrates are
+  // shown through `offered`, which reads a retired value as it does.
+  @AppStorage(UserDefaultsKeys.keepPlaying)
+  private var keepPlaying = UserDefaultsManager.keepPlaying
+  @AppStorage(UserDefaultsKeys.showMixReasons)
+  private var showMixReasons = UserDefaultsManager.showMixReasons
+  @AppStorage(UserDefaultsKeys.streamOnCellular)
+  private var streamOnCellular = UserDefaultsManager.streamOnCellular
+  @AppStorage(UserDefaultsKeys.downloadOverCellular)
+  private var downloadOverCellular = UserDefaultsManager.downloadOverCellular
+  @AppStorage(UserDefaultsKeys.enableMaxBitRate) private var wifiBitRate: String?
+  @AppStorage(UserDefaultsKeys.cellularBitRate) private var cellularBitRate: String?
+  @AppStorage(UserDefaultsKeys.downloadBitRate) private var downloadBitRate: String?
+  // A number, which UserDefaultsManager reads as Int64.
+  @AppStorage(UserDefaultsKeys.streamCacheMaxSize)
+  private var cacheLimit = Int(UserDefaultsManager.streamCacheMaxSize)
   @State private var username = ""
   @State private var serverVersion: String?
   @State private var cachedSongs = 0
   @State private var confirmsLogout = false
-  @State private var confirmsClear = false
+  @State private var confirmsClearCache = false
+  @State private var confirmsDeleteDownloads = false
 
   /// The offered limits, highest first as the design lists them.
   private static let limits: [(value: String, label: String)] = TranscodingSettings.bitRates
     .filter { $0 != TranscodingSettings.sourceBitRate }.reversed().map { ($0, $0) }
   private static let limitsWithOriginal = [(TranscodingSettings.sourceBitRate, "Original")] + limits
+  private static let cacheLimits = StreamCacheManager.cacheLimits.map { (Int($0.bytes), $0.label) }
 
   var body: some View {
     ScrollView {
@@ -62,19 +73,34 @@ struct SettingsView: View {
             "Stream on cellular", "Uses the cellular bitrate below", isOn: $streamOnCellular)
         }
         section("Streaming on Wi-Fi (kbps)") {
-          Segmented(options: Self.limitsWithOriginal, selection: $wifiBitRate)
+          Segmented(options: Self.limitsWithOriginal, selection: offered($wifiBitRate))
         }
         section("Streaming on cellular (kbps)") {
-          Segmented(options: Self.limits, selection: $cellularBitRate)
+          Segmented(options: Self.limits, selection: offered($cellularBitRate))
+        }
+        section("Streaming cache") {
+          Segmented(options: Self.cacheLimits, selection: $cacheLimit)
+          storage("Cached songs", "\(flooo.streamCacheSize) · \(counted(cachedSongs, "song"))") {
+            confirmsClearCache = true
+          }
+          Text(
+            "Songs you stream are kept here and the next two are fetched ahead, so they play "
+              + "again without a connection. The least recently played go first when it is full."
+          )
+          .font(.meta)
+          .foregroundStyle(palette.secondary)
+          .padding(.horizontal, 4)
         }
         section("Downloads (kbps)") {
           // Original as on the watch: the phone has room for lossless files.
-          Segmented(options: Self.limitsWithOriginal, selection: $downloadBitRate)
+          Segmented(options: Self.limitsWithOriginal, selection: offered($downloadBitRate))
           toggle(
             "Download on cellular", "Downloads wait for Wi-Fi when this is off",
             isOn: $downloadOverCellular)
         }
-        storage
+        storage("Downloads on this iPhone", flooo.localDirectorySize) {
+          confirmsDeleteDownloads = true
+        }
         NavigationLink {
           DiagnosticsView()
         } label: {
@@ -95,25 +121,16 @@ struct SettingsView: View {
     .navigationBarTitleDisplayMode(.inline)
     // Keep Playing and the cellular and download bitrates are what the watch
     // follows.
-    .onChange(of: keepPlaying) {
-      UserDefaultsManager.keepPlaying = $1
-      WatchLink.shared.updateWatch()
-    }
-    .onChange(of: showMixReasons) { UserDefaultsManager.showMixReasons = $1 }
-    .onChange(of: streamOnCellular) { UserDefaultsManager.streamOnCellular = $1 }
-    .onChange(of: wifiBitRate) { UserDefaultsManager.maxBitRate = $1 }
-    .onChange(of: cellularBitRate) {
-      UserDefaultsManager.cellularBitRate = $1
-      WatchLink.shared.updateWatch()
-    }
-    .onChange(of: downloadBitRate) {
-      UserDefaultsManager.downloadBitRate = $1
-      WatchLink.shared.updateWatch()
-    }
+    .onChange(of: keepPlaying) { WatchLink.shared.updateWatch() }
+    .onChange(of: cellularBitRate) { WatchLink.shared.updateWatch() }
+    .onChange(of: downloadBitRate) { WatchLink.shared.updateWatch() }
     .onChange(of: downloadOverCellular) {
-      UserDefaultsManager.downloadOverCellular = $1
       DownloadSession.shared.cellularAccessChanged()
       WatchSend.shared.cellularAccessChanged()
+    }
+    .onChange(of: cacheLimit) {
+      StreamCacheManager.shared.setLimit(Int64(cacheLimit))
+      refreshStorage()
     }
     .onAppear {
       if case .found(let login) = KeychainManager.loadAuth() { username = login.username }
@@ -126,17 +143,21 @@ struct SettingsView: View {
     } message: {
       Text("You will need to sign in again. Downloads stay on this iPhone.")
     }
-    .confirmationDialog("Clear storage", isPresented: $confirmsClear) {
+    .confirmationDialog("Clear cached songs", isPresented: $confirmsClearCache) {
       Button("Clear Cached Songs", role: .destructive) {
         StreamCacheManager.shared.clearCache()
         refreshStorage()
       }
+    } message: {
+      Text("Cached songs come back as you listen.")
+    }
+    .confirmationDialog("Delete downloads", isPresented: $confirmsDeleteDownloads) {
       Button("Delete All Downloads", role: .destructive) {
         flooo.deleteAllDownloads()
         refreshStorage()
       }
     } message: {
-      Text("Cached songs come back as you listen. Downloaded albums have to be downloaded again.")
+      Text("Downloaded albums have to be downloaded again.")
     }
   }
 
@@ -184,16 +205,17 @@ struct SettingsView: View {
     return host + (components.port.map { ":\($0)" } ?? "") + components.path
   }
 
-  private var storage: some View {
+  /// The room something takes on the phone, with Clear.
+  private func storage(_ title: String, _ detail: String, clear: @escaping () -> Void)
+    -> some View
+  {
     HStack {
       VStack(alignment: .leading, spacing: 2) {
-        Text("Downloads on this iPhone").font(.rowTitle.weight(.semibold))
-        Text("\(flooo.localDirectorySize) · \(counted(cachedSongs, "cached song"))")
-          .font(.rowSubtitle)
-          .foregroundStyle(palette.secondary)
+        Text(title).font(.rowTitle.weight(.semibold))
+        Text(detail).font(.rowSubtitle).foregroundStyle(palette.secondary)
       }
       Spacer()
-      Button("Clear") { confirmsClear = true }
+      Button("Clear", action: clear)
         .font(.rowSubtitle.weight(.semibold))
         .foregroundStyle(Color.floDestructive)
     }
@@ -203,6 +225,15 @@ struct SettingsView: View {
   private func refreshStorage() {
     flooo.getLocalStorageInformation()
     cachedSongs = StreamCacheManager.shared.getCachedSongs().count
+  }
+
+  /// A stored bitrate as its picker shows it.
+  private func offered(_ stored: Binding<String?>) -> Binding<String> {
+    Binding {
+      TranscodingSettings.offeredBitRate(stored.wrappedValue)
+    } set: {
+      stored.wrappedValue = $0
+    }
   }
 
   private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
@@ -224,45 +255,6 @@ struct SettingsView: View {
     }
     .tint(palette.fill)
     .card(horizontal: 16, vertical: 14)
-  }
-}
-
-/// The design's segmented control: the chosen option on the fill with ink,
-/// or, `filled` false, on the second platter color.
-private struct Segmented<Value: Hashable>: View {
-  let options: [(value: Value, label: String)]
-  @Binding var selection: Value
-  var filled = true
-
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    HStack(spacing: 2) {
-      ForEach(options, id: \.value) { option in
-        let isOn = option.value == selection
-        Button {
-          selection = option.value
-        } label: {
-          Text(option.label)
-            .font(.rowSubtitle.weight(.semibold))
-            .foregroundStyle(
-              isOn ? (filled ? palette.ink : palette.text) : (filled ? palette.text : palette.secondary)
-            )
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 9)
-            .background(
-              isOn ? (filled ? palette.fill : palette.surface2) : .clear,
-              in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isOn ? .isSelected : [])
-      }
-    }
-    .padding(3)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-    .animation(.snappy(duration: 0.2), value: selection)
   }
 }
 
