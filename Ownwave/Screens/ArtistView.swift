@@ -68,25 +68,26 @@ struct ArtistView: View {
     .task(id: albums.first?.id) {
       if let albumId = albums.first?.id { hue = await CoverTint.hue(albumId: albumId) }
     }
-    .onReceive(radio.playableSongs) { songs in
-      if songs.isEmpty {
-        showsRadioError = true
-      } else {
-        let playable = SongCollection(id: artist.id, name: "\(artist.name) Radio", songs: songs)
-        if player.playItem(item: playable) { app.isNowPlayingPresented = true }
-      }
-    }
     .alert(artist.name, isPresented: $showsRadioError) {
-      Button("OK") { radio.errorMessage = nil }
+      Button("OK") {}
     } message: {
-      Text(radio.errorMessage ?? "")
+      Text(ArtistDetailViewModel.noRadioMessage)
     }
   }
 
   private var buttons: some View {
     HStack(spacing: 10) {
       Button {
-        radio.fetchArtistRadio(artist: artist)
+        Task {
+          let songs = await radio.fetchArtistRadio(artist: artist)
+          if songs.isEmpty {
+            showsRadioError = true
+          } else if player.playItem(
+            item: SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs))
+          {
+            app.isNowPlayingPresented = true
+          }
+        }
       } label: {
         if radio.isLoadingRadio {
           ProgressView()
@@ -124,8 +125,7 @@ struct ArtistView: View {
             ItemMenuButton(target: menu)
           }
           .onTapGesture {
-            let playable = SongCollection(
-              id: "artist-\(artist.id)", name: artist.name, songs: topSongs)
+            let playable = SongCollection.artist(id: artist.id, name: artist.name, songs: topSongs)
             if player.playItem(item: playable, startingAt: index) {
               app.isNowPlayingPresented = true
             }

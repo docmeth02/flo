@@ -13,6 +13,7 @@ struct WatchArtistDetailView: View {
   @StateObject var artistDetailViewModel = ArtistDetailViewModel()
 
   @State private var displayAlert: Bool = false
+  @State private var isLoadingTopSongs = false
   @State private var openedAlbum: Album?
   @State private var menu: MenuTarget?
 
@@ -22,7 +23,15 @@ struct WatchArtistDetailView: View {
     List {
       Section {
         Button(action: {
-          artistDetailViewModel.fetchArtistRadio(artist: artist)
+          Task {
+            let songs = await artistDetailViewModel.fetchArtistRadio(artist: artist)
+            let radio = SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs)
+            if songs.isEmpty {
+              displayAlert = true
+            } else if playerViewModel.playItem(item: radio) {
+              showPlayer()
+            }
+          }
         }) {
           if artistDetailViewModel.isLoadingRadio {
             ProgressView()
@@ -32,10 +41,16 @@ struct WatchArtistDetailView: View {
         }
         .capsuleRow()
 
+        // Top songs online, else the artist's songs on the watch, as Siri
+        // plays an artist.
         Button(action: {
-          artistDetailViewModel.fetchTopSongs(artist: artist)
+          Task {
+            isLoadingTopSongs = true
+            if await playerViewModel.playArtist(id: artist.id, name: artist.name) { showPlayer() }
+            isLoadingTopSongs = false
+          }
         }) {
-          if artistDetailViewModel.isLoadingTopSongs {
+          if isLoadingTopSongs {
             ProgressView()
           } else {
             Label("Top Songs", systemImage: "music.note.list")
@@ -43,7 +58,7 @@ struct WatchArtistDetailView: View {
         }
         .capsuleRow()
       }
-      .disabled(artistDetailViewModel.isLoadingRadio || artistDetailViewModel.isLoadingTopSongs)
+      .disabled(artistDetailViewModel.isLoadingRadio || playerViewModel.isGeneratingMix)
 
       Section {
         ForEach(albumViewModel.albums(byArtist: artist.id)) { album in
@@ -64,20 +79,10 @@ struct WatchArtistDetailView: View {
     .onAppear {
       albumViewModel.fetchAlbumsByArtist(id: artist.id)
     }
-    .onReceive(artistDetailViewModel.playableSongs) { songs in
-      if songs.isEmpty {
-        displayAlert = true
-      } else {
-        let playable = SongCollection(id: artist.id, name: "\(artist.name) Radio", songs: songs)
-        if playerViewModel.playItem(item: playable) { showPlayer() }
-      }
-    }
     .alert(artist.name, isPresented: $displayAlert) {
-      Button("OK") {
-        artistDetailViewModel.errorMessage = nil
-      }
+      Button("OK") {}
     } message: {
-      Text(artistDetailViewModel.errorMessage ?? "")
+      Text(ArtistDetailViewModel.noRadioMessage)
     }
   }
 }

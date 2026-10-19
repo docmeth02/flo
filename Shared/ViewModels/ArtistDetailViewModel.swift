@@ -1,59 +1,22 @@
 //    flo
 
 import Foundation
-import Combine
 
-class ArtistDetailViewModel: ObservableObject {
-  var playableSongs: PassthroughSubject<[Song], Never> = .init()
+@MainActor
+final class ArtistDetailViewModel: ObservableObject {
+  @Published private(set) var isLoadingRadio = false
 
-  @Published var isLoadingRadio = false
-  @Published var isLoadingTopSongs = false
-  @Published var errorMessage: String? = nil
+  /// What the artist screens say when Artist Radio has nothing to play.
+  static let noRadioMessage = "No similar songs found for this artist."
 
-  func fetchArtistRadio(artist: Artist) {
+  /// Songs similar to the artist's for Artist Radio; none when the server
+  /// has none or did not answer.
+  func fetchArtistRadio(artist: Artist) async -> [Song] {
     isLoadingRadio = true
-
-    RadioService.shared.getSimilarSongs(id: artist.id) { [weak self] result in
-      DispatchQueue.main.async {
-        guard let self else { return }
-
-        self.isLoadingRadio = false
-
-        switch result {
-        case .success(let songs):
-          if songs.isEmpty {
-            self.errorMessage = "No similar songs found for this artist."
-          }
-
-          self.playableSongs.send(songs)
-        case .failure(_):
-          self.errorMessage = "Failed to load Artist Radio. Please try again."
-          self.playableSongs.send([])
-        }
-      }
+    defer { isLoadingRadio = false }
+    let result = await withCheckedContinuation { continuation in
+      RadioService.shared.getSimilarSongs(id: artist.id) { continuation.resume(returning: $0) }
     }
-  }
-
-  func fetchTopSongs(artist: Artist) {
-    isLoadingTopSongs = true
-
-    RadioService.shared.getTopSongs(artistId: artist.id, count: 20) { [weak self] result in
-      DispatchQueue.main.async {
-        guard let self else { return }
-
-        self.isLoadingTopSongs = false
-
-        switch result {
-        case .success(let songs):
-          if songs.isEmpty {
-            self.errorMessage = "No top songs found for this artist."
-          }
-          self.playableSongs.send(songs)
-        case .failure(_):
-          self.errorMessage = "Failed to load Artist Top Songs. Please try again."
-          self.playableSongs.send([])
-        }
-      }
-    }
+    return (try? result.get()) ?? []
   }
 }
