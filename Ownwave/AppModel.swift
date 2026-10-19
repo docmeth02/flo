@@ -35,8 +35,13 @@ final class AppModel: ObservableObject {
   private init() {
     // A logout ends a tour; `tourSeen` is only set at its end, so it starts
     // over after the next login instead of halfway.
+    Self.onLogout { AppModel.shared.tour = nil }
+  }
+
+  /// Runs `action` on the main actor after every logout.
+  static func onLogout(_ action: @escaping @MainActor () -> Void) {
     NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
-      Task { @MainActor in AppModel.shared.tour = nil }
+      Task { @MainActor in action() }
     }
   }
 

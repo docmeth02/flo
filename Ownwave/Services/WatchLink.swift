@@ -48,9 +48,7 @@ import WatchConnectivity
     guard WCSession.isSupported() else { return }
     session.delegate = receiver
     session.activate()
-    NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
-      Task { @MainActor in WatchLink.shared.cancelSends() }
-    }
+    AppModel.onLogout { WatchLink.shared.cancelSends() }
     #if DEBUG
       runDebugLaunchActions()
     #endif
