@@ -80,7 +80,8 @@ private struct TourOverlay: View {
     }
     .animation(.easeInOut(duration: 0.2), value: step)
     .task(id: step) {
-      try? await Task.sleep(for: .seconds(0.45))
+      // A step left within the wait must not show after the next one.
+      guard (try? await Task.sleep(for: .seconds(0.45))) != nil else { return }
       withAnimation(motion) { shown = step }
     }
   }

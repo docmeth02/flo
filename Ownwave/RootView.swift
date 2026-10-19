@@ -136,7 +136,10 @@ struct AppTabs: View {
       let id = url.lastPathComponent
       Task {
         let albums: [Album] = await app.albums.loadedOrCached(app.albums.albums, .albums)
-        guard let album = albums.first(where: { $0.id == id }) else { return }
+        guard
+          let album = app.albums.recentAlbums.first(where: { $0.id == id })
+            ?? albums.first(where: { $0.id == id })
+        else { return }
         app.isNowPlayingPresented = false
         tab = .home
         paths[.home, default: NavigationPath()].append(Route.album(album))
@@ -175,7 +178,8 @@ struct AppTabs: View {
     case .taste?: show(.taste)
     case .send?: show(.home, Route.watch)
     case nil:
-      tourSeen = true
+      // A logout ends the tour without it counting as seen.
+      if app.auth.isLoggedIn { tourSeen = true }
       show(.home)
     }
     app.isNowPlayingPresented = false

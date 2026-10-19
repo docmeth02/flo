@@ -238,7 +238,6 @@
 		AB128564F2F5628F184B5756 /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134522C15BE0C00CCF2EB /* Strings.swift */; };
 		AC55BF9DA8F03D696B917C74 /* RateIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA19B96B3927E5638EBB93C1 /* RateIntents.swift */; };
 		AD62670C9AD1BC6C85BC9779 /* AlbumService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4875DFF2C149D9000D9BAEB /* AlbumService.swift */; };
-		AD6E053D10D9E9231A6B485A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 650FF0208FB53E12E0416CA9 /* Foundation.framework */; };
 		ADC990DEAE33749FF281E185 /* WatchLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6699C44D5AD9144242023B3 /* WatchLinkTests.swift */; };
 		AF8F4066A6464664404ECF80 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C33E4D7DFB09BB760978CACE /* Assets.xcassets */; };
 		B0330DD0198F131B14456A89 /* WatchAlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66B14F36AC2C06239FAD68BF /* WatchAlbumDetailView.swift */; };
@@ -465,7 +464,6 @@
 		638B2D1AECAA38268427598A /* WatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
 		639E407CBF5AE3682C7D8D83 /* MiniPlayer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MiniPlayer.swift; sourceTree = "<group>"; };
 		64FB5C179BC0B76201835B86 /* WatchContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
-		650FF0208FB53E12E0416CA9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		65117DD019E4D018EA684BA4 /* ListeningHistoryStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ListeningHistoryStore.swift; sourceTree = "<group>"; };
 		6543C7E35E9DD723A4C89C0F /* PinStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PinStore.swift; sourceTree = "<group>"; };
 		65FA148E7B2D4FCA696D6D18 /* Tour+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "Tour+Debug.swift"; sourceTree = "<group>"; };
@@ -636,7 +634,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AD6E053D10D9E9231A6B485A /* Foundation.framework in Frameworks */,
 				734600D63D4F9E1F336CE758 /* WidgetKit.framework in Frameworks */,
 				83F6066B8DB782A3922B169B /* SwiftUI.framework in Frameworks */,
 			);
@@ -648,7 +645,6 @@
 		0B927662D32C46CA258E20F4 /* iOS */ = {
 			isa = PBXGroup;
 			children = (
-				650FF0208FB53E12E0416CA9 /* Foundation.framework */,
 			);
 			name = iOS;
 			sourceTree = "<group>";

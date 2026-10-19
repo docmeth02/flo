@@ -34,6 +34,14 @@ import WidgetKit
     changes = song.combineLatest(app.albums.$recentAlbums, app.auth.$isLoggedIn)
       .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
       .sink { [weak self] songId, _, _ in self?.publish(songChanged: songId) }
+    // Without waiting for the debounce: a quit right after a logout must not
+    // leave the account in the widgets.
+    NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
+      Task { @MainActor in
+        WidgetPublisher.shared.generation += 1
+        WidgetPublisher.shared.clear()
+      }
+    }
     // The last song counts as played only after it started, and a cover may
     // have failed offline: leaving the app catches up on both.
     NotificationCenter.default.addObserver(
