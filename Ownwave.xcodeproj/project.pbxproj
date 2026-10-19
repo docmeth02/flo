@@ -419,6 +419,7 @@
 		0C2A3B4C5D6E7F8A9B0C1D2E /* LibraryCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCacheManager.swift; sourceTree = "<group>"; };
 		0D2A3B4C5D6E7F8A9B0C1D2E /* CoverArtCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverArtCacheManager.swift; sourceTree = "<group>"; };
 		10DC358D9887C65057013EB9 /* WidgetGallery.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetGallery.swift; sourceTree = "<group>"; };
+		113D2AEAABACF00BBAF02931 /* flo 6.xcdatamodel */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcdatamodel; path = "flo 6.xcdatamodel"; sourceTree = "<group>"; };
 		15C4C47133E096CE3E8B1ABE /* QueueOrdersTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QueueOrdersTests.swift; sourceTree = "<group>"; };
 		1653EF2DC6793F11E0E95064 /* TourOverlay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TourOverlay.swift; sourceTree = "<group>"; };
 		17258430B8997B70CB97CC82 /* RatingStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RatingStore.swift; sourceTree = "<group>"; };
@@ -2191,8 +2192,9 @@
 				664CAB98EC12ABB56EB036FA /* flo 3.xcdatamodel */,
 				2D16BEDC0E729D620EA52DD1 /* flo 4.xcdatamodel */,
 				9CDB35CEF39647629BFCA841 /* flo 5.xcdatamodel */,
+				113D2AEAABACF00BBAF02931 /* flo 6.xcdatamodel */,
 			);
-			currentVersion = 9CDB35CEF39647629BFCA841 /* flo 5.xcdatamodel */;
+			currentVersion = 113D2AEAABACF00BBAF02931 /* flo 6.xcdatamodel */;
 			path = flo.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

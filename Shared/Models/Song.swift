@@ -192,7 +192,9 @@ struct Song: Codable, Identifiable, Hashable {
     self.id = song.id ?? ""
     self.title = song.title ?? "N/A"
     self.artist = song.artistName ?? "N/A"
-    self.albumId = song.albumId ?? ""
+    // `albumId` is the collection the song was downloaded with, a playlist's
+    // id for a playlist download; records older than model 6 only have that.
+    self.albumId = song.songAlbumId ?? song.albumId ?? ""
     self.albumName = song.albumName ?? ""
     self.trackNumber = Int(song.trackNumber)
     self.discNumber = Int(song.discNumber)

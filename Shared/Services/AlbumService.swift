@@ -582,6 +582,7 @@ class AlbumService {
       if let old = existingSong.fileURL, !old.isEmpty, old != fileURL { replacedFile = old }
       existingSong.fileURL = fileURL
       existingSong.albumName = resolvedAlbumName
+      existingSong.songAlbumId = song.albumId
       existingSong.status = status
       existingSong.suffix = suffix
       existingSong.bitRate = Int64(bitRate)
@@ -591,6 +592,7 @@ class AlbumService {
       let downloadedSong = SongEntity(context: CoreDataManager.shared.viewContext)
 
       downloadedSong.albumId = albumId
+      downloadedSong.songAlbumId = song.albumId
       downloadedSong.albumName = resolvedAlbumName
       downloadedSong.id = songId
       downloadedSong.title = song.title
