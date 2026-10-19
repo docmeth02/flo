@@ -32,11 +32,11 @@ extension Song {
   /// A 200 s MP3 at 320 kbps, track 1 of disc 1; a test sets what it looks at.
   static func fixture(
     _ id: String, title: String? = nil, artist: String = "Artist", album: String = "al",
-    albumName: String = "Album", mediaFileId: String = ""
+    albumName: String = "Album", disc: Int = 1, track: Int = 1, mediaFileId: String = ""
   ) -> Song {
     Song(
       id: id, title: title ?? "Song \(id)", albumId: album, albumName: albumName, artist: artist,
-      trackNumber: 1, discNumber: 1, bitRate: 320, sampleRate: 44100, suffix: "mp3",
+      trackNumber: track, discNumber: disc, bitRate: 320, sampleRate: 44100, suffix: "mp3",
       duration: 200, mediaFileId: mediaFileId)
   }
 }

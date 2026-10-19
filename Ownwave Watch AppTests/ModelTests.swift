@@ -41,6 +41,34 @@ final class ModelTests: XCTestCase {
     XCTAssertEqual(Song(from: entity).albumId, "pl-1")
   }
 
+  /// An album screen shows the downloaded songs with the server's others,
+  /// in disc and track order.
+  func testAlbumSongsMergeInDiscAndTrackOrder() {
+    let local = [Song.fixture("b", disc: 1, track: 2), Song.fixture("c", disc: 2, track: 1)]
+    let remote = [
+      Song.fixture("c", disc: 2, track: 1), Song.fixture("a", disc: 1, track: 1),
+      Song.fixture("b", disc: 1, track: 2), Song.fixture("d", disc: 2, track: 2),
+    ]
+    XCTAssertEqual(
+      AlbumViewModel.mergeAlbumSongs(local: local, remote: remote).map(\.id), ["a", "b", "c", "d"])
+    XCTAssertEqual(AlbumViewModel.mergeAlbumSongs(local: local, remote: []).map(\.id), ["b", "c"])
+  }
+
+  /// A playlist keeps the server's order, a song it holds twice and its
+  /// downloads in place; a download it no longer holds goes last.
+  func testPlaylistSongsKeepTheServerOrder() {
+    let local = [
+      Song.fixture("pl:p:m2", mediaFileId: "m2"), Song.fixture("pl:p:m9", mediaFileId: "m9"),
+    ]
+    let remote = [
+      Song.fixture("m1", mediaFileId: "m1"), Song.fixture("m2", mediaFileId: "m2"),
+      Song.fixture("m2", mediaFileId: "m2"),
+    ]
+    XCTAssertEqual(
+      AlbumViewModel.mergePlaylistSongs(local: local, remote: remote).map(\.id),
+      ["m1", "pl:p:m2", "m2", "pl:p:m9"])
+  }
+
   /// Off first, then rising to the most the device has room for, with the
   /// default among them.
   func testStreamCacheLimits() {
