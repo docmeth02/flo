@@ -36,3 +36,17 @@ extension AuthError {
     }
   }
 }
+
+extension Result where Failure == Error {
+  /// The outcome of an async call, for code that handles both ends in one
+  /// place. Runs on the caller's actor, so it adds no hop of its own.
+  init(
+    isolation: isolated (any Actor)? = #isolation, catching body: () async throws -> Success
+  ) async {
+    do {
+      self = .success(try await body())
+    } catch {
+      self = .failure(error)
+    }
+  }
+}

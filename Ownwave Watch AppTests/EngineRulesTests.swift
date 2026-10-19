@@ -67,6 +67,19 @@ final class EngineRulesTests: XCTestCase {
     XCTAssertFalse(ConnectivityMonitor.isConnectionError(nil))
   }
 
+  /// An async call's answer or error, kept for code that handles both.
+  func testResultOfAnAsyncCall() async throws {
+    func answer(failing: Bool) async throws -> Int {
+      if failing { throw URLError(.timedOut) }
+      return 1
+    }
+    let answered = await Result { try await answer(failing: false) }
+    XCTAssertEqual(try answered.get(), 1)
+    guard case .failure(let error) = await Result(catching: { try await answer(failing: true) })
+    else { return XCTFail("no failure") }
+    XCTAssertEqual((error as? URLError)?.code, .timedOut)
+  }
+
   func testExplicitStatusReadsEveryServerSpelling() {
     for raw in ["e", "Explicit", " 1 ", "4"] {
       XCTAssertEqual(ExplicitStatus(from: raw), .explicit, raw)
