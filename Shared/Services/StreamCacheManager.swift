@@ -29,9 +29,17 @@ class StreamCacheManager {
   private let fileManager = FileManager.default
   private let cacheDirectory = URL.cacheDirectory(named: "StreamCache")
   private let syncQueue = DispatchQueue(label: "flo.streamcache")
+  // The attempt each cache key is in flight with. A key cancelled and asked
+  // for again gets a new attempt, so the old one's late completion leaves the
+  // new one's registration and record alone.
+  private var inFlightAttempts: [String: UUID] = [:]
   private var inFlightDownloads: [String: DownloadRequest] = [:]
-  private var inFlightKeys: Set<String> = []
   private var currentlyPlayingSongId: String?
+
+  /// CacheEntity.state.
+  private enum State: String {
+    case downloading, ready
+  }
 
   private init() {}
 
@@ -62,7 +70,7 @@ class StreamCacheManager {
   /// The file of a ready cache record, refreshing its access time; records
   /// whose file vanished are dropped.
   private func readyFileURL(for record: CacheEntity) -> URL? {
-    guard record.state == "ready", let filePath = record.filePath else { return nil }
+    guard record.state == State.ready.rawValue, let filePath = record.filePath else { return nil }
 
     let fileURL = cacheDirectory.appendingPathComponent(filePath)
     guard fileManager.fileExists(atPath: fileURL.path) else {
@@ -77,7 +85,6 @@ class StreamCacheManager {
     return fileURL
   }
 
-
   func cacheSong(mediaFileId: String, originalSuffix: String? = nil, from queueItem: QueueEntity? = nil) {
     guard UserDefaultsManager.streamCacheMaxSize > 0 else { return }
     guard !mediaFileId.isEmpty else { return }
@@ -89,34 +96,32 @@ class StreamCacheManager {
     guard let bitrate = TranscodingSettings.streamingBitRate else { return }
     let key = cacheKey(mediaFileId: mediaFileId, bitrate: bitrate)
 
-    // Register in-flight atomically — prevents duplicate downloads
+    let attempt = UUID()
     let didRegister: Bool = syncQueue.sync {
-      guard !inFlightKeys.contains(key) else { return false }
-      inFlightKeys.insert(key)
+      guard inFlightAttempts[key] == nil else { return false }
+      inFlightAttempts[key] = attempt
       return true
     }
     guard didRegister else { return }
 
-    // Already cached?
     let existing = CoreDataManager.shared.getRecordByKey(
       entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1)
     if !existing.isEmpty {
-      syncQueue.async { self.inFlightKeys.remove(key) }
+      endAttempt(attempt, key: key)
       return
     }
 
-    // Create CacheEntity with downloading state now, while the queue item
-    // behind the metadata is alive; the file name waits for the server's
-    // transcode decision.
+    // The record is made now, while the queue item behind the metadata is
+    // alive; the file name waits for the server's transcode decision.
     let entity = CacheEntity(context: CoreDataManager.shared.viewContext)
     entity.cacheKey = key
     entity.mediaFileId = mediaFileId
-    entity.state = "downloading"
+    entity.state = State.downloading.rawValue
     entity.cachedAt = Date()
     entity.lastAccessedAt = Date()
     entity.fileSize = 0
 
-    // Store song metadata for offline browsing
+    // The cached songs list shows the song offline.
     if let q = queueItem {
       entity.title = q.songName
       entity.artistName = q.artistName
@@ -133,21 +138,17 @@ class StreamCacheManager {
     Task { @MainActor in
       let result = await AlbumService.shared.resolveStreamSource(
         songId: mediaFileId, originalSuffix: originalSuffix, offset: 0)
-      // cancelAllInFlight may have run while the decision was pending.
-      guard self.syncQueue.sync(execute: { self.inFlightKeys.contains(key) }) else {
-        self.removeCacheRecord(key: key)
-        return
-      }
       guard case .success(let source) = result else {
-        self.syncQueue.async { self.inFlightKeys.remove(key) }
-        self.removeCacheRecord(key: key)
+        if self.endAttempt(attempt, key: key) { self.removeCacheRecord(key: key) }
         return
       }
-      self.startCacheDownload(key: key, source: source)
+      // A cancel while the decision was pending already removed the record.
+      guard self.syncQueue.sync(execute: { self.inFlightAttempts[key] == attempt }) else { return }
+      self.startCacheDownload(key: key, attempt: attempt, source: source)
     }
   }
 
-  private func startCacheDownload(key: String, source: StreamSource) {
+  private func startCacheDownload(key: String, attempt: UUID, source: StreamSource) {
     let suffix = source.suffix
     if let record = CoreDataManager.shared.getRecordByKey(
       entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1
@@ -162,10 +163,10 @@ class StreamCacheManager {
       allowsCellular: TranscodingSettings.streamsOverCellular
     ) { [weak self] result in
       guard let self = self else { return }
-
-      self.syncQueue.async {
-        self.inFlightDownloads.removeValue(forKey: key)
-        self.inFlightKeys.remove(key)
+      // A cancelled attempt's record is gone, or is the next attempt's.
+      guard self.endAttempt(attempt, key: key) else {
+        if case .success(let tempFile) = result { try? self.fileManager.removeItem(at: tempFile) }
+        return
       }
 
       switch result {
@@ -183,7 +184,7 @@ class StreamCacheManager {
           let records = CoreDataManager.shared.getRecordByKey(
             entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1)
           if let record = records.first {
-            record.state = "ready"
+            record.state = State.ready.rawValue
             record.fileSize = fileSize
             CoreDataManager.shared.saveRecord()
           }
@@ -197,12 +198,23 @@ class StreamCacheManager {
     }
 
     syncQueue.sync {
-      if !inFlightKeys.contains(key) {
-        // cancelAllInFlight ran while we were setting up — cancel immediately
-        request.cancel()
+      // A cancel may have come while the request was set up.
+      if inFlightAttempts[key] == attempt {
+        inFlightDownloads[key] = request
       } else {
-        self.inFlightDownloads[key] = request
+        request.cancel()
       }
+    }
+  }
+
+  /// Ends the attempt; false when it was cancelled or replaced meanwhile.
+  @discardableResult
+  private func endAttempt(_ attempt: UUID, key: String) -> Bool {
+    syncQueue.sync {
+      guard inFlightAttempts[key] == attempt else { return false }
+      inFlightAttempts[key] = nil
+      inFlightDownloads[key] = nil
+      return true
     }
   }
 
@@ -211,10 +223,10 @@ class StreamCacheManager {
     let records = CoreDataManager.shared.getRecordsByEntity(
       entity: CacheEntity.self, sortDescriptors: [sortDescriptor])
 
-    // Deduplicate by mediaFileId (keep most recent per song)
+    // The most recently played copy of each song.
     var seen = Set<String>()
     return records
-      .filter { $0.state == "ready" && $0.title != nil }
+      .filter { $0.state == State.ready.rawValue && $0.title != nil }
       .filter { record in
         guard let id = record.mediaFileId else { return false }
         return seen.insert(id).inserted
@@ -237,16 +249,17 @@ class StreamCacheManager {
     }
   }
 
-  /// Cancels the downloads in flight except those of the `kept` cache keys,
-  /// and returns the cancelled keys.
+  /// Cancels the attempts in flight, downloading or waiting for the server's
+  /// decision, except those of the `kept` cache keys, and returns the
+  /// cancelled keys.
   @discardableResult
   private func cancelDownloads(keeping kept: Set<String> = []) -> [String] {
     syncQueue.sync {
-      let keys = inFlightDownloads.keys.filter { !kept.contains($0) }
+      let keys = inFlightAttempts.keys.filter { !kept.contains($0) }
       for key in keys {
+        inFlightAttempts[key] = nil
         inFlightDownloads.removeValue(forKey: key)?.cancel()
       }
-      inFlightKeys.formIntersection(kept)
       return keys
     }
   }
@@ -261,7 +274,6 @@ class StreamCacheManager {
   func clearCache() {
     cancelDownloads()
 
-    // Delete all files
     try? fileManager.removeItem(at: cacheDirectory)
     try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
 
@@ -278,19 +290,19 @@ class StreamCacheManager {
   func calculateCacheSize() async -> Int64 {
     return await MainActor.run {
       let records = CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)
-      return records.filter { $0.state == "ready" }.reduce(0) { $0 + $1.fileSize }
+      return records.filter { $0.state == State.ready.rawValue }.reduce(0) { $0 + $1.fileSize }
     }
   }
 
   func reconcile() {
-    // Cancel any active downloads first to prevent races
+    // The downloading records go below, so nothing may still be filling them.
     cancelDownloads()
 
     DispatchQueue.main.async { [self] in
       let records = CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)
 
       for record in records {
-        if record.state == "downloading" {
+        if record.state == State.downloading.rawValue {
           if let filePath = record.filePath {
             try? fileManager.removeItem(at: cacheDirectory.appendingPathComponent(filePath))
           }
@@ -310,7 +322,7 @@ class StreamCacheManager {
 
       CoreDataManager.shared.saveRecord()
 
-      // Re-fetch surviving records for orphan file cleanup
+      // Files no record names are left over from interrupted downloads.
       let survivingRecords = CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)
       let knownFiles = Set(survivingRecords.compactMap { $0.filePath })
 
@@ -338,7 +350,7 @@ class StreamCacheManager {
   }
 
   private func evictIfNeeded() {
-    // Must be called on main thread for CoreData viewContext safety
+    // The view context is main-thread only.
     dispatchPrecondition(condition: .onQueue(.main))
 
     let maxSize = UserDefaultsManager.streamCacheMaxSize
@@ -348,13 +360,14 @@ class StreamCacheManager {
     let records = CoreDataManager.shared.getRecordsByEntity(
       entity: CacheEntity.self, sortDescriptors: [sortDescriptor])
 
-    let totalSize = records.filter { $0.state == "ready" }.reduce(Int64(0)) { $0 + $1.fileSize }
+    let totalSize = records.filter { $0.state == State.ready.rawValue }
+      .reduce(Int64(0)) { $0 + $1.fileSize }
     guard totalSize > maxSize else { return }
 
     var currentSize = totalSize
     let currentlyPlaying: String? = syncQueue.sync { currentlyPlayingSongId }
 
-    for record in records where record.state == "ready" {
+    for record in records where record.state == State.ready.rawValue {
       guard currentSize > maxSize else { break }
 
       if let playing = currentlyPlaying, record.mediaFileId == playing { continue }
