@@ -14,15 +14,14 @@ struct MiniPlayer: View {
   @Environment(\.tabViewBottomAccessoryPlacement) private var placement
 
   var body: some View {
-    if player.hasNowPlaying() {
-      nowPlaying
+    if let song = player.nowPlaying {
+      nowPlaying(song)
     } else {
       playSomething
     }
   }
 
-  private var nowPlaying: some View {
-    let song = player.nowPlaying
+  private func nowPlaying(_ song: QueueEntity) -> some View {
     // Inline, beside the minimized tab bar, there is room for less.
     let isInline = placement == .inline
     return HStack(spacing: 11) {

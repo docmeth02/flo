@@ -18,7 +18,7 @@ extension PlayerViewModel {
     } else if !starLookupFailed {
       return
     }
-    guard hasNowPlaying(), let songId = nowPlaying.id, !songId.isEmpty else { return }
+    guard let songId = nowPlayingId, !songId.isEmpty else { return }
     starLookup += 1
     let lookup = starLookup
     // Offline the lookup could only time out; it counts as failed, so the
@@ -81,7 +81,7 @@ extension PlayerViewModel {
     if coverArt.hasPrefix("/") {
       if let image = UIImage(contentsOfFile: coverArt) { Self.setArtwork(image) }
     } else if !albumId.isEmpty {
-      let trackId = nowPlaying.id
+      let trackId = nowPlayingId
       Task { @MainActor [weak self] in
         // Shares the cover cache's single download with the album art views,
         // and only for the song still playing.
@@ -95,7 +95,7 @@ extension PlayerViewModel {
 
   /// What "this song" means to Siri: the song in the player, nil for none.
   @MainActor func publishSiriTarget() {
-    NowPlayingTarget.publish(hasNowPlaying() ? nowPlaying : nil, isLiveRadio: isLiveRadio)
+    NowPlayingTarget.publish(nowPlaying, isLiveRadio: isLiveRadio)
   }
 
   private static func setArtwork(_ image: UIImage) {
@@ -169,8 +169,8 @@ extension PlayerViewModel {
     commandCenter.likeCommand.localizedShortTitle = "Boost"
     commandCenter.likeCommand.addTarget { [weak self] _ in
       Task { @MainActor in
-        guard let self, self.hasNowPlaying() else { return }
-        let rating = RatingStore.shared.rating(for: self.nowPlaying.id ?? "")
+        guard let self, let song = self.nowPlaying else { return }
+        let rating = RatingStore.shared.rating(for: song.id ?? "")
         self.rateNowPlaying(rating >= 4 ? 0 : 5)
       }
       return .success
@@ -180,8 +180,8 @@ extension PlayerViewModel {
     commandCenter.dislikeCommand.localizedShortTitle = "Avoid"
     commandCenter.dislikeCommand.addTarget { [weak self] _ in
       Task { @MainActor in
-        guard let self, self.hasNowPlaying() else { return }
-        let rating = RatingStore.shared.rating(for: self.nowPlaying.id ?? "")
+        guard let self, let song = self.nowPlaying else { return }
+        let rating = RatingStore.shared.rating(for: song.id ?? "")
         self.rateNowPlaying((1...2).contains(rating) ? 0 : 1)
       }
       return .success
@@ -191,14 +191,14 @@ extension PlayerViewModel {
   /// Rates the now playing song, from the player's stars or the remote like
   /// and dislike; 0 clears the rating.
   @MainActor func rateNowPlaying(_ rating: Int) {
-    guard hasNowPlaying(), !isLiveRadio else { return }
-    RatingStore.shared.set(rating, for: nowPlaying)
+    guard let song = nowPlaying, !isLiveRadio else { return }
+    RatingStore.shared.set(rating, for: song)
   }
 
   @MainActor func updateRatingCommands() {
     let commandCenter = MPRemoteCommandCenter.shared()
-    let isRateable = hasNowPlaying() && !isLiveRadio
-    let rating = isRateable ? RatingStore.shared.rating(for: nowPlaying.id ?? "") : 0
+    let isRateable = nowPlaying != nil && !isLiveRadio
+    let rating = isRateable ? RatingStore.shared.rating(for: nowPlayingId ?? "") : 0
     commandCenter.likeCommand.isEnabled = isRateable
     commandCenter.dislikeCommand.isEnabled = isRateable
     commandCenter.likeCommand.isActive = rating >= 4
@@ -209,7 +209,7 @@ extension PlayerViewModel {
   }
 
   @MainActor func toggleStar() {
-    guard hasNowPlaying(), let songId = nowPlaying.id, !songId.isEmpty else { return }
+    guard let songId = nowPlayingId, !songId.isEmpty else { return }
     StarStore.shared.setSong(!isStarred, id: songId)
   }
 

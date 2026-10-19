@@ -75,7 +75,7 @@ struct WatchContentView: View {
             WatchHomeView()
               .tag(Tab.home)
 
-            if playerViewModel.hasNowPlaying() {
+            if playerViewModel.nowPlaying != nil {
               WatchNowPlayingView(ownsCrown: selectedTab == .nowPlaying)
                 .tag(Tab.nowPlaying)
             }
@@ -121,7 +121,7 @@ struct WatchContentView: View {
         }
       }
     }
-    .onChange(of: playerViewModel.hasNowPlaying()) { _, hasNowPlaying in
+    .onChange(of: playerViewModel.nowPlaying != nil) { _, hasNowPlaying in
       if !hasNowPlaying { selectedTab = .home }
     }
     // The iPhone signs the watch in with the watch's own login.

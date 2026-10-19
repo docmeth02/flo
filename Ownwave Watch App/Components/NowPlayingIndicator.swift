@@ -14,23 +14,23 @@ struct NowPlayingIndicator: View {
   var body: some View {
     // The home list drops this row when the queue empties, but this view can
     // refresh first (a logout clears the queue under it).
-    if playerViewModel.hasNowPlaying() {
-      content
+    if let song = playerViewModel.nowPlaying {
+      content(song)
     }
   }
 
-  private var content: some View {
+  private func content(_ song: QueueEntity) -> some View {
     VStack(spacing: 2) {
       Label("Now Playing", systemImage: playerViewModel.isPlaying ? "waveform" : "pause.fill")
         .labelStyle(NowPlayingLabelStyle())
         .font(.floCaption)
         .foregroundStyle(tint)
 
-      Text(playerViewModel.nowPlaying.songName ?? "Unknown")
+      Text(song.songName ?? "Unknown")
         .font(.floTitle)
         .lineLimit(1)
 
-      Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
+      Text(song.artistName ?? "Unknown")
         .font(.floMeta)
         .foregroundStyle(Color.floOnCover)
         .lineLimit(1)

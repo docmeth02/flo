@@ -177,13 +177,14 @@ class PlayerViewModel: ObservableObject {
   private var startGeneration = 0
   @Published private(set) var isGeneratingMix = false
 
-  var nowPlaying: QueueEntity {
-    return self.queue[self.activeQueueIdx]
+  /// The queue entry in the player, nil while the queue is empty.
+  var nowPlaying: QueueEntity? {
+    queue.indices.contains(activeQueueIdx) ? queue[activeQueueIdx] : nil
   }
 
   var isLiveRadio: Bool {
-    guard hasNowPlaying() else { return false }
-    return nowPlaying.duration.isInfinite || nowPlaying.duration.isNaN
+    guard let song = nowPlaying else { return false }
+    return song.duration.isInfinite || song.duration.isNaN
   }
 
   init() {
@@ -235,7 +236,7 @@ class PlayerViewModel: ObservableObject {
       self.hasQualified = UserDefaultsManager.nowPlayingQualified
       self.secondsListened = UserDefaultsManager.nowPlayingListened
       debugLog(
-        "restored \(self.nowPlaying.id ?? "") qualified=\(self.hasQualified) "
+        "restored \(self.nowPlaying?.id ?? "") qualified=\(self.hasQualified) "
           + "listened=\(Int(self.secondsListened))s")
     } else {
       UserDefaultsManager.removeObject(key: UserDefaultsKeys.queueActiveIdx)
@@ -310,14 +311,10 @@ class PlayerViewModel: ObservableObject {
     persistShuffleOrder()
   }
 
-  func hasNowPlaying() -> Bool {
-    queue.indices.contains(activeQueueIdx)
-  }
-
-  var nowPlayingId: String? { hasNowPlaying() ? nowPlaying.id : nil }
+  var nowPlayingId: String? { nowPlaying?.id }
 
   func isCurrentTrack(_ id: String?) -> Bool {
-    hasNowPlaying() && nowPlaying.id == id
+    nowPlaying.map { $0.id == id } ?? false
   }
 
   /// Whether the song is the one in the player, by the id the queue uses.
@@ -327,7 +324,7 @@ class PlayerViewModel: ObservableObject {
 
   private func setNowPlaying(playAudio: Bool = true) {
     endConnectionWait(because: "song change")
-    guard hasNowPlaying() else { return }
+    guard let song = nowPlaying else { return }
 
     self.persistActiveIndex()
     self.hasQualified = false
@@ -341,14 +338,14 @@ class PlayerViewModel: ObservableObject {
     // Before its 10 s this only cancels downloads no longer upcoming; the
     // song after next may already be on its way.
     precacheUpcoming()
-    StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: self.nowPlaying.id ?? "")
+    StreamCacheManager.shared.setCurrentlyPlaying(mediaFileId: song.id ?? "")
 
     // The item itself is attached by play(), so a queue restored at launch
     // streams nothing until the user presses Play.
     self.detachItem()
     self.isMediaLoading = false
 
-    self.totalDuration = self.nowPlaying.duration
+    self.totalDuration = song.duration
 
     if playAudio {
       self.progress = 0
@@ -372,8 +369,8 @@ class PlayerViewModel: ObservableObject {
     }
 
     self.publishNowPlaying(
-      title: self.nowPlaying.songName ?? "",
-      artist: self.nowPlaying.artistName ?? "",
+      title: song.songName ?? "",
+      artist: song.artistName ?? "",
       duration: self.totalDuration)
     // Nothing is attached yet, so the restored position is published here.
     if !playAudio {
@@ -386,7 +383,7 @@ class PlayerViewModel: ObservableObject {
 
   /// Reports the current song as playing to the server, once per song.
   private func announceNowPlaying() {
-    guard needsNowPlayingAnnouncement, hasNowPlaying() else { return }
+    guard needsNowPlayingAnnouncement, let song = nowPlaying else { return }
     needsNowPlayingAnnouncement = false
     // A station is no song the server knows.
     guard !isLiveRadio else { return }
@@ -395,16 +392,16 @@ class PlayerViewModel: ObservableObject {
     MainActor.assumeIsolated { loadStarred(refresh: true) }
 
     FloooViewModel.shared.reportPlayback(
-      state: .starting, nowPlaying: self.nowPlaying, positionSeconds: self.pendingStartPosition)
+      state: .starting, nowPlaying: song, positionSeconds: self.pendingStartPosition)
   }
 
   /// Tells the server where the announced song stands; the ViewModel drops a
   /// playing report within 30 s of the last one.
   private func reportPlayback(_ state: PlaybackReportState, at position: Double? = nil) {
-    guard !needsNowPlayingAnnouncement, hasNowPlaying(), !isLiveRadio
+    guard !needsNowPlayingAnnouncement, let song = nowPlaying, !isLiveRadio
     else { return }
     FloooViewModel.shared.reportPlayback(
-      state: state, nowPlaying: nowPlaying,
+      state: state, nowPlaying: song,
       positionSeconds: position ?? (playerItem == nil ? pendingStartPosition : lastObservedTime))
   }
 
@@ -533,7 +530,7 @@ class PlayerViewModel: ObservableObject {
         // music the user may pause meanwhile.
         self.resumeAfterInterruption = false
 
-        if self.playerItem == nil, self.hasNowPlaying(), !self.isLiveRadio {
+        if self.playerItem == nil, self.nowPlaying != nil, !self.isLiveRadio {
           self.isFinished = false
           self.isPlaying = true
           self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
@@ -546,9 +543,9 @@ class PlayerViewModel: ObservableObject {
         // A failed item cannot play, nor can one already counted as failed
         // (ready but silent); a fresh one gets one more chance.
         if let item = self.playerItem, item.status == .failed || item === self.countedFailedItem,
-          self.hasNowPlaying()
+          let song = self.nowPlaying
         {
-          let trackId = self.nowPlaying.id
+          let trackId = song.id
           if self.reloadedFailedTrackId != trackId {
             self.reloadedFailedTrackId = trackId
             if self.isLiveRadio {
@@ -789,24 +786,22 @@ class PlayerViewModel: ObservableObject {
   }
 
   func shuffleCurrentQueue() {
-    guard hasNowPlaying() else { return }
+    guard let current = nowPlaying else { return }
     self.isShuffling.toggle()
 
     if self.isShuffling {
       self.unshuffledQueue = self.queue
-      let currentSong = self.queue[self.activeQueueIdx]
 
       // The song playing leads the shuffled order and plays on.
       var remaining = self.queue
       remaining.remove(at: self.activeQueueIdx)
       remaining.shuffle()
 
-      self.queue = [currentSong] + remaining
+      self.queue = [current] + remaining
       self.activeQueueIdx = 0
     } else {
       // Restore original order and find the current song in it; an index
       // from the shuffled order must never survive into the restored queue.
-      let current = self.queue[self.activeQueueIdx]
       self.queue = self.unshuffledQueue
       self.unshuffledQueue = []
       self.activeQueueIdx = self.queue.firstIndex(where: { $0 === current }) ?? 0
@@ -833,11 +828,11 @@ class PlayerViewModel: ObservableObject {
   /// Saves the current song's position in the persisted queue order, which is
   /// the unshuffled one, so a relaunch restores the song that was playing.
   func persistActiveIndex() {
-    guard hasNowPlaying() else { return }
+    guard let song = nowPlaying else { return }
 
     var index = activeQueueIdx
     if isShuffling,
-      let unshuffledIndex = unshuffledQueue.firstIndex(where: { $0 === nowPlaying })
+      let unshuffledIndex = unshuffledQueue.firstIndex(where: { $0 === song })
     {
       index = unshuffledIndex
     }
@@ -928,18 +923,17 @@ extension PlayerViewModel {
 
   /// The album of the song in the player, empty while the queue is.
   var nowPlayingAlbumId: String {
-    hasNowPlaying() ? nowPlaying.albumId ?? "" : ""
+    nowPlaying?.albumId ?? ""
   }
 
   /// A mix or its Keep Playing continuation.
   var isSmartMix: Bool {
-    guard hasNowPlaying() else { return false }
-    return nowPlaying.playbackOrigin.isMix
+    nowPlaying?.playbackOrigin.isMix ?? false
   }
 
   /// "Smart Mix", else the album or playlist the queue came from.
   var sourceName: String {
-    guard hasNowPlaying() else { return "" }
-    return isSmartMix ? "Smart Mix" : nowPlaying.contextName ?? ""
+    guard let song = nowPlaying else { return "" }
+    return song.playbackOrigin.isMix ? "Smart Mix" : song.contextName ?? ""
   }
 }

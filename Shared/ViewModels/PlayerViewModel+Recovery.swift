@@ -294,7 +294,7 @@ extension PlayerViewModel {
   /// the track: a transcode is started there by the server, anything else is
   /// seeked there. Remote songs wait for the server's transcode decision.
   func loadItem(at position: Double) {
-    guard hasNowPlaying(), !isLiveRadio else { return }
+    guard let song = nowPlaying, !isLiveRadio else { return }
     detachItem()
     replacePlayerIfFailed()
     pendingStartPosition = position
@@ -304,7 +304,7 @@ extension PlayerViewModel {
     connectionWait?.isReloading = true
 
     let generation = loadGeneration
-    let trackId = nowPlaying.id
+    let trackId = song.id
     let songId = trackId ?? ""
 
     if let fileURL = DownloadStore.localFileURL(mediaFileId: songId) {
@@ -314,7 +314,7 @@ extension PlayerViewModel {
       return
     }
 
-    let suffix = nowPlaying.suffix
+    let suffix = song.suffix
     Task { @MainActor [weak self] in
       let result = await StreamSources.shared.resolveStreamSource(
         songId: songId, originalSuffix: suffix, offset: Int(position))

@@ -78,7 +78,7 @@
           if stall.last == "offline" {
             self.enterConnectionWait(cause: "debug")
           } else {
-            self.recoverStalledItem(item, trackId: self.nowPlaying.id)
+            self.recoverStalledItem(item, trackId: self.nowPlayingId)
           }
         }
       }
@@ -120,10 +120,10 @@
       }
 
       Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
-        guard let self = self, self.hasNowPlaying() else { return }
+        guard let self = self, let song = self.nowPlaying else { return }
         debugLog(
           "queue=\(self.queue.count) idx=\(self.activeQueueIdx) playing=\(self.isPlaying) "
-            + "song=\(self.nowPlaying.id ?? "") progress=\(String(format: "%.2f", self.progress)) "
+            + "song=\(song.id ?? "") progress=\(String(format: "%.2f", self.progress)) "
             + "session=\(self.sessionStartedAt.map { "\(Int(-$0.timeIntervalSinceNow))s" } ?? "none")"
         )
       }

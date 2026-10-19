@@ -12,7 +12,7 @@ extension PlayerViewModel {
   /// ends, radio, repeat modes that restart the same track and accidental
   /// starts under five seconds do not.
   func logSkipIfAbandoned() {
-    guard self.hasNowPlaying(), !self.isLiveRadio else { return }
+    guard let song = self.nowPlaying, !self.isLiveRadio else { return }
     guard !self.hasQualified else { return }
 
     let restartsSameTrack =
@@ -25,7 +25,7 @@ extension PlayerViewModel {
     else { return }
 
     PlaybackJournal.shared.recordSkip(
-      self.nowPlaying, origin: self.nowPlaying.playbackOrigin,
+      song, origin: song.playbackOrigin,
       listenedSeconds: self.secondsListened)
   }
 
@@ -41,7 +41,7 @@ extension PlayerViewModel {
   /// on main: journal writes stay on the view context's queue and the
   /// submission is asynchronous inside the service.
   func qualifyIfDue() {
-    guard !hasQualified, hasNowPlaying(), totalDuration.isFinite,
+    guard !hasQualified, let song = nowPlaying, totalDuration.isFinite,
       totalDuration > 0, secondsListened >= min(0.5 * totalDuration, 240)
     else { return }
     hasQualified = true
@@ -50,16 +50,16 @@ extension PlayerViewModel {
       "qualified after \(String(format: "%.1f", secondsListened))s of "
         + "\(String(format: "%.0f", totalDuration))s")
     PlaybackJournal.shared.recordHeard(
-      nowPlaying, origin: nowPlaying.playbackOrigin, listenedSeconds: secondsListened)
-    FloooViewModel.shared.scrobble(submission: true, nowPlaying: nowPlaying)
+      song, origin: song.playbackOrigin, listenedSeconds: secondsListened)
+    FloooViewModel.shared.scrobble(submission: true, nowPlaying: song)
     acceptNowPlaying()
   }
 
   /// A song heard out seeds the next continuation; the first one of the
   /// session also anchors its genres.
   func acceptNowPlaying() {
-    guard let id = nowPlaying.id, !id.isEmpty else { return }
-    lastAcceptedSong = (id, nowPlaying.artistName ?? "", nowPlaying.albumId ?? "")
+    guard let song = nowPlaying, let id = song.id, !id.isEmpty else { return }
+    lastAcceptedSong = (id, song.artistName ?? "", song.albumId ?? "")
     guard anchorGenres.isEmpty else { return }
     let session = sessionStartedAt
     Task { @MainActor [weak self] in
@@ -71,7 +71,7 @@ extension PlayerViewModel {
   }
 
   func autoPlayOrStop() {
-    guard UserDefaultsManager.keepPlaying, hasNowPlaying() else {
+    guard UserDefaultsManager.keepPlaying, let lastPlayed = nowPlaying else {
       self.stop()
       return
     }
@@ -80,12 +80,12 @@ extension PlayerViewModel {
 
     // Capture the playback context before the queue is replaced. Until a song
     // was heard out, the session continues from the one that just ended.
-    let lastPlayedId = self.nowPlaying.id
+    let lastPlayedId = lastPlayed.id
     let accepted = self.lastAcceptedSong
     let seedId = accepted?.id ?? lastPlayedId ?? ""
     let seed = SmartPlaybackService.Seed(
-      artist: accepted?.artist ?? self.nowPlaying.artistName ?? "",
-      albumId: accepted?.albumId ?? self.nowPlaying.albumId ?? "")
+      artist: accepted?.artist ?? lastPlayed.artistName ?? "",
+      albumId: accepted?.albumId ?? lastPlayed.albumId ?? "")
     let sessionGenres = self.anchorGenres
     let sessionMinutes = self.sessionStartedAt.map { Date().timeIntervalSince($0) / 60 } ?? 0
     let queueIdList = self.queue.compactMap { $0.id }
@@ -113,7 +113,7 @@ extension PlayerViewModel {
             seed: seed, anchorGenres: anchorGenres, sessionMinutes: sessionMinutes,
             queueIds: queueIds)))
 
-      await MainActor.run {
+      await MainActor.run { [weak self] in
         guard let self = self else { return }
         self.isAutoContinuing = false
 

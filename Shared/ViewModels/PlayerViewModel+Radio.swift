@@ -47,12 +47,12 @@ extension PlayerViewModel {
 
     self.isMediaLoading = true
     self.isMediaFailed = false
-    self.totalDuration = self.nowPlaying.duration
+    self.totalDuration = queue[0].duration
     self.progress = 0.0
 
     self.play()
 
-    self.publishNowPlaying(title: item.name, artist: nowPlaying.artistName ?? "", duration: 0)
+    self.publishNowPlaying(title: item.name, artist: queue[0].artistName ?? "", duration: 0)
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
     return true
   }

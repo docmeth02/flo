@@ -140,7 +140,7 @@ extension PlayerViewModel {
   }
 
   // A live radio's queue is the station alone.
-  private var isEditable: Bool { hasNowPlaying() && !isLiveRadio }
+  private var isEditable: Bool { nowPlaying != nil && !isLiveRadio }
 
   /// Songs queued after the queue ran out play right away, rather than after
   /// the ended song plays again. Always true: the queue did change.

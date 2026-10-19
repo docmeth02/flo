@@ -184,10 +184,10 @@
         try? await Task.sleep(nanoseconds: 1_000_000_000)
       }
       try? await Task.sleep(nanoseconds: 2_000_000_000)
-      guard playerViewModel.hasNowPlaying() else { return debugLog("rating hook: nothing playing") }
+      guard let song = playerViewModel.nowPlaying else { return debugLog("rating hook: nothing playing") }
       selectedTab = .nowPlaying
       playerViewModel.rateNowPlaying(rating)
-      debugLog("rating hook: \(playerViewModel.nowPlaying.id ?? "") rated \(rating)")
+      debugLog("rating hook: \(song.id ?? "") rated \(rating)")
     }
 
     // FLO_DEBUG_DUMP_MIX=<s> logs the newest mix record at that time.

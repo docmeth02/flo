@@ -79,7 +79,7 @@ struct HomeView: View {
   }
 
   private var playCard: some View {
-    let hasNowPlaying = player.hasNowPlaying()
+    let hasNowPlaying = player.nowPlaying != nil
     return VStack(spacing: 0) {
       if hasNowPlaying { NowPlayingCard() }
       Button {
@@ -196,10 +196,10 @@ private struct NowPlayingCard: View {
           )
           .font(.buttonLabel)
           .foregroundStyle(tint)
-          Text(player.nowPlaying.songName ?? "")
+          Text(player.nowPlaying?.songName ?? "")
             .font(.playerTitle)
             .foregroundStyle(palette.text)
-          Text((player.nowPlaying.artistName ?? "").uppercased())
+          Text((player.nowPlaying?.artistName ?? "").uppercased())
             .font(.rowSubtitle)
             .tracking(0.3)
             .foregroundStyle(palette.secondary)
