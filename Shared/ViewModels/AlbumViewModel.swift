@@ -100,11 +100,10 @@ class AlbumViewModel: ObservableObject {
       DispatchQueue.main.async {
         switch result {
         case .success(let songs):
+          guard id == self.album.id else { return }
           let remoteSongs = songs.filter { song in
             !self.album.songs.contains(where: { $0.id == song.id })
           }
-
-          guard id == self.album.id else { return }
           self.album.songs.append(contentsOf: remoteSongs)
 
           self.album.songs.sort { (lhs, rhs) in
