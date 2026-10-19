@@ -134,7 +134,6 @@ import WatchKit
     UserDefaultsManager.settingsFollowPhone = phone.share
     sending = phone.sending
     recountIncoming()
-    objectWillChange.send()
     publishState()
     return true
   }
