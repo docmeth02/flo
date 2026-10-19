@@ -57,6 +57,7 @@ import WidgetKit
     let albums = [snapshot.nowPlaying?.albumId].compactMap { $0 } + snapshot.recent.map(\.id)
     Task {
       for albumId in albums where !albumId.isEmpty { await Self.writeCover(albumId) }
+      Self.removeCovers(except: Set(albums))
       snapshot.save()
       reload(from: last, to: snapshot)
       last = snapshot
@@ -85,6 +86,16 @@ import WidgetKit
     }
     if signedIn || old.recent != new.recent {
       center.reloadTimelines(ofKind: WidgetSnapshot.Kind.recentlyPlayed)
+    }
+  }
+
+  /// Covers no widget shows any more only take room in the App Group.
+  private static func removeCovers(except kept: Set<String>) {
+    guard let folder = WidgetSnapshot.coversFolder,
+      let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+    else { return }
+    for file in files where !kept.contains(file.deletingPathExtension().lastPathComponent) {
+      try? FileManager.default.removeItem(at: file)
     }
   }
 
