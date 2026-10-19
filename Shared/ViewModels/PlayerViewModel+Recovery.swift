@@ -270,8 +270,7 @@ extension PlayerViewModel {
       player?.removeTimeObserver(timeObserverToken)
       self.timeObserverToken = nil
     }
-    playerItemObservation?.cancel()
-    playbackEndObservation?.cancel()
+    playerItemObservation = nil
     playbackEndObservation = nil
     playbackFailureObservation = nil
     accessLogObservation = nil
