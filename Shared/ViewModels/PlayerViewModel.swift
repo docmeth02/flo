@@ -896,7 +896,7 @@ class PlayerViewModel: ObservableObject {
     for idx in upcoming {
       let entry = queue[idx]
       guard let id = entry.id, !id.isEmpty else { continue }
-      AlbumService.shared.prefetchTranscodeDecision(songId: id)
+      StreamSources.shared.prefetchTranscodeDecision(songId: id)
       StreamCacheManager.shared.cacheSong(
         mediaFileId: id, originalSuffix: entry.suffix, from: entry)
     }

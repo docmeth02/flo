@@ -316,7 +316,7 @@ extension PlayerViewModel {
 
     let suffix = nowPlaying.suffix
     Task { @MainActor [weak self] in
-      let result = await AlbumService.shared.resolveStreamSource(
+      let result = await StreamSources.shared.resolveStreamSource(
         songId: songId, originalSuffix: suffix, offset: Int(position))
       guard let self, self.loadGeneration == generation, self.isCurrentTrack(trackId) else {
         return
@@ -465,7 +465,7 @@ extension PlayerViewModel {
     let remoteSong = isCurrentTrack(trackId) && !isLiveRadio && currentSourceIsRemote
     // The server may no longer accept the decision's token.
     if remoteSong, let trackId {
-      AlbumService.shared.forgetTranscodeDecision(songId: trackId)
+      StreamSources.shared.forgetTranscodeDecision(songId: trackId)
     }
     if remoteSong, isPlaying,
       ConnectivityMonitor.isConnectionError(error ?? item.error)

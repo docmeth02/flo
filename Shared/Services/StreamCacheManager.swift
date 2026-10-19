@@ -146,7 +146,7 @@ class StreamCacheManager {
     CoreDataManager.shared.saveRecord()
 
     Task { @MainActor in
-      let result = await AlbumService.shared.resolveStreamSource(
+      let result = await StreamSources.shared.resolveStreamSource(
         songId: mediaFileId, originalSuffix: originalSuffix, offset: 0)
       guard case .success(let source) = result else {
         if self.endAttempt(attempt, key: key) { self.removeCacheRecord(key: key) }

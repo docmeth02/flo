@@ -30,7 +30,7 @@ class APIManager {
 
   // Requests outlive the task awaiting them: a view's task ends when the
   // view goes, and the answer still counts. The stream decision is the one
-  // exception (AlbumService caches its task and cancels it on logout).
+  // exception (StreamSources caches its task and cancels it on logout).
   func ndRequest<T: Decodable>(
     endpoint: String, parameters: Parameters?
   ) async -> DataResponse<T, AFError> {
