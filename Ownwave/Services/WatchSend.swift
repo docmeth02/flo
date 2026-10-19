@@ -265,7 +265,7 @@ import Foundation
     tasks[job.id] = nil
     switch failure {
     case .connection:
-      retry(job, after: DownloadRetry.delays[0])
+      retry(job, after: DownloadRetry.connectionWait)
     case .counted:
       guard let delay = DownloadRetry.delay(afterAttempts: job.attempts) else {
         return failSend(job.album.id)

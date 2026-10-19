@@ -72,6 +72,8 @@ enum DownloadFailure: Equatable {
 
 /// The waits before the retries of a failure that counts.
 enum DownloadRetry {
+  /// A broken connection waits this long, uncounted.
+  static let connectionWait: TimeInterval = 30
   static let delays: [TimeInterval] = [30, 120, 300]
 
   /// The wait before the next retry, nil once all are spent and the job fails.
@@ -119,8 +121,8 @@ extension URLSession {
     let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
     configuration.sessionSendsLaunchEvents = true
     configuration.isDiscretionary = false
-    // Two transcodes over the phone link would halve each other's rate, and
-    // the player's stream must not starve.
+    // Two transcodes over one link would halve each other's rate, and the
+    // player's stream must not starve.
     configuration.httpMaximumConnectionsPerHost = 1
     // A background task otherwise waits up to 7 days and never fails.
     configuration.timeoutIntervalForResource = 2 * 3600

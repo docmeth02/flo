@@ -342,8 +342,8 @@ final class DownloadSession: NSObject, ObservableObject {
       // ago goes again at once; one that failed right away waits, or an
       // unreachable host would be asked in a loop.
       let sinceSubmit = job.startedAt.map { Date().timeIntervalSince($0) } ?? .infinity
-      if sinceSubmit < DownloadRetry.delays[0] {
-        let retryAt = Date().addingTimeInterval(DownloadRetry.delays[0])
+      if sinceSubmit < DownloadRetry.connectionWait {
+        let retryAt = Date().addingTimeInterval(DownloadRetry.connectionWait)
         update(job.id) { $0.retryAt = retryAt }
         scheduleRetry(job.id, at: retryAt)
       } else {

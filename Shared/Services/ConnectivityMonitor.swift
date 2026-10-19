@@ -12,7 +12,8 @@ import Foundation
 /// HTTP requests to the server, which every app may make.
 ///
 /// Its state lives on the main queue; the methods callable from any thread
-/// hop there, hence `@unchecked Sendable`.
+/// hop there, and a read of a flag elsewhere is taken as a snapshot, hence
+/// `@unchecked Sendable`.
 final class ConnectivityMonitor: ObservableObject, @unchecked Sendable {
   static let shared = ConnectivityMonitor()
 

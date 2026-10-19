@@ -78,7 +78,7 @@ class AlbumViewModel: ObservableObject {
   /// An album's songs for its screen: the downloaded ones at once, then the
   /// server's list with them in disc and track order. A downloaded playlist
   /// shown as an album loads as a playlist.
-  func loadSongs(of album: Album) -> AsyncStream<[Song]> {
+  @MainActor func loadSongs(of album: Album) -> AsyncStream<[Song]> {
     if album.isPlaylist { return loadPlaylistSongs(id: album.id) }
     let id = album.id
     return Self.downloadedThenServer(DownloadStore.getSongsByAlbumId(albumId: id)) { local in
@@ -88,7 +88,7 @@ class AlbumViewModel: ObservableObject {
 
   /// A playlist's downloaded songs at once, then the server's order with the
   /// downloads in place.
-  func loadSongs(of playlist: Playlist) -> AsyncStream<[Song]> {
+  @MainActor func loadSongs(of playlist: Playlist) -> AsyncStream<[Song]> {
     loadPlaylistSongs(id: playlist.id)
   }
 
