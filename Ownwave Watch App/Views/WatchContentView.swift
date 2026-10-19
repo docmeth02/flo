@@ -7,12 +7,12 @@ import SwiftUI
 
 extension EnvironmentValues {
   /// Leaves the library for the player page; set by WatchContentView.
-  @Entry var showPlayer: () -> Void = {}
+  @Entry var showPlayer = EnvironmentAction<Void> {}
   /// Selects the player page without popping, for the root of the stack,
   /// where a reset would only rebuild Home.
-  @Entry var selectPlayerPage: () -> Void = {}
+  @Entry var selectPlayerPage = EnvironmentAction<Void> {}
   /// Tells WatchContentView whether the queue is pushed over the player.
-  @Entry var setQueueShown: (Bool) -> Void = { _ in }
+  @Entry var setQueueShown = EnvironmentAction<Bool> { _ in }
 }
 
 struct WatchContentView: View {
@@ -86,9 +86,9 @@ struct WatchContentView: View {
           #endif
         }
         .id(stackID)
-        .environment(\.showPlayer, showPlayer)
-        .environment(\.selectPlayerPage) { selectedTab = .nowPlaying }
-        .environment(\.setQueueShown) { queueShown = $0 }
+        .environment(\.showPlayer, EnvironmentAction { showPlayer() })
+        .environment(\.selectPlayerPage, EnvironmentAction { selectedTab = .nowPlaying })
+        .environment(\.setQueueShown, EnvironmentAction { queueShown = $0 })
       } else {
         WatchLoginView(viewModel: authViewModel)
       }

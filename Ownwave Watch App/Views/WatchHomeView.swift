@@ -23,7 +23,7 @@ struct WatchHomeView: View {
       }
 
       if playerViewModel.hasNowPlaying() {
-        Button(action: selectPlayerPage) {
+        Button(action: selectPlayerPage.callAsFunction) {
           NowPlayingIndicator()
         }
         .listRowBackground(Color.clear)

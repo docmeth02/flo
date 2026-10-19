@@ -16,7 +16,7 @@ enum Route: Hashable {
 
 extension EnvironmentValues {
   /// Switches to the Library tab on one of its chips (Home's See all).
-  @Entry var openLibrary: (LibraryChip) -> Void = { _ in }
+  @Entry var openLibrary = EnvironmentAction<LibraryChip> { _ in }
 }
 
 /// The app's look: follows the system, or stays dark or light (Settings).
@@ -105,11 +105,13 @@ struct AppTabs: View {
         stack(.search) { SearchView() }
       }
     }
-    .environment(\.openLibrary) { chip in
-      libraryChip = chip
-      paths[.library] = nil
-      tab = .library
-    }
+    .environment(
+      \.openLibrary,
+      EnvironmentAction { chip in
+        libraryChip = chip
+        paths[.library] = nil
+        tab = .library
+      })
     .tabBarMinimizeBehavior(.onScrollDown)
     .tabViewBottomAccessory { MiniPlayer() }
     .toastOverlay(app.toast, bottom: 140)
