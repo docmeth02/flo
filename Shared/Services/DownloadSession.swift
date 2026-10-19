@@ -82,8 +82,11 @@ enum DownloadFailure: Equatable {
     return nil
   }
 
+  /// A Subsonic error comes as JSON or XML; an SVG cover is XML too, but an
+  /// image.
   static func isErrorBody(_ response: HTTPURLResponse?) -> Bool {
-    ["json", "xml"].contains { response?.mimeType?.contains($0) == true }
+    guard let type = response?.mimeType, !type.hasPrefix("image/") else { return false }
+    return type.contains("json") || type.contains("xml")
   }
 
   /// The code of a Subsonic JSON error body, nil when it cannot be read.
