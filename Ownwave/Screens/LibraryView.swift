@@ -205,7 +205,7 @@ struct LibraryView: View {
             }
           }
           .accessibilityAddTraits(.isButton)
-          .itemMenu(.song(song, context: "Liked Songs", isFromPlaylist: false))
+          .itemMenu(.song(song, context: SongCollection.Name.liked, isFromPlaylist: false))
         }
         ForEach(albums) { album in
           NavigationLink(value: Route.album(album)) {
@@ -416,14 +416,15 @@ private struct CachedSongsView: View {
             art: .cover(albumId: song.albumId), title: song.title, subtitle: song.artist,
             isPlaying: player.isCurrent(song), artSize: 44
           ) {
-            ItemMenuButton(target: .song(song, context: "Cached", isFromPlaylist: false))
+            ItemMenuButton(
+              target: .song(song, context: SongCollection.Name.cached, isFromPlaylist: false))
           }
           .onTapGesture {
-            let cached = SongCollection(id: "cached-songs", name: "Cached", songs: songs)
+            let cached = SongCollection.cached(songs)
             if player.playItem(item: cached, startingAt: index) { app.isNowPlayingPresented = true }
           }
           .accessibilityAddTraits(.isButton)
-          .itemMenu(.song(song, context: "Cached", isFromPlaylist: false))
+          .itemMenu(.song(song, context: SongCollection.Name.cached, isFromPlaylist: false))
         }
       }
       .padding(16)

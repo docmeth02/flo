@@ -140,7 +140,7 @@ extension PlayerViewModel {
         }
         debugLog("keep playing: \(songs.count) songs follow")
 
-        let autoPlay = SongCollection(id: "auto-play", name: "Auto Play", songs: songs)
+        let autoPlay = SongCollection.keepPlaying(songs)
         // A mix that could not be stored ends playback like an empty one.
         let queue = PlaybackService.shared.addToQueue(item: autoPlay)
         guard !queue.isEmpty else {

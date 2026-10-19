@@ -68,13 +68,6 @@ struct BlurredBackdrop: View {
   }
 }
 
-extension SongCollection {
-  /// Liked Songs as Home and Library play them, under the watch's id and name.
-  static func liked(_ songs: [Song]) -> SongCollection {
-    SongCollection(id: "starred-songs", name: "Liked Songs", songs: songs)
-  }
-}
-
 extension [Song] {
   /// "12 songs · 48 min", empty while no song is loaded.
   var countAndLength: String {

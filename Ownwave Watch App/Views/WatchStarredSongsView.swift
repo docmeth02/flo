@@ -27,9 +27,9 @@ struct WatchStarredSongsView: View {
           title: song.title,
           artist: song.artist,
           isPlaying: playerViewModel.isCurrent(song),
-          onHold: { menu = .song(song, context: "Liked Songs", isFromPlaylist: false) }
+          onHold: { menu = .song(song, context: SongCollection.Name.liked, isFromPlaylist: false) }
         ) {
-          let liked = SongCollection(id: "starred-songs", name: "Liked Songs", songs: albumViewModel.starredSongs)
+          let liked = SongCollection.liked(albumViewModel.starredSongs)
           if playerViewModel.playItem(item: liked, startingAt: idx) { showPlayer() }
         }
         .listRowBackground(Color.clear)

@@ -227,10 +227,10 @@ extension QueueEntity {
   /// keeps no origin of its own.
   var playbackOrigin: PlaybackOrigin {
     switch contextName {
-    case "Smart Shuffle": return .smartShuffle
-    case "Auto Play": return .keepPlaying
-    case "Liked Songs": return .starred
-    case "Cached": return .cached
+    case SongCollection.Name.smartShuffle: return .smartShuffle
+    case SongCollection.Name.keepPlaying: return .keepPlaying
+    case SongCollection.Name.liked: return .starred
+    case SongCollection.Name.cached: return .cached
     default: return isFromPlaylist ? .playlist : .album
     }
   }

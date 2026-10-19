@@ -123,7 +123,7 @@ struct WatchSearchView: View {
             isPlaying: playerViewModel.isCurrent(song),
             onHold: { menu = .song(song, context: "Search", isFromPlaylist: false) }
           ) {
-            let search = SongCollection(id: "search", name: "Search", songs: [song])
+            let search = SongCollection.search(song)
             if playerViewModel.playItem(item: search) { showPlayer() }
           }
           .listRowBackground(Color.clear)

@@ -741,7 +741,7 @@ class PlayerViewModel: ObservableObject {
     let played = await playWhenBuilt {
       let mix = await SmartPlaybackService.shared.mix(count: 15, mode: .playSomething)
       record = mix.record
-      return SongCollection(id: "smart-shuffle", name: "Smart Shuffle", songs: mix.songs)
+      return .smartShuffle(mix.songs)
     }
     if played, let record { RecommendationLog.shared.markPlayed(record) }
     return played
@@ -779,7 +779,7 @@ class PlayerViewModel: ObservableObject {
         if songs.isEmpty { songs = byArtist(await service.offlinePlayableSongs()) }
         songs.shuffle()
       }
-      return SongCollection(id: "artist-\(id)", name: name, songs: songs)
+      return .artist(id: id, name: name, songs: songs)
     }
   }
 

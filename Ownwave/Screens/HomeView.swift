@@ -163,7 +163,7 @@ struct HomeView: View {
               }
             }
             .accessibilityAddTraits(.isButton)
-            .itemMenu(.song(song, context: "Liked Songs", isFromPlaylist: false))
+            .itemMenu(.song(song, context: SongCollection.Name.liked, isFromPlaylist: false))
           }
         }
       }
