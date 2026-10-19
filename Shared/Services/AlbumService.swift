@@ -188,7 +188,10 @@ class AlbumService {
   }
 
   private static func rawSuffix(_ originalSuffix: String?) -> String {
-    (originalSuffix?.isEmpty == false) ? originalSuffix! : TranscodingSettings.sourceFormat
+    guard let originalSuffix, !originalSuffix.isEmpty else {
+      return TranscodingSettings.sourceFormat
+    }
+    return originalSuffix
   }
 
   /// The stream a decision allows, the original file first; nil when it
@@ -340,10 +343,6 @@ class AlbumService {
       (response: DataResponse<SubsonicEnvelope<BasicResponse>, AFError>) in
       completion(response.value?.subsonicResponse.serverVersion)
     }
-  }
-
-  func getStarredSongs(completion: @escaping (Result<[Song], Error>) -> Void) {
-    getStarred { completion($0.map(\.songs)) }
   }
 
   /// Every liked song, album and artist of the account.
@@ -683,7 +682,7 @@ class AlbumService {
   /// `kbps` 0, else an MP3 the server converts, which has no length.
   func downloadRequest(mediaFileId: String, kbps: Int) -> URLRequest? {
     guard !UserDefaultsManager.serverBaseURL.isEmpty else { return nil }
-    let format = kbps > 0 ? TranscodingSettings.targetFormat : TranscodingSettings.sourceFormat
+    let format = TranscodingSettings.convertedFormat(kbps: kbps) ?? TranscodingSettings.sourceFormat
     let params: [String: Any] = ["id": mediaFileId, "format": format, "bitrate": kbps]
     return URL(string: subsonicURL(endpoint: API.SubsonicEndpoint.download, parameters: params))
       .map { URLRequest(url: $0) }

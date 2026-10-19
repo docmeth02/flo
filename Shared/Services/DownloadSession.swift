@@ -43,7 +43,7 @@ struct DownloadJob: Codable, Equatable {
         id: "\(collection.id):\(mediaFileId)", collectionId: collection.id,
         collectionName: collection.name, isPlaylist: isPlaylist,
         playlistIndex: isPlaylist ? index : -1, song: song,
-        suffix: kbps > 0 ? TranscodingSettings.targetFormat : song.suffix, kbps: kbps)
+        suffix: TranscodingSettings.convertedFormat(kbps: kbps) ?? song.suffix, kbps: kbps)
     }
   }
 }

@@ -111,6 +111,11 @@ enum TranscodingSettings {
   static var streamsOverCellular: Bool { streamingBitRate(onCellular: true) != nil }
   static let sourceFormat = "raw"
   static let targetFormat = "mp3"
+
+  /// The format a download at `kbps` arrives in; nil for 0, the original file.
+  static func convertedFormat(kbps: Int) -> String? {
+    kbps > 0 ? targetFormat : nil
+  }
 }
 
 /// "1 song", "3 songs".

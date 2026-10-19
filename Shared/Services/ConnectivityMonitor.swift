@@ -100,7 +100,7 @@ final class ConnectivityMonitor: ObservableObject {
   /// the URL loading error; a request that failed without one (cancelled or
   /// never sent) says nothing about the connection. Callable from any thread.
   func record(response: HTTPURLResponse?, error: Error?) {
-    guard response != nil || (error is URLError && (error as? URLError)?.code != .cancelled)
+    guard response != nil || (error as? URLError).map({ $0.code != .cancelled }) == true
     else { return }
     DispatchQueue.main.async {
       let reachable = response != nil

@@ -129,7 +129,7 @@ class CoreDataManager {
     }
 
     request.predicate = predicate
-    request.fetchLimit = limit > 0 ? limit : 0
+    request.fetchLimit = limit
     request.sortDescriptors = sortDescriptors
 
     do {

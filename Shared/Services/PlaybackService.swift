@@ -42,7 +42,7 @@ class PlaybackService {
   /// came from, which the journal reads as the song's origin.
   func makeEntry(song: Song, context name: String, isFromPlaylist: Bool) -> QueueEntity {
     let entity = QueueEntity(context: context)
-    entity.id = song.mediaFileId == "" ? song.id : song.mediaFileId
+    entity.id = song.playbackID
     entity.albumId = song.albumId
     entity.albumName = song.albumName.isEmpty ? name : song.albumName
     entity.contextName = name

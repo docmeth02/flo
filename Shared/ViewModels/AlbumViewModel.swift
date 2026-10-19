@@ -243,7 +243,8 @@ class AlbumViewModel: ObservableObject {
   /// (the cached copy shown meanwhile does not).
   private static func starredSongsRequest(_ completion: @escaping (Result<[Song], Error>) -> Void) {
     let since = MainActor.assumeIsolated { StarStore.shared.listRevision }
-    AlbumService.shared.getStarredSongs { result in
+    AlbumService.shared.getStarred { starred in
+      let result = starred.map(\.songs)
       if case .success(let songs) = result {
         DispatchQueue.main.async {
           MainActor.assumeIsolated {
