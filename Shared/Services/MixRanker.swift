@@ -9,86 +9,88 @@ import Foundation
 /// affinity, ratings and stars, plus a share of lesser-played songs from the
 /// listener's own artists and genres. Pure and synchronous: every input is a
 /// snapshot, so the same inputs and generator state give the same mix.
-/// Which caps a refill may step over.
-private enum Relax { case none, genre, all }
-
 struct MixRanker {
   struct Config {
     // Saturation points of the affinity features: f(x; k) reaches 1 at x = k.
-    var artistK = 40.0
-    var albumK = 15.0
-    var genreK = 80.0
-    var eraK = 120.0
-    var songK = 8.0
+    let artistK = 40.0
+    let albumK = 15.0
+    let genreK = 80.0
+    let eraK = 120.0
+    let songK = 8.0
     /// Server play counts above this add nothing to a song's prior.
-    var priorPlayCap = 10
+    let priorPlayCap = 10
     /// Decayed history at which the log is trusted fully over server counts.
-    var fullTrustWeight = 40.0
+    let fullTrustWeight = 40.0
     /// Trust in the log while its import has not reached the oldest play.
-    var partialImportTrust = 0.5
+    let partialImportTrust = 0.5
     /// Below this much decayed history the mix starts cold.
-    var coldStartWeight = 20.0
+    let coldStartWeight = 20.0
 
-    var baseWeight = 0.02
-    var artistWeight = 0.24
-    var albumWeight = 0.10
-    var genreWeight = 0.16
-    var eraWeight = 0.04
-    var songWeight = 0.16
-    var starWeight = 0.25
-    var boostBonus = 0.35
-    var ratedFourBonus = 0.20
-    var ratedTwoMultiplier = 0.02
+    let baseWeight = 0.02
+    let artistWeight = 0.24
+    let albumWeight = 0.10
+    let genreWeight = 0.16
+    let eraWeight = 0.04
+    let songWeight = 0.16
+    let starWeight = 0.25
+    let boostBonus = 0.35
+    let ratedFourBonus = 0.20
+    let ratedTwoMultiplier = 0.02
     /// Added for a song on a liked album or by a liked artist, together at
     /// most `collectionBonusCap`.
-    var likedAlbumBonus = 0.10
-    var likedArtistBonus = 0.08
-    var collectionBonusCap = 0.15
+    let likedAlbumBonus = 0.10
+    let likedArtistBonus = 0.08
+    let collectionBonusCap = 0.15
 
-    var skipHalfLife: TimeInterval = 14 * 86400
-    var skipPenalty = 0.15
-    var skipLoadCap = 2.0
-    var artistSkipPenalty = 0.05
-    var artistSkipMinSongs = 3
-    var artistSkipDamping = 5.0
+    let skipHalfLife: TimeInterval = 14 * 86400
+    let skipPenalty = 0.15
+    let skipLoadCap = 2.0
+    let artistSkipPenalty = 0.05
+    let artistSkipMinSongs = 3
+    let artistSkipDamping = 5.0
 
-    var cooldownFloor = 0.05
-    var cooldownHours = 6.0
-    var titleCooldownFloor = 0.10
-    var titleCooldownHours = 2.0
+    let cooldownFloor = 0.05
+    let cooldownHours = 6.0
+    let titleCooldownFloor = 0.10
+    let titleCooldownHours = 2.0
     /// Title siblings heard longer ago than this are fully cooled down.
-    var titleCooldownWindow: TimeInterval = 24 * 3600
+    let titleCooldownWindow: TimeInterval = 24 * 3600
 
-    var clusterArtistWeight = 3.0
-    var clusterGenreWeight = 8.0
-    var clusterGenreArtists = 3
-    var exploreBase = 0.25
-    var exploreMaxPlays = 2
+    let clusterArtistWeight = 3.0
+    let clusterGenreWeight = 8.0
+    let clusterGenreArtists = 3
+    let exploreBase = 0.25
+    let exploreMaxPlays = 2
 
-    var playSomethingExplore = 1.0 / 6
-    var keepPlayingExplore = 1.0 / 3
-    var keepPlayingExploreMax = 0.40
-    var keepPlayingRampMinutes = 90.0
+    let playSomethingExplore = 1.0 / 6
+    let keepPlayingExplore = 1.0 / 3
+    let keepPlayingExploreMax = 0.40
+    let keepPlayingRampMinutes = 90.0
 
     /// Preferred songs are sampled from this many candidates per wanted song.
-    var preferredPoolFactor = 5
+    let preferredPoolFactor = 5
     /// Sampling weighs a preferred song by its weight to this power, so
-    /// favourites stand out of a long tail of weak songs.
+    /// favourites stand out of a long tail of weak songs. Settable for the
+    /// test that compares it with linear sampling.
     var preferredSamplingExponent = 2.0
-    var poolPerArtist = 4
+    let poolPerArtist = 4
 
-    var perArtistCap = 2
-    var perAlbumCap = 2
-    var genreCeiling = 0.60
+    let perArtistCap = 2
+    let perAlbumCap = 2
+    let genreCeiling = 0.60
 
-    var anchorGenreBonus = 0.15
-    var seedArtistBonus = 0.15
-    var seedAlbumPenalty = 0.12
+    let anchorGenreBonus = 0.15
+    let seedArtistBonus = 0.15
+    let seedAlbumPenalty = 0.12
     /// Anchor genres bound the candidates while this many per wanted song remain.
-    var anchorMinFactor = 3
+    let anchorMinFactor = 3
   }
 
-  var config = Config()
+  let config: Config
+
+  init(config: Config = Config()) {
+    self.config = config
+  }
 
   /// A song's rating for the mix and whose it is: the song's own, else its
   /// album's, else its artist's.
@@ -150,6 +152,9 @@ struct MixRanker {
   private enum Admission {
     case taken, capped, rejected
   }
+
+  /// Which caps a refill may step over.
+  private enum Relax { case none, genre, all }
 
   // MARK: - Ranking
 
@@ -709,11 +714,6 @@ struct MixRanker {
     events.reduce(0) {
       $0 + $1.weight * exp2(-max(0, now.timeIntervalSince($1.at)) / config.skipHalfLife)
     }
-  }
-
-  /// The song's penalty from its own skips.
-  func skipPenalty(_ events: [JournalSnapshot.SkipEvent], now: Date) -> Double {
-    config.skipPenalty * min(config.skipLoadCap, skipLoad(events, now: now))
   }
 
   // MARK: - Helpers

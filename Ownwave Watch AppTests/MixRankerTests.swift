@@ -260,8 +260,7 @@ final class MixRankerTests: XCTestCase {
       }
       return Double(total) / 50
     }
-    var linear = MixRanker()
-    linear.config.preferredSamplingExponent = 1
+    let linear = MixRanker(config: .init(preferredSamplingExponent: 1))
     let squared = favouritesPicked(MixRanker())
     let flat = favouritesPicked(linear)
     XCTAssertGreaterThanOrEqual(squared, 6, "\(squared)")

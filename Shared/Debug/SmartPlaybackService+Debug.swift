@@ -133,4 +133,11 @@
       }
     }
   }
+
+  extension MixRanker {
+    /// The song's penalty from its own skips.
+    func skipPenalty(_ events: [JournalSnapshot.SkipEvent], now: Date) -> Double {
+      config.skipPenalty * min(config.skipLoadCap, skipLoad(events, now: now))
+    }
+  }
 #endif
