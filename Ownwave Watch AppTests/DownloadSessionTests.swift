@@ -76,7 +76,8 @@ final class DownloadSessionTests: XCTestCase {
   func testJobStoreRoundTrip() throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { try? FileManager.default.removeItem(at: directory) }
-    let store = DownloadJobStore(fileURL: directory.appendingPathComponent("jobs.json"))
+    let store = JobFile<DownloadJob>(
+      fileURL: directory.appendingPathComponent("jobs.json"), label: "download jobs")
     XCTAssertEqual(store.load(), [])
 
     let album = Album(
@@ -88,5 +89,18 @@ final class DownloadSessionTests: XCTestCase {
     jobs[1].startedAt = Date(timeIntervalSince1970: 1_700_000_000)
     store.save(jobs)
     XCTAssertEqual(store.load(), jobs)
+
+    try Data("not json".utf8).write(to: store.fileURL)
+    XCTAssertEqual(store.load(), [])
+  }
+
+  func testBackgroundEventsCompleteOnce() {
+    let events = BackgroundEventCompletions()
+    var completed = 0
+    events.hold { completed += 1 }
+    events.hold { completed += 1 }
+    events.complete()
+    events.complete()
+    XCTAssertEqual(completed, 2)
   }
 }

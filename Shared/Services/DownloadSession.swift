@@ -48,105 +48,12 @@ struct DownloadJob: Codable, Equatable {
   }
 }
 
-/// How a failed download goes on.
-enum DownloadFailure: Equatable {
-  /// The connection broke or the system cancelled the task (a force-quit):
-  /// tried again without counting, so a dead zone never uses up the retries.
-  case connection
-  /// The server or the transfer failed (5xx, a Subsonic error, a certificate).
-  case counted
-  /// Retrying cannot help: the server refused the credentials.
-  case final
-
-  /// For a task that ended with a URL loading error.
-  static func classify(error: Error) -> DownloadFailure {
-    // A handshake cut by a dropping link is no server fault; certificate
-    // errors still count.
-    let code = (error as? URLError)?.code
-    if ConnectivityMonitor.isConnectionError(error) || code == .cancelled
-      || code == .secureConnectionFailed
-    {
-      return .connection
-    }
-    return .counted
-  }
-
-  /// For a task that delivered a file; nil when the file is the song. A
-  /// Subsonic error arrives with status 200 as a JSON or XML body
-  /// (`isErrorBody`), whose code is nil when it could not be read.
-  static func classify(status: Int, isErrorBody: Bool, subsonicCode: Int?, bytes: Int64)
-    -> DownloadFailure?
-  {
-    if subsonicCode == 40 { return .final }
-    if isErrorBody || !(200..<300).contains(status) || bytes == 0 { return .counted }
-    return nil
-  }
-
-  /// A Subsonic error comes as JSON or XML; an SVG cover is XML too, but an
-  /// image.
-  static func isErrorBody(_ response: HTTPURLResponse?) -> Bool {
-    guard let type = response?.mimeType, !type.hasPrefix("image/") else { return false }
-    return type.contains("json") || type.contains("xml")
-  }
-
-  /// The code of a Subsonic JSON error body, nil when it cannot be read.
-  static func subsonicCode(in file: URL) -> Int? {
-    (try? JSONDecoder().decode(SubsonicEnvelope<BasicResponse>.self, from: Data(contentsOf: file)))?
-      .subsonicResponse.error?.code
-  }
-}
-
-/// The waits before the retries of a failure that counts.
-enum DownloadRetry {
-  static let delays: [TimeInterval] = [30, 120, 300]
-
-  /// The wait before the next retry, nil once all are spent and the job fails.
-  static func delay(afterAttempts attempts: Int) -> TimeInterval? {
-    delays.indices.contains(attempts) ? delays[attempts] : nil
-  }
-}
-
 enum DownloadProgress {
   /// The share of `batch` (job ids queued together) that is no longer
   /// `pending`.
   static func fraction(batch: Set<String>, pending: Set<String>) -> Double {
     guard !batch.isEmpty else { return 0 }
     return Double(batch.subtracting(pending).count) / Double(batch.count)
-  }
-}
-
-/// The jobs on disk, so downloads outlive the process. A background launch
-/// may come while the watch is locked, so the file stays readable then.
-struct DownloadJobStore {
-  static let defaultURL = URL.applicationSupportDirectory
-    .appendingPathComponent("download-jobs.json")
-
-  let fileURL: URL
-
-  init(fileURL: URL = defaultURL) {
-    self.fileURL = fileURL
-  }
-
-  func load() -> [DownloadJob] {
-    do {
-      return try JSONDecoder().decode([DownloadJob].self, from: Data(contentsOf: fileURL))
-    } catch CocoaError.fileReadNoSuchFile {
-      return []
-    } catch {
-      RequestLog.shared.note("download jobs unreadable: \(error)")
-      return []
-    }
-  }
-
-  func save(_ jobs: [DownloadJob]) {
-    do {
-      try FileManager.default.createDirectory(
-        at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-      try JSONEncoder().encode(jobs).write(
-        to: fileURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-    } catch {
-      RequestLog.shared.note("download jobs not saved: \(error)")
-    }
   }
 }
 
@@ -168,25 +75,19 @@ final class DownloadSession: NSObject, ObservableObject {
   /// device holds as much as a finished song does.
   let downloadsRemoved = PassthroughSubject<Void, Never>()
 
-  private lazy var session: URLSession = {
-    let configuration = URLSessionConfiguration.background(
-      withIdentifier: "\(Bundle.main.bundleIdentifier ?? "flo").downloads")
-    configuration.sessionSendsLaunchEvents = true
-    configuration.isDiscretionary = false
-    // Two transcodes over the phone link would halve each other's rate, and
-    // the player's stream must not starve.
-    configuration.httpMaximumConnectionsPerHost = 1
-    // A background task otherwise waits up to 7 days and never fails.
-    configuration.timeoutIntervalForResource = 2 * 3600
-    return URLSession(configuration: configuration, delegate: self, delegateQueue: .main)
-  }()
+  private lazy var session = URLSession.background(
+    identifier: "\(Bundle.main.bundleIdentifier ?? "flo").downloads", delegate: self)
 
-  private let store: DownloadJobStore
+  private static let jobFile = JobFile<DownloadJob>(
+    fileURL: URL.applicationSupportDirectory.appendingPathComponent("download-jobs.json"),
+    label: "download jobs")
+
+  private let store: JobFile<DownloadJob>
   private var tasks: [String: URLSessionTask] = [:]
   private var retries: [String: DispatchWorkItem] = [:]
   /// Job ids queued together per collection, for its progress.
   private var batches: [String: Set<String>]
-  private var backgroundCompletions: [UUID: () -> Void] = [:]
+  private let backgroundEvents = BackgroundEventCompletions()
   /// Nothing is submitted before the session's tasks are known, or a song
   /// still downloading from before the launch would get a second task.
   private var hasReconciled = false
@@ -194,7 +95,7 @@ final class DownloadSession: NSObject, ObservableObject {
   /// finished tasks still have their delivery queued.
   private var delivered = Set<Int>()
 
-  private init(store: DownloadJobStore = DownloadJobStore()) {
+  private init(store: JobFile<DownloadJob> = jobFile) {
     self.store = store
     let jobs = store.load()
     self.jobs = jobs
@@ -324,21 +225,8 @@ final class DownloadSession: NSObject, ObservableObject {
     }
   }
 
-  /// Keeps the system's wake-up for this session until the session has
-  /// delivered its events. They may also have come before the wake-up (the
-  /// session exists from launch), so a deadline completes it in any case.
   func handleBackgroundEvents(completion: @escaping () -> Void) {
-    let id = UUID()
-    backgroundCompletions[id] = completion
-    DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-      self.backgroundCompletions.removeValue(forKey: id)?()
-    }
-  }
-
-  private func completeBackgroundEvents() {
-    let completions = backgroundCompletions.values
-    backgroundCompletions = [:]
-    completions.forEach { $0() }
+    backgroundEvents.hold(completion)
   }
 
   /// Tasks created in the background are discretionary for good, so they are
@@ -573,6 +461,6 @@ extension DownloadSession: URLSessionDownloadDelegate {
   }
 
   func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-    completeBackgroundEvents()
+    backgroundEvents.complete()
   }
 }
