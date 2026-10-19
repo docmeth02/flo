@@ -6,12 +6,14 @@
 import SwiftUI
 
 struct SettingsView: View {
+  @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var auth: AuthViewModel
   @EnvironmentObject private var flooo: FloooViewModel
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @Environment(\.palette) private var palette
 
   @AppStorage("appearance") private var appearance = Appearance.system
+  @AppStorage("tourSeen") private var tourSeen = false
   @State private var keepPlaying = UserDefaultsManager.keepPlaying
   @State private var showMixReasons = UserDefaultsManager.showMixReasons
   @State private var streamOnCellular = UserDefaultsManager.streamOnCellular
@@ -40,6 +42,17 @@ struct SettingsView: View {
             options: Appearance.allCases.map { ($0, $0.rawValue.capitalized) },
             selection: $appearance, filled: false)
         }
+        Button {
+          tourSeen = false
+          app.tour = .play
+        } label: {
+          Text("Show the tour again")
+            .font(.rowTitle.weight(.semibold))
+            .foregroundStyle(palette.accent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .card(horizontal: 16, vertical: 14)
+        }
+        .buttonStyle(.plain)
         section("Playback") {
           toggle(
             "Keep Playing", "Smart Shuffle continues when the queue ends", isOn: $keepPlaying)

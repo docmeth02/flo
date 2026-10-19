@@ -84,8 +84,10 @@ struct NowPlayingView: View {
       )
       .ignoresSafeArea()
     }
-    // The tabs' toast sits under this cover.
+    // The tabs' toast and tour sit under this cover. A step of the tabs shows
+    // here too while something else opened the cover, not while it closes.
     .toastOverlay(app.toast, bottom: 24)
+    .tourOverlay(app.tour.flatMap { $0.isOnNowPlaying || app.isNowPlayingPresented ? $0 : nil })
     .task(id: albumId) { hue = await CoverTint.hue(albumId: albumId, url: player.coverArt) }
     .onChange(of: player.hasNowPlaying(), initial: true) { _, playing in
       if !playing { dismiss() }
@@ -232,6 +234,7 @@ private struct PlayerPage: View {
       .padding(.vertical, 9)
       .padding(.horizontal, 12)
       .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .tourAnchor(.why)
       .padding(.top, -6)
   }
 
@@ -310,6 +313,7 @@ private struct PlayerPage: View {
     }
     .padding(.top, 4)
     .padding(.bottom, 6)
+    .tourAnchor(.rate)
   }
 
   /// Tapping the current rating again clears it.
@@ -342,6 +346,7 @@ private struct PlayerPage: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .tourAnchor(.peek)
   }
 
   private var nextUp: String {
