@@ -193,7 +193,7 @@ private struct NowPlayingCard: View {
   @State private var hue: Double?
 
   var body: some View {
-    let albumId = player.nowPlaying.albumId ?? ""
+    let albumId = player.nowPlayingAlbumId
     let tint = hue.map { CoverShades(hue: $0, scheme: scheme).tint } ?? palette.accent
     Button {
       app.isNowPlayingPresented = true

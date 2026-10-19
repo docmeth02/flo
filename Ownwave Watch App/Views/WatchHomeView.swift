@@ -104,7 +104,7 @@ struct WatchHomeView: View {
       // Fixed behind the list like the mockup: rows scroll over the cover.
       if playerViewModel.hasNowPlaying() {
         CoverBackdrop(
-          albumId: playerViewModel.nowPlaying.albumId ?? "",
+          albumId: playerViewModel.nowPlayingAlbumId,
           url: playerViewModel.coverArt, height: 190)
       }
     }

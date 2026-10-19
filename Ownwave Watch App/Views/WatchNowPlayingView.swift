@@ -28,9 +28,8 @@ struct WatchNowPlayingView: View {
   @State private var tint: Color?
 
   private var accent: Color { tint ?? .floLilac }
-  // nowPlaying indexes the queue, which can be empty here.
   private var albumId: String {
-    playerViewModel.hasNowPlaying() ? playerViewModel.nowPlaying.albumId ?? "" : ""
+    playerViewModel.nowPlayingAlbumId
   }
   private var coverURL: String { playerViewModel.coverArt }
 

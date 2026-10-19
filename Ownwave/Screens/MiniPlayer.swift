@@ -26,7 +26,7 @@ struct MiniPlayer: View {
     // Inline, beside the minimized tab bar, there is room for less.
     let isInline = placement == .inline
     return HStack(spacing: 11) {
-      CoverArt(albumId: song.albumId ?? "", url: player.coverArt, radius: isInline ? 14 : 20)
+      CoverArt(albumId: player.nowPlayingAlbumId, url: player.coverArt, radius: isInline ? 14 : 20)
         .frame(width: isInline ? 28 : 40, height: isInline ? 28 : 40)
       VStack(alignment: .leading, spacing: 0) {
         Text(song.songName ?? "Unknown").font(.rowSubtitle.weight(.semibold))

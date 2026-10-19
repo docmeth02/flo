@@ -77,7 +77,7 @@ extension PlayerViewModel {
       if NowPlayingTarget.current != nil { publishSiriTarget() }
     }
 
-    coverArt = AlbumService.shared.coverURL(albumId: nowPlaying.albumId ?? "")
+    coverArt = AlbumService.shared.coverURL(albumId: nowPlayingAlbumId)
     if coverArt.hasPrefix("/") {
       if let image = UIImage(contentsOfFile: coverArt) { Self.setArtwork(image) }
     } else if let albumId = nowPlaying.albumId {

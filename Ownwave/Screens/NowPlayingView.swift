@@ -29,8 +29,7 @@ struct NowPlayingView: View {
   private var drag: CGFloat = 0
   @State private var queuePosition = ScrollPosition(edge: .top)
 
-  // nowPlaying indexes the queue, which can be empty here.
-  private var albumId: String { player.hasNowPlaying() ? player.nowPlaying.albumId ?? "" : "" }
+  private var albumId: String { player.nowPlayingAlbumId }
   private var shades: CoverShades? { hue.map { CoverShades(hue: $0, scheme: scheme) } }
 
   var body: some View {
@@ -157,7 +156,7 @@ private struct PlayerPage: View {
   var body: some View {
     VStack(spacing: 16) {
       header
-      CoverArt(albumId: song.albumId ?? "", url: player.coverArt, radius: 18)
+      CoverArt(albumId: player.nowPlayingAlbumId, url: player.coverArt, radius: 18)
         .aspectRatio(1, contentMode: .fit)
         .frame(maxWidth: 322)
         .shadow(color: .black.opacity(0.35), radius: 25, y: 24)
@@ -523,7 +522,7 @@ private struct UpNextPage: View {
   private var current: some View {
     let song = player.nowPlaying
     return HStack(spacing: 12) {
-      CoverArt(albumId: song.albumId ?? "", url: player.coverArt, radius: 8)
+      CoverArt(albumId: player.nowPlayingAlbumId, url: player.coverArt, radius: 8)
         .frame(width: 52, height: 52)
       VStack(alignment: .leading, spacing: 1) {
         Text(song.songName ?? "Unknown")

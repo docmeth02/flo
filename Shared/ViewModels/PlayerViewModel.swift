@@ -934,6 +934,11 @@ extension PlayerViewModel {
     if isPlaying { pause() } else { play() }
   }
 
+  /// The album of the song in the player, empty while the queue is.
+  var nowPlayingAlbumId: String {
+    hasNowPlaying() ? nowPlaying.albumId ?? "" : ""
+  }
+
   /// A mix or its Keep Playing continuation.
   var isSmartMix: Bool {
     guard hasNowPlaying() else { return false }

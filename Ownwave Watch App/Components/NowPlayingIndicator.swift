@@ -42,10 +42,10 @@ struct NowPlayingIndicator: View {
     .multilineTextAlignment(.center)
     .padding(.top, 10)
     .padding(.bottom, 12)
-    .task(id: playerViewModel.nowPlaying.albumId) {
+    .task(id: playerViewModel.nowPlayingAlbumId) {
       tint =
         await CoverTint.color(
-          albumId: playerViewModel.nowPlaying.albumId ?? "",
+          albumId: playerViewModel.nowPlayingAlbumId,
           url: playerViewModel.coverArt) ?? .floLilac
     }
   }
