@@ -11,13 +11,19 @@ struct WatchPlaylistDetailView: View {
 
   let playlist: Playlist
 
-  private var displayPlaylist: Playlist {
-    albumViewModel.playlist.id == playlist.id ? albumViewModel.playlist : playlist
+  @State private var songs: [Song] = []
+  @State private var isLoaded = false
+
+  /// The playlist with the songs shown, as the player and downloads take it.
+  private var loadedPlaylist: Playlist {
+    var loaded = playlist
+    loaded.songs = songs
+    return loaded
   }
 
   private var meta: String {
     if !playlist.comment.isEmpty { return playlist.comment }
-    let count = displayPlaylist.songs.count
+    let count = songs.count
     return count > 0 ? counted(count, "song") : ""
   }
 
@@ -26,11 +32,11 @@ struct WatchPlaylistDetailView: View {
       collectionId: playlist.id,
       title: playlist.name,
       meta: meta,
-      songs: displayPlaylist.songs,
+      songs: songs,
       trackNumber: { index, _ in index + 1 },
-      playable: { Album(from: displayPlaylist) },
-      onDownload: { downloads.enqueue(displayPlaylist) },
-      onRemove: { albumViewModel.removeDownloadedPlaylist(playlist: playlist) }
+      playable: { Album(from: loadedPlaylist) },
+      onDownload: { downloads.enqueue(loadedPlaylist) },
+      onRemove: { albumViewModel.removeDownload(id: playlist.id) { isLoaded = false } }
     ) {
       Image(systemName: "music.note.list")
         .font(.system(size: 34))
@@ -42,6 +48,13 @@ struct WatchPlaylistDetailView: View {
         )
         .padding(.bottom, 6)
     }
-    .onAppear { albumViewModel.setActivePlaylist(playlist: playlist) }
+    // Once, as an album.
+    .task(id: isLoaded) {
+      guard !isLoaded else { return }
+      for await songs in albumViewModel.loadSongs(of: playlist) where !songs.isEmpty {
+        self.songs = songs
+      }
+      isLoaded = !Task.isCancelled
+    }
   }
 }

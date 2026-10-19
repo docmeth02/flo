@@ -11,18 +11,21 @@ struct WatchAlbumDetailView: View {
 
   let album: Album
 
-  // The loaded album stays with this screen when another one opens on top.
-  @State private var localAlbum: Album?
+  @State private var songs: [Song] = []
+  @State private var isLoaded = false
   @State private var tint: Color = .floLilac
 
-  private var displayAlbum: Album {
-    localAlbum ?? album
+  /// The album with the tracks shown, as the player and downloads take it.
+  private var loadedAlbum: Album {
+    var loaded = album
+    loaded.songs = songs
+    return loaded
   }
 
   private var meta: String {
     var parts = [album.albumArtist]
     if album.minYear > 0 { parts.append(String(album.minYear)) }
-    let count = displayAlbum.songs.count
+    let count = songs.count
     if count > 0 { parts.append(counted(count, "song")) }
     return parts.filter { !$0.isEmpty }.joined(separator: " · ")
   }
@@ -32,21 +35,27 @@ struct WatchAlbumDetailView: View {
       collectionId: album.id,
       title: album.name,
       meta: meta,
-      songs: displayAlbum.songs,
+      songs: songs,
       tint: tint,
       onCover: true,
       trackNumber: { _, song in song.trackNumber },
-      playable: { displayAlbum },
-      onDownload: { downloads.enqueue(displayAlbum) },
-      onRemove: { albumViewModel.removeDownloadedAlbum(album: album) }
+      playable: { loadedAlbum },
+      onDownload: { downloads.enqueue(loadedAlbum) },
+      onRemove: { albumViewModel.removeDownload(id: album.id) { isLoaded = false } }
     ) {
       Spacer().frame(height: 58)
     }
     .background(alignment: .top) { CoverBackdrop(albumId: album.id, height: 220) }
     .task(id: album.id) { tint = await CoverTint.color(albumId: album.id) ?? .floLilac }
-    .onAppear { albumViewModel.setActiveAlbum(album: album) }
-    .onReceive(albumViewModel.$album) { updated in
-      if updated.id == album.id { localAlbum = updated }
+    // Once: a return from a screen pushed on top keeps the loaded tracks,
+    // also offline. A load cut short by that push runs again, and so does
+    // one after a removed download, which keeps the tracks while offline.
+    .task(id: isLoaded) {
+      guard !isLoaded else { return }
+      for await songs in albumViewModel.loadSongs(of: album) where !songs.isEmpty {
+        self.songs = songs
+      }
+      isLoaded = !Task.isCancelled
     }
   }
 }

@@ -16,12 +16,17 @@ struct AlbumView: View {
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
 
-  // The loaded album stays with this screen when another one opens on top.
-  @State private var localAlbum: Album?
+  @State private var songs: [Song] = []
+  @State private var isLoaded = false
   @State private var shades: CoverShades?
   @State private var downloadedIds: Set<String> = []
 
-  private var displayAlbum: Album { localAlbum ?? album }
+  /// The album with the tracks shown, for playing, downloading and the menu.
+  private var loadedAlbum: Album {
+    var loaded = album
+    loaded.songs = songs
+    return loaded
+  }
 
   private var tint: Color { shades?.tint ?? palette.fill }
 
@@ -37,8 +42,8 @@ struct AlbumView: View {
   private var meta: String {
     var parts: [String] = []
     if album.minYear > 0 { parts.append(String(album.minYear)) }
-    let songs = displayAlbum.songs.countAndLength
-    if !songs.isEmpty { parts.append(songs) }
+    let length = songs.countAndLength
+    if !length.isEmpty { parts.append(length) }
     return parts.joined(separator: " · ")
   }
 
@@ -61,7 +66,7 @@ struct AlbumView: View {
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
         Menu {
-          ItemMenuItems(target: .album(displayAlbum))
+          ItemMenuItems(target: .album(loadedAlbum))
         } label: {
           Image(systemName: "ellipsis")
         }
@@ -69,15 +74,17 @@ struct AlbumView: View {
       }
     }
     .coverShades($shades, albumId: album.id)
-    .onAppear {
-      // Once: a return from a screen pushed on top keeps the loaded tracks,
-      // also offline.
-      if localAlbum == nil { albumViewModel.setActiveAlbum(album: album) }
-      refreshDownloadState()
+    // Once: a return from a screen pushed on top keeps the loaded tracks,
+    // also offline. A load cut short by that push runs again, and so does
+    // one after a removed download, which keeps the tracks while offline.
+    .task(id: isLoaded) {
+      guard !isLoaded else { return }
+      for await songs in albumViewModel.loadSongs(of: album) where !songs.isEmpty {
+        self.songs = songs
+      }
+      isLoaded = !Task.isCancelled
     }
-    .onReceive(albumViewModel.$album) { updated in
-      if updated.id == album.id, !updated.songs.isEmpty { localAlbum = updated }
-    }
+    .onAppear { refreshDownloadState() }
     .onReceive(downloads.downloadFinished) { id in
       if id == album.id { refreshDownloadState() }
     }
@@ -108,13 +115,13 @@ struct AlbumView: View {
   private var buttons: some View {
     HStack(spacing: 10) {
       Button {
-        app.play(displayAlbum)
+        app.play(loadedAlbum)
       } label: {
         Label("Play", systemImage: "play.fill")
       }
       .buttonStyle(FillButtonStyle(tint: tint))
       Button {
-        app.shuffle(displayAlbum)
+        app.shuffle(loadedAlbum)
       } label: {
         Label("Shuffle", systemImage: "shuffle").foregroundStyle(palette.accent)
       }
@@ -140,8 +147,8 @@ struct AlbumView: View {
     }
     if downloads.hasFailed(collectionId: album.id) { return .failed }
     // Unknown until the tracks are loaded.
-    guard !displayAlbum.songs.isEmpty else { return .none }
-    let missing = displayAlbum.songs.contains { !downloadedIds.contains($0.playbackID) }
+    guard !songs.isEmpty else { return .none }
+    let missing = songs.contains { !downloadedIds.contains($0.playbackID) }
     return missing ? .none : .done
   }
 
@@ -167,7 +174,7 @@ struct AlbumView: View {
     case .done:
       Menu {
         Button("Remove Download", systemImage: "trash", role: .destructive) {
-          albumViewModel.removeDownloadedAlbum(album: album)
+          albumViewModel.removeDownload(id: album.id) { isLoaded = false }
           refreshDownloadState()
         }
       } label: {
@@ -204,7 +211,7 @@ struct AlbumView: View {
   }
 
   private func download() {
-    app.download(displayAlbum)
+    app.download(loadedAlbum)
   }
 
   private func refreshDownloadState() {
@@ -214,7 +221,6 @@ struct AlbumView: View {
   // MARK: - Tracks
 
   @ViewBuilder private var tracks: some View {
-    let songs = displayAlbum.songs
     if !songs.isEmpty {
       Platter {
         ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
@@ -222,7 +228,7 @@ struct AlbumView: View {
             number: song.trackNumber, song: song, tint: tint,
             menu: .song(song, context: album.name, isFromPlaylist: false)
           ) {
-            app.play(displayAlbum, startingAt: index)
+            app.play(loadedAlbum, startingAt: index)
           }
         }
       }

@@ -8,10 +8,8 @@ import Foundation
 class AlbumViewModel: ObservableObject {
   @Published var artists: [Artist] = []
   @Published var playlists: [Playlist] = []
-  @Published var playlist: Playlist = Playlist()
   @Published private var artistAlbums: [Album] = []
   @Published var albums: [Album] = []
-  @Published var album: Album = Album()
   @Published var starredSongs: [Song] = []
   @Published var downloadedAlbums: [Album] = []
   @Published private(set) var recentAlbums: [Album] = []
@@ -75,74 +73,62 @@ class AlbumViewModel: ObservableObject {
     id == artistAlbumsId ? artistAlbums : []
   }
 
-  func setActiveAlbum(album: Album) {
-    self.album = album
+  // MARK: - Album and playlist songs
 
-    if !album.id.isEmpty {
-      if DownloadStore.isPlaylistDownload(id: album.id) {
-        self.album.isPlaylist = true
-        fetchPlaylistSongs(id: album.id, isShown: { self.album.id == album.id }) {
-          self.album.songs = $0
+  /// An album's songs for its screen: the downloaded ones at once, then the
+  /// server's list with them in disc and track order. A downloaded playlist
+  /// shown as an album loads as a playlist.
+  func loadSongs(of album: Album) -> AsyncStream<[Song]> {
+    if album.isPlaylist { return loadPlaylistSongs(id: album.id) }
+    let id = album.id
+    return Self.downloadedThenServer(DownloadStore.getSongsByAlbumId(albumId: id)) { local in
+      Self.mergeAlbumSongs(local: local, remote: try await LibraryAPI.getSongFromAlbum(id: id))
+    }
+  }
+
+  /// A playlist's downloaded songs at once, then the server's order with the
+  /// downloads in place.
+  func loadSongs(of playlist: Playlist) -> AsyncStream<[Song]> {
+    loadPlaylistSongs(id: playlist.id)
+  }
+
+  private func loadPlaylistSongs(id: String) -> AsyncStream<[Song]> {
+    Self.downloadedThenServer(DownloadStore.getPlaylistSongs(playlistId: id)) { local in
+      let remote = try await LibraryAPI.getSongsByPlaylist(id: id)
+      let merged = Self.mergePlaylistSongs(local: local, remote: remote)
+      DownloadStore.updatePlaylistPositions(playlistId: id, songs: merged)
+      return merged
+    }
+  }
+
+  /// `local`, then what `merge` makes of it with the server's answer. The
+  /// request runs to its end when the screen leaves, so a playlist's
+  /// download positions are still written. Without the server the
+  /// downloaded songs stay.
+  private static func downloadedThenServer(
+    _ local: [Song], merge: @escaping @MainActor ([Song]) async throws -> [Song]
+  ) -> AsyncStream<[Song]> {
+    AsyncStream { continuation in
+      continuation.yield(local)
+      Task { @MainActor in
+        do {
+          continuation.yield(try await merge(local))
+        } catch {
+          debugLog("collection songs failed: \(error)")
         }
-      } else {
-        self.fetchSongs(id: album.id)
+        continuation.finish()
       }
     }
   }
 
-  func setActivePlaylist(playlist: Playlist) {
-    self.playlist = playlist
-    fetchPlaylistSongs(id: playlist.id, isShown: { self.playlist.id == playlist.id }) {
-      self.playlist.songs = $0
-    }
-  }
-
-  func fetchSongs(id: String) {
-    let checkLocalSongs = DownloadStore.getSongsByAlbumId(albumId: id)
-
-    self.album.songs = checkLocalSongs
-
-    Task { @MainActor in
-      do {
-        let songs = try await LibraryAPI.getSongFromAlbum(id: id)
-        guard id == self.album.id else { return }
-        let remoteSongs = songs.filter { song in
-          !self.album.songs.contains(where: { $0.id == song.id })
-        }
-        self.album.songs.append(contentsOf: remoteSongs)
-
-        self.album.songs.sort { (lhs, rhs) in
-          if lhs.discNumber == rhs.discNumber {
-            return lhs.trackNumber < rhs.trackNumber
-          }
-          return lhs.discNumber < rhs.discNumber
-        }
-      } catch {
-        debugLog("album songs failed: \(error)")
+  /// The downloaded songs with the server's others, in disc and track order.
+  static func mergeAlbumSongs(local: [Song], remote: [Song]) -> [Song] {
+    let localIds = Set(local.map(\.id))
+    return (local + remote.filter { !localIds.contains($0.id) }).sorted { lhs, rhs in
+      if lhs.discNumber == rhs.discNumber {
+        return lhs.trackNumber < rhs.trackNumber
       }
-    }
-  }
-
-  /// The playlist's downloaded songs at once, then the server's order with
-  /// the downloads in place. `assign` is skipped for a late answer once
-  /// `isShown` says the playlist was left, so it never replaces the tracks
-  /// of the one now shown.
-  private func fetchPlaylistSongs(
-    id: String, isShown: @escaping () -> Bool, assign: @escaping ([Song]) -> Void
-  ) {
-    let localSongs = DownloadStore.getPlaylistSongs(playlistId: id)
-    assign(localSongs)
-
-    Task { @MainActor in
-      do {
-        let remoteSongs = try await LibraryAPI.getSongsByPlaylist(id: id)
-        let merged = Self.mergePlaylistSongs(local: localSongs, remote: remoteSongs)
-        DownloadStore.updatePlaylistPositions(playlistId: id, songs: merged)
-        guard isShown() else { return }
-        assign(merged)
-      } catch {
-        debugLog("playlist songs failed: \(error)")
-      }
+      return lhs.discNumber < rhs.discNumber
     }
   }
 
@@ -264,27 +250,16 @@ class AlbumViewModel: ObservableObject {
 
   // MARK: - Fetch methods
 
-  func removeDownloadedAlbum(album: Album) {
-    DownloadStore.removeDownloadedCollection(id: album.id) { result in
+  /// Removes a downloaded album or playlist, then calls `removed` on the
+  /// main thread so its screen can load the server's songs instead.
+  func removeDownload(id: String, removed: @escaping () -> Void = {}) {
+    DownloadStore.removeDownloadedCollection(id: id) { result in
       DispatchQueue.main.async {
         switch result {
         case .success:
-          self.setActiveAlbum(album: album)
+          removed()
         case .failure(let error):
-          debugLog("removing album failed: \(error)")
-        }
-      }
-    }
-  }
-
-  func removeDownloadedPlaylist(playlist: Playlist) {
-    DownloadStore.removeDownloadedCollection(id: playlist.id) { result in
-      DispatchQueue.main.async {
-        switch result {
-        case .success:
-          self.setActivePlaylist(playlist: playlist)
-        case .failure(let error):
-          debugLog("removing playlist failed: \(error)")
+          debugLog("removing download failed: \(error)")
         }
       }
     }

@@ -12,13 +12,17 @@ struct PlaylistView: View {
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @Environment(\.palette) private var palette
 
-  // The loaded playlist stays with this screen when another one opens on top.
-  @State private var localPlaylist: Playlist?
+  @State private var songs: [Song] = []
+  @State private var isLoaded = false
 
-  private var displayPlaylist: Playlist { localPlaylist ?? playlist }
+  /// The playlist with the songs shown, as the player takes it.
+  private var playable: Album {
+    var loaded = playlist
+    loaded.songs = songs
+    return Album(from: loaded)
+  }
 
   var body: some View {
-    let songs = displayPlaylist.songs
     ScrollView {
       VStack(spacing: 18) {
         GlyphTile.playlist.squared(radius: 30)
@@ -34,13 +38,13 @@ struct PlaylistView: View {
         }
         HStack(spacing: 10) {
           Button {
-            app.play(Album(from: displayPlaylist))
+            app.play(playable)
           } label: {
             Label("Play", systemImage: "play.fill")
           }
           .buttonStyle(FillButtonStyle())
           Button {
-            app.shuffle(Album(from: displayPlaylist))
+            app.shuffle(playable)
           } label: {
             Label("Shuffle", systemImage: "shuffle").foregroundStyle(palette.accent)
           }
@@ -52,7 +56,7 @@ struct PlaylistView: View {
             ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
               let menu = MenuTarget.song(song, context: playlist.name, isFromPlaylist: true)
               SongRow(song: song, menu: menu) {
-                app.play(Album(from: displayPlaylist), startingAt: index)
+                app.play(playable, startingAt: index)
               } trailing: {
                 ItemMenuButton(target: menu)
               }
@@ -64,11 +68,12 @@ struct PlaylistView: View {
       .padding(.bottom, 24)
     }
     .navigationBarTitleDisplayMode(.inline)
-    .onAppear {
-      if localPlaylist == nil { albumViewModel.setActivePlaylist(playlist: playlist) }
-    }
-    .onReceive(albumViewModel.$playlist) { updated in
-      if updated.id == playlist.id, !updated.songs.isEmpty { localPlaylist = updated }
+    // Once, as an album: a return from a screen pushed on top keeps the
+    // songs, also offline.
+    .task(id: isLoaded) {
+      guard !isLoaded else { return }
+      for await songs in albumViewModel.loadSongs(of: playlist) { self.songs = songs }
+      isLoaded = !Task.isCancelled
     }
   }
 }

@@ -42,12 +42,10 @@
       try? await Task.sleep(nanoseconds: 6_000_000_000)
 
       var album: Album
-      var playlist: Playlist?
       if kind == "playlist" {
         let playlists = (try? await LibraryAPI.getPlaylists()) ?? []
         guard var first = playlists.first else { return debugLog("no playlists") }
         first.songs = (try? await LibraryAPI.getSongsByPlaylist(id: first.id)) ?? []
-        playlist = first
         album = Album(from: first)
         DownloadSession.shared.enqueue(first)
       } else {
@@ -80,11 +78,7 @@
       logMediaFiles("after download")
 
       guard env["FLO_DEBUG_REMOVE"] == "1" else { return }
-      if let playlist {
-        albumViewModel.removeDownloadedPlaylist(playlist: playlist)
-      } else {
-        albumViewModel.removeDownloadedAlbum(album: album)
-      }
+      albumViewModel.removeDownload(id: album.id)
       try? await Task.sleep(nanoseconds: 2_000_000_000)
       logMediaFiles("after removal")
     }
