@@ -46,7 +46,10 @@ import WatchKit
       },
     ]
     // An album downloading here finishes song by song; one state for a run.
-    downloads = DownloadSession.shared.downloadFinished
+    // A deletion changes the inventory too, or the phone keeps refusing to
+    // send what is gone.
+    downloads = DownloadSession.shared.downloadFinished.map { _ in () }
+      .merge(with: DownloadSession.shared.downloadsRemoved)
       .debounce(for: .seconds(2), scheduler: DispatchQueue.main)
       .sink { _ in PhoneLink.shared.publishState() }
     // Files of the old account are dropped from now on. The login change

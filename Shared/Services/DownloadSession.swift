@@ -151,6 +151,9 @@ final class DownloadSession: NSObject, ObservableObject {
   @Published private(set) var jobs: [DownloadJob]
   /// Sent with the collection's id when one of its songs was saved.
   let downloadFinished = PassthroughSubject<String, Never>()
+  /// Sent when downloaded collections were deleted, which changes what the
+  /// device holds as much as a finished song does.
+  let downloadsRemoved = PassthroughSubject<Void, Never>()
 
   private lazy var session: URLSession = {
     let configuration = URLSessionConfiguration.background(

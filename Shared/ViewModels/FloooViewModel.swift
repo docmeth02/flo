@@ -64,6 +64,7 @@ class FloooViewModel: ObservableObject {
       case .success:
         // Records go even when the media folder was already missing.
         CoreDataManager.shared.clearDownloads()
+        DownloadSession.shared.downloadsRemoved.send()
 
         self.getLocalStorageInformation()
 

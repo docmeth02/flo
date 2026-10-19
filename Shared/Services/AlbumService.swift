@@ -721,6 +721,7 @@ class AlbumService {
       entity: PlaylistEntity.self, key: \PlaylistEntity.id, value: id)
     CoreDataManager.shared.deleteRecordByKey(
       entity: SongEntity.self, key: \SongEntity.albumId, value: id)
+    DownloadSession.shared.downloadsRemoved.send()
 
     completion(.success(true))
   }
