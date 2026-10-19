@@ -101,6 +101,12 @@ struct GlyphTile: View {
   static let artist = GlyphTile(systemImage: "music.mic", round: true)
   static let playlist = GlyphTile(systemImage: "music.note.list")
   static let radio = GlyphTile(systemImage: "dot.radiowaves.up.forward", round: true)
+
+  /// The same glyph on a square tile, for the larger tiles of pins and the
+  /// playlist screen.
+  func squared(radius: CGFloat) -> GlyphTile {
+    GlyphTile(systemImage: systemImage, radius: radius)
+  }
 }
 
 /// The colors the phone derives from a cover's hue, light and dark.

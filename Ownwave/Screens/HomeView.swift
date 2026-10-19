@@ -266,9 +266,9 @@ private struct PinLink: View {
   @ViewBuilder private var art: some View {
     switch target {
     case .album(let album): CoverArt(albumId: album.id, radius: 14)
-    case .artist: GlyphTile(systemImage: "music.mic", radius: 14)
-    case .playlist: GlyphTile(systemImage: "music.note.list", radius: 14)
-    case .radio: GlyphTile(systemImage: "dot.radiowaves.up.forward", radius: 14)
+    case .artist: GlyphTile.artist.squared(radius: 14)
+    case .playlist: GlyphTile.playlist.squared(radius: 14)
+    case .radio: GlyphTile.radio.squared(radius: 14)
     case .song: EmptyView()
     }
   }

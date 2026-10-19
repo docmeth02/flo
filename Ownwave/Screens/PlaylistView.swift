@@ -21,7 +21,7 @@ struct PlaylistView: View {
     let songs = displayPlaylist.songs
     ScrollView {
       VStack(spacing: 18) {
-        GlyphTile(systemImage: "music.note.list", radius: 30)
+        GlyphTile.playlist.squared(radius: 30)
           .frame(width: 180, height: 180)
         VStack(spacing: 4) {
           Text(playlist.name)
