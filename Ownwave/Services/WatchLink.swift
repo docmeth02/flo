@@ -126,7 +126,7 @@ import WatchConnectivity
     do {
       try session.updateApplicationContext(Link.encode(phone))
     } catch {
-      debugLog("watch link: state not sent: \(error)")
+      RequestLog.shared.note("watch link: settings not sent: \(error.localizedDescription)")
     }
   }
 
@@ -173,6 +173,8 @@ import WatchConnectivity
   func transfer(_ file: URL, _ info: Link.FileInfo) {
     guard canTransfer else { return }
     session.transferFile(file, metadata: Link.encode(info))
+    RequestLog.shared.note(
+      "watch link: transfer \(info.kind) \(info.song?.title ?? info.album.name)")
   }
 
   /// Recomputes a send's progress: its songs count once downloaded and once
@@ -194,13 +196,19 @@ import WatchConnectivity
 
   /// Ends a send that cannot finish, with what is on the way.
   func failSend(_ collectionId: String) {
+    if let send = sends.first(where: { $0.id == collectionId }) {
+      AppModel.shared.show("Could not send \(send.album.name)")
+    }
+    stopSend(collectionId)
+  }
+
+  /// Ends a send and cancels what is on the way; the album can go again.
+  func stopSend(_ collectionId: String) {
+    RequestLog.shared.note("watch link: send of \(collectionId) ended")
     WatchSend.shared.cancel(collectionId)
     for transfer in session.outstandingFileTransfers
     where Self.info(of: transfer)?.collectionId == collectionId {
       transfer.cancel()
-    }
-    if let send = sends.first(where: { $0.id == collectionId }) {
-      AppModel.shared.show("Could not send \(send.album.name)")
     }
     sends.removeAll { $0.id == collectionId }
   }
@@ -232,6 +240,17 @@ import WatchConnectivity
     isReachable = session.isReachable
   }
 
+  /// The watch app was installed, removed or the watch switched: what waited
+  /// for the app goes now.
+  fileprivate func watchStateChanged() {
+    refresh()
+    RequestLog.shared.note(
+      "watch link: watch paired=\(isPaired) installed=\(isAppInstalled)")
+    guard canTransfer else { return }
+    updateWatch()
+    WatchSend.shared.handOver()
+  }
+
   fileprivate func activated() {
     refresh()
     // Empty after a switch to another watch, which must not inherit the old one's.
@@ -252,6 +271,9 @@ import WatchConnectivity
 
   fileprivate func received(_ context: [String: Any]) {
     guard let state = Link.decode(Link.WatchState.self, from: context) else { return }
+    RequestLog.shared.note(
+      "watch link: watch reports \(state.collections.count) albums, "
+        + "\(state.incoming.values.reduce(0, +)) songs expected")
     watch = state
     if signIn == .sending, state.account != nil {
       signIn = .idle
@@ -271,9 +293,10 @@ import WatchConnectivity
     // A cover is a nicety; the songs decide.
     guard let info, info.kind == .song else { return }
     if let error {
-      debugLog("watch link: transfer failed: \(error)")
+      RequestLog.shared.note("watch link: transfer failed: \(error.localizedDescription)")
       return failSend(info.collectionId)
     }
+    RequestLog.shared.note("watch link: delivered \(info.song?.title ?? "")")
     updateProgress(info.collectionId, excluding: transfer)
   }
 }
@@ -298,9 +321,11 @@ private final class Receiver: NSObject, WCSessionDelegate {
   func session(
     _ session: WCSession, activationDidCompleteWith state: WCSessionActivationState, error: Error?
   ) {
-    debugLog(
+    RequestLog.shared.note(
       "watch link: activated \(state.rawValue) paired=\(session.isPaired) "
-        + "installed=\(session.isWatchAppInstalled) error=\(String(describing: error))")
+        + "installed=\(session.isWatchAppInstalled) "
+        + "outstanding=\(session.outstandingFileTransfers.count)"
+        + (error.map { " error=\($0.localizedDescription)" } ?? ""))
     Task { @MainActor in WatchLink.shared.activated() }
   }
 
@@ -312,7 +337,7 @@ private final class Receiver: NSObject, WCSessionDelegate {
   }
 
   func sessionWatchStateDidChange(_ session: WCSession) {
-    Task { @MainActor in WatchLink.shared.refresh() }
+    Task { @MainActor in WatchLink.shared.watchStateChanged() }
   }
 
   func sessionReachabilityDidChange(_ session: WCSession) {
