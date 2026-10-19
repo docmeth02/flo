@@ -433,7 +433,7 @@ final class DownloadSession: NSObject, ObservableObject {
       AlbumService.shared.saveDownload(
         albumId: job.collectionId, albumName: job.collectionName, song: job.song,
         suffix: job.suffix, bitRate: job.kbps > 0 ? job.kbps : job.song.bitRate,
-        status: "Downloaded", isFromPlaylist: job.isPlaylist, playlistIndex: job.playlistIndex)
+        isFromPlaylist: job.isPlaylist, playlistIndex: job.playlistIndex)
     else { return RequestLog.shared.note("download \(job.song.title) not saved") }
     // A record in the stand-in memory store is gone after a relaunch, and the
     // job with it would be too.

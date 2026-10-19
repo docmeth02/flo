@@ -167,7 +167,7 @@ import WatchKit
       guard
         service.saveDownload(
           albumId: info.collectionId, albumName: info.album.name, song: song, suffix: info.suffix,
-          bitRate: info.kbps > 0 ? info.kbps : song.bitRate, status: "Downloaded")
+          bitRate: info.kbps > 0 ? info.kbps : song.bitRate)
       else { return RequestLog.shared.note("phone song \(song.title) not saved") }
     }
     recountIncoming()

@@ -35,11 +35,6 @@ final class ScrobbleQueueManager {
     _ songId: String, _ time: Date, _ completion: @escaping (Result<Void, Error>) -> Void
   ) -> Void
 
-  private enum Status {
-    static let pending = "pending"
-    static let failed = "failed"
-  }
-
   private static let initialRetryDelay: TimeInterval = 30
   private static let maxRetryDelay: TimeInterval = 30 * 60
 
@@ -132,7 +127,6 @@ final class ScrobbleQueueManager {
     entry.songId = payload.songId
     entry.listenTime = payload.listenTime
     entry.queuedAt = Date()
-    entry.status = Status.pending
 
     guard store.saveRecord() else {
       // The store failed and dropped the entry; one direct attempt beats
@@ -262,9 +256,6 @@ final class ScrobbleQueueManager {
           self.submitPending(remaining)
 
         case .failure:
-          entry.status = Status.failed
-          self.store.saveRecord()
-
           self.isFlushing = false
           self.reload()
           self.backOff()

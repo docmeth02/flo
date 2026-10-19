@@ -569,7 +569,7 @@ class AlbumService {
   /// False when the record could not be saved.
   @discardableResult
   func saveDownload(
-    albumId: String, albumName: String?, song: Song, suffix: String, bitRate: Int, status: String,
+    albumId: String, albumName: String?, song: Song, suffix: String, bitRate: Int,
     isFromPlaylist: Bool = false, playlistIndex: Int = -1
   ) -> Bool {
     let songId = isFromPlaylist ? "pl:\(albumId):\(song.mediaFileId)" : song.id
@@ -591,7 +591,6 @@ class AlbumService {
       existingSong.fileURL = fileURL
       existingSong.albumName = resolvedAlbumName
       existingSong.songAlbumId = song.albumId
-      existingSong.status = status
       existingSong.suffix = suffix
       existingSong.bitRate = Int64(bitRate)
       existingSong.position = position
@@ -612,7 +611,6 @@ class AlbumService {
       downloadedSong.suffix = suffix
       downloadedSong.duration = song.duration
       downloadedSong.fileURL = fileURL
-      downloadedSong.status = status
       downloadedSong.mediaFileId = isFromPlaylist ? song.mediaFileId : song.id
       downloadedSong.position = position
       downloadedSong.explicitStatus = song.explicitStatus.rawValue
