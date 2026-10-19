@@ -2,8 +2,6 @@
 //  Playable.swift
 //  flo
 //
-//  Created by rizaldy on 16/11/24.
-//
 
 protocol Playable {
   var id: String { get }

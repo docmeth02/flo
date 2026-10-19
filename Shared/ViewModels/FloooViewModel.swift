@@ -2,8 +2,6 @@
 //  FloooViewModel.swift
 //  flo
 //
-//  Created by rizaldy on 11/01/25.
-//
 
 import Alamofire
 import SwiftUI

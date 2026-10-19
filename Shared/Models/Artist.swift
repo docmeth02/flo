@@ -2,8 +2,6 @@
 //  Artist.swift
 //  flo
 //
-//  Created by rizaldy on 14/11/24.
-//
 
 import Foundation
 

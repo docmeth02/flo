@@ -2,8 +2,6 @@
 //  Song.swift
 //  flo
 //
-//  Created by rizaldy on 09/06/24.
-//
 
 import Foundation
 

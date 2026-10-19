@@ -2,8 +2,6 @@
 //  Playlist.swift
 //  flo
 //
-//  Created by rizaldy on 15/11/24.
-//
 
 import Foundation
 

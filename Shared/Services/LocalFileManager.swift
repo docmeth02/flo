@@ -2,8 +2,6 @@
 //  LocalFileManager.swift
 //  flo
 //
-//  Created by rizaldy on 01/08/24.
-//
 
 import Foundation
 

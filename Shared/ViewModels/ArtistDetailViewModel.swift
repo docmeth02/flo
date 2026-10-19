@@ -1,4 +1,7 @@
-//    flo
+//
+//  ArtistDetailViewModel.swift
+//  flo
+//
 
 import Foundation
 

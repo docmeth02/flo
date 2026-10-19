@@ -2,8 +2,6 @@
 //  Constants.swift
 //  flo
 //
-//  Created by rizaldy on 06/06/24.
-//
 
 import Foundation
 

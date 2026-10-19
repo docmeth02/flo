@@ -2,8 +2,6 @@
 //  Radio.swift
 //  flo
 //
-//  Created by Francesco (f-longobardi)
-//
 
 import Foundation
 

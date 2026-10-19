@@ -2,8 +2,6 @@
 //  UserAuth.swift
 //  flo
 //
-//  Created by rizaldy on 01/06/24.
-//
 
 import Foundation
 

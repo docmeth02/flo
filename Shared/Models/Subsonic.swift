@@ -2,8 +2,6 @@
 //  Subsonic.swift
 //  flo
 //
-//  Created by rizaldy on 11/01/25.
-//
 
 protocol SubsonicResponseData: Decodable {
   static var key: String { get }

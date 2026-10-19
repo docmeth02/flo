@@ -2,8 +2,6 @@
 //  CoreDataManager.swift
 //  flo
 //
-//  Created by rizaldy on 29/06/24.
-//
 
 @preconcurrency import CoreData
 import Foundation

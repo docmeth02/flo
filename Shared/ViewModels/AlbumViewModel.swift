@@ -2,8 +2,6 @@
 //  AlbumViewModel.swift
 //  flo
 //
-//  Created by rizaldy on 07/06/24.
-//
 
 import Foundation
 

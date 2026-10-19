@@ -2,8 +2,6 @@
 //  AuthService.swift
 //  flo
 //
-//  Created by rizaldy on 08/06/24.
-//
 
 import Alamofire
 import Foundation

@@ -2,8 +2,6 @@
 //  FloooService.swift
 //  flo
 //
-//  Created by rizaldy on 22/11/24.
-//
 
 import Alamofire
 import Foundation
