@@ -402,10 +402,9 @@ extension PlayerViewModel {
         }
       }
 
-    // Fallback advance for items whose reported duration is off (VBR, missing
-    // metadata): if the periodic check misses the end, the player item itself
-    // tells us. The observation is per-item, so a track advanced by the
-    // periodic check never double-fires here.
+    // The item's end ends the song; the periodic check only covers an item
+    // that plays on past its reported duration. The observation is per-item,
+    // so a track advanced by the periodic check never double-fires here.
     playbackEndObservation = NotificationCenter.default
       .publisher(for: .AVPlayerItemDidPlayToEndTime, object: item)
       .receive(on: DispatchQueue.main)

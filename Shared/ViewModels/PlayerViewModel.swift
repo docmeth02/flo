@@ -436,7 +436,7 @@ class PlayerViewModel: ObservableObject {
         self.playerItem === observedItem, time.isNumeric
       else { return }
       let currentTime = self.streamOffset + CMTimeGetSeconds(time)
-      let roundedTotalDuration = floor(self.totalDuration)
+      let isRunning = (self.player?.rate ?? 0) > 0
 
       if self.totalDuration.isFinite, self.totalDuration > 0 {
         self.progress = currentTime / self.totalDuration
@@ -450,7 +450,7 @@ class PlayerViewModel: ObservableObject {
       let step = currentTime - self.lastObservedTime
       // Ticks arrive every second; a larger step is a seek, or a stall whose
       // time was not heard either way.
-      if (self.player?.rate ?? 0) > 0, step > 0, step <= 3 {
+      if isRunning, step > 0, step <= 3 {
         self.secondsListened += step
         self.countStartPlayed(step)
         self.noteProgress()
@@ -458,7 +458,7 @@ class PlayerViewModel: ObservableObject {
       self.lastObservedTime = currentTime
 
       // Half an hour without playback ends the listening session.
-      if (self.player?.rate ?? 0) > 0 {
+      if isRunning {
         let now = Date()
         if self.sessionStartedAt == nil
           || now.timeIntervalSince(self.lastPlaybackAt ?? .distantPast) > Self.sessionTimeout
@@ -479,13 +479,18 @@ class PlayerViewModel: ObservableObject {
 
       self.qualifyIfDue()
 
-      if self.totalDuration.isFinite,
-        self.totalDuration > 0,
-        round(currentTime) >= roundedTotalDuration
-      {
+      if Self.tickEndsSong(at: currentTime, duration: self.totalDuration, isRunning: isRunning) {
         self.finishCurrentSong()
       }
     }
+  }
+
+  /// Whether an observer tick ends the song: only while it plays, so a seek
+  /// to the end while paused waits for Play, and only once the whole song
+  /// was heard. An item shorter than its reported duration reports its own
+  /// end (AVPlayerItemDidPlayToEndTime).
+  static func tickEndsSong(at time: Double, duration: Double, isRunning: Bool) -> Bool {
+    isRunning && duration.isFinite && duration > 0 && time >= duration
   }
 
   /// A song heard to its end was accepted, also when qualification did not
