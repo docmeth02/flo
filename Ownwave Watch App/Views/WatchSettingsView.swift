@@ -16,6 +16,8 @@ struct WatchSettingsView: View {
   @AppStorage(UserDefaultsKeys.downloadBitRate) private var downloadBitRate: String?
   @AppStorage(UserDefaultsKeys.downloadOverCellular) private var downloadOverCellular = false
   @AppStorage(UserDefaultsKeys.settingsFollowPhone) private var settingsFollowPhone = false
+  @AppStorage(UserDefaultsKeys.streamCacheMaxSize)
+  private var cacheLimit = Int(UserDefaultsManager.streamCacheMaxSize)
 
   @State private var showLogoutAlert = false
   @State private var showClearAlert = false
@@ -74,11 +76,18 @@ struct WatchSettingsView: View {
       }
 
       Section {
-        Picker("Limit", selection: cacheLimit) {
-          ForEach(StreamCacheManager.cacheLimits, id: \.bytes) { Text($0.label).tag($0.bytes) }
+        Picker("Limit", selection: $cacheLimit) {
+          ForEach(StreamCacheManager.cacheLimits, id: \.bytes) {
+            Text($0.label).tag(Int($0.bytes))
+          }
         }
         .tint(.floLilac)
         .floRow()
+        .onChange(of: cacheLimit) {
+          // Trims the cache at once.
+          StreamCacheManager.shared.setLimit(Int64(cacheLimit))
+          floooViewModel.getLocalStorageInformation()
+        }
 
         infoRow("Cache Used", floooViewModel.streamCacheSize)
 
@@ -168,17 +177,6 @@ struct WatchSettingsView: View {
     } message: {
       Text("All downloaded music will be removed.")
     }
-  }
-
-  /// Setting it trims the cache at once; the storage figures follow, and
-  /// their update redraws the picker.
-  private var cacheLimit: Binding<Int64> {
-    Binding(
-      get: { UserDefaultsManager.streamCacheMaxSize },
-      set: {
-        StreamCacheManager.shared.setLimit($0)
-        floooViewModel.getLocalStorageInformation()
-      })
   }
 
   @ViewBuilder private var followsPhone: some View {

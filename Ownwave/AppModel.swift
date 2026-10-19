@@ -73,7 +73,9 @@ final class AppModel: ObservableObject {
     let fetched = await withCheckedContinuation { continuation in
       AlbumService.shared.getSongFromAlbum(id: album.id) { continuation.resume(returning: $0) }
     }
-    return (try? fetched.get()) ?? album.songs
+    // An empty answer (the album gone from the server) keeps what is known.
+    guard let songs = try? fetched.get(), !songs.isEmpty else { return album.songs }
+    return songs
   }
 
   /// Downloads the songs of an album the phone does not have yet.

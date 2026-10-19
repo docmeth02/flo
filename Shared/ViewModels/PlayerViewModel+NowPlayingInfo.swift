@@ -77,10 +77,11 @@ extension PlayerViewModel {
       if NowPlayingTarget.current != nil { publishSiriTarget() }
     }
 
-    coverArt = AlbumService.shared.coverURL(albumId: nowPlayingAlbumId)
+    let albumId = nowPlayingAlbumId
+    coverArt = AlbumService.shared.coverURL(albumId: albumId)
     if coverArt.hasPrefix("/") {
       if let image = UIImage(contentsOfFile: coverArt) { Self.setArtwork(image) }
-    } else if let albumId = nowPlaying.albumId {
+    } else if !albumId.isEmpty {
       let trackId = nowPlaying.id
       Task { @MainActor [weak self] in
         // Shares the cover cache's single download with the album art views,

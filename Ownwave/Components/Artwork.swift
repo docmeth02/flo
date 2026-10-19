@@ -64,12 +64,12 @@ struct CoverArt: View {
         }
         let pixels = Int(side * scale)
         let path = await CoverTint.coverFile(albumId: albumId, url: url)
-        let image = await Task.detached(priority: .userInitiated) {
+        let cgImage = await Task.detached(priority: .userInitiated) {
           path.flatMap { Thumbnail.image(URL(fileURLWithPath: $0), pixels: pixels) }
-            .map(UIImage.init(cgImage:))
         }.value
         guard !Task.isCancelled else { return }
-        if let image, let cgImage = image.cgImage {
+        let image = cgImage.map(UIImage.init(cgImage:))
+        if let image, let cgImage {
           Self.thumbnails.setObject(
             image, forKey: key as NSString, cost: cgImage.bytesPerRow * cgImage.height)
         }

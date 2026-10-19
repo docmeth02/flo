@@ -113,9 +113,11 @@ struct AvoidIntent: AppIntent {
         StarStore.shared.set(starred, id: id)
       }
       let sentence: LocalizedStringResource =
-        if !starred { "Removed \(name) from your likes." } else if item == .song {
-          "Liked \(name) by \(artist)."
-        } else { "Liked \(name)." }
+        switch (starred, item) {
+        case (false, _): "Removed \(name) from your likes."
+        case (true, .song): "Liked \(name) by \(artist)."
+        default: "Liked \(name)."
+        }
       return await answer(
         sentence, isPending: { StarStore.shared.isPending(id) },
         isApplied: { StarStore.shared.stars[id] == starred })

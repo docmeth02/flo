@@ -236,7 +236,8 @@ class CoreDataManager {
 extension NSManagedObjectContext {
   /// Batch-deletes the entity's rows matching `predicate` and returns how
   /// many went. For a background context: objects other contexts hold are
-  /// not told.
+  /// not told, and the volatile in-memory store is not handled, unlike
+  /// `CoreDataManager.batchDelete(entityName:predicate:)`.
   @discardableResult
   func batchDelete(_ entityName: String, _ predicate: NSPredicate) -> Int {
     let fetch = NSFetchRequest<NSFetchRequestResult>(entityName: entityName)
