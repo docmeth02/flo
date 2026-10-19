@@ -105,14 +105,7 @@ enum DiagnosticsReport {
     lines += historyLines(HistoryStatus.shared.state).map { "\($0.0): \($0.1)" }
     lines.append("")
     lines.append("Requests, newest first")
-    for entry in RequestLog.shared.entries {
-      lines.append(
-        "  \(String(format: "%.1f", entry.startedAt)) \(entry.text) "
-          + "status=\(entry.status.map(String.init) ?? "-") error=\(entry.error ?? "-")"
-          + (entry.duration.map { String(format: " %.1fs", $0) } ?? "")
-          + (entry.bytes > 0 ? " \(entry.bytes)B" : "")
-          + (entry.retries > 0 ? " retry=\(entry.retries)" : ""))
-    }
+    lines += RequestLog.shared.entries.map { "  \($0.text) · \(details(of: $0))" }
     lines.append("")
     lines.append("Last mixes")
     for mix in RecommendationLog.shared.mixes.prefix(3) {
