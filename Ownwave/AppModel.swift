@@ -66,18 +66,17 @@ final class AppModel: ObservableObject {
   /// at once. Views showing them observe StarStore for those changes.
   var likedSongs: [Song] { albums.starredSongs.filter { player.isStarred($0) } }
 
-  /// The album's songs; an album listed without them asks the server.
+  /// The album's whole track list from the server: an album screen may show
+  /// only the songs downloaded here. Without the server, the songs known.
   func songs(of album: Album) async -> [Song] {
-    guard album.songs.isEmpty else { return album.songs }
-    return await withCheckedContinuation { continuation in
-      AlbumService.shared.getSongFromAlbum(id: album.id) {
-        continuation.resume(returning: (try? $0.get()) ?? [])
-      }
+    guard ConnectivityMonitor.shared.canReachServer else { return album.songs }
+    let fetched = await withCheckedContinuation { continuation in
+      AlbumService.shared.getSongFromAlbum(id: album.id) { continuation.resume(returning: $0) }
     }
+    return (try? fetched.get()) ?? album.songs
   }
 
-  /// Downloads an album to the phone, fetching its songs first when it was
-  /// listed without them.
+  /// Downloads the songs of an album the phone does not have yet.
   func download(_ album: Album) {
     var album = album
     Task {
