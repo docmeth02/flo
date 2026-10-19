@@ -62,6 +62,10 @@ final class AppModel: ObservableObject {
     toast = nil
   }
 
+  /// The liked songs as last listed, less those unliked since, which leave
+  /// at once. Views showing them observe StarStore for those changes.
+  var likedSongs: [Song] { albums.starredSongs.filter { player.isStarred($0) } }
+
   /// The album's songs; an album listed without them asks the server.
   func songs(of album: Album) async -> [Song] {
     guard album.songs.isEmpty else { return album.songs }

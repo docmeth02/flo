@@ -18,6 +18,7 @@ enum TasteSegment: String, CaseIterable, Identifiable {
 /// back here.
 struct TasteView: View {
   @EnvironmentObject private var app: AppModel
+  // Liked follows the heart of the song playing.
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @Environment(\.palette) private var palette
@@ -67,7 +68,7 @@ struct TasteView: View {
     case .profile:
       TasteProfile(
         summary: summary,
-        likedCount: albumViewModel.starredSongs.filter { player.isStarred($0) }.count,
+        likedCount: app.likedSongs.count,
         openLiked: { openLibrary(.liked) }, open: { segment = $0 })
     case .top:
       list(isEmpty: summary.top.isEmpty, empty: "No plays in the last 60 days yet.") {

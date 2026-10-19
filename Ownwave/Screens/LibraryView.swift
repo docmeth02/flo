@@ -15,6 +15,7 @@ enum LibraryChip: String, CaseIterable, Identifiable {
 
 struct LibraryView: View {
   @EnvironmentObject private var app: AppModel
+  // Liked follows the heart of the song playing.
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @EnvironmentObject private var downloadSession: DownloadSession
@@ -157,7 +158,7 @@ struct LibraryView: View {
   /// Liked songs, then liked albums and artists out of the library lists,
   /// StarStore's edits over their listed stars, as on the watch.
   @ViewBuilder private var liked: some View {
-    let songs = albumViewModel.starredSongs.filter { player.isStarred($0) }
+    let songs = app.likedSongs
     let albums = albumViewModel.albums.filter { stars.isStarred($0.id, listed: $0.starred) }
     let artists = albumViewModel.artists.filter { stars.isStarred($0.id, listed: $0.starred) }
     let states = [AlbumViewModel.Library.starredSongs, .albums, .artists].map(albumViewModel.state)

@@ -10,6 +10,7 @@ struct HomeView: View {
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @EnvironmentObject private var pins: PinStore
+  // Redraws the liked songs when one is unliked from its menu.
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
   @Environment(\.openLibrary) private var openLibrary
@@ -21,11 +22,6 @@ struct HomeView: View {
   @State private var albums: [Album] = []
   @State private var artists: [Artist] = []
   @State private var playlists: [Playlist] = []
-
-  /// Unliked songs leave at once, before the list reloads.
-  private var likedSongs: [Song] {
-    albumViewModel.starredSongs.filter { player.isStarred($0) }
-  }
 
   private var pinned: [MenuTarget] {
     func pinned<T: Identifiable>(_ items: [T], _ kind: PinStore.Kind) -> [T] where T.ID == String {
@@ -119,7 +115,7 @@ struct HomeView: View {
   }
 
   @ViewBuilder private var likedSection: some View {
-    let songs = likedSongs
+    let songs = app.likedSongs
     if !songs.isEmpty {
       VStack(spacing: 10) {
         HStack(spacing: 14) {
