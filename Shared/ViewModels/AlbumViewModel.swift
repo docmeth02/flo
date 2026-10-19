@@ -188,16 +188,20 @@ class AlbumViewModel: ObservableObject {
   }
 
   /// Shows the cached list right away when nothing is loaded yet, then
-  /// replaces it with the server's unless that is under way or recent.
+  /// replaces it with the server's unless that is under way or younger than
+  /// `maxAge`, the list's own by default.
   private func fetchCached<T: Codable>(
     _ library: Library,
+    maxAge: TimeInterval? = nil,
     current: [T],
     assign: @escaping ([T]) -> Void,
     request: @escaping (@escaping (Result<[T], Error>) -> Void) -> Void
   ) {
     let state = state(library)
     if state.isLoading { return }
-    if let loadedAt = state.loadedAt, Date().timeIntervalSince(loadedAt) < library.maxAge {
+    if let loadedAt = state.loadedAt,
+      Date().timeIntervalSince(loadedAt) < maxAge ?? library.maxAge
+    {
       return
     }
     if current.isEmpty,
@@ -222,20 +226,19 @@ class AlbumViewModel: ObservableObject {
   }
 
   func fetchStarredSongs() {
-    fetchCached(
-      .starredSongs, current: starredSongs,
-      assign: { self.starredSongs = $0 }, request: Self.starredSongsRequest)
+    fetchStarredSongs(maxAge: nil)
   }
 
   /// Liked Songs at most every few minutes, for the iPhone's Home, which
   /// shows them on every return; the Liked screens always reload.
   func fetchStarredSongsIfStale() {
-    if let loadedAt = state(.starredSongs).loadedAt,
-      Date().timeIntervalSince(loadedAt) < Self.reloadAfter
-    {
-      return
-    }
-    fetchStarredSongs()
+    fetchStarredSongs(maxAge: Self.reloadAfter)
+  }
+
+  private func fetchStarredSongs(maxAge: TimeInterval?) {
+    fetchCached(
+      .starredSongs, maxAge: maxAge, current: starredSongs,
+      assign: { self.starredSongs = $0 }, request: Self.starredSongsRequest)
   }
 
   /// The server's Liked Songs, which also tell StarStore what is starred now
