@@ -97,7 +97,6 @@ struct WatchContentView: View {
       if !connectivity.isOnline {
         Badge(kind: .offline)
           .padding(.top, 2)
-        .transition(.opacity)
       }
     }
     .onChange(of: scenePhase) { _, phase in
