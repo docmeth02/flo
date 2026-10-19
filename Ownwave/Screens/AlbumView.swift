@@ -19,7 +19,6 @@ struct AlbumView: View {
   // The loaded album stays with this screen when another one opens on top.
   @State private var localAlbum: Album?
   @State private var shades: CoverShades?
-  @State private var downloaded = false
   @State private var downloadedIds: Set<String> = []
 
   private var displayAlbum: Album { localAlbum ?? album }
@@ -141,7 +140,7 @@ struct AlbumView: View {
     }
     if downloads.hasFailed(collectionId: album.id) { return .failed }
     // Unknown until the tracks are loaded.
-    guard downloaded, !displayAlbum.songs.isEmpty else { return .none }
+    guard !displayAlbum.songs.isEmpty else { return .none }
     let missing = displayAlbum.songs.contains { !downloadedIds.contains($0.playbackID) }
     return missing ? .none : .done
   }
@@ -169,7 +168,7 @@ struct AlbumView: View {
       Menu {
         Button("Remove Download", systemImage: "trash", role: .destructive) {
           albumViewModel.removeDownloadedAlbum(album: album)
-          downloaded = false
+          refreshDownloadState()
         }
       } label: {
         Image(systemName: "checkmark.circle.fill")
@@ -209,7 +208,6 @@ struct AlbumView: View {
   }
 
   private func refreshDownloadState() {
-    downloaded = AlbumService.shared.checkIfAlbumDownloaded(albumID: album.id)
     downloadedIds = AlbumService.shared.downloadedMediaFileIds(collectionId: album.id)
   }
 
