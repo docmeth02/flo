@@ -84,6 +84,7 @@ class AlbumViewModel: ObservableObject {
 
     if !album.id.isEmpty {
       if AlbumService.shared.isPlaylistDownload(id: album.id) {
+        self.album.isPlaylist = true
         fetchPlaylistSongs(id: album.id, isShown: { self.album.id == album.id }) {
           self.album.songs = $0
         }

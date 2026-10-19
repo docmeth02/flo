@@ -21,6 +21,8 @@ struct Album: Codable, Hashable, Identifiable, Playable {
   var starred = false
   /// The account's rating, 1 to 5; nil or 0 when unrated.
   var rating: Int?
+  /// A playlist shown or downloaded as an album.
+  var isPlaylist = false
 
   var isExplicit: Bool {
     if explicitStatus.isExplicit {
@@ -43,6 +45,7 @@ struct Album: Codable, Hashable, Identifiable, Playable {
     case explicitStatus
     case starred
     case rating
+    case isPlaylist
   }
 
   init(from decoder: any Decoder) throws {
@@ -62,6 +65,7 @@ struct Album: Codable, Hashable, Identifiable, Playable {
       from: try container.decodeIfPresent(String.self, forKey: .explicitStatus))
     self.starred = try container.decodeIfPresent(Bool.self, forKey: .starred) ?? false
     self.rating = try? container.decodeIfPresent(Int.self, forKey: .rating)
+    self.isPlaylist = try container.decodeIfPresent(Bool.self, forKey: .isPlaylist) ?? false
   }
 
   init(
@@ -100,5 +104,6 @@ struct Album: Codable, Hashable, Identifiable, Playable {
     self.songs = playlist.songs
     self.genre = "\(playlist.comment) by \(playlist.ownerName)"
     self.minYear = 0
+    self.isPlaylist = true
   }
 }

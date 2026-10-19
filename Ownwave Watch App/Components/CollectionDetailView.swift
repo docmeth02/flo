@@ -111,8 +111,7 @@ struct CollectionDetailView<Artwork: View>: View {
             isPlaying: playerViewModel.isCurrent(song),
             tint: tint,
             onHold: {
-              menu = .song(
-                song, context: title, isFromPlaylist: PlaybackService.isPlaylist(playable()))
+              menu = .song(song, context: title, isFromPlaylist: playable().isPlaylist)
             }
           ) {
             if playerViewModel.playItem(item: playable(), startingAt: index) { showPlayer() }

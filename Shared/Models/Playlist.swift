@@ -14,6 +14,7 @@ struct Playlist: Codable, Identifiable, Hashable, Playable {
   let ownerName: String
   let coverArtId: String?
   var songs: [Song] = []
+  var isPlaylist: Bool { true }
 
   enum CodingKeys: String, CodingKey {
     case id

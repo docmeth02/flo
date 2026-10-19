@@ -370,8 +370,13 @@ class AlbumService {
       ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "album", "album_id": id], completion)
   }
 
+  /// The downloaded albums and playlists, each as an album.
   func downloadedAlbums() -> [Album] {
-    CoreDataManager.shared.getRecordsByEntity(entity: PlaylistEntity.self).map(Album.init)
+    CoreDataManager.shared.getRecordsByEntity(entity: PlaylistEntity.self).map { entity in
+      var album = Album(from: entity)
+      album.isPlaylist = isPlaylistDownload(id: album.id)
+      return album
+    }
   }
 
   func getAlbum(completion: @escaping (Result<[Album], Error>) -> Void) {
