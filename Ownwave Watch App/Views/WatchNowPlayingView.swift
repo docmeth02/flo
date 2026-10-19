@@ -37,8 +37,8 @@ struct WatchNowPlayingView: View {
     // Never a scroll view: a drag would scroll it and take the crown from the
     // volume control. The text is capped so the fixed layout always fits.
     Group {
-      if playerViewModel.hasNowPlaying() {
-        nowPlayingContent
+      if let song = playerViewModel.nowPlaying {
+        nowPlayingContent(song)
           .dynamicTypeSize(...DynamicTypeSize.large)
           // Clears the round toolbar buttons, which reach below the clock row.
           .padding(.top, 18)
@@ -90,10 +90,10 @@ struct WatchNowPlayingView: View {
     }
   }
 
-  private var nowPlayingContent: some View {
+  private func nowPlayingContent(_ song: QueueEntity) -> some View {
     VStack(spacing: 0) {
       VStack(spacing: 1) {
-        Text(playerViewModel.nowPlaying.songName ?? "Unknown")
+        Text(song.songName ?? "Unknown")
           .font(.floSong)
           .foregroundStyle(.white)
         if playerViewModel.isWaitingForConnection {
@@ -101,7 +101,7 @@ struct WatchNowPlayingView: View {
             .font(.floMeta)
             .foregroundStyle(Color.floWarningText)
         } else {
-          Text(playerViewModel.nowPlaying.artistName ?? "Unknown")
+          Text(song.artistName ?? "Unknown")
             .font(.floMeta)
             .foregroundStyle(Color.floOnCover)
         }
@@ -138,7 +138,7 @@ struct WatchNowPlayingView: View {
         }
         .padding(.top, Self.compact ? 0 : 3)
 
-        TimeLine(clock: playerViewModel.clock, duration: playerViewModel.nowPlaying.duration)
+        TimeLine(clock: playerViewModel.clock, duration: song.duration)
           .font(.floTime)
           .foregroundStyle(Color.floTimeText)
           .padding(.top, Self.compact ? 0 : 2)
@@ -171,7 +171,7 @@ struct WatchNowPlayingView: View {
               WKInterfaceDevice.current().play(.click)
             }
             .onLongPressGesture(minimumDuration: FloLayout.holdDuration) {
-              guard let id = playerViewModel.nowPlaying.id, !id.isEmpty else { return }
+              guard let id = song.id, !id.isEmpty else { return }
               ratingTarget = id
               showRating = true
               WKInterfaceDevice.current().play(.click)
@@ -271,7 +271,8 @@ struct WatchNowPlayingView: View {
   }
 
   private var rating: Int {
-    playerViewModel.hasNowPlaying() ? ratings.rating(for: playerViewModel.nowPlaying.id ?? "") : 0
+    guard let song = playerViewModel.nowPlaying else { return 0 }
+    return ratings.rating(for: song.id ?? "")
   }
 
   /// A boosted or avoided song is marked on the heart; 3 is no statement.

@@ -23,8 +23,8 @@ struct WatchQueueView: View {
 
   var body: some View {
     List {
-      if playerViewModel.hasNowPlaying() {
-        row(playerViewModel.nowPlaying, at: playerViewModel.activeQueueIdx)
+      if let song = playerViewModel.nowPlaying {
+        row(song, at: playerViewModel.activeQueueIdx)
 
         Section {
           ForEach(upNext, id: \.element.objectID) { index, item in

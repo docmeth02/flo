@@ -65,8 +65,7 @@ import WidgetKit
     guard app.auth.isLoggedIn else { return clear() }
 
     var snapshot = WidgetSnapshot(signedIn: true)
-    if app.player.hasNowPlaying() {
-      let song = app.player.nowPlaying
+    if let song = app.player.nowPlaying {
       snapshot.nowPlaying = .init(
         title: song.songName ?? "", artist: song.artistName ?? "", albumId: song.albumId ?? "")
     }

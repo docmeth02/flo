@@ -34,10 +34,10 @@ struct NowPlayingView: View {
     GeometryReader { proxy in
       let insets = proxy.safeAreaInsets
       let page = proxy.size.height + insets.top + insets.bottom
-      if player.hasNowPlaying() {
+      if let song = player.nowPlaying {
         VStack(spacing: 0) {
           PlayerPage(
-            tint: shades?.tint ?? palette.accent, isPastPeek: drag > Self.threshold,
+            song: song, tint: shades?.tint ?? palette.accent, isPastPeek: drag > Self.threshold,
             close: { dismiss() }, showQueue: { show(queue: true) }
           )
           .padding(.top, insets.top)
@@ -48,7 +48,9 @@ struct NowPlayingView: View {
           // A station has no queue to show.
           if !player.isLiveRadio {
             ScrollView {
-              UpNextPage(tint: shades?.tint ?? palette.accent, showPlayer: { show(queue: false) })
+              UpNextPage(
+                song: song, tint: shades?.tint ?? palette.accent,
+                showPlayer: { show(queue: false) })
                 .padding(.top, insets.top)
                 .padding(.bottom, insets.bottom + 24)
             }
@@ -140,6 +142,7 @@ struct NowPlayingView: View {
 /// The first page: cover, song, scrubber, transport, rating and the peek at
 /// Up Next.
 private struct PlayerPage: View {
+  let song: QueueEntity
   let tint: Color
   let isPastPeek: Bool
   let close: () -> Void
@@ -150,8 +153,6 @@ private struct PlayerPage: View {
   @ObservedObject private var ratings = RatingStore.shared
   @ObservedObject private var mixes = RecommendationLog.shared
   @Environment(\.palette) private var palette
-
-  private var song: QueueEntity { player.nowPlaying }
 
   var body: some View {
     VStack(spacing: 16) {
@@ -482,6 +483,7 @@ private struct Scrubber: View {
 /// The second page: the song playing and the songs after it in play order,
 /// each removable with Undo.
 private struct UpNextPage: View {
+  let song: QueueEntity
   let tint: Color
   let showPlayer: () -> Void
 
@@ -529,8 +531,7 @@ private struct UpNextPage: View {
   }
 
   private var current: some View {
-    let song = player.nowPlaying
-    return HStack(spacing: 12) {
+    HStack(spacing: 12) {
       CoverArt(albumId: player.nowPlayingAlbumId, url: player.coverArt, radius: 8)
         .frame(width: 52, height: 52)
       VStack(alignment: .leading, spacing: 1) {
