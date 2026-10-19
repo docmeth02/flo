@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import WatchKit
 
 /// A song on its own surface platter, for scroll views. Inside a List, give
 /// the row a clear background so the platter is not drawn twice. A tap runs
@@ -55,5 +56,32 @@ struct TrackRowView: View {
         .fill(isPlaying ? tint.opacity(0.22) : idleBackground)
     )
     .holdable(onTap: action, onHold: onHold)
+  }
+}
+
+extension View {
+  /// Tap and hold on one plain view, which a `Button` cannot do on the watch:
+  /// it takes the whole touch and the hold never arrives. The row dims while
+  /// pressed, as a button would. Without `onHold` it is a plain tap target.
+  func holdable(onTap: @escaping () -> Void, onHold: (() -> Void)?) -> some View {
+    modifier(HoldableRow(onTap: onTap, onHold: onHold))
+  }
+}
+
+struct HoldableRow: ViewModifier {
+  let onTap: () -> Void
+  let onHold: (() -> Void)?
+  @State private var isPressed = false
+
+  func body(content: Content) -> some View {
+    content
+      .opacity(isPressed ? FloLayout.pressedOpacity : 1)
+      .contentShape(Rectangle())
+      .onTapGesture(perform: onTap)
+      .onLongPressGesture(minimumDuration: FloLayout.holdDuration) {
+        guard let onHold else { return }
+        WKInterfaceDevice.current().play(.click)
+        onHold()
+      } onPressingChanged: { isPressed = $0 }
   }
 }
