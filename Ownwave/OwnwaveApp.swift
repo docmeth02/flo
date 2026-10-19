@@ -29,6 +29,7 @@ struct OwnwaveApp: App {
     AppLaunch.warmUp()
     _ = WatchSend.shared
     WatchLink.shared.activate()
+    WidgetPublisher.shared.start()
   }
 
   var body: some Scene {

@@ -272,6 +272,7 @@
 		C95CCD886CD51F97613E4057 /* DiagnosticsReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A59D47FB2CC1314CD1F3C3 /* DiagnosticsReport.swift */; };
 		C9CAB3113F8295CB12A9CE87 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 177180DFFCFB2A20113DD4D2 /* NowPlayingView.swift */; };
 		CA89010362A86EC66584ECF3 /* PendingEditsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20859017241A75867B4A0DF /* PendingEditsTests.swift */; };
+		CB51040D3D6EBF0199D21693 /* WidgetPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8A2E20EE465B2E0CC6C462 /* WidgetPublisher.swift */; };
 		CC6A300EDEA9178FD33F876F /* MixRanker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2805B2B3AE86B8713D6AEA /* MixRanker.swift */; };
 		CF1A10394114EB138CFAC69E /* ArtistAppEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41ED1C069984CF677281CBB3 /* ArtistAppEntity.swift */; };
 		CFB3CC406C299B4E43BD8FA5 /* LibrarySearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA6E4B95E86671912ADCC03D /* LibrarySearch.swift */; };
@@ -478,6 +479,7 @@
 		7A3C1E5D9B2F4A6C8E0D1F24 /* FamiljenGrotesk[wght].ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FamiljenGrotesk[wght].ttf"; sourceTree = "<group>"; };
 		7A3C1E5D9B2F4A6C8E0D1F26 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
 		7B703F8B5CD1028520DAD03D /* TasteView+Debug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "TasteView+Debug.swift"; sourceTree = "<group>"; };
+		7D8A2E20EE465B2E0CC6C462 /* WidgetPublisher.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetPublisher.swift; sourceTree = "<group>"; };
 		8883E358F0C5AF828257EF31 /* WatchLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLink.swift; sourceTree = "<group>"; };
 		88D8350161966488618D240F /* PlayerViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlayerViewModel.swift; sourceTree = "<group>"; };
 		89CB0839D0A2902036399ED6 /* WatchSearchView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSearchView.swift; sourceTree = "<group>"; };
@@ -763,6 +765,7 @@
 			children = (
 				8883E358F0C5AF828257EF31 /* WatchLink.swift */,
 				D1C49ED21B57D55485FE8A43 /* WatchSend.swift */,
+				7D8A2E20EE465B2E0CC6C462 /* WidgetPublisher.swift */,
 			);
 			name = Services;
 			path = Services;
@@ -1588,6 +1591,7 @@
 				EAB22607D871B50C771A7305 /* WatchView.swift in Sources */,
 				1D67C50A9490E10B5B0B1849 /* PlaySomethingNowIntent.swift in Sources */,
 				4DC167FE18C8D5E1D1937AC5 /* WidgetSnapshot.swift in Sources */,
+				CB51040D3D6EBF0199D21693 /* WidgetPublisher.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

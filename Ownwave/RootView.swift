@@ -115,9 +115,30 @@ struct AppTabs: View {
     .fullScreenCover(isPresented: $app.isNowPlayingPresented) {
       NowPlayingView()
     }
+    .onOpenURL(perform: open)
     #if DEBUG
       .task { await runDebugScreen() }
     #endif
+  }
+
+  /// The widgets' links: `ownwave://nowplaying`, `ownwave://album/<id>`, and
+  /// `ownwave://`, which only brings the app forward.
+  private func open(_ url: URL) {
+    guard url.scheme == "ownwave" else { return }
+    switch url.host() {
+    case "nowplaying":
+      if app.player.hasNowPlaying() { app.isNowPlayingPresented = true }
+    case "album":
+      let id = url.lastPathComponent
+      Task {
+        let albums: [Album] = await app.albums.loadedOrCached(app.albums.albums, .albums)
+        guard let album = albums.first(where: { $0.id == id }) else { return }
+        app.isNowPlayingPresented = false
+        tab = .home
+        paths[.home, default: NavigationPath()].append(Route.album(album))
+      }
+    default: break
+    }
   }
 
   /// iOS 27 draws a search role tab inside the bar; the prominent role keeps
