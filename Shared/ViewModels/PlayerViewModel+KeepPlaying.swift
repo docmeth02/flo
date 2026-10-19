@@ -113,7 +113,7 @@ extension PlayerViewModel {
             seed: seed, anchorGenres: anchorGenres, sessionMinutes: sessionMinutes,
             queueIds: queueIds)))
 
-      await MainActor.run {
+      await MainActor.run { [weak self] in
         guard let self = self else { return }
         self.isAutoContinuing = false
 
