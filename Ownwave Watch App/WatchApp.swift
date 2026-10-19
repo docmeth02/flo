@@ -2,8 +2,6 @@
 //  WatchApp.swift
 //  Ownwave Watch App
 //
-//  Created for watchOS target
-//
 
 import SwiftUI
 import WatchKit
