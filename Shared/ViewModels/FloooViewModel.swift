@@ -171,11 +171,11 @@ class FloooViewModel: ObservableObject {
     guard ConnectivityMonitor.shared.canReachServer else { return }
 
     Task {
-      guard
-        (try? await ScrobbleAPI.shared.scrobbleToBuiltinEndpoint(
-          submission: false, songId: payload.songId, time: payload.listenTime)) != nil
-      else { return }
-      debugLog("scrobble delivered: \(payload.songId) submission=false")
+      if (try? await ScrobbleAPI.shared.scrobbleToBuiltinEndpoint(
+        submission: false, songId: payload.songId, time: payload.listenTime)) != nil
+      {
+        debugLog("scrobble delivered: \(payload.songId) submission=false")
+      }
     }
   }
 }

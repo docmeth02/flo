@@ -29,10 +29,12 @@ class APIManager {
   }
 
   // Requests outlive the task awaiting them: a view's task ends when the
-  // view goes, and the answer still counts.
+  // view goes, and the answer still counts. The stream decision is the one
+  // exception (AlbumService caches its task and cancels it on logout).
   func ndRequest<T: Decodable>(
     endpoint: String, parameters: Parameters?
   ) async -> DataResponse<T, AFError> {
+    guard !UserDefaultsManager.serverBaseURL.isEmpty else { return Self.signedOut() }
     let authSession = AuthService.shared.sessionSnapshot()
     let token = authSession.ndToken
 
@@ -55,6 +57,7 @@ class APIManager {
   func subsonicRequest<T: Decodable>(
     endpoint: String, parameters: Parameters?
   ) async -> DataResponse<T, AFError> {
+    guard !UserDefaultsManager.serverBaseURL.isEmpty else { return Self.signedOut() }
     let authSession = AuthService.shared.sessionSnapshot()
     let url =
       "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(authSession.subsonicCredentials)"
@@ -67,6 +70,14 @@ class APIManager {
     ConnectivityMonitor.shared.record(
       response: response.response, error: response.error?.underlyingError)
     return response
+  }
+
+  /// A request whose task started after a logout: it asks nothing and leaves
+  /// no verdict on the server's reachability.
+  private static func signedOut<T>() -> DataResponse<T, AFError> {
+    DataResponse(
+      request: nil, response: nil, data: nil, metrics: nil, serializationDuration: 0,
+      result: .failure(.explicitlyCancelled))
   }
 
   /// A Subsonic call without payload. Subsonic reports failures with HTTP

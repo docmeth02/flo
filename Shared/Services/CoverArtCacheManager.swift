@@ -47,12 +47,16 @@ class CoverArtCacheManager {
       try? fileManager.removeItem(at: target)
       try? fileManager.moveItem(at: tempFile, to: target)
     }
-    syncQueue.sync { downloads[albumId] = nil }
+    // A logout cancelled it, and a newer download may hold its place.
+    if !Task.isCancelled { syncQueue.sync { downloads[albumId] = nil } }
     return cachedFilePath(albumId: albumId)
   }
 
   func clearCache() {
-    syncQueue.sync { downloads.removeAll() }
+    syncQueue.sync {
+      downloads.values.forEach { $0.cancel() }
+      downloads.removeAll()
+    }
     try? fileManager.removeItem(at: cacheDirectory)
     try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
   }

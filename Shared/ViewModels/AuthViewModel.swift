@@ -210,17 +210,19 @@ class AuthViewModel: ObservableObject {
     serverUrl = serverUrl.trimmingCharacters(in: .whitespacesAndNewlines)
     while serverUrl.hasSuffix("/") { serverUrl.removeLast() }
 
+    // The fields as shown at the tap.
+    let (serverUrl, username, password) = (serverUrl, username, password)
     // The view model lives as long as the app, and the login must be saved.
     Task { @MainActor in
       do throws(AuthError) {
         let data = try await AuthService.shared.login(
           serverUrl: serverUrl, username: username, password: password)
-        self.persistAuthData(data, serverUrl: self.serverUrl)
+        self.persistAuthData(data, serverUrl: serverUrl)
         self.needsReauthentication = false
 
         // Without it the session cannot be renewed and ends with the token.
         do {
-          try KeychainManager.setAuthPassword(newValue: self.password)
+          try KeychainManager.setAuthPassword(newValue: password)
         } catch {
           debugLog("error saving password to Keychain: \(error)")
         }

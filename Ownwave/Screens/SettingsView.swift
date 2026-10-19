@@ -132,9 +132,9 @@ struct SettingsView: View {
       StreamCacheManager.shared.setLimit(Int64(cacheLimit))
       refreshStorage()
     }
+    .task { serverVersion = await AlbumService.shared.serverVersion() }
     .onAppear {
       if case .found(let login) = KeychainManager.loadAuth() { username = login.username }
-      Task { serverVersion = await AlbumService.shared.serverVersion() }
       refreshStorage()
     }
     .alert("Change Server?", isPresented: $confirmsLogout) {
