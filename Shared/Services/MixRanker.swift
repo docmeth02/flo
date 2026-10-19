@@ -226,10 +226,8 @@ struct MixRanker {
     mode: SmartPlaybackService.MixMode, count: Int, now: Date,
     rng: inout some RandomNumberGenerator
   ) -> (songs: [Song], record: MixRecord) {
-    let cfg = config
     var context: SmartPlaybackService.KeepPlayingContext?
     if case .keepPlaying(let keep) = mode { context = keep }
-    let modeName = context == nil ? "playSomething" : "keepPlaying"
     let input = Input(
       library: library, index: index, affinity: affinity, journal: journal,
       pendingPlays: pendingPlays, recentPlays: recentPlays, ratings: ratings, starred: starred,
@@ -240,293 +238,31 @@ struct MixRanker {
     let scan = scanLibrary(input)
     let standing = weigh(scan, input)
     var candidates = score(input, scan, standing)
-    let entries = scan.entries
-    let ids = scan.ids
-    let lifetimePlays = scan.lifetimePlays
-    let heardAt = scan.heardAt
-    let artists = standing.artists
-    let seedArtist = scan.seedArtist
-    let anchorGenres = context?.anchorGenres ?? []
-    func titleKey(_ i: Int) -> String { scan.titles.key(i) }
-
-    // The session's genres bound a continuation while enough songs share
-    // them, by enough artists to fill the mix within the artist cap.
-    if !anchorGenres.isEmpty {
-      let anchored = candidates.filter(\.anchored)
-      var perArtist: [String: Int] = [:]
-      for c in anchored { perArtist[entries[c.index].artistKey, default: 0] += 1 }
-      let fillable = perArtist.values.reduce(0) { $0 + min($1, cfg.perArtistCap) }
-      let genres = anchorGenres.sorted().joined(separator: ", ")
-      if anchored.count >= cfg.anchorMinFactor * count, fillable >= count {
-        candidates = anchored
-        notes.append("anchor genres: \(genres)")
-      } else {
-        notes.append(
-          "anchor genres: \(genres) (\(anchored.count) songs by \(perArtist.count) artists, "
-            + "not bounding)")
-      }
-    }
-
-    // Cold start: anchor on ratings and stars, else on the server's counts,
-    // widened to their artists and then their genres; with neither, every
-    // artist is equally likely.
+    if let note = boundByAnchorGenres(&candidates, input, scan) { notes.append(note) }
     var bootstrap = false
-    if scan.totalWeight < cfg.coldStartWeight {
-      let favoured = candidates.filter { $0.rating >= 4 || $0.starred || $0.collection > 0 }
-      let counted = candidates.filter { lifetimePlays[$0.index] > 0 }
-      let seeds = favoured.isEmpty ? counted : favoured
-      if seeds.isEmpty {
-        bootstrap = true
-        for n in candidates.indices {
-          let artist = entries[candidates[n].index].artistKey
-          candidates[n].preferred /= Double(max(1, artists[artist]?.songs ?? 1))
-        }
-        notes.append("bootstrap")
-      } else {
-        let seedArtists = Set(seeds.map { entries[$0.index].artistKey })
-        let seedGenres = Set(seeds.flatMap { entries[$0.index].genres })
-        var keep: (Candidate) -> Bool = { seedArtists.contains(entries[$0.index].artistKey) }
-        var widened = "artists"
-        if candidates.filter(keep).count < cfg.anchorMinFactor * count {
-          keep = { !seedGenres.isDisjoint(with: entries[$0.index].genres) }
-          widened = "genres"
-          if candidates.filter(keep).count < cfg.anchorMinFactor * count {
-            keep = { _ in true }
-            widened = "library"
-          }
-        }
-        for n in candidates.indices where !keep(candidates[n]) { candidates[n].preferred = 0 }
-        notes.append(
-          "cold start: \(favoured.isEmpty ? "server counts" : "ratings/stars"), their \(widened)")
-      }
+    if scan.totalWeight < config.coldStartWeight {
+      let start = startCold(&candidates, input, scan)
+      bootstrap = start.bootstrap
+      notes.append(start.note)
     }
 
-    // Exploration quota: a fixed share for Play Something, growing with the
-    // session for Keep Playing; the fraction is rounded at random.
-    let share =
-      context.map {
-        cfg.keepPlayingExplore + (cfg.keepPlayingExploreMax - cfg.keepPlayingExplore)
-          * min(max(0, $0.sessionMinutes) / cfg.keepPlayingRampMinutes, 1)
-      } ?? cfg.playSomethingExplore
-    let wanted = Double(count) * share
-    let exploreQuota =
-      Int(wanted) + (Double.random(in: 0..<1, using: &rng) < wanted - wanted.rounded(.down) ? 1 : 0)
+    let quota = exploreQuota(input, rng: &rng)
+    var selection = Selection(candidates, scan, input, config: config)
+    let explore = sampleExplore(candidates, scan, quota: quota, into: &selection, rng: &rng)
+    notes.append(explore.note)
+    let preferred = samplePreferred(
+      candidates, scan, count: count, room: count - explore.picks.count, bootstrap: bootstrap,
+      into: &selection, rng: &rng)
+    if preferred.relaxed { notes.append("caps relaxed") }
 
-    // Selection with caps per artist and album, and for Play Something a soft
-    // ceiling per genre. A capped song waits in the overflow for a refill.
-    var chosen = Set<Int>()
-    var titles = Set<String>()
-    var artistCounts: [String: Int] = [:]
-    var albumCounts: [String: Int] = [:]
-    var genreCounts: [String: Int] = [:]
-    var overflow: [Int] = []
-    let genreLimit = context == nil ? Int((Double(count) * cfg.genreCeiling).rounded(.up)) : count
-
-    // The genre ceiling gives way first; the artist and album caps only when
-    // the mix cannot be filled otherwise.
-    func fits(_ n: Int, _ relax: Relax) -> Bool {
-      let entry = entries[candidates[n].index]
-      return artistCounts[entry.artistKey, default: 0] < cfg.perArtistCap
-        && (entry.albumId.isEmpty || albumCounts[entry.albumId, default: 0] < cfg.perAlbumCap)
-        && (relax == .genre
-          || entry.genres.first.map { genreCounts[$0, default: 0] < genreLimit } ?? true)
-    }
-    func admit(_ n: Int, relax: Relax = .none) -> Admission {
-      let i = candidates[n].index
-      let entry = entries[i]
-      guard !chosen.contains(n), !titles.contains(titleKey(i)) else { return .rejected }
-      if relax != .all, !fits(n, relax) { return .capped }
-      let genre = entry.genres.first
-      chosen.insert(n)
-      titles.insert(titleKey(i))
-      artistCounts[entry.artistKey, default: 0] += 1
-      albumCounts[entry.albumId, default: 0] += 1
-      if let genre { genreCounts[genre, default: 0] += 1 }
-      return .taken
-    }
-
-    // Exploration goes first, so its share survives the caps: an artist by
-    // the mean weight of its songs left, so a large catalogue does not
-    // crowd out a small one, then one of the artist's songs.
-    var exploreSongs: [[Int]] = []
-    var exploreTotals: [Double] = []
-    var exploreSlot: [String: Int] = [:]
-    for n in candidates.indices where candidates[n].explore > 0 {
-      let artist = entries[candidates[n].index].artistKey
-      if exploreSlot[artist] == nil {
-        exploreSlot[artist] = exploreSongs.count
-        exploreSongs.append([])
-        exploreTotals.append(0)
-      }
-      let a = exploreSlot[artist]!
-      exploreSongs[a].append(n)
-      exploreTotals[a] += candidates[n].explore
-    }
-    let explorePool =
-      "explore pool: \(exploreSongs.reduce(0) { $0 + $1.count }) songs by "
-      + "\(exploreSongs.count) artists"
-    var explorePicks: [Int] = []
-    // One discovery per artist leaves the favourites room in the caps; the
-    // artists' remaining songs are kept for a second round in case the
-    // quota is not met with one each.
-    var exploreReserve: [[Int]] = Array(repeating: [], count: exploreSongs.count)
-    for round in 0..<2 {
-      if round == 1 {
-        guard explorePicks.count < exploreQuota else { break }
-        for a in exploreReserve.indices where !exploreReserve[a].isEmpty {
-          exploreSongs[a] = exploreReserve[a]
-          exploreTotals[a] = exploreReserve[a].reduce(0) { $0 + candidates[$1].explore }
-        }
-      }
-      while explorePicks.count < exploreQuota, exploreTotals.contains(where: { $0 > 0 }) {
-        let means = exploreTotals.indices.map {
-          exploreSongs[$0].isEmpty ? 0 : exploreTotals[$0] / Double(exploreSongs[$0].count)
-        }
-        let a = pickWeighted(means, rng: &rng)
-        // Rounding can land the draw on a drained artist.
-        guard !exploreSongs[a].isEmpty else {
-          exploreTotals[a] = 0
-          continue
-        }
-        let s = pickWeighted(exploreSongs[a].map { candidates[$0].explore }, rng: &rng)
-        let n = exploreSongs[a].remove(at: s)
-        exploreTotals[a] -= candidates[n].explore
-        // A drained artist must read exactly zero: a float residue would
-        // keep the loop alive with nothing left to draw.
-        if exploreSongs[a].isEmpty { exploreTotals[a] = 0 }
-        let taken = admit(n) == .taken
-        if taken { explorePicks.append(n) }
-        let artistKey = entries[candidates[n].index].artistKey
-        let artistFull = artistCounts[artistKey, default: 0] >= cfg.perArtistCap
-        if round == 0, taken || exploreSongs[a].isEmpty {
-          exploreReserve[a] = exploreSongs[a]
-          exploreSongs[a] = []
-          exploreTotals[a] = 0
-        } else if round == 1, taken || artistFull || exploreSongs[a].isEmpty {
-          // No more draws on an artist the caps are closed for.
-          exploreSongs[a] = []
-          exploreTotals[a] = 0
-        }
-      }
-    }
-
-    // Preferred songs: weighted sampling without replacement (Efraimidis–
-    // Spirakis: one random key per candidate, then key order; the weight
-    // raised to the sampling exponent) over the best few per wanted song, a
-    // few per artist so the caps rarely drain it; over the whole library its
-    // long tail would outweigh the favourites. The rest follows by weight,
-    // and then the caps give way.
-    let ranked = candidates.indices.filter { candidates[$0].preferred > 0 }
-      .sorted { candidates[$0].preferred > candidates[$1].preferred }
-    var pool: [Int] = []
-    var rest: [Int] = []
-    var poolArtists: [String: Int] = [:]
-    for n in ranked {
-      let artist = entries[candidates[n].index].artistKey
-      if bootstrap
-        || (pool.count < cfg.preferredPoolFactor * count
-          && poolArtists[artist, default: 0] < cfg.poolPerArtist)
-      {
-        pool.append(n)
-        poolArtists[artist, default: 0] += 1
-      } else {
-        rest.append(n)
-      }
-    }
-    // Bootstrap weights are already divided by the artist's song count;
-    // squaring them would favour small catalogues.
-    let exponent = bootstrap ? 1 : cfg.preferredSamplingExponent
-    let preferredOrder =
-      pool.map { n in
-        (
-          n,
-          log(Double.random(in: .leastNonzeroMagnitude..<1, using: &rng))
-            / pow(candidates[n].preferred, exponent)
-        )
-      }
-      .sorted { $0.1 > $1.1 }
-      .map(\.0) + rest
-    notes.append("\(explorePool), quota \(exploreQuota), taken \(explorePicks.count)")
-    let sampled = Set(pool)
-    var sources: [Int: Source] = [:]
-    var preferredPicks: [Int] = []
-    for n in preferredOrder where preferredPicks.count + explorePicks.count < count {
-      switch admit(n) {
-      case .taken:
-        preferredPicks.append(n)
-        sources[n] = sampled.contains(n) ? .sampled : .remainder
-      case .capped: overflow.append(n)
-      case .rejected: break
-      }
-    }
-    let capped = preferredPicks.count
-    for relax in [Relax.genre, .all] {
-      for n in overflow where preferredPicks.count + explorePicks.count < count {
-        if admit(n, relax: relax) == .taken {
-          preferredPicks.append(n)
-          sources[n] = relax == .genre ? .relaxedGenre : .relaxedCaps
-        }
-      }
-    }
-    if preferredPicks.count > capped { notes.append("caps relaxed") }
-
-    // Exploration lands on every ⌈n/k⌉-th position, preferred songs around it.
-    let total = preferredPicks.count + explorePicks.count
-    var exploreSlots = Set<Int>()
-    if !explorePicks.isEmpty {
-      let step = (total + explorePicks.count - 1) / explorePicks.count
-      for e in 1...explorePicks.count { exploreSlots.insert(min(total - 1, e * step - 1)) }
-    }
-    var order: [(n: Int, slot: Slot)] = []
-    var nextPreferred = preferredPicks.makeIterator()
-    var nextExplore = explorePicks.makeIterator()
-    for position in 0..<total {
-      if exploreSlots.contains(position), let n = nextExplore.next() {
-        order.append((n, .explore))
-      } else if let n = nextPreferred.next() {
-        order.append((n, .preferred))
-      } else if let n = nextExplore.next() {
-        order.append((n, .explore))
-      }
-    }
-    order = Self.spreadArtists(order, after: seedArtist) {
-      entries[candidates[$0.n].index].artistKey
-    }
-
-    // Over the whole index: offline the candidates are only the songs on the
-    // device. Ties go to the lower key, so the same inputs word the same reasons.
-    var artistRecentPlays: [String: Int] = [:]
-    for (id, plays) in recentPlays {
-      if let key = index.songs[id]?.artistKey { artistRecentPlays[key, default: 0] += plays }
-    }
-    let topArtist = artistRecentPlays.filter { !$0.key.isEmpty && $0.value > 0 }
-      .max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }?.key
-    let picks = order.map { item -> MixRecord.Pick in
-      let c = candidates[item.n]
-      let song = library[c.index]
-      let artistKey = entries[c.index].artistKey
-      let why = MixReason.make(
-        MixReason.Facts(
-          explore: item.slot == .explore, rating: c.rating, ratingSource: c.ratingSource,
-          starred: c.starred, likedAlbum: c.likedAlbum, likedArtist: c.likedArtist,
-          seedArtist: c.seedArtist, anchored: c.anchored, songPlays: recentPlays[ids[c.index]] ?? 0,
-          artistPlays: artistRecentPlays[artistKey] ?? 0, topArtist: artistKey == topArtist,
-          lifetimePlays: lifetimePlays[c.index], artist: song.artist, album: song.albumName,
-          lastHeard: heardAt[c.index], now: now))
-      return MixRecord.Pick(
-        slot: item.slot == .explore ? "explore" : "preferred", songId: ids[c.index],
-        title: song.title, artist: song.artist, why: why,
-        reason: reason(
-          c, slot: item.slot, frequentArtist: artists[entries[c.index].artistKey]?.cluster ?? false,
-          bootstrap: bootstrap),
-        scores: scores(
-          c, source: sources[item.n] ?? .explore, plays: lifetimePlays[c.index],
-          keepPlaying: context != nil))
-    }
+    let order = arrange(preferred: preferred.picks, explore: explore.picks, candidates, scan)
+    let picks = describe(
+      order, candidates, input, scan, standing, sources: preferred.sources, bootstrap: bootstrap)
     let record = MixRecord(
-      at: now, mode: modeName, picks: picks,
+      at: now, mode: context == nil ? "playSomething" : "keepPlaying", picks: picks,
       eligible: candidates.filter { $0.preferred > 0 }.count,
-      exploreShare: total == 0 ? 0 : Double(explorePicks.count) / Double(total), notes: notes)
+      exploreShare: order.isEmpty ? 0 : Double(explore.picks.count) / Double(order.count),
+      notes: notes)
     return (order.map { library[candidates[$0.n].index] }, record)
   }
 
@@ -680,9 +416,9 @@ struct MixRanker {
       if artist.plays.count >= 2 {
         artist.lowerHalf = artist.plays.sorted()[artist.plays.count / 2 - 1]
       }
-      // Once several of its songs were skipped. The artist's decayed
-      // affinity weight (the snapshot's, 60-day half-life) dampens the
-      // pressure, so an artist played a lot shrugs off a few skips.
+      // Skips press on an artist once several of its songs were skipped; its
+      // decayed affinity weight (the snapshot's, 60-day half-life) dampens
+      // the pressure, so an artist played a lot shrugs off a few skips.
       if let skipped = skips.artists[key], skipped.songs >= cfg.artistSkipMinSongs {
         artist.pressure =
           cfg.artistSkipPenalty * skipped.load
@@ -801,6 +537,286 @@ struct MixRanker {
           * (1 - exp(-hours / cfg.titleCooldownHours)))
     }
     return cool
+  }
+
+  /// The session's genres bound a continuation while enough songs share
+  /// them, by enough artists to fill the mix within the artist cap. Returns
+  /// the note on them; nil without anchor genres.
+  private func boundByAnchorGenres(
+    _ candidates: inout [Candidate], _ input: Input, _ scan: Scan
+  ) -> String? {
+    guard let anchorGenres = input.context?.anchorGenres, !anchorGenres.isEmpty else {
+      return nil
+    }
+    let anchored = candidates.filter(\.anchored)
+    var perArtist: [String: Int] = [:]
+    for c in anchored { perArtist[scan.entries[c.index].artistKey, default: 0] += 1 }
+    let fillable = perArtist.values.reduce(0) { $0 + min($1, config.perArtistCap) }
+    let genres = anchorGenres.sorted().joined(separator: ", ")
+    guard anchored.count >= config.anchorMinFactor * input.count, fillable >= input.count else {
+      return
+        "anchor genres: \(genres) (\(anchored.count) songs by \(perArtist.count) artists, "
+        + "not bounding)"
+    }
+    candidates = anchored
+    return "anchor genres: \(genres)"
+  }
+
+  /// Cold start: anchor on ratings and stars, else on the server's counts,
+  /// widened to their artists and then their genres; with neither, every
+  /// artist is equally likely. Returns whether it is that bootstrap, and the
+  /// note on it.
+  private func startCold(
+    _ candidates: inout [Candidate], _ input: Input, _ scan: Scan
+  ) -> (bootstrap: Bool, note: String) {
+    let entries = scan.entries
+    let enough = config.anchorMinFactor * input.count
+    let favoured = candidates.filter { $0.rating >= 4 || $0.starred || $0.collection > 0 }
+    let counted = candidates.filter { scan.lifetimePlays[$0.index] > 0 }
+    let seeds = favoured.isEmpty ? counted : favoured
+    guard !seeds.isEmpty else {
+      for n in candidates.indices {
+        let artist = entries[candidates[n].index].artistKey
+        candidates[n].preferred /= Double(max(1, scan.artists[artist]?.songs ?? 1))
+      }
+      return (true, "bootstrap")
+    }
+    let seedArtists = Set(seeds.map { entries[$0.index].artistKey })
+    let seedGenres = Set(seeds.flatMap { entries[$0.index].genres })
+    var keep: (Candidate) -> Bool = { seedArtists.contains(entries[$0.index].artistKey) }
+    var widened = "artists"
+    if candidates.filter(keep).count < enough {
+      keep = { !seedGenres.isDisjoint(with: entries[$0.index].genres) }
+      widened = "genres"
+      if candidates.filter(keep).count < enough {
+        keep = { _ in true }
+        widened = "library"
+      }
+    }
+    for n in candidates.indices where !keep(candidates[n]) { candidates[n].preferred = 0 }
+    return (
+      false, "cold start: \(favoured.isEmpty ? "server counts" : "ratings/stars"), their \(widened)"
+    )
+  }
+
+  /// Exploration quota: a fixed share for Play Something, growing with the
+  /// session for Keep Playing; the fraction is rounded at random.
+  private func exploreQuota(_ input: Input, rng: inout some RandomNumberGenerator) -> Int {
+    let cfg = config
+    let share =
+      input.context.map {
+        cfg.keepPlayingExplore + (cfg.keepPlayingExploreMax - cfg.keepPlayingExplore)
+          * min(max(0, $0.sessionMinutes) / cfg.keepPlayingRampMinutes, 1)
+      } ?? cfg.playSomethingExplore
+    let wanted = Double(input.count) * share
+    return Int(wanted)
+      + (Double.random(in: 0..<1, using: &rng) < wanted - wanted.rounded(.down) ? 1 : 0)
+  }
+
+  /// Exploration goes first, so its share survives the caps: an artist by
+  /// the mean weight of its songs left, so a large catalogue does not
+  /// crowd out a small one, then one of the artist's songs. Returns the
+  /// picks and the note on the pool.
+  private func sampleExplore(
+    _ candidates: [Candidate], _ scan: Scan, quota: Int, into selection: inout Selection,
+    rng: inout some RandomNumberGenerator
+  ) -> (picks: [Int], note: String) {
+    var exploreSongs: [[Int]] = []
+    var exploreTotals: [Double] = []
+    var exploreSlot: [String: Int] = [:]
+    for n in candidates.indices where candidates[n].explore > 0 {
+      let artist = scan.entries[candidates[n].index].artistKey
+      if exploreSlot[artist] == nil {
+        exploreSlot[artist] = exploreSongs.count
+        exploreSongs.append([])
+        exploreTotals.append(0)
+      }
+      let a = exploreSlot[artist]!
+      exploreSongs[a].append(n)
+      exploreTotals[a] += candidates[n].explore
+    }
+    let pool =
+      "explore pool: \(exploreSongs.reduce(0) { $0 + $1.count }) songs by "
+      + "\(exploreSongs.count) artists"
+    var picks: [Int] = []
+    // One discovery per artist leaves the favourites room in the caps; the
+    // artists' remaining songs are kept for a second round in case the
+    // quota is not met with one each.
+    var exploreReserve: [[Int]] = Array(repeating: [], count: exploreSongs.count)
+    for round in 0..<2 {
+      if round == 1 {
+        guard picks.count < quota else { break }
+        for a in exploreReserve.indices where !exploreReserve[a].isEmpty {
+          exploreSongs[a] = exploreReserve[a]
+          exploreTotals[a] = exploreReserve[a].reduce(0) { $0 + candidates[$1].explore }
+        }
+      }
+      while picks.count < quota, exploreTotals.contains(where: { $0 > 0 }) {
+        let means = exploreTotals.indices.map {
+          exploreSongs[$0].isEmpty ? 0 : exploreTotals[$0] / Double(exploreSongs[$0].count)
+        }
+        let a = pickWeighted(means, rng: &rng)
+        // Rounding can land the draw on a drained artist.
+        guard !exploreSongs[a].isEmpty else {
+          exploreTotals[a] = 0
+          continue
+        }
+        let s = pickWeighted(exploreSongs[a].map { candidates[$0].explore }, rng: &rng)
+        let n = exploreSongs[a].remove(at: s)
+        exploreTotals[a] -= candidates[n].explore
+        // A drained artist must read exactly zero: a float residue would
+        // keep the loop alive with nothing left to draw.
+        if exploreSongs[a].isEmpty { exploreTotals[a] = 0 }
+        let taken = selection.admit(n) == .taken
+        if taken { picks.append(n) }
+        let artistFull = selection.isFull(artist: scan.entries[candidates[n].index].artistKey)
+        if round == 0, taken || exploreSongs[a].isEmpty {
+          exploreReserve[a] = exploreSongs[a]
+          exploreSongs[a] = []
+          exploreTotals[a] = 0
+        } else if round == 1, taken || artistFull || exploreSongs[a].isEmpty {
+          // No more draws on an artist the caps are closed for.
+          exploreSongs[a] = []
+          exploreTotals[a] = 0
+        }
+      }
+    }
+    return (picks, "\(pool), quota \(quota), taken \(picks.count)")
+  }
+
+  /// Preferred songs: weighted sampling without replacement (Efraimidis–
+  /// Spirakis: one random key per candidate, then key order; the weight
+  /// raised to the sampling exponent) over the best few per wanted song, a
+  /// few per artist so the caps rarely drain it; over the whole library its
+  /// long tail would outweigh the favourites. The rest follows by weight,
+  /// and then the caps give way. `room` is what exploration left of
+  /// `count`. Returns the picks, how each got in and whether caps gave way.
+  private func samplePreferred(
+    _ candidates: [Candidate], _ scan: Scan, count: Int, room: Int, bootstrap: Bool,
+    into selection: inout Selection, rng: inout some RandomNumberGenerator
+  ) -> (picks: [Int], sources: [Int: Source], relaxed: Bool) {
+    let cfg = config
+    let ranked = candidates.indices.filter { candidates[$0].preferred > 0 }
+      .sorted { candidates[$0].preferred > candidates[$1].preferred }
+    var pool: [Int] = []
+    var rest: [Int] = []
+    var poolArtists: [String: Int] = [:]
+    for n in ranked {
+      let artist = scan.entries[candidates[n].index].artistKey
+      if bootstrap
+        || (pool.count < cfg.preferredPoolFactor * count
+          && poolArtists[artist, default: 0] < cfg.poolPerArtist)
+      {
+        pool.append(n)
+        poolArtists[artist, default: 0] += 1
+      } else {
+        rest.append(n)
+      }
+    }
+    // Bootstrap weights are already divided by the artist's song count;
+    // squaring them would favour small catalogues.
+    let exponent = bootstrap ? 1 : cfg.preferredSamplingExponent
+    let order =
+      pool.map { n in
+        (
+          n,
+          log(Double.random(in: .leastNonzeroMagnitude..<1, using: &rng))
+            / pow(candidates[n].preferred, exponent)
+        )
+      }
+      .sorted { $0.1 > $1.1 }
+      .map(\.0) + rest
+    let sampled = Set(pool)
+    var sources: [Int: Source] = [:]
+    var picks: [Int] = []
+    // A capped song waits in the overflow for a refill.
+    var overflow: [Int] = []
+    for n in order where picks.count < room {
+      switch selection.admit(n) {
+      case .taken:
+        picks.append(n)
+        sources[n] = sampled.contains(n) ? .sampled : .remainder
+      case .capped: overflow.append(n)
+      case .rejected: break
+      }
+    }
+    let capped = picks.count
+    for relax in [Relax.genre, .all] {
+      for n in overflow where picks.count < room {
+        if selection.admit(n, relax: relax) == .taken {
+          picks.append(n)
+          sources[n] = relax == .genre ? .relaxedGenre : .relaxedCaps
+        }
+      }
+    }
+    return (picks, sources, picks.count > capped)
+  }
+
+  /// Exploration lands on every ⌈n/k⌉-th position, preferred songs around
+  /// it; then songs by one artist move apart.
+  private func arrange(
+    preferred: [Int], explore: [Int], _ candidates: [Candidate], _ scan: Scan
+  ) -> [(n: Int, slot: Slot)] {
+    let total = preferred.count + explore.count
+    var exploreSlots = Set<Int>()
+    if !explore.isEmpty {
+      let step = (total + explore.count - 1) / explore.count
+      for e in 1...explore.count { exploreSlots.insert(min(total - 1, e * step - 1)) }
+    }
+    var order: [(n: Int, slot: Slot)] = []
+    var nextPreferred = preferred.makeIterator()
+    var nextExplore = explore.makeIterator()
+    for position in 0..<total {
+      if exploreSlots.contains(position), let n = nextExplore.next() {
+        order.append((n, .explore))
+      } else if let n = nextPreferred.next() {
+        order.append((n, .preferred))
+      } else if let n = nextExplore.next() {
+        order.append((n, .explore))
+      }
+    }
+    return Self.spreadArtists(order, after: scan.seedArtist) {
+      scan.entries[candidates[$0.n].index].artistKey
+    }
+  }
+
+  /// Each pick with why it is in the mix: in words for the listener, and as
+  /// a reason and scores for diagnostics.
+  private func describe(
+    _ order: [(n: Int, slot: Slot)], _ candidates: [Candidate], _ input: Input, _ scan: Scan,
+    _ standing: Standing, sources: [Int: Source], bootstrap: Bool
+  ) -> [MixRecord.Pick] {
+    // Over the whole index: offline the candidates are only the songs on the
+    // device. Ties go to the lower key, so the same inputs word the same reasons.
+    var artistRecentPlays: [String: Int] = [:]
+    for (id, plays) in input.recentPlays {
+      if let key = input.index.songs[id]?.artistKey { artistRecentPlays[key, default: 0] += plays }
+    }
+    let topArtist = artistRecentPlays.filter { !$0.key.isEmpty && $0.value > 0 }
+      .max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }?.key
+    return order.map { item -> MixRecord.Pick in
+      let c = candidates[item.n]
+      let song = input.library[c.index]
+      let artistKey = scan.entries[c.index].artistKey
+      let why = MixReason.make(
+        MixReason.Facts(
+          explore: item.slot == .explore, rating: c.rating, ratingSource: c.ratingSource,
+          starred: c.starred, likedAlbum: c.likedAlbum, likedArtist: c.likedArtist,
+          seedArtist: c.seedArtist, anchored: c.anchored,
+          songPlays: input.recentPlays[scan.ids[c.index]] ?? 0,
+          artistPlays: artistRecentPlays[artistKey] ?? 0, topArtist: artistKey == topArtist,
+          lifetimePlays: scan.lifetimePlays[c.index], artist: song.artist, album: song.albumName,
+          lastHeard: scan.heardAt[c.index], now: input.now))
+      return MixRecord.Pick(
+        slot: item.slot == .explore ? "explore" : "preferred", songId: scan.ids[c.index],
+        title: song.title, artist: song.artist, why: why,
+        reason: reason(
+          c, slot: item.slot, frequentArtist: standing.artists[artistKey]?.cluster ?? false,
+          bootstrap: bootstrap),
+        scores: scores(
+          c, source: sources[item.n] ?? .explore, plays: scan.lifetimePlays[c.index],
+          keepPlaying: input.context != nil))
+    }
   }
 
   // MARK: - Helpers
@@ -981,6 +997,58 @@ struct MixRanker {
       else { return false }
       return first == "(" || first == "[" || first.allSatisfy(\.isWhitespace)
         || recentStarts.contains(entries[i].artistKey + "|" + first)
+    }
+  }
+
+  /// The mix as it fills, with caps per artist and album and for Play
+  /// Something a soft ceiling per genre. The genre ceiling gives way first;
+  /// the artist and album caps only when the mix cannot be filled otherwise.
+  private struct Selection {
+    private let candidates: [Candidate]
+    private let entries: [Entry]
+    private let titles: Titles
+    private let config: Config
+    private let genreLimit: Int
+    private var chosen = Set<Int>()
+    private var titleKeys = Set<String>()
+    private var artistCounts: [String: Int] = [:]
+    private var albumCounts: [String: Int] = [:]
+    private var genreCounts: [String: Int] = [:]
+
+    init(_ candidates: [Candidate], _ scan: Scan, _ input: Input, config: Config) {
+      self.candidates = candidates
+      entries = scan.entries
+      titles = scan.titles
+      self.config = config
+      genreLimit =
+        input.context == nil
+        ? Int((Double(input.count) * config.genreCeiling).rounded(.up)) : input.count
+    }
+
+    func isFull(artist: String) -> Bool {
+      artistCounts[artist, default: 0] >= config.perArtistCap
+    }
+
+    mutating func admit(_ n: Int, relax: Relax = .none) -> Admission {
+      let i = candidates[n].index
+      let entry = entries[i]
+      guard !chosen.contains(n), !titleKeys.contains(titles.key(i)) else { return .rejected }
+      if relax != .all, !fits(n, relax) { return .capped }
+      let genre = entry.genres.first
+      chosen.insert(n)
+      titleKeys.insert(titles.key(i))
+      artistCounts[entry.artistKey, default: 0] += 1
+      albumCounts[entry.albumId, default: 0] += 1
+      if let genre { genreCounts[genre, default: 0] += 1 }
+      return .taken
+    }
+
+    private func fits(_ n: Int, _ relax: Relax) -> Bool {
+      let entry = entries[candidates[n].index]
+      return artistCounts[entry.artistKey, default: 0] < config.perArtistCap
+        && (entry.albumId.isEmpty || albumCounts[entry.albumId, default: 0] < config.perAlbumCap)
+        && (relax == .genre
+          || entry.genres.first.map { genreCounts[$0, default: 0] < genreLimit } ?? true)
     }
   }
 }
