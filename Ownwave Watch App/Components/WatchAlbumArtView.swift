@@ -28,11 +28,7 @@ struct WatchAlbumArtView: View {
         // The download's cover, else one download through the cover cache
         // that serves this view, every other view of the album and the Now
         // Playing artwork.
-        let path = await CoverTint.coverFile(albumId: albumId)
-        // Decoding in body would stall the main thread on every redraw.
-        let decoded = await Task.detached(priority: .userInitiated) {
-          path.flatMap(UIImage.init(contentsOfFile:)).flatMap(CoverTint.decoded)
-        }.value
+        let decoded = await CoverTint.decodedImage(albumId: albumId)
         // The view may have moved on to another album while this loaded.
         guard !Task.isCancelled else { return }
         loaded = (albumId, decoded)

@@ -41,11 +41,7 @@ struct CoverBackdrop: View {
     .ignoresSafeArea()
     .task(id: albumId) {
       guard image?.albumId != albumId else { return }
-      let path = await CoverTint.coverFile(albumId: albumId, url: url)
-      // Decoding a full cover would stall the main thread mid-transition.
-      let decoded = await Task.detached(priority: .userInitiated) {
-        path.flatMap(UIImage.init(contentsOfFile:)).flatMap(CoverTint.decoded)
-      }.value
+      let decoded = await CoverTint.decodedImage(albumId: albumId, url: url)
       guard !Task.isCancelled else { return }
       image = (albumId, decoded)
     }
