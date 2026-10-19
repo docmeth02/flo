@@ -285,9 +285,7 @@ final class WatchSend: NSObject {
   private func sendCover(of album: Album, songCount: Int) {
     let target = Self.outbox.appendingPathComponent(album.id).appendingPathComponent("cover.png")
     Task { @MainActor in
-      var source = AlbumService.shared.downloadedCoverPath(albumId: album.id)
-      if source == nil { source = await CoverArtCacheManager.shared.coverPath(albumId: album.id) }
-      guard let source,
+      guard let source = await CoverTint.coverFile(albumId: album.id),
         await Task.detached(priority: .utility, operation: {
           Thumbnail.write(URL(fileURLWithPath: source), to: target, pixels: 200, type: .png)
         }).value

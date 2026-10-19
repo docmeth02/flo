@@ -140,9 +140,7 @@ import WidgetKit
     guard let target = WidgetSnapshot.coverURL(albumId: albumId),
       !FileManager.default.fileExists(atPath: target.path)
     else { return }
-    var source = AlbumService.shared.downloadedCoverPath(albumId: albumId)
-    if source == nil { source = await CoverArtCacheManager.shared.coverPath(albumId: albumId) }
-    guard let source else { return }
+    guard let source = await CoverTint.coverFile(albumId: albumId) else { return }
     let pixels = coverPixels
     await Task.detached(priority: .utility) {
       _ = Thumbnail.write(
