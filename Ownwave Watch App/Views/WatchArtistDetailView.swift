@@ -14,6 +14,8 @@ struct WatchArtistDetailView: View {
 
   @State private var displayAlert: Bool = false
   @State private var radioFailed = false
+  /// Ends with the screen, so a late answer never replaces a newer queue.
+  @State private var radioTask: Task<Void, Never>?
   @State private var isLoadingTopSongs = false
   @State private var openedAlbum: Album?
   @State private var menu: MenuTarget?
@@ -24,8 +26,9 @@ struct WatchArtistDetailView: View {
     List {
       Section {
         Button(action: {
-          Task {
+          radioTask = Task {
             let songs = await artistDetailViewModel.fetchArtistRadio(artist: artist)
+            guard !Task.isCancelled else { return }
             if let songs, !songs.isEmpty {
               let radio = SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs)
               if playerViewModel.playItem(item: radio) { showPlayer() }
@@ -82,6 +85,7 @@ struct WatchArtistDetailView: View {
     .onAppear {
       albumViewModel.fetchAlbumsByArtist(id: artist.id)
     }
+    .onDisappear { radioTask?.cancel() }
     .alert(artist.name, isPresented: $displayAlert) {
       Button("OK") {}
     } message: {

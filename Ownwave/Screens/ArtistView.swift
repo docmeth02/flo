@@ -18,6 +18,8 @@ struct ArtistView: View {
   @State private var shades: CoverShades?
   @State private var showsRadioError = false
   @State private var radioFailed = false
+  /// Ends with the screen, so a late answer never replaces a newer queue.
+  @State private var radioTask: Task<Void, Never>?
 
   /// The screen takes its backdrop and tint from the artist's first album.
   private var albums: [Album] { albumViewModel.albums(byArtist: artist.id) }
@@ -64,6 +66,7 @@ struct ArtistView: View {
     .onAppear { albumViewModel.fetchAlbumsByArtist(id: artist.id) }
     .task(id: artist.id) { await loadTopSongs() }
     .coverShades($shades, albumId: albums.first?.id ?? "")
+    .onDisappear { radioTask?.cancel() }
     .alert(artist.name, isPresented: $showsRadioError) {
       Button("OK") {}
     } message: {
@@ -74,8 +77,9 @@ struct ArtistView: View {
   private var buttons: some View {
     HStack(spacing: 10) {
       Button {
-        Task {
+        radioTask = Task {
           let songs = await radio.fetchArtistRadio(artist: artist)
+          guard !Task.isCancelled else { return }
           if let songs, !songs.isEmpty {
             app.play(SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs))
           } else {
