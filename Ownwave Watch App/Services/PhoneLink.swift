@@ -125,6 +125,8 @@ import WatchKit
   /// context without them.
   @discardableResult func apply(_ context: [String: Any]) -> Bool {
     guard let phone = Link.decode(Link.PhoneState.self, from: context) else { return false }
+    RequestLog.shared.note(
+      "phone link: phone share=\(phone.share) sending=\(phone.sending.values.reduce(0, +)) songs")
     // Turned off, the watch keeps the values it followed last.
     if phone.share {
       UserDefaultsManager.maxBitRate = phone.streamingBitRate
@@ -182,7 +184,7 @@ import WatchKit
       try session.updateApplicationContext(Link.encode(state))
       lastState = state
     } catch {
-      debugLog("phone link: state not sent: \(error)")
+      RequestLog.shared.note("phone link: state not sent: \(error.localizedDescription)")
     }
   }
 
@@ -215,8 +217,11 @@ import WatchKit
       return state
     }
     state.musicBytes = await bytes
-    let free = try? URL.documentsDirectory.resourceValues(forKeys: [.volumeAvailableCapacityKey])
-    state.freeBytes = Int64(free?.volumeAvailableCapacity ?? 0)
+    // The volume's available capacity can be negative on watchOS; the file
+    // system's free size cannot.
+    let system = try? FileManager.default.attributesOfFileSystem(
+      forPath: URL.documentsDirectory.path)
+    state.freeBytes = max(0, (system?[.systemFreeSize] as? NSNumber)?.int64Value ?? 0)
     return state
   }
 }
@@ -248,9 +253,9 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
   func session(
     _ session: WCSession, activationDidCompleteWith state: WCSessionActivationState, error: Error?
   ) {
-    debugLog(
-      "phone link: activated \(state.rawValue) companion=\(session.isCompanionAppInstalled) "
-        + "error=\(String(describing: error))")
+    RequestLog.shared.note(
+      "phone link: activated \(state.rawValue) companion=\(session.isCompanionAppInstalled)"
+        + (error.map { " error=\($0.localizedDescription)" } ?? ""))
     Task { @MainActor in PhoneLink.shared.activated() }
   }
 
@@ -287,9 +292,12 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
 
   /// Moves a file from the phone into place, before its callback returns.
   func receive(_ file: URL, metadata: [String: Any]) {
-    guard let info = Link.decode(Link.FileInfo.self, from: metadata),
-      info.accountKey == AuthService.shared.accountKey
-    else { return debugLog("phone link: dropped a file for another account") }
+    guard let info = Link.decode(Link.FileInfo.self, from: metadata) else {
+      return RequestLog.shared.note("phone link: dropped a file without its details")
+    }
+    guard info.accountKey == AuthService.shared.accountKey else {
+      return RequestLog.shared.note("phone link: dropped \(info.kind) for another account")
+    }
     let path =
       switch info.kind {
       case .song:
@@ -304,8 +312,10 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
       try LocalFileManager.shared.moveFile(
         source: file, target: LocalFileManager.shared.fileURL(for: path))
     } catch {
-      return debugLog("phone link: file not moved: \(error)")
+      return RequestLog.shared.note("phone link: file not moved: \(error.localizedDescription)")
     }
+    RequestLog.shared.note(
+      "phone link: received \(info.kind) \(info.song?.title ?? info.album.name)")
     lock.withLock { deliveries += 1 }
     Task { @MainActor in PhoneLink.shared.save(info) }
   }
