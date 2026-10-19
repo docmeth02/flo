@@ -29,6 +29,7 @@ struct Segmented<Value: Hashable>: View {
             )
             .lineLimit(1)
             .minimumScaleFactor(0.8)
+            .padding(.horizontal, 4)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 9)
             .background(
