@@ -22,6 +22,7 @@ enum DiagnosticsReport {
   static func connectionLines() -> [(String, String)] {
     let connectivity = ConnectivityMonitor.shared
     return [
+      ("Version", version),
       ("Online", connectivity.isOnline ? "Yes" : "No"),
       ("Server reachable", connectivity.isServerReachable ? "Yes" : "No"),
       ("Token expires", tokenExpiry),
@@ -92,11 +93,8 @@ enum DiagnosticsReport {
 
   /// The report as plain text with the request log newest first.
   static func text() -> String {
-    let info = Bundle.main.infoDictionary
-    let version = info?["CFBundleShortVersionString"] as? String ?? "?"
-    let build = info?["CFBundleVersion"] as? String ?? "?"
     var lines = [
-      "Ownwave \(version) (\(build)), \(Date().formatted(.iso8601))",
+      "Ownwave, \(Date().formatted(.iso8601))",
       "\(AppPlatform.systemDescription), \(hardwareModel)",
     ]
     lines += connectionLines().map { "\($0.0): \($0.1)" }
@@ -117,6 +115,13 @@ enum DiagnosticsReport {
       }
     }
     return lines.joined(separator: "\n")
+  }
+
+  /// e.g. "1.0 (41)".
+  private static var version: String {
+    let info = Bundle.main.infoDictionary
+    let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+    return "\(version) (\(info?["CFBundleVersion"] as? String ?? "?"))"
   }
 
   /// The `exp` claim of the Navidrome JWT, relative to now.
