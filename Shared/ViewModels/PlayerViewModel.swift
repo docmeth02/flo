@@ -593,6 +593,9 @@ class PlayerViewModel: ObservableObject {
 
   func pause() {
     playGeneration += 1
+    // A mix still being built must not start behind a pause, nor during a
+    // call that paused.
+    startGeneration += 1
     endStart()
     // A pause ends a run of resumes; a stall after Play is a fresh one.
     resumedAtListened = nil
