@@ -242,11 +242,7 @@ struct WatchNowPlayingView: View {
   /// live radio, which has no progress.
   private var playPauseButton: some View {
     Button(action: {
-      if playerViewModel.isPlaying {
-        playerViewModel.pause()
-      } else {
-        playerViewModel.play()
-      }
+      playerViewModel.togglePlayback()
       WKInterfaceDevice.current().play(.success)
     }) {
       ZStack {
