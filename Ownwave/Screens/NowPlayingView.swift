@@ -84,7 +84,9 @@ struct NowPlayingView: View {
     }
     .background {
       LinearGradient(
-        stops: [.init(color: backdropTop, location: 0), .init(color: palette.background, location: 0.78)],
+        stops: [
+          .init(color: backdropTop, location: 0), .init(color: palette.background, location: 0.78),
+        ],
         startPoint: .top, endPoint: .bottom
       )
       .ignoresSafeArea()
@@ -202,7 +204,8 @@ private struct PlayerPage: View {
         Menu {
           ItemMenuItems(
             target: .song(
-              Song(from: song), context: song.contextName ?? "", isFromPlaylist: song.isFromPlaylist))
+              Song(from: song), context: song.contextName ?? "", isFromPlaylist: song.isFromPlaylist
+            ))
         } label: {
           GlassCircle.label("ellipsis")
         }
@@ -275,13 +278,18 @@ private struct PlayerPage: View {
       PlayPauseButton(tint: tint)
       if !player.isLiveRadio {
         Spacer()
-        Button { player.nextSong(userInitiated: true) } label: { skipGlyph("forward.fill") }
+        Button {
+          player.nextSong(userInitiated: true)
+        } label: {
+          skipGlyph("forward.fill")
+        }
         Spacer()
         Button(action: player.cyclePlaybackMode) {
           Image(systemName: player.playbackMode == PlaybackMode.repeatOnce ? "repeat.1" : "repeat")
             .font(.system(size: 20, weight: .semibold))
             .foregroundStyle(
-              player.playbackMode == PlaybackMode.defaultPlayback ? palette.secondary : tint)
+              player.playbackMode == PlaybackMode.defaultPlayback ? palette.secondary : tint
+            )
             .frame(width: 44, height: 44)
         }
       }
@@ -309,7 +317,9 @@ private struct PlayerPage: View {
     VStack(spacing: 6) {
       HStack(spacing: 6) {
         ForEach(1...5, id: \.self) { n in
-          Button { rate(n) } label: {
+          Button {
+            rate(n)
+          } label: {
             Image(systemName: n <= rating ? "star.fill" : "star")
               .font(.system(size: 24, weight: .medium))
               .foregroundStyle(
@@ -395,7 +405,8 @@ private struct PlayPauseButton: View {
           Circle().inset(by: -3).stroke(palette.hairline, lineWidth: 6)
           if isLoading {
             TimelineView(.animation) { context in
-              let turn = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1)
+              let turn = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(
+                dividingBy: 1)
               Circle()
                 .inset(by: -3)
                 .trim(from: 0, to: 0.25)

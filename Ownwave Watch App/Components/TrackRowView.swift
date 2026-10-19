@@ -82,6 +82,8 @@ struct HoldableRow: ViewModifier {
         guard let onHold else { return }
         WKInterfaceDevice.current().play(.click)
         onHold()
-      } onPressingChanged: { isPressed = $0 }
+      } onPressingChanged: {
+        isPressed = $0
+      }
   }
 }

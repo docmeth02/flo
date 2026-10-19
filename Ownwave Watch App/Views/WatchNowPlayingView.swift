@@ -139,9 +139,9 @@ struct WatchNowPlayingView: View {
         .padding(.top, Self.compact ? 0 : 3)
 
         TimeLine(clock: playerViewModel.clock, duration: playerViewModel.nowPlaying.duration)
-        .font(.floTime)
-        .foregroundStyle(Color.floTimeText)
-        .padding(.top, Self.compact ? 0 : 2)
+          .font(.floTime)
+          .foregroundStyle(Color.floTimeText)
+          .padding(.top, Self.compact ? 0 : 2)
 
         HStack(spacing: 0) {
           Button(action: {
@@ -190,7 +190,8 @@ struct WatchNowPlayingView: View {
             .font(.system(size: 22, weight: .semibold))
             .foregroundStyle(
               playerViewModel.playbackMode != PlaybackMode.defaultPlayback
-                ? accent : .floSecondary)
+                ? accent : .floSecondary
+            )
             .frame(width: 44, height: 44)
           }
           .buttonStyle(.plain)

@@ -93,7 +93,8 @@ struct DownloadControl: View {
       .frame(minHeight: FloLayout.rowHeight)
       .background(
         RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
-          .fill(Color.floSurface))
+          .fill(Color.floSurface)
+      )
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)

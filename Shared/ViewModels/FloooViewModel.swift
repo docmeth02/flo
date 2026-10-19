@@ -82,7 +82,8 @@ class FloooViewModel: ObservableObject {
   /// state of the same song, and playing is sent at most every 30 seconds.
   /// A server without reportPlayback gets a now playing scrobble for
   /// starting instead. Main thread.
-  func reportPlayback(state: PlaybackReportState, nowPlaying: QueueEntity, positionSeconds: Double) {
+  func reportPlayback(state: PlaybackReportState, nowPlaying: QueueEntity, positionSeconds: Double)
+  {
     guard AuthService.shared.accountKey != nil,
       let payload = ScrobblePayload(nowPlaying: nowPlaying)
     else { return }

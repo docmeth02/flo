@@ -49,7 +49,8 @@ struct LikeIntent: AppIntent {
 
 struct UnlikeIntent: AppIntent {
   static var title: LocalizedStringResource = "Unlike"
-  static var description = IntentDescription("Removes the song, album or artist playing from your likes.")
+  static var description = IntentDescription(
+    "Removes the song, album or artist playing from your likes.")
   static var openAppWhenRun = false
 
   @Parameter(title: "Item")
@@ -65,7 +66,8 @@ struct UnlikeIntent: AppIntent {
 
 struct BoostIntent: AppIntent {
   static var title: LocalizedStringResource = "Boost"
-  static var description = IntentDescription("Rates the song or artist playing 5 for smart shuffle.")
+  static var description = IntentDescription(
+    "Rates the song or artist playing 5 for smart shuffle.")
   static var openAppWhenRun = false
 
   @Parameter(title: "Item")
@@ -81,7 +83,8 @@ struct BoostIntent: AppIntent {
 
 struct AvoidIntent: AppIntent {
   static var title: LocalizedStringResource = "Avoid"
-  static var description = IntentDescription("Rates the song or artist playing 1 for smart shuffle.")
+  static var description = IntentDescription(
+    "Rates the song or artist playing 1 for smart shuffle.")
   static var openAppWhenRun = false
 
   @Parameter(title: "Item")
@@ -110,9 +113,9 @@ struct AvoidIntent: AppIntent {
         StarStore.shared.set(starred, id: id)
       }
       let sentence: LocalizedStringResource =
-        if !starred { "Removed \(name) from your likes." }
-        else if item == .song { "Liked \(name) by \(artist)." }
-        else { "Liked \(name)." }
+        if !starred { "Removed \(name) from your likes." } else if item == .song {
+          "Liked \(name) by \(artist)."
+        } else { "Liked \(name)." }
       return await answer(
         sentence, isPending: { StarStore.shared.isPending(id) },
         isApplied: { StarStore.shared.stars[id] == starred })
@@ -184,6 +187,7 @@ struct AvoidIntent: AppIntent {
       return String(localized: sentence) + " "
         + String(localized: "It syncs when your server is reachable.")
     }
-    return isApplied() ? String(localized: sentence) : String(localized: "The server didn't take that.")
+    return isApplied()
+      ? String(localized: sentence) : String(localized: "The server didn't take that.")
   }
 }

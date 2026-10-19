@@ -86,7 +86,8 @@ struct CoverRow<Trailing: View>: View {
         .background(
           (round
             ? AnyShape(Circle())
-            : AnyShape(RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous)))
+            : AnyShape(
+              RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous)))
             .fill(Color.floTile))
     }
   }
@@ -299,6 +300,7 @@ struct StateView: View {
     .padding(.horizontal, 10)
     .frame(minHeight: FloLayout.coverRowHeight)
     .background(
-      RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous).fill(Color.floSurface))
+      RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous).fill(Color.floSurface)
+    )
   }
 }

@@ -26,7 +26,8 @@
           debugLog(
             "phone link: follows=\(UserDefaultsManager.settingsFollowPhone) "
               + "streaming=\(UserDefaultsManager.maxBitRate) "
-              + "downloads=\(UserDefaultsManager.downloadBitRate) keep=\(UserDefaultsManager.keepPlaying)")
+              + "downloads=\(UserDefaultsManager.downloadBitRate) keep=\(UserDefaultsManager.keepPlaying)"
+          )
         } else if action.hasPrefix("signin:") {
           let parts = action.dropFirst(7).split(separator: "|", maxSplits: 2).map(String.init)
           guard parts.count == 3 else { return }

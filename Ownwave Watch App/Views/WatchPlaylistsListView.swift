@@ -19,7 +19,8 @@ struct WatchPlaylistsListView: View {
     ) {
       ForEach(albumViewModel.playlists) { playlist in
         NavigationLink(destination: WatchPlaylistDetailView(playlist: playlist)) {
-          CoverRow(tile: .glyph("music.note.list"), title: playlist.name, subtitle: playlist.comment)
+          CoverRow(
+            tile: .glyph("music.note.list"), title: playlist.name, subtitle: playlist.comment)
         }
         .floRow()
       }

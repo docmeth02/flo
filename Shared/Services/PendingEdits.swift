@@ -87,7 +87,9 @@ import Foundation
     defaults.removeObject(forKey: key)
   }
 
-  private func finish(_ value: Value, id: String, result: Result<Void, Error>, account generation: Int) {
+  private func finish(
+    _ value: Value, id: String, result: Result<Void, Error>, account generation: Int
+  ) {
     guard account == generation else { return }
     inFlight.remove(id)
 

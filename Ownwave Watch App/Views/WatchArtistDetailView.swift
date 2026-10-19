@@ -65,7 +65,8 @@ struct WatchArtistDetailView: View {
           CoverRow(
             tile: .cover(albumId: album.id),
             title: album.name,
-            subtitle: album.minYear > 0 ? String(album.minYear) : "")
+            subtitle: album.minYear > 0 ? String(album.minYear) : ""
+          )
           .holdable(onTap: { openedAlbum = album }, onHold: { menu = .album(album) })
           .floRow()
         }

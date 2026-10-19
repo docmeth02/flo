@@ -50,7 +50,9 @@ struct CoverArt: View {
         }
       }
       .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-      .onGeometryChange(for: CGFloat.self) { max($0.size.width, $0.size.height) } action: {
+      .onGeometryChange(for: CGFloat.self) {
+        max($0.size.width, $0.size.height)
+      } action: {
         side = $0
       }
       .task(id: key) {
@@ -126,7 +128,8 @@ struct CoverShades {
 extension View {
   /// Keeps `shades` at the colors of the album's cover in the color scheme
   /// in use; nil until the cover is read, and for a gray one.
-  func coverShades(_ shades: Binding<CoverShades?>, albumId: String, url: String = "") -> some View {
+  func coverShades(_ shades: Binding<CoverShades?>, albumId: String, url: String = "") -> some View
+  {
     modifier(CoverShading(shades: shades, albumId: albumId, url: url))
   }
 }

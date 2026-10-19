@@ -6,7 +6,9 @@ import XCTest
 
 final class WatchLinkTests: XCTestCase {
   func testPayloadsSurviveTheTrip() {
-    let message = Link.Message.signIn(Link.SignIn(server: "https://music.lan", user: "u", password: "p", accountKey: "music.lan|id"))
+    let message = Link.Message.signIn(
+      Link.SignIn(server: "https://music.lan", user: "u", password: "p", accountKey: "music.lan|id")
+    )
     XCTAssertEqual(Link.decode(Link.Message.self, from: Link.encode(message)), message)
 
     let reply = Link.Reply.otherAccount(user: "v", host: "music.lan")

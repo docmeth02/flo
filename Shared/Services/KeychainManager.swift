@@ -78,4 +78,3 @@ enum KeychainManager {
     try keychain.set(newValue, key: KeychainKeys.serverPassword)
   }
 }
-

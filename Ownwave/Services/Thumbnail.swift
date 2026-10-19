@@ -34,7 +34,9 @@ enum Thumbnail {
       let destination = CGImageDestinationCreateWithURL(
         target as CFURL, type.identifier as CFString, 1, nil)
     else { return false }
-    let properties = quality.map { [kCGImageDestinationLossyCompressionQuality: $0] as CFDictionary }
+    let properties = quality.map {
+      [kCGImageDestinationLossyCompressionQuality: $0] as CFDictionary
+    }
     CGImageDestinationAddImage(destination, image, properties)
     return CGImageDestinationFinalize(destination)
   }

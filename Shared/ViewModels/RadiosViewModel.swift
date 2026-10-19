@@ -3,8 +3,8 @@
 //  flo
 //
 
-import Foundation
 import Combine
+import Foundation
 
 class RadiosViewModel: ObservableObject {
   @Published var radios: [Radio] = []

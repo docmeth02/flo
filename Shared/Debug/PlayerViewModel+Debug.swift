@@ -124,7 +124,8 @@
         debugLog(
           "queue=\(self.queue.count) idx=\(self.activeQueueIdx) playing=\(self.isPlaying) "
             + "song=\(self.nowPlaying.id ?? "") progress=\(String(format: "%.2f", self.progress)) "
-            + "session=\(self.sessionStartedAt.map { "\(Int(-$0.timeIntervalSinceNow))s" } ?? "none")")
+            + "session=\(self.sessionStartedAt.map { "\(Int(-$0.timeIntervalSinceNow))s" } ?? "none")"
+        )
       }
     }
   }

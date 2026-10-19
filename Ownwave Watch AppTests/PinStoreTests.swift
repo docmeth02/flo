@@ -30,7 +30,8 @@ final class PinStoreTests: XCTestCase {
   func testPinsSurviveANewStore() {
     let defaults = makeDefaults()
     PinStore(defaults: defaults, account: { "server|alice" }).toggle("al1", .album)
-    XCTAssertEqual(PinStore(defaults: defaults, account: { "server|alice" }).pinned(.album), ["al1"])
+    XCTAssertEqual(
+      PinStore(defaults: defaults, account: { "server|alice" }).pinned(.album), ["al1"])
   }
 
   func testNothingIsPinnedWithoutAnAccount() {
@@ -40,6 +41,7 @@ final class PinStoreTests: XCTestCase {
     XCTAssertEqual(store.pinned(.album), [])
     store.toggle("al2", .album)
     XCTAssertFalse(store.isPinned("al2", .album))
-    XCTAssertEqual(defaults.dictionaryRepresentation().keys.filter { $0.hasPrefix("pins.") }.count, 1)
+    XCTAssertEqual(
+      defaults.dictionaryRepresentation().keys.filter { $0.hasPrefix("pins.") }.count, 1)
   }
 }

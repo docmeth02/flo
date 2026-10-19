@@ -72,7 +72,8 @@ struct SearchView: View {
     .navigationBarTitleDisplayMode(.inline)
     .searchable(
       text: $query, placement: .navigationBarDrawer(displayMode: .always),
-      prompt: "Artists, albums, songs")
+      prompt: "Artists, albums, songs"
+    )
     .onSubmit(of: .search) { remember(query) }
     .task {
       albums.getArtists()

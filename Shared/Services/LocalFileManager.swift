@@ -67,7 +67,8 @@ class LocalFileManager {
     }
     try fileManager.moveItem(at: source, to: target)
     try? fileManager.setAttributes(
-      [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: target.path)
+      [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+      ofItemAtPath: target.path)
     return target
   }
 

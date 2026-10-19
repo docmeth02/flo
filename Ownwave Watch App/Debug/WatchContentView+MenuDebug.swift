@@ -19,7 +19,7 @@
         let pending = UserDefaults.standard.dictionary(forKey: UserDefaultsKeys.pendingStars) ?? [:]
         debugLog("star hook: \(pending.count) pending \(pending)")
       }
-      if case let (kind, id)? = env["FLO_DEBUG_PIN"].flatMap(Self.debugItem) {
+      if case (let kind, let id)? = env["FLO_DEBUG_PIN"].flatMap(Self.debugItem) {
         PinStore.shared.toggle(id, kind)
         debugLog("pin hook: \(kind) \(id) pinned=\(PinStore.shared.isPinned(id, kind))")
       }
@@ -28,7 +28,7 @@
       let albums: [Album] = await Self.debugLoad(AlbumService.shared.getAlbum)
       let artists: [Artist] = await Self.debugLoad(AlbumService.shared.getArtists)
 
-      if case let (kind, id)? = env["FLO_DEBUG_STAR"].flatMap(Self.debugItem) {
+      if case (let kind, let id)? = env["FLO_DEBUG_STAR"].flatMap(Self.debugItem) {
         // The cached lists when offline, where the requests above fail.
         let listed =
           kind == .album

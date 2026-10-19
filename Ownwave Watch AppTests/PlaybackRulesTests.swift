@@ -56,7 +56,8 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertEqual(
       AuthError(login: status(401), body: body),
       .invalidCredentials(message: "Invalid username or password"))
-    XCTAssertEqual(AuthError(login: status(500), body: body), .server(message: "Invalid username or password"))
+    XCTAssertEqual(
+      AuthError(login: status(500), body: body), .server(message: "Invalid username or password"))
     XCTAssertEqual(AuthError(login: status(401), body: Data("<html>".utf8)), .sessionExpired)
     XCTAssertEqual(AuthError(login: status(403), body: nil), .sessionExpired)
     let offline = URLError(.notConnectedToInternet)

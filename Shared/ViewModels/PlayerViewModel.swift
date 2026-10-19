@@ -664,7 +664,8 @@ class PlayerViewModel: ObservableObject {
       UserDefaultsManager.nowPlayingProgress = progress
       UserDefaultsManager.nowPlayingListened = self.secondsListened
     } else if playerItem == nil
-      || (currentSourceIsTranscoded && (target < streamOffset || abs(target - lastObservedTime) > 3))
+      || (currentSourceIsTranscoded
+        && (target < streamOffset || abs(target - lastObservedTime) > 3))
     {
       // A load under way restarts at the target; a transcode cannot seek far,
       // so the server starts a new one there. The new item has not ticked
@@ -764,7 +765,8 @@ class PlayerViewModel: ObservableObject {
         // Offline only what is downloaded or cached can play. Online a cache
         // without the artist (a fresh login, an artist added since) is synced.
         let service = SmartPlaybackService.shared
-        songs = byArtist(online ? await service.loadCachedLibrary().songs : await service.offlinePlayableSongs())
+        songs = byArtist(
+          online ? await service.loadCachedLibrary().songs : await service.offlinePlayableSongs())
         if online, songs.isEmpty { songs = byArtist(await service.syncSongLibrary()) }
         // The sync may have failed because the link went.
         if songs.isEmpty { songs = byArtist(await service.offlinePlayableSongs()) }

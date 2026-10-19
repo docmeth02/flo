@@ -123,7 +123,9 @@ enum MenuTarget: Identifiable {
         }
       }
       if songs.isEmpty {
-        songs = await MainActor.run { AlbumService.shared.getPlaylistSongs(playlistId: playlist.id) }
+        songs = await MainActor.run {
+          AlbumService.shared.getPlaylistSongs(playlistId: playlist.id)
+        }
       }
       return (songs, playlist.name, true)
     case .radio:

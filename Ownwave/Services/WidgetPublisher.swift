@@ -121,7 +121,8 @@ import WidgetKit
   /// Covers no widget shows any more only take room in the App Group.
   private static func removeCovers(except kept: Set<String>) {
     guard let folder = WidgetSnapshot.coversFolder,
-      let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+      let files = try? FileManager.default.contentsOfDirectory(
+        at: folder, includingPropertiesForKeys: nil)
     else { return }
     for file in files where !kept.contains(file.deletingPathExtension().lastPathComponent) {
       try? FileManager.default.removeItem(at: file)

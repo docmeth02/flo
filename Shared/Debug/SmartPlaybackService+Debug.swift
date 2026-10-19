@@ -40,8 +40,7 @@
           if let song = library.songs.filter({
             index.songs[$0.playbackID]?.historyArtistKey == top
           })
-            .max(by: { size($0) < size($1) })
-          {
+          .max(by: { size($0) < size($1) }) {
             let genres = Set(index.songs[song.playbackID]?.genres ?? [])
             debugLog(
               "mix seed: \(song.playbackID) \(song.title) — \(song.artist) album=\(song.albumId) "

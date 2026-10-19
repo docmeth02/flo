@@ -202,8 +202,7 @@ final class DownloadSession: NSObject, ObservableObject {
     reconcile()
 
     let center = NotificationCenter.default
-    for name: Notification.Name in [AppPlatform.didBecomeActive, .networkBecameOnline]
-    {
+    for name: Notification.Name in [AppPlatform.didBecomeActive, .networkBecameOnline] {
       center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
         self?.reconcile()
       }

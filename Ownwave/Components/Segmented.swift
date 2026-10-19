@@ -25,7 +25,9 @@ struct Segmented<Value: Hashable>: View {
           Text(option.label)
             .font(font)
             .foregroundStyle(
-              isOn ? (filled ? palette.ink : palette.text) : (filled ? palette.text : palette.secondary)
+              isOn
+                ? (filled ? palette.ink : palette.text)
+                : (filled ? palette.text : palette.secondary)
             )
             .lineLimit(1)
             .minimumScaleFactor(0.8)

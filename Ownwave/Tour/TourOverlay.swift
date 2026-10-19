@@ -134,7 +134,8 @@ private struct TourOverlay: View {
         edges.bottom = size.height - min(bottom, hole.minY - Self.gap)
       }
     }
-    return card
+    return
+      card
       .frame(maxHeight: size.height - edges.top - edges.bottom, alignment: alignment)
       .padding(edges)
   }

@@ -55,7 +55,8 @@ import Foundation
     send: @escaping PendingEdits<Int>.Send = AlbumService.shared.setRating
   ) {
     self.defaults = defaults
-    confirmed = defaults.dictionary(forKey: UserDefaultsKeys.confirmedRatings) as? [String: Int] ?? [:]
+    confirmed =
+      defaults.dictionary(forKey: UserDefaultsKeys.confirmedRatings) as? [String: Int] ?? [:]
     artistConfirmed =
       defaults.dictionary(forKey: UserDefaultsKeys.confirmedArtistRatings) as? [String: Int] ?? [:]
     edits = PendingEdits(
@@ -266,8 +267,10 @@ import Foundation
   private func settle(_ rating: Int, id: String, accepted: Bool, artist: Bool) {
     let (pending, server, confirmed, key) =
       artist
-      ? (artistEdits, \RatingStore.artistServer, \RatingStore.artistConfirmed,
-        UserDefaultsKeys.confirmedArtistRatings)
+      ? (
+        artistEdits, \RatingStore.artistServer, \RatingStore.artistConfirmed,
+        UserDefaultsKeys.confirmedArtistRatings
+      )
       : (edits, \RatingStore.server, \RatingStore.confirmed, UserDefaultsKeys.confirmedRatings)
     if accepted {
       confirmedEdits += 1

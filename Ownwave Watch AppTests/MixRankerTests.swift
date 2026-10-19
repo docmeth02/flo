@@ -12,7 +12,8 @@ final class MixRankerTests: XCTestCase {
     (0..<10).flatMap { artist in
       (0..<6).map { track in
         var song = Song(
-          id: "s\(artist)-\(track)", title: "Song \(artist)-\(track)", albumId: "a\(artist)-\(track % 2)",
+          id: "s\(artist)-\(track)", title: "Song \(artist)-\(track)",
+          albumId: "a\(artist)-\(track % 2)",
           albumName: "Album \(artist)-\(track % 2)", artist: "Artist \(artist)",
           trackNumber: track + 1, discNumber: 1, bitRate: 320, sampleRate: 44100, suffix: "mp3",
           duration: 200, mediaFileId: "")
@@ -70,7 +71,8 @@ final class MixRankerTests: XCTestCase {
   }
 
   private func rank(
-    _ songs: [Song], ranker: MixRanker = MixRanker(), affinity: AffinitySnapshot = AffinitySnapshot(),
+    _ songs: [Song], ranker: MixRanker = MixRanker(),
+    affinity: AffinitySnapshot = AffinitySnapshot(),
     journal: JournalSnapshot = JournalSnapshot(), ratings: [String: MixRanker.Rating] = [:],
     likedAlbums: Set<String> = [], likedArtists: Set<String> = [], count: Int, seed: UInt64
   ) -> (songs: [Song], record: MixRecord) {
@@ -126,7 +128,8 @@ final class MixRankerTests: XCTestCase {
     let ranker = MixRanker()
     let halfLife = ranker.config.skipHalfLife
     let fresh = JournalSnapshot.SkipEvent(at: now, weight: 1, artistKey: "")
-    let old = JournalSnapshot.SkipEvent(at: now.addingTimeInterval(-halfLife), weight: 1, artistKey: "")
+    let old = JournalSnapshot.SkipEvent(
+      at: now.addingTimeInterval(-halfLife), weight: 1, artistKey: "")
     XCTAssertEqual(ranker.skipLoad([fresh], now: now), 1, accuracy: 1e-9)
     XCTAssertEqual(ranker.skipLoad([old], now: now), 0.5, accuracy: 1e-9)
   }

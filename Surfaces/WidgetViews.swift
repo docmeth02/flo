@@ -16,7 +16,8 @@ private let palette = Palette.dark
 extension WidgetSnapshot {
   /// The widget gallery's content, so it never asks to sign in.
   static let sample = WidgetSnapshot(
-    signedIn: true, nowPlaying: .init(title: "Golden Hour", artist: "Low Tide", albumId: "sample-1"),
+    signedIn: true,
+    nowPlaying: .init(title: "Golden Hour", artist: "Low Tide", albumId: "sample-1"),
     recent: [
       .init(id: "sample-1", name: "Golden Hour"), .init(id: "sample-2", name: "Satellites"),
       .init(id: "sample-3", name: "Paper Moons"), .init(id: "sample-4", name: "Blue Rooms"),
@@ -98,7 +99,9 @@ struct NowPlayingWidgetView: View {
         // A tinted Home Screen would draw the shade as a flat veil.
         if renderingMode == .fullColor {
           LinearGradient(
-            stops: [.init(color: .clear, location: 0.3), .init(color: .black.opacity(0.75), location: 1)],
+            stops: [
+              .init(color: .clear, location: 0.3), .init(color: .black.opacity(0.75), location: 1),
+            ],
             startPoint: .top, endPoint: .bottom)
         }
         songText(song, titleSize: 17).padding(14)
@@ -240,7 +243,9 @@ private struct WidgetCover: View {
   let albumId: String
 
   var body: some View {
-    let image = WidgetSnapshot.coverURL(albumId: albumId).flatMap { UIImage(contentsOfFile: $0.path) }
+    let image = WidgetSnapshot.coverURL(albumId: albumId).flatMap {
+      UIImage(contentsOfFile: $0.path)
+    }
     Color.clear.overlay {
       if let image {
         Image(uiImage: image).resizable().widgetAccentedRenderingMode(.fullColor).scaledToFill()

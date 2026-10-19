@@ -18,9 +18,11 @@ enum ArtistIdentity {
     // digits: "Baby Metal", "BABYMETAL" and "ＢＡＢＹＭＥＴＡＬ" are one name.
     let folded = name.folding(
       options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: locale)
-    let kept = String(String.UnicodeScalarView(folded.unicodeScalars.filter {
-      CharacterSet.alphanumerics.contains($0)
-    }))
+    let kept = String(
+      String.UnicodeScalarView(
+        folded.unicodeScalars.filter {
+          CharacterSet.alphanumerics.contains($0)
+        }))
     return kept.isEmpty ? nil : "name:" + kept
   }
 

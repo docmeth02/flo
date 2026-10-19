@@ -318,7 +318,9 @@ extension PlayerViewModel {
     Task { @MainActor [weak self] in
       let result = await AlbumService.shared.resolveStreamSource(
         songId: songId, originalSuffix: suffix, offset: Int(position))
-      guard let self, self.loadGeneration == generation, self.isCurrentTrack(trackId) else { return }
+      guard let self, self.loadGeneration == generation, self.isCurrentTrack(trackId) else {
+        return
+      }
       if case .failure(.blocked) = result {
         self.isMediaLoading = false
         self.isStreamingBlocked = true
@@ -385,13 +387,15 @@ extension PlayerViewModel {
       .publisher(for: .AVPlayerItemNewAccessLogEntry, object: item)
       .merge(
         with: NotificationCenter.default.publisher(
-          for: .AVPlayerItemNewErrorLogEntry, object: item))
+          for: .AVPlayerItemNewErrorLogEntry, object: item)
+      )
       .receive(on: DispatchQueue.main)
       .sink { [weak item] notification in
         if notification.name == .AVPlayerItemNewErrorLogEntry {
           guard let event = item?.errorLog()?.events.last else { return }
           RequestLog.shared.note(
-            "player error \(event.errorDomain) \(event.errorStatusCode) \(event.errorComment ?? "")")
+            "player error \(event.errorDomain) \(event.errorStatusCode) \(event.errorComment ?? "")"
+          )
         } else if let event = item?.accessLog()?.events.last {
           RequestLog.shared.note(
             String(
@@ -433,7 +437,8 @@ extension PlayerViewModel {
 
     // AVPlayer loads bypass the request log's Alamofire monitor.
     if isRemote {
-      RequestLog.shared.note("player stream offset=\(Int(offset))\(isTranscoded ? " transcode" : "")")
+      RequestLog.shared.note(
+        "player stream offset=\(Int(offset))\(isTranscoded ? " transcode" : "")")
     }
   }
 
@@ -512,8 +517,9 @@ extension PlayerViewModel {
         self.armLoadWatchdog()
         return
       }
-      guard item.status != .readyToPlay
-        || self.player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
+      guard
+        item.status != .readyToPlay
+          || self.player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
       else { return }
       self.handleNoProgress(of: item, cause: "load timeout") { [weak self, weak item] in
         // A slow cell can leave a ready item silent; it is asked for once

@@ -27,7 +27,8 @@ extension PlayerViewModel {
           let value = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
           let reason = AVAudioSession.RouteChangeReason(rawValue: value)
         else { return }
-        let previous = (notification.userInfo?[AVAudioSessionRouteChangePreviousRouteKey]
+        let previous =
+          (notification.userInfo?[AVAudioSessionRouteChangePreviousRouteKey]
           as? AVAudioSessionRouteDescription)?.outputs.map(\.portType.rawValue)
           .joined(separator: ",") ?? "-"
         RequestLog.shared.note(

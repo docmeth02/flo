@@ -68,7 +68,9 @@ struct WatchView: View {
           Text("Apple Watch").font(.buttonLabel)
           HStack(spacing: 6) {
             Circle()
-              .fill(link.isReachable && link.isAppInstalled ? Color.floDownloaded : palette.secondary)
+              .fill(
+                link.isReachable && link.isAppInstalled ? Color.floDownloaded : palette.secondary
+              )
               .frame(width: 7, height: 7)
             Text(statusLine)
           }

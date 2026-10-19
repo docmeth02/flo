@@ -63,7 +63,8 @@
         var state = Link.WatchState()
         if signedIn, let key = AuthService.shared.accountKey {
           state.account = .init(
-            user: "demo", host: URL(string: UserDefaultsManager.serverBaseURL)?.host ?? "", key: key)
+            user: "demo", host: URL(string: UserDefaultsManager.serverBaseURL)?.host ?? "", key: key
+          )
         }
         state.collections = albums.prefix(2).map {
           .init(id: $0.id, name: $0.name, songs: 11, kbps: 192)

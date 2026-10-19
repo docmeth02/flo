@@ -60,21 +60,31 @@ final class ArtistIdentityTests: XCTestCase {
   }
 
   func testIsByMatchesTheIdOrTheSpelling() {
-    XCTAssertTrue(song("Anything", artistId: "ar1").isBy(artistId: "ar1", name: "President", keys: [:]))
-    XCTAssertTrue(song("PRESIDENT", artistId: "ar2").isBy(artistId: "ar1", name: "President", keys: [:]))
-    XCTAssertTrue(song("Baby Metal", artistId: nil).isBy(artistId: "ar1", name: "BABYMETAL", keys: [:]))
-    XCTAssertFalse(song("Muse", artistId: "ar2").isBy(artistId: "ar1", name: "President", keys: [:]))
+    XCTAssertTrue(
+      song("Anything", artistId: "ar1").isBy(artistId: "ar1", name: "President", keys: [:]))
+    XCTAssertTrue(
+      song("PRESIDENT", artistId: "ar2").isBy(artistId: "ar1", name: "President", keys: [:]))
+    XCTAssertTrue(
+      song("Baby Metal", artistId: nil).isBy(artistId: "ar1", name: "BABYMETAL", keys: [:]))
+    XCTAssertFalse(
+      song("Muse", artistId: "ar2").isBy(artistId: "ar1", name: "President", keys: [:]))
     XCTAssertFalse(song("", artistId: nil).isBy(artistId: "ar1", name: "", keys: [:]))
     // MusicBrainz decides over the name: same name, different artists, and
     // one artist under two names.
     let keys = ["ar1": "mbz:a", "ar2": "mbz:b", "ar3": "mbz:a"]
-    XCTAssertFalse(song("President", artistId: "ar2").isBy(artistId: "ar1", name: "President", keys: keys))
-    XCTAssertTrue(song("Prez", artistId: "ar3").isBy(artistId: "ar1", name: "President", keys: keys))
+    XCTAssertFalse(
+      song("President", artistId: "ar2").isBy(artistId: "ar1", name: "President", keys: keys))
+    XCTAssertTrue(
+      song("Prez", artistId: "ar3").isBy(artistId: "ar1", name: "President", keys: keys))
     // One side unknown to the keys: the name decides.
-    XCTAssertTrue(song("President", artistId: "ar9").isBy(artistId: "ar1", name: "PRESIDENT", keys: keys))
-    XCTAssertTrue(song("President", artistId: "ar1x").isBy(artistId: "ar9", name: "PRESIDENT", keys: ["ar1x": "mbz:a"]))
+    XCTAssertTrue(
+      song("President", artistId: "ar9").isBy(artistId: "ar1", name: "PRESIDENT", keys: keys))
+    XCTAssertTrue(
+      song("President", artistId: "ar1x").isBy(
+        artistId: "ar9", name: "PRESIDENT", keys: ["ar1x": "mbz:a"]))
     // A download keeps no artist id and matches by name.
-    XCTAssertTrue(song("PRESIDENT", artistId: nil).isBy(artistId: "ar1", name: "President", keys: keys))
+    XCTAssertTrue(
+      song("PRESIDENT", artistId: nil).isBy(artistId: "ar1", name: "President", keys: keys))
   }
 
   func testLibraryIndexKeysSongsByIdentityAndHistoryById() {

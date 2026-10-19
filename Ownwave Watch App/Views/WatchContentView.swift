@@ -157,4 +157,3 @@ struct WatchContentView: View {
     #endif
   }
 }
-

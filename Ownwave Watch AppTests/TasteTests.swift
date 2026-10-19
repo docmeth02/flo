@@ -90,7 +90,8 @@ final class TasteTests: XCTestCase {
     // Two spellings of one artist share an identity.
     let keys = ["ar1": "mbz:bm", "ar2": "mbz:bm", "ar3": "ar3"]
     let index = SmartPlaybackService.LibraryIndex(
-      songs: Dictionary(uniqueKeysWithValues: songs.map { ($0.playbackID, .init($0, artistKeys: keys)) }))
+      songs: Dictionary(
+        uniqueKeysWithValues: songs.map { ($0.playbackID, .init($0, artistKeys: keys)) }))
     let artists = [
       Artist(id: "ar2", name: "BABYMETAL", albumCount: 2, mbzArtistID: "bm"),
       Artist(id: "ar3", name: "METALVERSE", albumCount: 1, mbzArtistID: nil),
@@ -140,7 +141,8 @@ final class TasteTests: XCTestCase {
     let record = MixRecord(
       at: now, mode: "playSomething", picks: [pick], eligible: 1, exploreShare: 1, notes: ["n"])
     let data = try JSONEncoder().encode(RecommendationLog.Saved(account: "srv|u1", mixes: [record]))
-    XCTAssertEqual(RecommendationLog.restore(data, account: "srv|u1").first?.picks.first?.why, pick.why)
+    XCTAssertEqual(
+      RecommendationLog.restore(data, account: "srv|u1").first?.picks.first?.why, pick.why)
     XCTAssertTrue(RecommendationLog.restore(data, account: "srv|u2").isEmpty)
     XCTAssertTrue(RecommendationLog.restore(Data("{}".utf8), account: "srv|u1").isEmpty)
   }

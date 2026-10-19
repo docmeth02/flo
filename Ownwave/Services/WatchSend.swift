@@ -28,7 +28,8 @@ import Foundation
     var id: String { "\(album.id):\(song.id)" }
     var suffix: String { kbps > 0 ? TranscodingSettings.targetFormat : song.suffix }
     var file: URL {
-      WatchSend.outbox.appendingPathComponent(album.id).appendingPathComponent("\(song.id).\(suffix)")
+      WatchSend.outbox.appendingPathComponent(album.id).appendingPathComponent(
+        "\(song.id).\(suffix)")
     }
   }
 
@@ -323,9 +324,12 @@ import Foundation
     let account = AuthService.shared.accountKey
     Task {
       guard let source = await CoverTint.coverFile(albumId: album.id),
-        await Task.detached(priority: .utility, operation: {
-          Thumbnail.write(URL(fileURLWithPath: source), to: target, pixels: 200, type: .png)
-        }).value
+        await Task.detached(
+          priority: .utility,
+          operation: {
+            Thumbnail.write(URL(fileURLWithPath: source), to: target, pixels: 200, type: .png)
+          }
+        ).value
       else { return }
       // After a logout, or once every song went: the watch keeps the album
       // without it.

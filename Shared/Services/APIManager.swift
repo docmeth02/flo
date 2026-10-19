@@ -39,17 +39,17 @@ class APIManager {
     let headers: HTTPHeaders = [API.ndAuthHeader: "Bearer \(token)"]
 
     session.request(url, parameters: parameters, headers: headers)
-    .validate(statusCode: 200..<300)
-    .responseDecodable(of: T.self) { response in
-      if response.error == nil,
-        let refreshed = response.response?.value(forHTTPHeaderField: "X-Nd-Authorization")
-      {
-        AuthService.shared.adoptRefreshedToken(refreshed, from: authSession)
+      .validate(statusCode: 200..<300)
+      .responseDecodable(of: T.self) { response in
+        if response.error == nil,
+          let refreshed = response.response?.value(forHTTPHeaderField: "X-Nd-Authorization")
+        {
+          AuthService.shared.adoptRefreshedToken(refreshed, from: authSession)
+        }
+        ConnectivityMonitor.shared.record(
+          response: response.response, error: response.error?.underlyingError)
+        completion(response)
       }
-      ConnectivityMonitor.shared.record(
-        response: response.response, error: response.error?.underlyingError)
-      completion(response)
-    }
   }
 
   func subsonicRequest<T: Decodable>(
@@ -61,14 +61,14 @@ class APIManager {
       "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(authSession.subsonicCredentials)"
 
     session.request(url, parameters: parameters)
-    .validate(statusCode: 200..<300)
-    .responseDecodable(of: T.self) { response in
-      Self.notifyIfSessionExpired(
-        response: response.response, error: response.error, authSession: authSession)
-      ConnectivityMonitor.shared.record(
-        response: response.response, error: response.error?.underlyingError)
-      completion(response)
-    }
+      .validate(statusCode: 200..<300)
+      .responseDecodable(of: T.self) { response in
+        Self.notifyIfSessionExpired(
+          response: response.response, error: response.error, authSession: authSession)
+        ConnectivityMonitor.shared.record(
+          response: response.response, error: response.error?.underlyingError)
+        completion(response)
+      }
   }
 
   /// A Subsonic call without payload. Subsonic reports failures with HTTP
@@ -113,7 +113,8 @@ class APIManager {
     if let progressUpdate {
       request.downloadProgress { progressUpdate($0.fractionCompleted * 100) }
     }
-    return request
+    return
+      request
       .validate { _, response, fileURL in
         let isErrorBody = DownloadFailure.isErrorBody(response)
         let code = isErrorBody ? fileURL.flatMap(DownloadFailure.subsonicCode(in:)) : nil
@@ -204,7 +205,8 @@ final class NDSessionInterceptor: RequestInterceptor {
         completion(.failure(RenewalFailed()))
         return
       }
-      completion(.success(Self.applying(AuthService.shared.sessionSnapshot().ndToken, to: urlRequest)))
+      completion(
+        .success(Self.applying(AuthService.shared.sessionSnapshot().ndToken, to: urlRequest)))
     }
   }
 

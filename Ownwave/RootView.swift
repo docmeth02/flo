@@ -150,7 +150,9 @@ struct AppTabs: View {
 
   /// The tour's step shown over the tabs; open Now Playing shows its own.
   private var tourStep: TourStep? {
-    guard let step = app.tour, !(step.isOnNowPlaying && app.isNowPlayingPresented) else { return nil }
+    guard let step = app.tour, !(step.isOnNowPlaying && app.isNowPlayingPresented) else {
+      return nil
+    }
     return step
   }
 
@@ -198,7 +200,13 @@ struct AppTabs: View {
   }
 
   private func stack(_ id: TabID, @ViewBuilder _ root: () -> some View) -> some View {
-    NavigationStack(path: Binding { paths[id] ?? NavigationPath() } set: { paths[id] = $0 }) {
+    NavigationStack(
+      path: Binding {
+        paths[id] ?? NavigationPath()
+      } set: {
+        paths[id] = $0
+      }
+    ) {
       root()
         .containerBackground(palette.background, for: .navigation)
         .navigationDestination(for: Route.self) { route in

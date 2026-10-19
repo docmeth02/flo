@@ -49,7 +49,8 @@
       }
     }
 
-    private func tile(_ family: WidgetFamily, @ViewBuilder _ content: () -> some View) -> some View {
+    private func tile(_ family: WidgetFamily, @ViewBuilder _ content: () -> some View) -> some View
+    {
       content()
         .frame(width: family == .systemSmall ? 170 : 364, height: 170)
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -60,7 +61,8 @@
     private var wallpaper: some View {
       let colors =
         scheme == .dark
-        ? [Color(hex: 0x3A2E5C), Color(hex: 0x0B0A14)] : [Color(hex: 0xD9CFF2), Color(hex: 0xF3F1FA)]
+        ? [Color(hex: 0x3A2E5C), Color(hex: 0x0B0A14)]
+        : [Color(hex: 0xD9CFF2), Color(hex: 0xF3F1FA)]
       return LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom).ignoresSafeArea()
     }
 

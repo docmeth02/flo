@@ -217,6 +217,7 @@ extension PlayerViewModel {
   /// StarStore over the state it was listed with.
   @MainActor func isStarred(_ song: Song) -> Bool {
     if isCurrent(song) { return isStarred }
-    return StarStore.shared.isStarred(song.playbackID, listed: song.starred || song.starredAt != nil)
+    return StarStore.shared.isStarred(
+      song.playbackID, listed: song.starred || song.starredAt != nil)
   }
 }

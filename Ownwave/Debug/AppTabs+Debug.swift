@@ -31,7 +31,9 @@
         paths[.home, default: NavigationPath()].append(Route.watch)
       case "album":
         let albums: [Album] = await Self.debugLoad(AlbumService.shared.getAlbum)
-        if let album = pick(albums) { paths[.home, default: NavigationPath()].append(Route.album(album)) }
+        if let album = pick(albums) {
+          paths[.home, default: NavigationPath()].append(Route.album(album))
+        }
       case "artist":
         let artists: [Artist] = await Self.debugLoad(AlbumService.shared.getArtists)
         if let artist = pick(artists) {

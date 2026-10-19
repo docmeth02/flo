@@ -90,7 +90,9 @@ struct TasteSummary: Sendable {
     func rated(_ stars: Int) -> [Rated] {
       let rows = songRatings.filter { $0.value == stars }.compactMap { id, _ in
         songs[id].map {
-          Rated(kind: .song, id: id, title: $0.title, subtitle: "\($0.artist) · song", albumId: $0.albumId)
+          Rated(
+            kind: .song, id: id, title: $0.title, subtitle: "\($0.artist) · song",
+            albumId: $0.albumId)
         }
       }
       let artistRows = artistRatings.filter { $0.value == stars }.compactMap { id, _ in
@@ -133,7 +135,8 @@ struct TasteSummary: Sendable {
     }
     let left = PlaybackJournal.skipWindow - now.timeIntervalSince(song.latest)
     let days = max(1, Int((left / 86400).rounded(.up)))
-    return skipped + " · less likely for " + (days >= 10 ? "about 2 weeks" : counted(days, "more day"))
+    return skipped + " · less likely for "
+      + (days >= 10 ? "about 2 weeks" : counted(days, "more day"))
   }
 
   /// Reads everything from the stores and caches; asks the server nothing.

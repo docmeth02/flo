@@ -130,7 +130,9 @@ enum UserDefaultsManager {
   /// The iPhone shares its bitrates and Keep Playing with the watch. On by
   /// default.
   static var shareWatchSettings: Bool {
-    get { UserDefaults.standard.object(forKey: UserDefaultsKeys.shareWatchSettings) as? Bool ?? true }
+    get {
+      UserDefaults.standard.object(forKey: UserDefaultsKeys.shareWatchSettings) as? Bool ?? true
+    }
     set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.shareWatchSettings) }
   }
 

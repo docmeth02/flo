@@ -52,7 +52,8 @@ struct MixReason: Codable, Sendable, Equatable {
     if facts.rating >= 4 {
       switch facts.ratingSource {
       case .song: return MixReason(.rated, "You rated this \(facts.rating)")
-      case .album: return MixReason(.rated, "From \(facts.album), an album you rated \(facts.rating)")
+      case .album:
+        return MixReason(.rated, "From \(facts.album), an album you rated \(facts.rating)")
       case .artist: return MixReason(.rated, "From an artist you rated \(facts.rating)")
       }
     }
@@ -62,9 +63,12 @@ struct MixReason: Codable, Sendable, Equatable {
     if facts.topArtist {
       return MixReason(.history, "\(facts.artist) is your most-played artist")
     }
-    if facts.songPlays >= 3 { return MixReason(.history, "Played \(facts.songPlays) times in 60 days") }
+    if facts.songPlays >= 3 {
+      return MixReason(.history, "Played \(facts.songPlays) times in 60 days")
+    }
     if facts.artistPlays >= 5 {
-      return MixReason(.history, "You play \(facts.artist) often · \(facts.artistPlays) plays in 60 days")
+      return MixReason(
+        .history, "You play \(facts.artist) often · \(facts.artistPlays) plays in 60 days")
     }
     // Keep Playing's seed is the last song heard through, its genres the session's.
     if facts.seedArtist { return MixReason(.history, "Same artist as a song you just heard") }

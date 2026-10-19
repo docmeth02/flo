@@ -553,7 +553,8 @@ class AlbumService {
         completion(
           Result {
             try LocalFileManager.shared.moveFile(
-              source: tempFile, target: LocalFileManager.shared.fileURL(for: Self.coverPath(id: id)),
+              source: tempFile,
+              target: LocalFileManager.shared.fileURL(for: Self.coverPath(id: id)),
               forceOverride: overwrite)
           })
       case .failure(let error):

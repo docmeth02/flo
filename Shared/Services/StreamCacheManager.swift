@@ -94,7 +94,9 @@ class StreamCacheManager {
     removeCacheRecord(key: fileURL.deletingPathExtension().lastPathComponent)
   }
 
-  func cacheSong(mediaFileId: String, originalSuffix: String? = nil, from queueItem: QueueEntity? = nil) {
+  func cacheSong(
+    mediaFileId: String, originalSuffix: String? = nil, from queueItem: QueueEntity? = nil
+  ) {
     guard UserDefaultsManager.streamCacheMaxSize > 0 else { return }
     guard !mediaFileId.isEmpty else { return }
     guard ConnectivityMonitor.shared.isOnline else { return }
@@ -182,7 +184,8 @@ class StreamCacheManager {
       case .success(let tempFile):
         let target = self.cacheDirectory.appendingPathComponent("\(key).\(suffix)")
 
-        guard (try? LocalFileManager.shared.moveFile(source: tempFile, target: target)) != nil else {
+        guard (try? LocalFileManager.shared.moveFile(source: tempFile, target: target)) != nil
+        else {
           DispatchQueue.main.async { self.removeCacheRecord(key: key) }
           return
         }
@@ -234,7 +237,8 @@ class StreamCacheManager {
 
     // The most recently played copy of each song.
     var seen = Set<String>()
-    return records
+    return
+      records
       .filter { $0.state == State.ready.rawValue && $0.title != nil }
       .filter { record in
         guard let id = record.mediaFileId else { return false }
@@ -250,9 +254,10 @@ class StreamCacheManager {
   /// Cancels the cache downloads in flight, except those of the given songs.
   func cancelAllInFlight(keeping mediaFileIds: Set<String> = []) {
     // Without streaming on this network none of them is kept.
-    let kept = TranscodingSettings.streamingBitRate.map { bitrate in
-      Set(mediaFileIds.map { cacheKey(mediaFileId: $0, bitrate: bitrate) })
-    } ?? []
+    let kept =
+      TranscodingSettings.streamingBitRate.map { bitrate in
+        Set(mediaFileIds.map { cacheKey(mediaFileId: $0, bitrate: bitrate) })
+      } ?? []
     for key in cancelDownloads(keeping: kept) {
       removeCacheRecord(key: key)
     }

@@ -40,7 +40,11 @@ struct MiniPlayer: View {
         glyph(player.isPlaying ? "pause.fill" : "play.fill")
       }
       if !isInline && !player.isLiveRadio {
-        Button { player.nextSong(userInitiated: true) } label: { glyph("forward.fill") }
+        Button {
+          player.nextSong(userInitiated: true)
+        } label: {
+          glyph("forward.fill")
+        }
       }
     }
     .buttonStyle(.plain)

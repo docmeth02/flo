@@ -210,7 +210,8 @@ import WatchKit
         }
         let rates = Set(songs.map(\.bitRate))
         return .init(
-          id: id, name: collection.name ?? "", songs: songs.count, kbps: rates.count == 1 ? rates.first.map(Int.init) : nil)
+          id: id, name: collection.name ?? "", songs: songs.count,
+          kbps: rates.count == 1 ? rates.first.map(Int.init) : nil)
       }
       return state
     }
@@ -235,7 +236,8 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
     guard let key = AuthService.shared.accountKey else { return nil }
     var user = ""
     if case .found(let auth) = KeychainManager.loadAuth() { user = auth.username }
-    return .init(user: user, host: URL(string: UserDefaultsManager.serverBaseURL)?.host ?? "", key: key)
+    return .init(
+      user: user, host: URL(string: UserDefaultsManager.serverBaseURL)?.host ?? "", key: key)
   }
 
   var isDelivering: Bool { lock.withLock { deliveries > 0 } }
@@ -300,7 +302,8 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
       }
     guard let path else { return }
     do {
-      try LocalFileManager.shared.moveFile(source: file, target: LocalFileManager.shared.fileURL(for: path))
+      try LocalFileManager.shared.moveFile(
+        source: file, target: LocalFileManager.shared.fileURL(for: path))
     } catch {
       return debugLog("phone link: file not moved: \(error)")
     }

@@ -10,7 +10,8 @@ class LibraryCacheManager {
 
   /// One JSON file per key, named after the raw value.
   enum Key: String {
-    case albums, artists, playlists, starredSongs, starredCollections, songs, ratedSongs, ratedAlbums, ratedArtists
+    case albums, artists, playlists, starredSongs, starredCollections, songs, ratedSongs,
+      ratedAlbums, ratedArtists
     case songsStamp = "songs.stamp"
   }
 

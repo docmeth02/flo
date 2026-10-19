@@ -54,7 +54,9 @@
           AlbumService.shared.getPlaylists { continuation.resume(returning: (try? $0.get()) ?? []) }
         }
         guard var first = playlists.first else { return debugLog("no playlists") }
-        first.songs = await songs { AlbumService.shared.getSongsByPlaylist(id: first.id, completion: $0) }
+        first.songs = await songs {
+          AlbumService.shared.getSongsByPlaylist(id: first.id, completion: $0)
+        }
         playlist = first
         album = Album(from: first)
         DownloadSession.shared.enqueue(first)
@@ -151,7 +153,8 @@
           + "imported=\(state.importedCount) matched=\(state.matchedCount) "
           + "unmatched=\(state.unmatchedCount) watermark=\(state.watermarkId) "
           + "bootstrapComplete=\(state.bootstrapComplete) "
-          + "earliest=\(state.earliestPlayAt.map { "\($0)" } ?? "-") future=\(snapshot.futurePlays)")
+          + "earliest=\(state.earliestPlayAt.map { "\($0)" } ?? "-") future=\(snapshot.futurePlays)"
+      )
       debugLog("ratings: \(RatingStore.shared.ratings.count) \(RatingStore.shared.ratings)")
       for kind in [AffinitySnapshot.Kind.artist, .genre] {
         let top = (snapshot.aggregates[kind] ?? [:]).sorted { $0.value.weight > $1.value.weight }
@@ -206,7 +209,8 @@
 
     // FLO_DEBUG_DUMP_MIX=<s> logs the newest mix record at that time.
     private func runDebugMixDump() async {
-      guard let delay = ProcessInfo.processInfo.environment["FLO_DEBUG_DUMP_MIX"].flatMap(Double.init)
+      guard
+        let delay = ProcessInfo.processInfo.environment["FLO_DEBUG_DUMP_MIX"].flatMap(Double.init)
       else { return }
       try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
       guard let mix = RecommendationLog.shared.mixes.first else {
@@ -223,7 +227,9 @@
     // FLO_DEBUG_DIAGNOSTICS=<s> shows Diagnostics at that time and logs the
     // size of the shared log.
     private func runDebugDiagnostics() async {
-      guard let delay = ProcessInfo.processInfo.environment["FLO_DEBUG_DIAGNOSTICS"].flatMap(Double.init)
+      guard
+        let delay = ProcessInfo.processInfo.environment["FLO_DEBUG_DIAGNOSTICS"].flatMap(
+          Double.init)
       else { return }
       try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
       showsDebugDiagnostics = true
@@ -324,7 +330,10 @@
         view = AnyView(WatchPlaylistDetailView(playlist: playlist))
       case "artist":
         // The artist with the most albums, so the album list has rows.
-        guard let artist = await load(AlbumService.shared.getArtists).max(by: { $0.albumCount < $1.albumCount })
+        guard
+          let artist = await load(AlbumService.shared.getArtists).max(by: {
+            $0.albumCount < $1.albumCount
+          })
         else {
           return debugLog("screen hook: no artists")
         }
@@ -356,18 +365,23 @@
       else { return }
       let target = play.split(separator: ":").map(String.init)
       if target.count == 2 { album.id = target[0] }
-      album.songs = await load { AlbumService.shared.getSongFromAlbum(id: album.id, completion: $0) }
+      album.songs = await load {
+        AlbumService.shared.getSongFromAlbum(id: album.id, completion: $0)
+      }
       let index = target.count == 2 ? album.songs.firstIndex { $0.playbackID == target[1] } ?? 0 : 0
       try? await Task.sleep(nanoseconds: 3_000_000_000)
       // Library screens are links the reset drops; this one is hook state.
       debugScreen = nil
       if playerViewModel.playItem(item: album, startingAt: index) { showPlayer() }
-      debugLog("screen hook: played \(album.songs.indices.contains(index) ? album.songs[index].title : "-"), page=\(selectedTab)")
+      debugLog(
+        "screen hook: played \(album.songs.indices.contains(index) ? album.songs[index].title : "-"), page=\(selectedTab)"
+      )
     }
 
     private func logMediaFiles(_ label: String) {
       let media = LocalFileManager.shared.fileURL(for: "Media")
-      let files = FileManager.default.enumerator(atPath: media.path)?
+      let files =
+        FileManager.default.enumerator(atPath: media.path)?
         .compactMap { $0 as? String } ?? []
       let songs = CoreDataManager.shared.countRecords(entity: SongEntity.self)
       let collections = CoreDataManager.shared.countRecords(entity: PlaylistEntity.self)
