@@ -84,10 +84,10 @@ class APIManager {
       switch response.result {
       case .success(let body):
         let reply = body.subsonicResponse
-        if reply.status == "ok" {
-          completion(.success(()))
+        if let failure = SubsonicError(status: reply.status, error: reply.error) {
+          completion(.failure(failure))
         } else {
-          completion(.failure(reply.error ?? SubsonicError(code: 0, message: reply.status)))
+          completion(.success(()))
         }
       case .failure(let error):
         completion(.failure(error))

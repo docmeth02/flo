@@ -356,7 +356,11 @@ class AlbumService {
       endpoint: API.SubsonicEndpoint.getStarred2, parameters: nil
     ) {
       (response: DataResponse<Starred2Response, AFError>) in
-      completion(response.result.map { ($0.songs, $0.collections) }.mapError { $0 })
+      completion(
+        response.result.mapError { $0 as Error }.flatMap { reply in
+          if let failure = reply.failure { return .failure(failure) }
+          return .success((reply.songs, reply.collections))
+        })
     }
   }
 

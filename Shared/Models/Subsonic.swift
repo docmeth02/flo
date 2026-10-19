@@ -19,6 +19,15 @@ struct SubsonicError: Codable, Error {
   let message: String?
 }
 
+extension SubsonicError {
+  /// The failure a response reports, nil for "ok". Subsonic answers
+  /// failures with HTTP 200, so the body's status is the only sign.
+  init?(status: String, error: SubsonicError?) {
+    guard status != "ok" else { return nil }
+    self = error ?? SubsonicError(code: 0, message: status)
+  }
+}
+
 struct SubsonicResponse<T: SubsonicResponseData>: Decodable {
   let status: String
   let error: SubsonicError?
@@ -92,6 +101,8 @@ struct Starred2Response: Codable {
       let id: String
     }
 
+    let status: String
+    let error: SubsonicError?
     let starred2: Starred2?
   }
 
@@ -99,6 +110,11 @@ struct Starred2Response: Codable {
 
   enum CodingKeys: String, CodingKey {
     case subsonicResponse = "subsonic-response"
+  }
+
+  /// A failed answer has no lists, which must not read as "nothing liked".
+  var failure: SubsonicError? {
+    SubsonicError(status: subsonicResponse.status, error: subsonicResponse.error)
   }
 
   var songs: [Song] {
