@@ -19,7 +19,7 @@ struct NowPlayingView: View {
 
   /// A drag commits once its damped distance passes this, about 165 pt of
   /// finger travel.
-  static let threshold: CGFloat = 70
+  private static let threshold: CGFloat = 70
 
   @State private var hue: Double?
   @State private var showsQueue = false
@@ -130,7 +130,7 @@ struct NowPlayingView: View {
 
   /// The design's resistance: the farther the finger, the less the player
   /// follows, up to 320 pt. 0.55 is the system's own overscroll factor.
-  static func rubberBand(_ travel: CGFloat) -> CGFloat {
+  private static func rubberBand(_ travel: CGFloat) -> CGFloat {
     let limit: CGFloat = 320
     let damped = (1 - 1 / (abs(travel) * 0.55 / limit + 1)) * limit
     return travel < 0 ? -damped : damped

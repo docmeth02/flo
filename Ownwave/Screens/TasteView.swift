@@ -406,7 +406,7 @@ private struct Treemap: View {
     }
   }
 
-  static func layout(_ weights: [Double], in rect: CGRect) -> [CGRect] {
+  private static func layout(_ weights: [Double], in rect: CGRect) -> [CGRect] {
     var rest = rect
     var left = weights.reduce(0, +)
     return weights.indices.map { index in
