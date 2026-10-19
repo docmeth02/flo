@@ -69,7 +69,7 @@ struct WatchView: View {
           HStack(spacing: 6) {
             Circle()
               .fill(
-                link.isReachable && link.isAppInstalled ? Color.floDownloaded : palette.secondary
+                link.isPaired && link.isAppInstalled ? Color.floDownloaded : palette.secondary
               )
               .frame(width: 7, height: 7)
             Text(statusLine)
@@ -90,7 +90,8 @@ struct WatchView: View {
   private var statusLine: String {
     if !link.isPaired { return "No watch paired" }
     if !link.isAppInstalled { return "Ownwave is not on this watch" }
-    return link.isReachable ? "Reachable" : "Not reachable right now"
+    // Reachable only while the app is in front; transfers go on without it.
+    return link.isReachable ? "App open on the watch" : "Connected"
   }
 
   // MARK: - Sign-in and settings
@@ -269,5 +270,11 @@ private struct SendRow: View {
     }
     .padding(.vertical, 8)
     .card()
+    // A send that hangs (a watch app reinstalled meanwhile) can go again.
+    .contextMenu {
+      Button("Stop Sending", systemImage: "xmark", role: .destructive) {
+        WatchLink.shared.stopSend(send.id)
+      }
+    }
   }
 }
