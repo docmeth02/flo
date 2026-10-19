@@ -55,6 +55,7 @@
 		2C41B9CF6BEFE05D0AF1E3D5 /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
 		2C95BE4D2933E3895658C87D /* RequestLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */; };
 		2CDB1421DD487403F27F0C6F /* PlaySomethingIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBB2DF36BC3392244E112731 /* PlaySomethingIntent.swift */; };
+		2D6205B25402169754A8AB7C /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2F9F871B146ABAB706FD3E /* ModelTests.swift */; };
 		2EDBBD3DE94DD0B5E855C9B1 /* RequestLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */; };
 		2F8DDF24A4E509AD68036392 /* WatchNowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FABF85F19B541FE12696A0E5 /* WatchNowPlayingView.swift */; };
 		2FA18EA1F9CF42711E1323EE /* WatchArtistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B41738B26DF74C4135ED3B6B /* WatchArtistDetailView.swift */; };
@@ -230,6 +231,7 @@
 		A29325BB4B873F908E8C854B /* flo.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = C4D7F84B2C7F2AE900165EFD /* flo.xcdatamodeld */; };
 		A3019F40AF02587D934ECE45 /* AuthViewModel+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10E00000000000000000003 /* AuthViewModel+Debug.swift */; };
 		A41E9729ECD9216622752F1D /* WatchAlbumArtView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC2E67CCE3ED944C69F8973 /* WatchAlbumArtView.swift */; };
+		A482A937381B44A00E969BB8 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2F9F871B146ABAB706FD3E /* ModelTests.swift */; };
 		A49532B8A368D691410CAF60 /* Radio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BAAAAA2F3214F7002A5FBB /* Radio.swift */; };
 		A5FC5AB7BD0896F665829238 /* PlayerViewModel+Recovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 753A1F5C3EC0F41E987BAB31 /* PlayerViewModel+Recovery.swift */; };
 		A6387FAFC31CDE427065AC0B /* WatchContentView+MenuDebug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D3B96B083E2837F57F165F /* WatchContentView+MenuDebug.swift */; };
@@ -447,6 +449,7 @@
 		395047701354C7333EF3EA04 /* AlbumView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlbumView.swift; sourceTree = "<group>"; };
 		3A7C08695326856038595DD6 /* CoverBackdrop.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CoverBackdrop.swift; sourceTree = "<group>"; };
 		3C96562CD0A8D9817861D2D2 /* TasteSummary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TasteSummary.swift; sourceTree = "<group>"; };
+		3D2F9F871B146ABAB706FD3E /* ModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		3D7A0E5B9C14F2A86B01C2D0 /* DownloadSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadSession.swift; sourceTree = "<group>"; };
 		3D7A0E5B9C14F2A86B01C2D2 /* DownloadSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadSessionTests.swift; sourceTree = "<group>"; };
 		41ED1C069984CF677281CBB3 /* ArtistAppEntity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtistAppEntity.swift; sourceTree = "<group>"; };
@@ -845,6 +848,7 @@
 				3D7A0E5B9C14F2A86B01C2D2 /* DownloadSessionTests.swift */,
 				FF45D97BBCDF015177721AFE /* TasteTests.swift */,
 				D6699C44D5AD9144242023B3 /* WatchLinkTests.swift */,
+				3D2F9F871B146ABAB706FD3E /* ModelTests.swift */,
 			);
 			name = "Ownwave Watch AppTests";
 			path = "Ownwave Watch AppTests";
@@ -1392,6 +1396,7 @@
 				89E06357048F18DE7C534793 /* WatchLinkProtocol.swift in Sources */,
 				ADC990DEAE33749FF281E185 /* WatchLinkTests.swift in Sources */,
 				898E65974F3238D4136AF627 /* ListState.swift in Sources */,
+				A482A937381B44A00E969BB8 /* ModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1657,6 +1662,7 @@
 				3D7A0E5B9C14F2A86B01C2D3 /* DownloadSessionTests.swift in Sources */,
 				01CEBAC6C1B6CF76106BFA3C /* TasteTests.swift in Sources */,
 				F9A7ACDB28E6BF251B18C16D /* WatchLinkTests.swift in Sources */,
+				2D6205B25402169754A8AB7C /* ModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

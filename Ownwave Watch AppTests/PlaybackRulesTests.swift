@@ -102,22 +102,50 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertEqual(DecisionFailure.unplayable.streamFailure, .unplayable)
   }
 
-  /// The journal and the ranker tell a song's origin by the queue's name.
-  func testQueueNamesMapToOrigins() throws {
+  /// The journal and the ranker tell a song's origin by the queue's name,
+  /// which the app's own queues take from their constructors, and by the
+  /// playlist flag of what was played.
+  func testQueuesMapToOrigins() throws {
     let container = CoreDataManager.inMemoryContainer()
+    let service = PlaybackService(context: container.viewContext)
+    let song = Song(
+      id: "s", title: "Song", albumId: "al", albumName: "Album", artist: "Artist",
+      trackNumber: 1, discNumber: 1, bitRate: 320, sampleRate: 44100, suffix: "mp3",
+      duration: 200, mediaFileId: "s")
 
-    func origin(_ name: String, playlist: Bool = false) -> PlaybackOrigin {
-      let entry = QueueEntity(context: container.viewContext)
-      entry.contextName = name
-      entry.isFromPlaylist = playlist
-      return entry.playbackOrigin
+    func origin<T: Playable>(_ item: T) -> PlaybackOrigin? {
+      service.addToQueue(item: item).first?.playbackOrigin
     }
-    XCTAssertEqual(origin("Smart Shuffle"), .smartShuffle)
-    XCTAssertEqual(origin("Auto Play"), .keepPlaying)
-    XCTAssertEqual(origin("Liked Songs"), .starred)
-    XCTAssertEqual(origin("Cached"), .cached)
-    XCTAssertEqual(origin("Road Trip", playlist: true), .playlist)
-    XCTAssertEqual(origin("Some Album"), .album)
+    XCTAssertEqual(origin(SongCollection.smartShuffle([song])), .smartShuffle)
+    XCTAssertEqual(origin(SongCollection.keepPlaying([song])), .keepPlaying)
+    XCTAssertEqual(origin(SongCollection.liked([song])), .starred)
+    XCTAssertEqual(origin(SongCollection.cached([song])), .cached)
+    XCTAssertEqual(origin(SongCollection.search(song)), .album)
+    XCTAssertEqual(origin(SongCollection.artist(id: "ar", name: "Artist", songs: [song])), .album)
+    let playlist = Playlist(id: "pl", name: "Road Trip", songs: [song])
+    XCTAssertEqual(origin(playlist), .playlist)
+    // As the watch's playlist screen and Downloads play one.
+    XCTAssertEqual(origin(Album(from: playlist)), .playlist)
+    XCTAssertEqual(origin(Album(id: "al", name: "Some Album", songs: [song])), .album)
+  }
+
+  /// A playlist played as an album keeps its flag through the library cache;
+  /// an album from the server has none.
+  func testAlbumPlaylistFlagSurvivesCoding() throws {
+    let encoded = try JSONEncoder().encode(Album(from: Playlist(id: "pl", name: "Mix")))
+    XCTAssertTrue(try JSONDecoder().decode(Album.self, from: encoded).isPlaylist)
+    let server = #"{"id":"al","name":"A","albumArtist":"B","genre":"","minYear":0}"#
+    XCTAssertFalse(try JSONDecoder().decode(Album.self, from: Data(server.utf8)).isPlaylist)
+  }
+
+  /// A tick ends a song only while it plays and once all of it was heard.
+  func testTickEndsSongOnlyWhilePlayingPastItsEnd() {
+    typealias Player = PlayerViewModel
+    XCTAssertFalse(Player.tickEndsSong(at: 201, duration: 201.9, isRunning: true))
+    XCTAssertTrue(Player.tickEndsSong(at: 201.9, duration: 201.9, isRunning: true))
+    XCTAssertFalse(Player.tickEndsSong(at: 201.9, duration: 201.9, isRunning: false))
+    XCTAssertFalse(Player.tickEndsSong(at: 30, duration: .infinity, isRunning: true))
+    XCTAssertFalse(Player.tickEndsSong(at: 0, duration: 0, isRunning: true))
   }
 
   /// The watch keeps a start through its output setup's interruptions, a
