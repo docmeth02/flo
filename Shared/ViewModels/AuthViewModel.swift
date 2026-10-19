@@ -206,10 +206,10 @@ class AuthViewModel: ObservableObject {
     while serverUrl.hasSuffix("/") { serverUrl.removeLast() }
 
     AuthService.shared.login(serverUrl: serverUrl, username: username, password: password) {
-      [weak self] result in
+      result in
       // Published state changes on main, whichever queue Alamofire answered on.
+      // The view model lives as long as the app, and the login must be saved.
       Task { @MainActor in
-        guard let self else { return }
         switch result {
         case .success(let data):
           self.persistAuthData(data, serverUrl: self.serverUrl)
