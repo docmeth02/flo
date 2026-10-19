@@ -30,17 +30,17 @@
         albums.albums = await albums.loadedOrCached(albums.albums, .albums)
         paths[.home, default: NavigationPath()].append(Route.watch)
       case "album":
-        let albums: [Album] = (try? await AlbumService.shared.getAlbum()) ?? []
+        let albums: [Album] = (try? await LibraryAPI.getAlbum()) ?? []
         if let album = pick(albums) {
           paths[.home, default: NavigationPath()].append(Route.album(album))
         }
       case "artist":
-        let artists: [Artist] = (try? await AlbumService.shared.getArtists()) ?? []
+        let artists: [Artist] = (try? await LibraryAPI.getArtists()) ?? []
         if let artist = pick(artists) {
           paths[.home, default: NavigationPath()].append(Route.artist(artist))
         }
       case "playlist":
-        let playlists: [Playlist] = (try? await AlbumService.shared.getPlaylists()) ?? []
+        let playlists: [Playlist] = (try? await LibraryAPI.getPlaylists()) ?? []
         if let playlist = pick(playlists) {
           paths[.home, default: NavigationPath()].append(Route.playlist(playlist))
         }

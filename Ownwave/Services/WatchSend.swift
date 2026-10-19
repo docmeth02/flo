@@ -223,7 +223,7 @@ import Foundation
 
   private func submit(_ job: Job) {
     guard
-      var request = AlbumService.shared.downloadRequest(mediaFileId: job.song.id, kbps: job.kbps)
+      var request = LibraryAPI.downloadRequest(mediaFileId: job.song.id, kbps: job.kbps)
     else { return failSend(job.album.id) }
     request.allowsCellularAccess = UserDefaultsManager.downloadOverCellular
     let task = session.downloadTask(with: request)

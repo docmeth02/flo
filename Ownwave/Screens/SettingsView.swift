@@ -132,7 +132,7 @@ struct SettingsView: View {
       StreamCacheManager.shared.setLimit(Int64(cacheLimit))
       refreshStorage()
     }
-    .task { serverVersion = await AlbumService.shared.serverVersion() }
+    .task { serverVersion = await LibraryAPI.serverVersion() }
     .onAppear {
       if case .found(let login) = KeychainManager.loadAuth() { username = login.username }
       refreshStorage()

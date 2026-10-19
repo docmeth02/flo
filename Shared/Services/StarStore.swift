@@ -39,9 +39,9 @@ import Foundation
     send: @escaping PendingEdits<Bool>.Send = { id, starred in
       // Navidrome takes songs, albums and artists alike as `id`.
       if starred {
-        try await AlbumService.shared.star(id: id)
+        try await LibraryAPI.star(id: id)
       } else {
-        try await AlbumService.shared.unstar(id: id)
+        try await LibraryAPI.unstar(id: id)
       }
     }
   ) {

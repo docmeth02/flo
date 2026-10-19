@@ -104,7 +104,7 @@ class AlbumViewModel: ObservableObject {
 
     Task { @MainActor in
       do {
-        let songs = try await AlbumService.shared.getSongFromAlbum(id: id)
+        let songs = try await LibraryAPI.getSongFromAlbum(id: id)
         guard id == self.album.id else { return }
         let remoteSongs = songs.filter { song in
           !self.album.songs.contains(where: { $0.id == song.id })
@@ -135,7 +135,7 @@ class AlbumViewModel: ObservableObject {
 
     Task { @MainActor in
       do {
-        let remoteSongs = try await AlbumService.shared.getSongsByPlaylist(id: id)
+        let remoteSongs = try await LibraryAPI.getSongsByPlaylist(id: id)
         let merged = Self.mergePlaylistSongs(local: localSongs, remote: remoteSongs)
         DownloadStore.updatePlaylistPositions(playlistId: id, songs: merged)
         guard isShown() else { return }
@@ -236,15 +236,15 @@ class AlbumViewModel: ObservableObject {
   /// (the cached copy shown meanwhile does not).
   @MainActor private static func starredSongsRequest() async throws -> [Song] {
     let since = StarStore.shared.listRevision
-    let songs = try await AlbumService.shared.getStarred().songs
+    let songs = try await LibraryAPI.getStarred().songs
     StarStore.shared.adoptServerStars(songs.map(\.playbackID), since: since)
     return songs
   }
 
-  private static let albumsRequest = adoptingStars(AlbumService.shared.getAlbum) {
+  private static let albumsRequest = adoptingStars(LibraryAPI.getAlbum) {
     ($0.id, $0.starred)
   }
-  private static let artistsRequest = adoptingStars(AlbumService.shared.getArtists) {
+  private static let artistsRequest = adoptingStars(LibraryAPI.getArtists) {
     ($0.id, $0.starred)
   }
 
@@ -307,7 +307,7 @@ class AlbumViewModel: ObservableObject {
       return
     }
     Task { @MainActor in
-      let result = await Result { try await AlbumService.shared.getAlbumsByArtist(id: id) }
+      let result = await Result { try await LibraryAPI.getAlbumsByArtist(id: id) }
       guard id == self.artistAlbumsId else { return }
       switch result {
       case .success(let albums):
@@ -353,7 +353,7 @@ class AlbumViewModel: ObservableObject {
   func getPlaylists() {
     fetchCached(
       .playlists, current: playlists,
-      assign: { self.playlists = $0 }, request: AlbumService.shared.getPlaylists)
+      assign: { self.playlists = $0 }, request: LibraryAPI.getPlaylists)
   }
 
   func getArtists() {
@@ -393,7 +393,7 @@ class AlbumViewModel: ObservableObject {
   @MainActor func refreshPlaylists() async {
     await refreshCached(
       .playlists, assign: { self.playlists = $0 },
-      request: AlbumService.shared.getPlaylists)
+      request: LibraryAPI.getPlaylists)
   }
 
   @MainActor func refreshStarredSongs() async {

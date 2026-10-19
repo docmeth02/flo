@@ -42,7 +42,7 @@ extension PlayerViewModel {
     let canAdopt = !StarStore.shared.isPending(songId)
     let edits = StarStore.shared.editCount
     Task { @MainActor [weak self] in
-      let starred = await AlbumService.shared.isStarred(songId: songId)
+      let starred = await LibraryAPI.isStarred(songId: songId)
       // A newer lookup, another song or a cleared queue (logout) meanwhile.
       guard let self, self.starLookup == lookup, self.isCurrentTrack(songId) else { return }
       self.serverStarred = starred ?? false

@@ -256,7 +256,7 @@ final class DownloadSession: NSObject, ObservableObject {
     }
     Task {
       for albumId in albumIds {
-        _ = try? await AlbumService.shared.downloadCover(
+        _ = try? await LibraryAPI.downloadCover(
           artId: "al-\(albumId)", as: albumId, overwrite: false)
       }
     }
@@ -266,7 +266,7 @@ final class DownloadSession: NSObject, ObservableObject {
   private static func downloadCover(artId: String, as id: String) {
     Task {
       do {
-        try await AlbumService.shared.downloadCover(artId: artId, as: id)
+        try await LibraryAPI.downloadCover(artId: artId, as: id)
       } catch {
         debugLog("cover \(id) not saved: \(error.localizedDescription)")
       }
@@ -359,7 +359,7 @@ final class DownloadSession: NSObject, ObservableObject {
       return RequestLog.shared.note("download \(job.song.title) waits for the app")
     }
     guard
-      var request = AlbumService.shared.downloadRequest(
+      var request = LibraryAPI.downloadRequest(
         mediaFileId: job.mediaFileId, kbps: job.kbps)
     else { return markFailed(job, reason: "no server URL") }
     request.allowsCellularAccess = UserDefaultsManager.downloadOverCellular

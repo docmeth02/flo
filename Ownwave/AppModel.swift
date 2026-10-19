@@ -71,7 +71,7 @@ final class AppModel: ObservableObject {
   func songs(of album: Album) async -> [Song] {
     guard ConnectivityMonitor.shared.canReachServer else { return album.songs }
     // An empty answer (the album gone from the server) keeps what is known.
-    guard let songs = try? await AlbumService.shared.getSongFromAlbum(id: album.id),
+    guard let songs = try? await LibraryAPI.getSongFromAlbum(id: album.id),
       !songs.isEmpty
     else { return album.songs }
     return songs

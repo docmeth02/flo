@@ -1,6 +1,6 @@
 //
-//  AlbumService.swift
-//  flo
+//  LibraryAPI.swift
+//  Ownwave
 //
 
 import Alamofire
@@ -10,11 +10,11 @@ private struct UpdatedAtOnly: Decodable {
   let updatedAt: String?
 }
 
-class AlbumService {
-  static let shared = AlbumService()
-
+/// The library's requests to the server: albums, artists, playlists and songs,
+/// stars and ratings, the play log, and song and cover downloads.
+enum LibraryAPI {
   /// Whether the server has the song starred; nil when it could not tell.
-  func isStarred(songId: String) async -> Bool? {
+  static func isStarred(songId: String) async -> Bool? {
     let params: [String: Any] = [
       "_start": 0, "_end": 1, "id": songId,
     ]
@@ -25,47 +25,47 @@ class AlbumService {
   }
 
   /// Stars a song, album or artist; Navidrome takes all three as `id`.
-  func star(id: String) async throws {
+  static func star(id: String) async throws {
     try await APIManager.shared.subsonicAction(
       endpoint: API.SubsonicEndpoint.star, parameters: ["id": id])
   }
 
-  func unstar(id: String) async throws {
+  static func unstar(id: String) async throws {
     try await APIManager.shared.subsonicAction(
       endpoint: API.SubsonicEndpoint.unstar, parameters: ["id": id])
   }
 
   /// Rates a song, album or artist 1 to 5; 0 removes its rating. Navidrome
   /// takes all three as `id`.
-  func setRating(id: String, rating: Int) async throws {
+  static func setRating(id: String, rating: Int) async throws {
     try await APIManager.shared.subsonicAction(
       endpoint: API.SubsonicEndpoint.setRating, parameters: ["id": id, "rating": rating])
   }
 
   /// Every song the account rated, with its rating.
-  func getRatedSongs() async throws -> [Song] {
+  static func getRatedSongs() async throws -> [Song] {
     try await ndList(API.NDEndpoint.getSong, ["has_rating": "true", "_start": 0, "_end": 0])
   }
 
   /// Every album the account rated, with its rating.
-  func getRatedAlbums() async throws -> [Album] {
+  static func getRatedAlbums() async throws -> [Album] {
     try await ndList(API.NDEndpoint.getAlbum, ["has_rating": "true", "_start": 0, "_end": 0])
   }
 
   /// Every artist the account rated, with its rating.
-  func getRatedArtists() async throws -> [Artist] {
+  static func getRatedArtists() async throws -> [Artist] {
     try await ndList(API.NDEndpoint.getArtists, ["has_rating": "true", "_start": 0, "_end": 0])
   }
 
   /// The server's version, nil when it does not say or does not answer.
-  func serverVersion() async -> String? {
+  static func serverVersion() async -> String? {
     let response: DataResponse<SubsonicEnvelope<BasicResponse>, AFError> =
       await APIManager.shared.subsonicRequest(endpoint: API.SubsonicEndpoint.ping, parameters: nil)
     return response.value?.subsonicResponse.serverVersion
   }
 
   /// Every liked song, album and artist of the account.
-  func getStarred() async throws -> (songs: [Song], collections: StarredCollections) {
+  static func getStarred() async throws -> (songs: [Song], collections: StarredCollections) {
     let response: DataResponse<SubsonicEnvelope<Starred2>, AFError> =
       await APIManager.shared.subsonicRequest(
         endpoint: API.SubsonicEndpoint.getStarred2, parameters: nil)
@@ -74,23 +74,23 @@ class AlbumService {
     return (starred.songs, starred.collections)
   }
 
-  func getSongFromAlbum(id: String) async throws -> [Song] {
+  static func getSongFromAlbum(id: String) async throws -> [Song] {
     try await ndList(
       API.NDEndpoint.getSong,
       ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "album", "album_id": id])
   }
 
-  func getAlbum() async throws -> [Album] {
+  static func getAlbum() async throws -> [Album] {
     try await ndList(
       API.NDEndpoint.getAlbum, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"])
   }
 
-  func getArtists() async throws -> [Artist] {
+  static func getArtists() async throws -> [Artist] {
     try await ndList(
       API.NDEndpoint.getArtists, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"])
   }
 
-  func getAlbumsByArtist(id: String) async throws -> [Album] {
+  static func getAlbumsByArtist(id: String) async throws -> [Album] {
     try await ndList(
       API.NDEndpoint.getAlbum,
       [
@@ -99,19 +99,19 @@ class AlbumService {
       ])
   }
 
-  func getPlaylists() async throws -> [Playlist] {
+  static func getPlaylists() async throws -> [Playlist] {
     try await ndList(
       API.NDEndpoint.getPlaylists, ["_start": 0, "_end": 0, "_order": "ASC", "_sort": "name"])
   }
 
-  func getSongsByPlaylist(id: String) async throws -> [Song] {
+  static func getSongsByPlaylist(id: String) async throws -> [Song] {
     try await ndList(
       "\(API.NDEndpoint.getPlaylists)/\(id)/tracks",
       ["playlist_id": id, "_start": 0, "_end": 0, "_order": "ASC", "_sort": "id"])
   }
 
   /// A whole list from Navidrome's own API.
-  private func ndList<T: Decodable>(
+  private static func ndList<T: Decodable>(
     _ endpoint: String, _ parameters: [String: Any]
   ) async throws -> [T] {
     let response: DataResponse<[T], AFError> =
@@ -121,7 +121,7 @@ class AlbumService {
 
   /// The stamp of the server's `entity` list ("song", "album", ...), from a
   /// one item request.
-  func getLibraryStamp(entity: String) async throws -> LibraryStamp {
+  static func getLibraryStamp(entity: String) async throws -> LibraryStamp {
     let params: [String: Any] = ["_start": 0, "_end": 1, "_sort": "updated_at", "_order": "DESC"]
 
     let response: DataResponse<[UpdatedAtOnly], AFError> =
@@ -132,7 +132,7 @@ class AlbumService {
   }
 
   /// One page of the song library, most recently changed first.
-  func getSongsPage(start: Int, end: Int) async throws -> [SongPageItem] {
+  static func getSongsPage(start: Int, end: Int) async throws -> [SongPageItem] {
     let params: [String: Any] = [
       "_start": start, "_end": end, "_sort": "updated_at", "_order": "DESC",
     ]
@@ -141,7 +141,9 @@ class AlbumService {
   }
 
   /// One page of the server's play log, highest id first, with the log's size.
-  func getScrobblePage(start: Int, end: Int) async throws -> (rows: [ScrobbleRow], total: Int?) {
+  static func getScrobblePage(start: Int, end: Int) async throws -> (
+    rows: [ScrobbleRow], total: Int?
+  ) {
     let params: [String: Any] = ["_start": start, "_end": end, "_sort": "id", "_order": "DESC"]
 
     let response: DataResponse<[ScrobbleRow], AFError> =
@@ -154,7 +156,9 @@ class AlbumService {
   /// Downloads the cover art `artId` as the stored cover of `id`; without
   /// `overwrite` a cover already stored stays.
   @discardableResult
-  func downloadCover(artId: String, as id: String, overwrite: Bool = true) async throws -> URL {
+  static func downloadCover(artId: String, as id: String, overwrite: Bool = true) async throws
+    -> URL
+  {
     let params: [String: Any] = ["id": artId, "size": AppPlatform.coverArtSize]
 
     let tempFile = try await APIManager.shared.subsonicDownload(
@@ -167,7 +171,7 @@ class AlbumService {
 
   /// The download of one song for `DownloadSession`: the original file for
   /// `kbps` 0, else an MP3 the server converts, which has no length.
-  func downloadRequest(mediaFileId: String, kbps: Int) -> URLRequest? {
+  static func downloadRequest(mediaFileId: String, kbps: Int) -> URLRequest? {
     guard !UserDefaultsManager.serverBaseURL.isEmpty else { return nil }
     let format = TranscodingSettings.convertedFormat(kbps: kbps) ?? TranscodingSettings.sourceFormat
     let params: [String: Any] = ["id": mediaFileId, "format": format, "bitrate": kbps]

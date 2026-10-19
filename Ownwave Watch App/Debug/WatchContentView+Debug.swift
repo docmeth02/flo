@@ -44,16 +44,16 @@
       var album: Album
       var playlist: Playlist?
       if kind == "playlist" {
-        let playlists = (try? await AlbumService.shared.getPlaylists()) ?? []
+        let playlists = (try? await LibraryAPI.getPlaylists()) ?? []
         guard var first = playlists.first else { return debugLog("no playlists") }
-        first.songs = (try? await AlbumService.shared.getSongsByPlaylist(id: first.id)) ?? []
+        first.songs = (try? await LibraryAPI.getSongsByPlaylist(id: first.id)) ?? []
         playlist = first
         album = Album(from: first)
         DownloadSession.shared.enqueue(first)
       } else {
         let albums: [Album]
         do {
-          albums = try await AlbumService.shared.getAlbum()
+          albums = try await LibraryAPI.getAlbum()
         } catch {
           debugLog("albums failed: \(error)")
           albums = []
@@ -61,7 +61,7 @@
         var smallest: Album?
         for candidate in albums.prefix(10) {
           var loaded = candidate
-          loaded.songs = (try? await AlbumService.shared.getSongFromAlbum(id: candidate.id)) ?? []
+          loaded.songs = (try? await LibraryAPI.getSongFromAlbum(id: candidate.id)) ?? []
           if !loaded.songs.isEmpty, loaded.songs.count < (smallest?.songs.count ?? .max) {
             smallest = loaded
           }
@@ -302,19 +302,19 @@
       case "albums": view = AnyView(WatchAlbumsListView())
       case "artists": view = AnyView(WatchArtistsListView())
       case "album":
-        guard let album = try? await AlbumService.shared.getAlbum().first else {
+        guard let album = try? await LibraryAPI.getAlbum().first else {
           return debugLog("screen hook: no albums")
         }
         view = AnyView(WatchAlbumDetailView(album: album))
       case "playlist":
-        guard let playlist = try? await AlbumService.shared.getPlaylists().first else {
+        guard let playlist = try? await LibraryAPI.getPlaylists().first else {
           return debugLog("screen hook: no playlists")
         }
         view = AnyView(WatchPlaylistDetailView(playlist: playlist))
       case "artist":
         // The artist with the most albums, so the album list has rows.
         guard
-          let artist = try? await AlbumService.shared.getArtists().max(by: {
+          let artist = try? await LibraryAPI.getArtists().max(by: {
             $0.albumCount < $1.albumCount
           })
         else {
@@ -344,11 +344,11 @@
       // button does, to check that the pushed screen gives way to the player;
       // =<albumId>:<songId> plays that song of that album instead.
       guard let play = ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN_PLAY"],
-        var album = try? await AlbumService.shared.getAlbum().first
+        var album = try? await LibraryAPI.getAlbum().first
       else { return }
       let target = play.split(separator: ":").map(String.init)
       if target.count == 2 { album.id = target[0] }
-      album.songs = (try? await AlbumService.shared.getSongFromAlbum(id: album.id)) ?? []
+      album.songs = (try? await LibraryAPI.getSongFromAlbum(id: album.id)) ?? []
       let index = target.count == 2 ? album.songs.firstIndex { $0.playbackID == target[1] } ?? 0 : 0
       try? await Task.sleep(nanoseconds: 3_000_000_000)
       // Library screens are links the reset drops; this one is hook state.

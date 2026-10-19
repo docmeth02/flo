@@ -52,7 +52,7 @@ import Foundation
   init(
     defaults: UserDefaults = .standard,
     canSend: @escaping () -> Bool = PendingEdits<Int>.serverReachable,
-    send: @escaping PendingEdits<Int>.Send = AlbumService.shared.setRating
+    send: @escaping PendingEdits<Int>.Send = LibraryAPI.setRating
   ) {
     self.defaults = defaults
     confirmed =
@@ -187,9 +187,9 @@ import Foundation
     let confirmations = confirmedEdits
     let cacheGeneration = LibraryCacheManager.shared.generation
 
-    async let ratedSongs = AlbumService.shared.getRatedSongs()
-    async let ratedAlbums = AlbumService.shared.getRatedAlbums()
-    async let ratedArtists = AlbumService.shared.getRatedArtists()
+    async let ratedSongs = LibraryAPI.getRatedSongs()
+    async let ratedAlbums = LibraryAPI.getRatedAlbums()
+    async let ratedArtists = LibraryAPI.getRatedArtists()
     guard let songs = try? await ratedSongs, let albums = try? await ratedAlbums,
       let artists = try? await ratedArtists
     else {

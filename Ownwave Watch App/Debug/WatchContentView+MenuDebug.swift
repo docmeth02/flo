@@ -25,8 +25,8 @@
       }
       guard env["FLO_DEBUG_STAR"] != nil || env["FLO_DEBUG_MENU"] != nil else { return }
       try? await Task.sleep(nanoseconds: 4_000_000_000)
-      let albums = (try? await AlbumService.shared.getAlbum()) ?? []
-      let artists = (try? await AlbumService.shared.getArtists()) ?? []
+      let albums = (try? await LibraryAPI.getAlbum()) ?? []
+      let artists = (try? await LibraryAPI.getArtists()) ?? []
 
       if case (let kind, let id)? = env["FLO_DEBUG_STAR"].flatMap(Self.debugItem) {
         // The cached lists when offline, where the requests above fail.
@@ -48,7 +48,7 @@
       switch env["FLO_DEBUG_MENU"] {
       case "song":
         guard var album = albums.first else { return debugLog("menu hook: no albums") }
-        album.songs = (try? await AlbumService.shared.getSongFromAlbum(id: album.id)) ?? []
+        album.songs = (try? await LibraryAPI.getSongFromAlbum(id: album.id)) ?? []
         guard let song = album.songs.first else { return debugLog("menu hook: no songs") }
         screen = AnyView(WatchAlbumDetailView(album: album))
         target = .song(song, context: album.name, isFromPlaylist: false)

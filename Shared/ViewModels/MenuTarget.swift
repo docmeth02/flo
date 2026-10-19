@@ -84,7 +84,7 @@ enum MenuTarget: Identifiable {
       var songs = await SmartPlaybackService.shared.loadCachedLibrary().songs
         .filter { $0.albumId == album.id }
       if songs.isEmpty, serverReachable {
-        songs = (try? await AlbumService.shared.getSongFromAlbum(id: album.id)) ?? []
+        songs = (try? await LibraryAPI.getSongFromAlbum(id: album.id)) ?? []
       }
       if songs.isEmpty {
         // Offline: the downloaded tracks, which may be only some of them.
@@ -112,7 +112,7 @@ enum MenuTarget: Identifiable {
     case .playlist(let playlist):
       var songs: [Song] = []
       if serverReachable {
-        songs = (try? await AlbumService.shared.getSongsByPlaylist(id: playlist.id)) ?? []
+        songs = (try? await LibraryAPI.getSongsByPlaylist(id: playlist.id)) ?? []
       }
       if songs.isEmpty {
         songs = await MainActor.run {

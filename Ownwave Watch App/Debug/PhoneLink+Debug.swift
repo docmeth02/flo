@@ -40,7 +40,7 @@
     }
 
     private func deliverDebugFiles(albumId: String) async {
-      let songs = (try? await AlbumService.shared.getSongFromAlbum(id: albumId)) ?? []
+      let songs = (try? await LibraryAPI.getSongFromAlbum(id: albumId)) ?? []
       guard let key = AuthService.shared.accountKey, let first = songs.first else {
         return debugLog("phone link: no songs or no account")
       }
@@ -57,7 +57,7 @@
       album.name = first.albumName
       album.albumArtist = first.artist
       for song in songs.prefix(2) {
-        guard let request = AlbumService.shared.downloadRequest(mediaFileId: song.id, kbps: 192),
+        guard let request = LibraryAPI.downloadRequest(mediaFileId: song.id, kbps: 192),
           let (file, _) = try? await URLSession.shared.download(for: request)
         else { return debugLog("phone link: download failed") }
         let info = Link.FileInfo(
