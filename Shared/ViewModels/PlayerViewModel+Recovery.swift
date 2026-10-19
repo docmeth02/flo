@@ -449,6 +449,9 @@ extension PlayerViewModel {
     guard let item, item === playerItem else { return }
     // The load watchdog already counted this item and scheduled the skip.
     guard item !== countedFailedItem else { return }
+    if !currentSourceIsRemote, let file = (item.asset as? AVURLAsset)?.url {
+      StreamCacheManager.shared.evict(fileURL: file)
+    }
     // Only the current queue entry's remote song is waited for, reloaded or
     // resumed; anything else that fails is skipped.
     let remoteSong = isCurrentTrack(trackId) && !isLiveRadio && currentSourceIsRemote

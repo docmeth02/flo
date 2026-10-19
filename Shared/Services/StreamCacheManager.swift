@@ -85,6 +85,15 @@ class StreamCacheManager {
     return fileURL
   }
 
+  /// Drops the cached copy at `fileURL`, which failed to play and would fail
+  /// again on every later play. Main thread; a file outside the cache, such
+  /// as a download, is left alone.
+  func evict(fileURL: URL) {
+    guard fileURL.deletingLastPathComponent().path == cacheDirectory.path else { return }
+    try? fileManager.removeItem(at: fileURL)
+    removeCacheRecord(key: fileURL.deletingPathExtension().lastPathComponent)
+  }
+
   func cacheSong(mediaFileId: String, originalSuffix: String? = nil, from queueItem: QueueEntity? = nil) {
     guard UserDefaultsManager.streamCacheMaxSize > 0 else { return }
     guard !mediaFileId.isEmpty else { return }

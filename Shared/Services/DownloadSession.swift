@@ -81,6 +81,16 @@ enum DownloadFailure: Equatable {
     if isErrorBody || !(200..<300).contains(status) || bytes == 0 { return .counted }
     return nil
   }
+
+  static func isErrorBody(_ response: HTTPURLResponse?) -> Bool {
+    ["json", "xml"].contains { response?.mimeType?.contains($0) == true }
+  }
+
+  /// The code of a Subsonic JSON error body, nil when it cannot be read.
+  static func subsonicCode(in file: URL) -> Int? {
+    (try? JSONDecoder().decode(BasicSubsonicResponse.self, from: Data(contentsOf: file)))?
+      .subsonicResponse.error?.code
+  }
 }
 
 /// The waits before the retries of a failure that counts.
@@ -532,11 +542,8 @@ extension DownloadSession: URLSessionDownloadDelegate {
     let response = downloadTask.response as? HTTPURLResponse
     let status = response?.statusCode ?? 0
     let bytes = downloadTask.countOfBytesReceived
-    let isErrorBody = ["json", "xml"].contains { response?.mimeType?.contains($0) == true }
-    let subsonicCode =
-      isErrorBody
-      ? (try? JSONDecoder().decode(BasicSubsonicResponse.self, from: Data(contentsOf: location)))?
-        .subsonicResponse.error?.code : nil
+    let isErrorBody = DownloadFailure.isErrorBody(response)
+    let subsonicCode = isErrorBody ? DownloadFailure.subsonicCode(in: location) : nil
     log(job, "status=\(status) bytes=\(bytes)\(subsonicCode.map { " code=\($0)" } ?? "")")
     ConnectivityMonitor.shared.record(response: response, error: nil)
 

@@ -94,6 +94,8 @@ class APIManager {
   }
 
   /// Downloads to a temporary file; progress, when asked for, is in percent.
+  /// A Subsonic error body, which arrives with status 200, or an empty file
+  /// fails like an HTTP error.
   @discardableResult
   func SubsonicEndpointDownload(
     endpoint: String, parameters: Parameters?, allowsCellular: Bool = true,
@@ -113,12 +115,26 @@ class APIManager {
       request.downloadProgress { progressUpdate($0.fractionCompleted * 100) }
     }
     return request
-      .validate()
+      .validate { _, response, fileURL in
+        let isErrorBody = DownloadFailure.isErrorBody(response)
+        let code = isErrorBody ? fileURL.flatMap(DownloadFailure.subsonicCode(in:)) : nil
+        let bytes = fileURL.flatMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize }
+        guard
+          DownloadFailure.classify(
+            status: response.statusCode, isErrorBody: isErrorBody, subsonicCode: code,
+            bytes: Int64(bytes ?? 0)) == nil
+        else {
+          return .failure(SubsonicError(code: code ?? 0, message: "no file in the response"))
+        }
+        return .success(())
+      }
       .responseURL { response in
         switch response.result {
         case .success(let fileURL):
           completion(.success(fileURL))
         case .failure(let error):
+          // A rejected body would otherwise stay in the temporary folder.
+          if let file = response.fileURL { try? FileManager.default.removeItem(at: file) }
           completion(.failure(error))
         }
       }
