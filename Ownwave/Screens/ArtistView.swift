@@ -12,19 +12,16 @@ struct ArtistView: View {
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @Environment(\.palette) private var palette
-  @Environment(\.colorScheme) private var scheme
 
   @StateObject private var radio = ArtistDetailViewModel()
   @State private var topSongs: [Song] = []
-  @State private var hue: Double?
+  @State private var shades: CoverShades?
   @State private var showsRadioError = false
 
   /// The screen takes its backdrop and tint from the artist's first album.
   private var albums: [Album] { albumViewModel.albums(byArtist: artist.id) }
 
-  private var tint: Color {
-    hue.map { CoverShades(hue: $0, scheme: scheme).tint } ?? palette.accent
-  }
+  private var tint: Color { shades?.tint ?? palette.accent }
 
   private var meta: String {
     let albumCount = albums.isEmpty ? artist.albumCount : albums.count
@@ -65,9 +62,7 @@ struct ArtistView: View {
     .navigationBarTitleDisplayMode(.inline)
     .onAppear { albumViewModel.fetchAlbumsByArtist(id: artist.id) }
     .task(id: artist.id) { await loadTopSongs() }
-    .task(id: albums.first?.id) {
-      if let albumId = albums.first?.id { hue = await CoverTint.hue(albumId: albumId) }
-    }
+    .coverShades($shades, albumId: albums.first?.id ?? "")
     .alert(artist.name, isPresented: $showsRadioError) {
       Button("OK") {}
     } message: {

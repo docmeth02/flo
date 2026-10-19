@@ -15,19 +15,16 @@ struct AlbumView: View {
   // Redraws the track hearts when a song is liked from its menu.
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
-  @Environment(\.colorScheme) private var scheme
 
   // The loaded album stays with this screen when another one opens on top.
   @State private var localAlbum: Album?
-  @State private var hue: Double?
+  @State private var shades: CoverShades?
   @State private var downloaded = false
   @State private var downloadedIds: Set<String> = []
 
   private var displayAlbum: Album { localAlbum ?? album }
 
-  private var tint: Color {
-    hue.map { CoverShades(hue: $0, scheme: scheme).tint } ?? palette.fill
-  }
+  private var tint: Color { shades?.tint ?? palette.fill }
 
   /// The album artist as the Artist screen takes it: the listed one when the
   /// library has it.
@@ -72,7 +69,7 @@ struct AlbumView: View {
         .accessibilityLabel("More")
       }
     }
-    .task(id: album.id) { hue = await CoverTint.hue(albumId: album.id) }
+    .coverShades($shades, albumId: album.id)
     .onAppear {
       // Once: a return from a screen pushed on top keeps the loaded tracks,
       // also offline.

@@ -116,3 +116,32 @@ struct CoverShades {
     background = CoverTint.color(hue: hue, lightness: dark ? 0.3 : 0.9, chroma: dark ? 0.07 : 0.05)
   }
 }
+
+extension View {
+  /// Keeps `shades` at the colors of the album's cover in the color scheme
+  /// in use; nil until the cover is read, and for a gray one.
+  func coverShades(_ shades: Binding<CoverShades?>, albumId: String, url: String = "") -> some View {
+    modifier(CoverShading(shades: shades, albumId: albumId, url: url))
+  }
+}
+
+private struct CoverShading: ViewModifier {
+  @Binding var shades: CoverShades?
+  let albumId: String
+  let url: String
+
+  @Environment(\.colorScheme) private var scheme
+
+  private struct Key: Equatable {
+    let albumId: String
+    let scheme: ColorScheme
+  }
+
+  func body(content: Content) -> some View {
+    // The hue is memoized per album, so a new scheme only mixes the colors.
+    content.task(id: Key(albumId: albumId, scheme: scheme)) {
+      let hue = await CoverTint.hue(albumId: albumId, url: url)
+      shades = hue.map { CoverShades(hue: $0, scheme: scheme) }
+    }
+  }
+}

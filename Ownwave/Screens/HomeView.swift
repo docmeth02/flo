@@ -188,13 +188,12 @@ private struct NowPlayingCard: View {
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var player: PlayerViewModel
   @Environment(\.palette) private var palette
-  @Environment(\.colorScheme) private var scheme
 
-  @State private var hue: Double?
+  @State private var shades: CoverShades?
 
   var body: some View {
     let albumId = player.nowPlayingAlbumId
-    let tint = hue.map { CoverShades(hue: $0, scheme: scheme).tint } ?? palette.accent
+    let tint = shades?.tint ?? palette.accent
     Button {
       app.isNowPlayingPresented = true
     } label: {
@@ -231,7 +230,7 @@ private struct NowPlayingCard: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .task(id: albumId) { hue = await CoverTint.hue(albumId: albumId, url: player.coverArt) }
+    .coverShades($shades, albumId: albumId, url: player.coverArt)
   }
 }
 
