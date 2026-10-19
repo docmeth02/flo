@@ -650,6 +650,8 @@ class PlayerViewModel: ObservableObject {
 
     self.isFinished = true
     self.isPlaying = false
+    // The system's clock runs on from the last rate it was given.
+    updateNowPlayingInfo(progress: 0, rate: 0.0)
     MainActor.assumeIsolated { NowPlayingTarget.current = nil }
   }
 
