@@ -75,18 +75,8 @@ final class DownloadSession: NSObject, ObservableObject {
   /// device holds as much as a finished song does.
   let downloadsRemoved = PassthroughSubject<Void, Never>()
 
-  private lazy var session: URLSession = {
-    let configuration = URLSessionConfiguration.background(
-      withIdentifier: "\(Bundle.main.bundleIdentifier ?? "flo").downloads")
-    configuration.sessionSendsLaunchEvents = true
-    configuration.isDiscretionary = false
-    // Two transcodes over the phone link would halve each other's rate, and
-    // the player's stream must not starve.
-    configuration.httpMaximumConnectionsPerHost = 1
-    // A background task otherwise waits up to 7 days and never fails.
-    configuration.timeoutIntervalForResource = 2 * 3600
-    return URLSession(configuration: configuration, delegate: self, delegateQueue: .main)
-  }()
+  private lazy var session = URLSession.background(
+    identifier: "\(Bundle.main.bundleIdentifier ?? "flo").downloads", delegate: self)
 
   private static let jobFile = JobFile<DownloadJob>(
     fileURL: URL.applicationSupportDirectory.appendingPathComponent("download-jobs.json"),
@@ -97,7 +87,7 @@ final class DownloadSession: NSObject, ObservableObject {
   private var retries: [String: DispatchWorkItem] = [:]
   /// Job ids queued together per collection, for its progress.
   private var batches: [String: Set<String>]
-  private var backgroundCompletions: [UUID: () -> Void] = [:]
+  private let backgroundEvents = BackgroundEventCompletions()
   /// Nothing is submitted before the session's tasks are known, or a song
   /// still downloading from before the launch would get a second task.
   private var hasReconciled = false
@@ -235,21 +225,8 @@ final class DownloadSession: NSObject, ObservableObject {
     }
   }
 
-  /// Keeps the system's wake-up for this session until the session has
-  /// delivered its events. They may also have come before the wake-up (the
-  /// session exists from launch), so a deadline completes it in any case.
   func handleBackgroundEvents(completion: @escaping () -> Void) {
-    let id = UUID()
-    backgroundCompletions[id] = completion
-    DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-      self.backgroundCompletions.removeValue(forKey: id)?()
-    }
-  }
-
-  private func completeBackgroundEvents() {
-    let completions = backgroundCompletions.values
-    backgroundCompletions = [:]
-    completions.forEach { $0() }
+    backgroundEvents.hold(completion)
   }
 
   /// Tasks created in the background are discretionary for good, so they are
@@ -484,6 +461,6 @@ extension DownloadSession: URLSessionDownloadDelegate {
   }
 
   func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-    completeBackgroundEvents()
+    backgroundEvents.complete()
   }
 }

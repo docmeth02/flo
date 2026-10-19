@@ -97,3 +97,43 @@ struct JobFile<Job: Codable> {
     }
   }
 }
+
+extension URLSession {
+  /// A session that transfers while the app is suspended or was ended by the
+  /// system, which relaunches the app in the background to hand the files
+  /// over. It delegates on the main queue.
+  static func background(identifier: String, delegate: URLSessionDelegate) -> URLSession {
+    let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
+    configuration.sessionSendsLaunchEvents = true
+    configuration.isDiscretionary = false
+    // Two transcodes over the phone link would halve each other's rate, and
+    // the player's stream must not starve.
+    configuration.httpMaximumConnectionsPerHost = 1
+    // A background task otherwise waits up to 7 days and never fails.
+    configuration.timeoutIntervalForResource = 2 * 3600
+    return URLSession(configuration: configuration, delegate: delegate, delegateQueue: .main)
+  }
+}
+
+/// Keeps the system's wake-ups for a background session until the session
+/// has delivered its events. They may also have come before the wake-up (the
+/// session exists from launch), so a deadline completes each in any case.
+/// Main thread only.
+final class BackgroundEventCompletions {
+  private var completions: [UUID: () -> Void] = [:]
+
+  func hold(_ completion: @escaping () -> Void) {
+    let id = UUID()
+    completions[id] = completion
+    DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+      self.completions.removeValue(forKey: id)?()
+    }
+  }
+
+  /// The session delivered its events.
+  func complete() {
+    let held = completions.values
+    completions = [:]
+    held.forEach { $0() }
+  }
+}
