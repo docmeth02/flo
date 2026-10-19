@@ -59,6 +59,8 @@ enum Link {
       let songs: Int
       /// Nil when its songs came at different bitrates.
       let kbps: Int?
+      /// Songs the watch is still downloading itself; nil when none.
+      var downloading: Int? = nil
     }
 
     var account: Account?

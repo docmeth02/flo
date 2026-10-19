@@ -162,11 +162,21 @@ struct WatchView: View {
       SectionTitle("On the watch")
       ForEach(collections) { collection in
         let kbps = collection.kbps.map { " · \($0) kbps" } ?? ""
+        let left = collection.downloading ?? 0
         ItemRow(
           art: .cover(albumId: collection.id), title: collection.name,
-          subtitle: counted(collection.songs, "song") + kbps, artSize: 44
+          subtitle: left > 0
+            ? "Downloading on the watch" : counted(collection.songs, "song") + kbps,
+          artSize: 44
         ) {
-          Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.floDownloaded)
+          if left > 0 {
+            Text("\(collection.songs * 100 / (collection.songs + left))%")
+              .font(.rowSubtitle)
+              .monospacedDigit()
+              .foregroundStyle(palette.secondary)
+          } else {
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.floDownloaded)
+          }
         }
         .card()
       }

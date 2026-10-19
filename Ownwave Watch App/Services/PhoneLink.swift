@@ -49,7 +49,9 @@ import WatchKit
     // A deletion changes the inventory too, or the phone keeps refusing to
     // send what is gone.
     downloads = DownloadSession.shared.downloadFinished.map { _ in () }
-      .merge(with: DownloadSession.shared.downloadsRemoved)
+      .merge(
+        with: DownloadSession.shared.downloadsRemoved, DownloadSession.shared.$jobs.map { _ in () }
+      )
       .debounce(for: .seconds(2), scheduler: DispatchQueue.main)
       .sink { _ in PhoneLink.shared.publishState() }
     // Files of the old account are dropped from now on. The login change
@@ -93,8 +95,10 @@ import WatchKit
     let downloadBitRate = UserDefaultsManager.downloadBitRate
     let incoming = incoming
     let account = PhoneLinkReceiver.signedInAccount()
+    let downloading = DownloadSession.shared.jobs.filter { !$0.failed }
+      .reduce(into: [String: Int]()) { $0[$1.collectionId, default: 0] += 1 }
     Task {
-      var state = await Self.inventory()
+      var state = await Self.inventory(downloading: downloading)
       state.account = account
       state.downloadBitRate = downloadBitRate
       state.incoming = incoming
@@ -196,9 +200,9 @@ import WatchKit
     heldTasks = []
   }
 
-  /// The downloaded collections with their song counts and bitrates, the
-  /// size of the downloads and the room left.
-  private static func inventory() async -> Link.WatchState {
+  /// The downloaded collections with their song counts, bitrates and songs
+  /// still downloading, the size of the downloads and the room left.
+  private static func inventory(downloading: [String: Int]) async -> Link.WatchState {
     async let bytes = LocalFileManager.shared.downloadsBytes()
     var state = await CoreDataManager.shared.performBackground { context in
       let collections = (try? context.fetch(PlaylistEntity.fetchRequest())) ?? []
@@ -212,7 +216,7 @@ import WatchKit
         let rates = Set(songs.map(\.bitRate))
         return .init(
           id: id, name: collection.name ?? "", songs: songs.count,
-          kbps: rates.count == 1 ? rates.first.map(Int.init) : nil)
+          kbps: rates.count == 1 ? rates.first.map(Int.init) : nil, downloading: downloading[id])
       }
       return state
     }
