@@ -29,11 +29,14 @@ extension SubsonicError {
 struct SubsonicResponse<T: SubsonicResponseData>: Decodable {
   let status: String
   let error: SubsonicError?
+  /// OpenSubsonic servers name their version in every answer.
+  let serverVersion: String?
   let data: T?
 
   enum CodingKeys: String, CodingKey {
     case status
     case error
+    case serverVersion
   }
 
   init(from decoder: Decoder) throws {
@@ -41,6 +44,7 @@ struct SubsonicResponse<T: SubsonicResponseData>: Decodable {
 
     status = try container.decode(String.self, forKey: .status)
     error = try container.decodeIfPresent(SubsonicError.self, forKey: .error)
+    serverVersion = try container.decodeIfPresent(String.self, forKey: .serverVersion)
 
     let rootContainer = try decoder.container(keyedBy: ExtraField.self)
     data = try rootContainer.decodeIfPresent(T.self, forKey: ExtraField(stringValue: T.key))
@@ -64,65 +68,41 @@ extension SubsonicResponse {
   }
 }
 
-/// The answer to `/rest/ping`; OpenSubsonic servers name their version.
-struct PingResponse: Decodable {
-  struct Body: Decodable {
-    let serverVersion: String?
-  }
-
-  let subsonicResponse: Body
-
-  enum CodingKeys: String, CodingKey {
-    case subsonicResponse = "subsonic-response"
-  }
-}
-
-/// A Subsonic response without payload, unwrapped from its
-/// `subsonic-response` envelope.
-struct BasicSubsonicResponse: Decodable {
-  let subsonicResponse: SubsonicResponse<BasicResponse>
-
-  enum CodingKeys: String, CodingKey {
-    case subsonicResponse = "subsonic-response"
-  }
-}
-
-struct Starred2Response: Codable {
-  struct SubsonicResponseBody: Codable {
-    struct Starred2: Codable {
-      let song: [SubsonicSong]?
-      let album: [Item]?
-      let artist: [Item]?
-    }
-
-    struct Item: Codable {
-      let id: String
-    }
-
-    let status: String
-    let error: SubsonicError?
-    let starred2: Starred2?
-  }
-
-  let subsonicResponse: SubsonicResponseBody
+/// A Subsonic answer, unwrapped from its `subsonic-response` envelope.
+struct SubsonicEnvelope<T: SubsonicResponseData>: Decodable {
+  let subsonicResponse: SubsonicResponse<T>
 
   enum CodingKeys: String, CodingKey {
     case subsonicResponse = "subsonic-response"
   }
 
-  /// A failed answer has no lists, which must not read as "nothing liked".
+  /// The failure the answer reports, nil for "ok". A failed answer carries
+  /// no payload, which must not read as an empty one.
   var failure: SubsonicError? {
     SubsonicError(status: subsonicResponse.status, error: subsonicResponse.error)
   }
 
+  var data: T? { subsonicResponse.data }
+}
+
+/// The getStarred2 payload: the liked songs, albums and artists.
+struct Starred2: SubsonicResponseData {
+  static let key = "starred2"
+
+  struct Item: Decodable {
+    let id: String
+  }
+
+  let song: [SubsonicSong]?
+  let album: [Item]?
+  let artist: [Item]?
+
   var songs: [Song] {
-    return (subsonicResponse.starred2?.song ?? []).map { $0.toSong() }
+    (song ?? []).map { $0.toSong() }
   }
 
   var collections: StarredCollections {
-    StarredCollections(
-      albums: (subsonicResponse.starred2?.album ?? []).map(\.id),
-      artists: (subsonicResponse.starred2?.artist ?? []).map(\.id))
+    StarredCollections(albums: (album ?? []).map(\.id), artists: (artist ?? []).map(\.id))
   }
 }
 
@@ -185,14 +165,6 @@ struct TranscodeDecision: SubsonicResponseData {
   let sourceStream: StreamInfo?
   let transcodeStream: StreamInfo?
   let errorReason: String?
-}
-
-struct TranscodeDecisionResponse: Decodable {
-  let subsonicResponse: SubsonicResponse<TranscodeDecision>
-
-  enum CodingKeys: String, CodingKey {
-    case subsonicResponse = "subsonic-response"
-  }
 }
 
 /// What the watch can play, sent with every transcode decision request.

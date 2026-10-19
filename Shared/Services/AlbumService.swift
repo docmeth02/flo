@@ -257,7 +257,7 @@ class AlbumService {
       encoder: JSONParameterEncoder.default, requestModifier: { $0.timeoutInterval = 10 }
     )
     .validate(statusCode: 200..<300)
-    .serializingDecodable(TranscodeDecisionResponse.self).response
+    .serializingDecodable(SubsonicEnvelope<TranscodeDecision>.self).response
 
     let underlyingError = response.error?.underlyingError
     ConnectivityMonitor.shared.record(response: response.response, error: underlyingError)
@@ -337,7 +337,7 @@ class AlbumService {
   /// The server's version, nil when it does not say or does not answer.
   func serverVersion(completion: @escaping (String?) -> Void) {
     APIManager.shared.SubsonicEndpointRequest(endpoint: API.SubsonicEndpoint.ping, parameters: nil) {
-      (response: DataResponse<PingResponse, AFError>) in
+      (response: DataResponse<SubsonicEnvelope<BasicResponse>, AFError>) in
       completion(response.value?.subsonicResponse.serverVersion)
     }
   }
@@ -353,11 +353,12 @@ class AlbumService {
     APIManager.shared.SubsonicEndpointRequest(
       endpoint: API.SubsonicEndpoint.getStarred2, parameters: nil
     ) {
-      (response: DataResponse<Starred2Response, AFError>) in
+      (response: DataResponse<SubsonicEnvelope<Starred2>, AFError>) in
       completion(
         response.result.mapError { $0 as Error }.flatMap { reply in
           if let failure = reply.failure { return .failure(failure) }
-          return .success((reply.songs, reply.collections))
+          let starred = reply.data ?? Starred2(song: nil, album: nil, artist: nil)
+          return .success((starred.songs, starred.collections))
         })
     }
   }

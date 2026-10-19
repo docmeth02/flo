@@ -78,11 +78,10 @@ class APIManager {
     completion: @escaping (Result<Void, Error>) -> Void
   ) {
     SubsonicEndpointRequest(endpoint: endpoint, parameters: parameters) {
-      (response: DataResponse<BasicSubsonicResponse, AFError>) in
+      (response: DataResponse<SubsonicEnvelope<BasicResponse>, AFError>) in
       switch response.result {
       case .success(let body):
-        let reply = body.subsonicResponse
-        if let failure = SubsonicError(status: reply.status, error: reply.error) {
+        if let failure = body.failure {
           completion(.failure(failure))
         } else {
           completion(.success(()))

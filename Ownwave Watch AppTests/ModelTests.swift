@@ -9,18 +9,18 @@ final class ModelTests: XCTestCase {
   /// Subsonic answers a failure with HTTP 200 and no lists, which must not
   /// read as nothing liked.
   func testFailedStarredAnswerIsAFailure() throws {
-    func decode(_ json: String) throws -> Starred2Response {
-      try JSONDecoder().decode(Starred2Response.self, from: Data(json.utf8))
+    func decode(_ json: String) throws -> SubsonicEnvelope<Starred2> {
+      try JSONDecoder().decode(SubsonicEnvelope<Starred2>.self, from: Data(json.utf8))
     }
     let failed = try decode(
       #"{"subsonic-response":{"status":"failed","error":{"code":40,"message":"Wrong password"}}}"#)
     XCTAssertEqual(failed.failure?.code, 40)
-    XCTAssertEqual(failed.songs.count, 0)
+    XCTAssertNil(failed.data)
 
     let ok = try decode(
       #"{"subsonic-response":{"status":"ok","starred2":{"album":[{"id":"al"}]}}}"#)
     XCTAssertNil(ok.failure)
-    XCTAssertEqual(ok.collections.albums, ["al"])
+    XCTAssertEqual(ok.data?.collections.albums, ["al"])
 
     XCTAssertEqual(SubsonicError(status: "failed", error: nil)?.code, 0)
     XCTAssertNil(SubsonicError(status: "ok", error: nil))

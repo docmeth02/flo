@@ -10,17 +10,6 @@ struct RadioList: SubsonicResponseData {
   let internetRadioStation: [Radio]
 }
 
-struct RadioListResponse: Decodable {
-  let subsonicResponse: SubsonicResponse<RadioList>
-
-  private enum CodingKeys: String, CodingKey {
-    case subsonicResponse = "subsonic-response"
-  }
-  var radioStations: [Radio] {
-    return subsonicResponse.data?.internetRadioStation ?? []
-  }
-}
-
 struct Radio: Codable, Identifiable, Hashable {
   let id: String
   let name: String

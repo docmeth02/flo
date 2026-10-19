@@ -22,19 +22,8 @@ enum TopSongsKey: SubsonicSongListKey {
 struct SubsonicSongList<Key: SubsonicSongListKey>: SubsonicResponseData {
   static var key: String { Key.key }
   let song: [SubsonicSong]?
-}
-
-struct SubsonicSongListResponse<Key: SubsonicSongListKey>: Decodable {
-  let subsonicResponse: SubsonicResponse<SubsonicSongList<Key>>
-
-  private enum CodingKeys: String, CodingKey {
-    case subsonicResponse = "subsonic-response"
-  }
 
   var songs: [Song] {
-    (subsonicResponse.data?.song ?? []).map { $0.toSong() }
+    (song ?? []).map { $0.toSong() }
   }
 }
-
-typealias SimilarSongsResponse = SubsonicSongListResponse<SimilarSongsKey>
-typealias TopSongsResponse = SubsonicSongListResponse<TopSongsKey>

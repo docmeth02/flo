@@ -88,7 +88,7 @@ enum DownloadFailure: Equatable {
 
   /// The code of a Subsonic JSON error body, nil when it cannot be read.
   static func subsonicCode(in file: URL) -> Int? {
-    (try? JSONDecoder().decode(BasicSubsonicResponse.self, from: Data(contentsOf: file)))?
+    (try? JSONDecoder().decode(SubsonicEnvelope<BasicResponse>.self, from: Data(contentsOf: file)))?
       .subsonicResponse.error?.code
   }
 }
