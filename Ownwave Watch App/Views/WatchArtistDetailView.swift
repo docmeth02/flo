@@ -63,7 +63,7 @@ struct WatchArtistDetailView: View {
       Section {
         ForEach(albumViewModel.albums(byArtist: artist.id)) { album in
           CoverRow(
-            tile: .album(album.id),
+            tile: .cover(albumId: album.id),
             title: album.name,
             subtitle: album.minYear > 0 ? String(album.minYear) : "")
           .holdable(onTap: { openedAlbum = album }, onHold: { menu = .album(album) })

@@ -41,6 +41,7 @@ struct FloNavRow: View {
 /// trailing mark.
 struct CoverRow<Trailing: View>: View {
   enum Tile {
+    /// The album's cover, read from its download when there is one.
     case cover(albumId: String)
     /// A lilac glyph, round for an artist or a station.
     case glyph(String, round: Bool = false)
@@ -93,9 +94,6 @@ struct CoverRow<Trailing: View>: View {
 }
 
 extension CoverRow.Tile {
-  /// The album's cover, read from its download when there is one.
-  static func album(_ id: String) -> Self { .cover(albumId: id) }
-
   /// The round glyph standing in for an artist's picture.
   static var artist: Self { .glyph("music.mic", round: true) }
 }
@@ -116,7 +114,7 @@ struct AlbumRow: View {
   let open: () -> Void
 
   var body: some View {
-    CoverRow(tile: .album(album.id), title: album.name, subtitle: album.albumArtist) {
+    CoverRow(tile: .cover(albumId: album.id), title: album.name, subtitle: album.albumArtist) {
       if isPinned { PinGlyph() }
     }
     .holdable(onTap: open, onHold: { menu = .album(album) })

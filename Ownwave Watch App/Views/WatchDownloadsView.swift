@@ -32,7 +32,9 @@ struct WatchDownloadsView: View {
 
           ForEach(albumViewModel.downloadedAlbums) { album in
             NavigationLink(destination: WatchAlbumDetailView(album: album)) {
-              CoverRow(tile: .album(album.id), title: album.name, subtitle: album.albumArtist) {
+              CoverRow(
+                tile: .cover(albumId: album.id), title: album.name, subtitle: album.albumArtist
+              ) {
                 // An album shows up here with its first song, so the check
                 // waits until its download has finished without a failure.
                 if downloads.isDownloading(collectionId: album.id) {
