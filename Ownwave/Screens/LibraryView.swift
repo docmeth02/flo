@@ -160,8 +160,8 @@ struct LibraryView: View {
   /// StarStore's edits over their listed stars, as on the watch.
   @ViewBuilder private var liked: some View {
     let songs = app.likedSongs
-    let albums = albumViewModel.albums.filter { stars.isStarred($0.id, listed: $0.starred) }
-    let artists = albumViewModel.artists.filter { stars.isStarred($0.id, listed: $0.starred) }
+    let albums = app.likedAlbums
+    let artists = app.likedArtists
     let states = [AlbumViewModel.Library.starredSongs, .albums, .artists].map(albumViewModel.state)
     listed(
       ListState(

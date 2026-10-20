@@ -229,6 +229,14 @@ class StreamCacheManager {
     }
   }
 
+  /// Media ids with a ready copy at any bitrate: what plays without the
+  /// server. Unlike `cachedFileURL`, it touches no record.
+  func readyMediaFileIds() -> Set<String> {
+    Set(
+      CoreDataManager.shared.getRecordsByEntity(entity: CacheEntity.self)
+        .filter { $0.state == State.ready.rawValue }.compactMap(\.mediaFileId))
+  }
+
   func getCachedSongs() -> [Song] {
     let sortDescriptor = NSSortDescriptor(key: "lastAccessedAt", ascending: false)
     let records = CoreDataManager.shared.getRecordsByEntity(

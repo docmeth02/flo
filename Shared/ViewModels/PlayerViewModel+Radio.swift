@@ -52,7 +52,8 @@ extension PlayerViewModel {
 
     self.play()
 
-    self.publishNowPlaying(title: item.name, artist: queue[0].artistName ?? "", duration: 0)
+    self.publishNowPlaying(
+      title: item.name, artist: queue[0].artistName ?? "", album: "", duration: 0)
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
     return true
   }

@@ -95,6 +95,14 @@ struct MixRecord: Codable, Sendable {
     return nil
   }
 
+  /// Why a mix queued the entry, while the listener wants to see it.
+  func shownReason(for entry: QueueEntity) -> MixReason? {
+    guard UserDefaultsManager.showMixReasons,
+      entry.playbackOrigin.isMix, let id = entry.id
+    else { return nil }
+    return reason(for: id)
+  }
+
   /// The saved mixes, if they are the account's.
   nonisolated static func restore(_ data: Data, account: String) -> [MixRecord] {
     guard let saved = try? JSONDecoder().decode(Saved.self, from: data), saved.account == account

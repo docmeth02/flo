@@ -345,7 +345,7 @@ private struct PlayerPage: View {
   private func rate(_ n: Int) {
     let value = rating == n ? 0 : n
     player.rateNowPlaying(value)
-    if value == 1 { app.show("Avoided · skipped from mixes") }
+    if value == 1 { app.show("Avoided · skipped") }
     if value == 5 { app.show("Boosted") }
   }
 
@@ -498,8 +498,7 @@ private struct UpNextPage: View {
   }
 
   private var meta: String {
-    guard player.isSmartMix else { return counted(player.queue.count, "song") }
-    return UserDefaultsManager.keepPlaying ? "Smart Mix · Keep Playing on" : "Smart Mix"
+    player.isSmartMix ? player.upNextSource : counted(player.queue.count, "song")
   }
 
   var body: some View {
@@ -612,16 +611,6 @@ private struct GlassCircle: View {
       .font(.system(size: 17, weight: .semibold))
       .frame(width: 40, height: 40)
       .glassEffect(.regular.interactive(), in: Circle())
-  }
-}
-
-extension RecommendationLog {
-  /// Why a mix queued the entry, while the listener wants to see it.
-  fileprivate func shownReason(for entry: QueueEntity) -> MixReason? {
-    guard UserDefaultsManager.showMixReasons,
-      entry.playbackOrigin.isMix, let id = entry.id
-    else { return nil }
-    return reason(for: id)
   }
 }
 

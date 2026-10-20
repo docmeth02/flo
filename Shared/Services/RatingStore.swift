@@ -3,6 +3,7 @@
 //  flo
 //
 
+import Combine
 import Foundation
 
 /// The account's song ratings by playback id: the server's, overlaid with
@@ -18,6 +19,9 @@ import Foundation
     return store
   }()
 
+  /// A song or artist rated 1 here, by its id; the player skips it while it
+  /// plays. Edits from other clients never send it.
+  let avoided = PassthroughSubject<String, Never>()
   /// 1 to 5 per playback id; unrated songs are absent.
   @Published private(set) var ratings: [String: Int] = [:]
   /// 1 to 5 per album id; unrated albums are absent.
@@ -109,6 +113,7 @@ import Foundation
     artistConfirmed[id] = nil
     defaults.set(artistConfirmed, forKey: UserDefaultsKeys.confirmedArtistRatings)
     publish()
+    if rating == 1 { avoided.send(id) }
   }
 
   /// Whether a rating edit for this song or artist waits for the server.
@@ -129,6 +134,7 @@ import Foundation
     confirmed[id] = nil
     defaults.set(confirmed, forKey: UserDefaultsKeys.confirmedRatings)
     publish()
+    if rating == 1 { avoided.send(id) }
   }
 
   /// Replaces the server's song, album and artist ratings with its current

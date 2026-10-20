@@ -172,6 +172,7 @@ class PlayerViewModel: ObservableObject {
   var anchorGenres: Set<String> = []
   private static let sessionTimeout: TimeInterval = 30 * 60
   private var ratingObservation: AnyCancellable?
+  private var avoidObservation: AnyCancellable?
   /// Bumped whenever the user starts something new; a mix built in the
   /// meantime is stale.
   private var startGeneration = 0
@@ -252,6 +253,15 @@ class PlayerViewModel: ObservableObject {
       self?.ratingObservation = RatingStore.shared.$ratings
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in self?.updateRatingCommands() }
+      // Avoiding the song playing, or its artist, skips it, wherever it was
+      // avoided on this device.
+      self?.avoidObservation = RatingStore.shared.avoided
+        .sink { [weak self] id in
+          guard let self, !self.isLiveRadio,
+            id == self.nowPlayingId || id == NowPlayingTarget.current?.artistId
+          else { return }
+          self.nextSong(userInitiated: true)
+        }
       self?.starObservation = StarStore.shared.$stars
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in self?.updateHeart() }
@@ -371,6 +381,7 @@ class PlayerViewModel: ObservableObject {
     self.publishNowPlaying(
       title: song.songName ?? "",
       artist: song.artistName ?? "",
+      album: song.albumName ?? "",
       duration: self.totalDuration)
     // Nothing is attached yet, so the restored position is published here.
     if !playAudio {
@@ -935,5 +946,11 @@ extension PlayerViewModel {
   var sourceName: String {
     guard let song = nowPlaying else { return "" }
     return song.playbackOrigin.isMix ? "Smart Mix" : song.contextName ?? ""
+  }
+
+  /// What Up Next continues: a mix says whether Keep Playing extends it.
+  var upNextSource: String {
+    guard isSmartMix else { return sourceName }
+    return UserDefaultsManager.keepPlaying ? "Smart Mix · Keep Playing on" : "Smart Mix"
   }
 }
