@@ -876,20 +876,21 @@ class PlayerViewModel: ObservableObject {
     setNowPlaying()
   }
 
-  /// `leaving` moves past the song even where repeat would play it again:
-  /// an avoided song is never repeated.
+  /// `leaving` moves on to another song even where repeat would play this
+  /// one again: an avoided song is never repeated.
   func nextSong(userInitiated: Bool = false, leaving: Bool = false) {
     guard !isLiveRadio else { return }
     if userInitiated {
       logSkipIfAbandoned()
     }
     reportStopped()
+    if leaving { return leaveSong() }
 
     let isLast = activeQueueIdx >= queue.count - 1
     switch playbackMode {
-    case PlaybackMode.repeatOnce where !leaving:
+    case PlaybackMode.repeatOnce:
       setNowPlaying()
-    case PlaybackMode.repeatAlbum where !(leaving && queue.count == 1):
+    case PlaybackMode.repeatAlbum:
       activeQueueIdx = isLast ? 0 : activeQueueIdx + 1
       setNowPlaying()
     default:
@@ -899,6 +900,22 @@ class PlayerViewModel: ObservableObject {
         activeQueueIdx += 1
         setNowPlaying()
       }
+    }
+  }
+
+  /// Plays the next entry that is another song, around the queue under
+  /// repeat; with none, the song falls silent and Keep Playing continues or
+  /// playback stops.
+  private func leaveSong() {
+    let left = nowPlayingId
+    let after = Array(activeQueueIdx + 1..<queue.count)
+    let around = playbackMode == PlaybackMode.repeatAlbum ? Array(0..<activeQueueIdx) : []
+    if let next = (after + around).first(where: { queue[$0].id != left }) {
+      activeQueueIdx = next
+      setNowPlaying()
+    } else {
+      pause()
+      autoPlayOrStop()
     }
   }
 
