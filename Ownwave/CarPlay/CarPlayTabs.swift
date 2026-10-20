@@ -21,6 +21,7 @@ extension CarPlayController {
   }
 
   func openAlbum(_ album: Album) {}
+  func openAlbum(id: String) {}
   func openArtist(_ artist: Artist) {}
   func openPlaylist(_ playlist: Playlist) {}
   func openCached() {}
