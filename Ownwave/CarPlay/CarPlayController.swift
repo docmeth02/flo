@@ -15,6 +15,9 @@ final class CarPlayController: NSObject, CPInterfaceControllerDelegate, CPTabBar
   /// Audio apps may stack five templates, the tab bar included
   /// (CPListTemplate documentation).
   static let maxDepth = 5
+  /// How long a list waits for a burst of changes to end before it is built
+  /// again.
+  static let settle = DispatchQueue.SchedulerTimeType.Stride.milliseconds(300)
 
   /// A tab: its list, how to build it, what changes it, and what its
   /// selection refreshes.
@@ -50,11 +53,13 @@ final class CarPlayController: NSObject, CPInterfaceControllerDelegate, CPTabBar
         CPTabBarTemplate.maximumTabCount))
     tabBar = CPTabBarTemplate(templates: tabs.map(\.template))
     tabBar.delegate = self
-    interfaceController.setRootTemplate(tabBar, animated: false, completion: nil)
+    interfaceController.setRootTemplate(tabBar, animated: false) { _, error in
+      if let error { RequestLog.shared.note("carplay: root failed: \(error.localizedDescription)") }
+    }
     for tab in tabs {
       tab.template.updateSections(tab.sections())
       tab.changes
-        .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+        .debounce(for: Self.settle, scheduler: DispatchQueue.main)
         .sink { tab.template.updateSections(tab.sections()) }
         .store(in: &subscriptions)
     }
@@ -78,12 +83,17 @@ final class CarPlayController: NSObject, CPInterfaceControllerDelegate, CPTabBar
   /// template makes room: Now Playing is shared and the car's own button
   /// brings it back, and a list was one tap away from it.
   func push(_ template: CPTemplate) {
-    if interfaceController.templates.count >= Self.maxDepth {
-      interfaceController.popTemplate(animated: false, completion: nil)
+    let interfaceController = interfaceController
+    let push = {
+      interfaceController.pushTemplate(template, animated: true) { _, error in
+        if let error {
+          RequestLog.shared.note("carplay: push failed: \(error.localizedDescription)")
+        }
+      }
     }
-    interfaceController.pushTemplate(template, animated: true) { _, error in
-      if let error { RequestLog.shared.note("carplay: push failed: \(error.localizedDescription)") }
-    }
+    // The push waits for the pop, which the car would refuse to overlap.
+    guard interfaceController.templates.count >= Self.maxDepth else { return push() }
+    interfaceController.popTemplate(animated: false) { _, _ in push() }
   }
 
   /// Pushes a song list and keeps it while it is on the stack.
@@ -105,16 +115,34 @@ final class CarPlayController: NSObject, CPInterfaceControllerDelegate, CPTabBar
   }
 
   func templateDidAppear(_ aTemplate: CPTemplate, animated: Bool) {
-    visible = aTemplate
+    visible = Self.shown(aTemplate)
   }
 
   func templateDidDisappear(_ aTemplate: CPTemplate, animated: Bool) {
+    // Another app in front leaves nothing of this one on screen.
+    if visible === Self.shown(aTemplate) { visible = nil }
     guard songLists.contains(where: { $0.template === aTemplate }) else { return }
     let stack = interfaceController.templates
     songLists.removeAll { list in !stack.contains { $0 === list.template } }
   }
 
   func tabBarTemplate(_ tabBarTemplate: CPTabBarTemplate, didSelect selectedTemplate: CPTemplate) {
+    // Tabs switch only while the tab bar is on top, which does not appear
+    // again for it.
+    visible = selectedTemplate
     tabs.first { $0.template === selectedTemplate }?.selected()
+  }
+
+  /// Selects a tab as a tap on it would; the tab bar tells its delegate
+  /// only of taps.
+  func selectTab(titled title: String) {
+    guard let tab = tabs.first(where: { $0.template.tabTitle == title }) else { return }
+    tabBar.select(tab.template)
+    tabBarTemplate(tabBar, didSelect: tab.template)
+  }
+
+  /// What a template puts on screen: a tab bar its selected tab.
+  private static func shown(_ template: CPTemplate) -> CPTemplate {
+    (template as? CPTabBarTemplate)?.selectedTemplate ?? template
   }
 }

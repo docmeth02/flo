@@ -260,7 +260,7 @@ class PlayerViewModel: ObservableObject {
           guard let self, !self.isLiveRadio,
             id == self.nowPlayingId || id == NowPlayingTarget.current?.artistId
           else { return }
-          self.nextSong(userInitiated: true)
+          self.nextSong(userInitiated: true, leaving: true)
         }
       self?.starObservation = StarStore.shared.$stars
         .receive(on: DispatchQueue.main)
@@ -784,6 +784,15 @@ class PlayerViewModel: ObservableObject {
     }
   }
 
+  /// Plays songs similar to the artist's, unless the user started something
+  /// else meanwhile; false when the server had none.
+  @MainActor func playArtistRadio(id: String, name: String) async -> Bool {
+    await playWhenBuilt {
+      let songs = (try? await RadioService.shared.getSimilarSongs(id: id)) ?? []
+      return SongCollection.artistRadio(id: id, name: name, songs: songs)
+    }
+  }
+
   /// Builds a collection and plays it, unless one is already being built or
   /// the user started something else in the meantime.
   @MainActor private func playWhenBuilt(_ build: () async -> SongCollection) async -> Bool {
@@ -867,7 +876,9 @@ class PlayerViewModel: ObservableObject {
     setNowPlaying()
   }
 
-  func nextSong(userInitiated: Bool = false) {
+  /// `leaving` moves past the song even where repeat would play it again:
+  /// an avoided song is never repeated.
+  func nextSong(userInitiated: Bool = false, leaving: Bool = false) {
     guard !isLiveRadio else { return }
     if userInitiated {
       logSkipIfAbandoned()
@@ -876,9 +887,9 @@ class PlayerViewModel: ObservableObject {
 
     let isLast = activeQueueIdx >= queue.count - 1
     switch playbackMode {
-    case PlaybackMode.repeatOnce:
+    case PlaybackMode.repeatOnce where !leaving:
       setNowPlaying()
-    case PlaybackMode.repeatAlbum:
+    case PlaybackMode.repeatAlbum where !(leaving && queue.count == 1):
       activeQueueIdx = isLast ? 0 : activeQueueIdx + 1
       setNowPlaying()
     default:

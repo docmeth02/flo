@@ -78,19 +78,21 @@ extension CarPlayController {
   /// Play Something, the pins, the recent albums and the liked songs.
   /// Offline the pins and recent albums are the ones downloaded here.
   private func homeSections(playSomething: CPListItem) -> [CPListSection] {
-    let offline = !ConnectivityMonitor.shared.canReachServer
+    // Offline, the albums downloaded here.
+    let downloaded =
+      ConnectivityMonitor.shared.canReachServer
+      ? nil : Set(albums.downloadedAlbums.map(\.id))
     let recent =
-      offline
-      ? albums.recentAlbums.filter { DownloadStore.checkIfAlbumDownloaded(albumID: $0.id) }
-      : albums.recentAlbums
+      downloaded.map { ids in albums.recentAlbums.filter { ids.contains($0.id) } }
+      ?? albums.recentAlbums
     var covers: [CarPlayImages.Cover] = []
     var sections = [CPListSection(items: [playSomething])]
     for (title, targets) in [
-      ("Pinned", pinned(offline: offline)), ("Recently Played", recent.map(MenuTarget.album)),
+      ("Pinned", pinned(downloaded: downloaded)), ("Recently Played", recent.map(MenuTarget.album)),
     ] where !targets.isEmpty {
       sections.append(CPListSection(items: [imageRow(title, targets, covers: &covers)]))
     }
-    sections.append(CPListSection(items: [likedSongsRow(offline: offline)]))
+    sections.append(CPListSection(items: [likedSongsRow(offline: downloaded != nil)]))
     images.loadCovers(covers, size: CarPlayImages.elementSize)
     return sections
   }
@@ -131,16 +133,15 @@ extension CarPlayController {
   }
 
   /// The pins over the library lists, as on the phone's Home; offline only
-  /// the albums downloaded here.
-  private func pinned(offline: Bool) -> [MenuTarget] {
+  /// the albums `downloaded` holds.
+  private func pinned(downloaded: Set<String>?) -> [MenuTarget] {
     let pins = PinStore.shared
-    guard !offline else {
+    guard let downloaded else {
       return pins.targets(
-        albums: albums.albums.filter { DownloadStore.checkIfAlbumDownloaded(albumID: $0.id) })
+        albums: albums.albums, artists: albums.artists, playlists: albums.playlists,
+        radios: radios.radios)
     }
-    return pins.targets(
-      albums: albums.albums, artists: albums.artists, playlists: albums.playlists,
-      radios: radios.radios)
+    return pins.targets(albums: albums.albums.filter { downloaded.contains($0.id) })
   }
 
   /// A titled row of covers and glyph tiles; a tap opens the album, artist
@@ -187,11 +188,7 @@ extension CarPlayController {
       image: images.tile("heart.fill", .liked, size: CarPlayImages.rowSize))
     item.accessoryType = .disclosureIndicator
     item.handler = { [weak self] _, completion in
-      if let tabBar = self?.tabBar,
-        let liked = tabBar.templates.first(where: { $0.tabTitle == Self.likedTitle })
-      {
-        tabBar.select(liked)
-      }
+      self?.selectTab(titled: Self.likedTitle)
       completion()
     }
     return item
@@ -565,14 +562,10 @@ extension CarPlayController {
       text: "Artist Radio", detailText: "Similar songs, starting with \(artist.name)",
       image: images.tile(Glyph.radio, round: true, size: size))
     radio.handler = { [weak self] _, completion in
+      let player = self?.player
       Task {
         // Holds the completion until the radio plays or has nothing to play.
-        let songs = await ArtistDetailViewModel().fetchArtistRadio(artist: artist) ?? []
-        if !songs.isEmpty,
-          self?.player.playItem(
-            item: SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs))
-            == true
-        {
+        if await player?.playArtistRadio(id: artist.id, name: artist.name) == true {
           self?.showNowPlaying()
         }
         completion()
@@ -606,7 +599,7 @@ extension CarPlayController {
     let albums = albums
     template.userInfo =
       albums.objectWillChange
-      .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+      .debounce(for: Self.settle, scheduler: DispatchQueue.main)
       // Albums loaded a moment ago for this artist are not asked for again.
       .prepend(())
       .map { albums.albums(byArtist: artist.id) }

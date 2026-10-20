@@ -168,6 +168,10 @@ struct AvoidIntent: AppIntent {
         artistId = known
       } else {
         artistId = await NowPlayingTarget.artistId(of: target.playbackID, named: target.artistName)
+        // Found now: the player matches an avoided artist by it.
+        if NowPlayingTarget.current?.playbackID == target.playbackID {
+          NowPlayingTarget.current?.artistId = artistId
+        }
       }
       guard let artistId else {
         throw Refusal(sentence: "I don't know this artist yet.")

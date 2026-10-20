@@ -77,7 +77,7 @@ import Combine
     let player = controller.player
     Publishers.CombineLatest(player.$queue, player.$activeQueueIdx)
       .dropFirst()
-      .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+      .debounce(for: CarPlayController.settle, scheduler: DispatchQueue.main)
       .sink { [weak screen] _ in screen?.showUpNext() }
       .store(in: &screen.subscriptions)
     return screen
@@ -220,12 +220,7 @@ import Combine
     let player = controller.player
     let template = template
     controller.$visible
-      .map { [weak controller] visible in
-        // A tab's list shows while the tab bar is on top and it is selected.
-        visible === template
-          || (visible != nil && visible === controller?.tabBar
-            && controller?.tabBar.selectedTemplate === template)
-      }
+      .map { $0 === template }
       .removeDuplicates()
       .map { shown -> AnyPublisher<Void, Never> in
         guard shown else { return Empty().eraseToAnyPublisher() }

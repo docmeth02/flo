@@ -106,14 +106,15 @@ import Foundation
     artistRatings[artistId] ?? 0
   }
 
-  /// Rates the artist 1 to 5; 0 clears its rating.
-  func setArtist(_ rating: Int, artistId id: String) {
+  /// Rates the artist 1 to 5; 0 clears its rating. An Avoid skips the
+  /// artist's song playing unless `skipsPlaying` is false.
+  func setArtist(_ rating: Int, artistId id: String, skipsPlaying: Bool = true) {
     guard !id.isEmpty else { return }
     artistEdits.set(min(max(rating, 0), 5), id: id)
     artistConfirmed[id] = nil
     defaults.set(artistConfirmed, forKey: UserDefaultsKeys.confirmedArtistRatings)
     publish()
-    if rating == 1 { avoided.send(id) }
+    if rating == 1, skipsPlaying { avoided.send(id) }
   }
 
   /// Whether a rating edit for this song or artist waits for the server.
@@ -127,14 +128,15 @@ import Foundation
     set(rating, playbackID: id)
   }
 
-  func set(_ rating: Int, playbackID id: String) {
+  /// An Avoid skips the song while it plays unless `skipsPlaying` is false.
+  func set(_ rating: Int, playbackID id: String, skipsPlaying: Bool = true) {
     // Stored first, so a kill in between cannot lose the edit.
     edits.set(min(max(rating, 0), 5), id: id)
     // A new edit supersedes what the server took before it.
     confirmed[id] = nil
     defaults.set(confirmed, forKey: UserDefaultsKeys.confirmedRatings)
     publish()
-    if rating == 1 { avoided.send(id) }
+    if rating == 1, skipsPlaying { avoided.send(id) }
   }
 
   /// Replaces the server's song, album and artist ratings with its current
