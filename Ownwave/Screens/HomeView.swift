@@ -24,14 +24,7 @@ struct HomeView: View {
   @State private var playlists: [Playlist] = []
 
   private var pinned: [MenuTarget] {
-    func pinned<T: Identifiable>(_ items: [T], _ kind: PinStore.Kind) -> [T] where T.ID == String {
-      let ids = pins.pinned(kind)
-      return ids.isEmpty ? [] : items.filter { ids.contains($0.id) }
-    }
-    return pinned(albums, .album).map(MenuTarget.album)
-      + pinned(artists, .artist).map(MenuTarget.artist)
-      + pinned(playlists, .playlist).map(MenuTarget.playlist)
-      + pinned(radios.radios, .radio).map(MenuTarget.radio)
+    pins.targets(albums: albums, artists: artists, playlists: playlists, radios: radios.radios)
   }
 
   var body: some View {

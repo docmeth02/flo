@@ -65,6 +65,14 @@ final class AppModel: ObservableObject {
   /// The liked songs as last listed, less those unliked since, which leave
   /// at once. Views showing them observe StarStore for those changes.
   var likedSongs: [Song] { albums.starredSongs.filter { player.isStarred($0) } }
+  /// Liked albums and artists out of the library lists, StarStore's edits
+  /// over their listed stars, as on the watch.
+  var likedAlbums: [Album] {
+    albums.albums.filter { StarStore.shared.isStarred($0.id, listed: $0.starred) }
+  }
+  var likedArtists: [Artist] {
+    albums.artists.filter { StarStore.shared.isStarred($0.id, listed: $0.starred) }
+  }
 
   /// The album's whole track list from the server: an album screen may show
   /// only the songs downloaded here. Without the server, the songs known.
@@ -123,12 +131,12 @@ final class AppModel: ObservableObject {
     if await player.playArtist(id: id, name: name) { isNowPlayingPresented = true }
   }
 
-  /// A station is a live stream, so nothing plays while streaming is off on
+  /// A station is a live stream, so none plays while streaming is off on
   /// cellular.
+  var isRadioBlocked: Bool { TranscodingSettings.streamingBitRate == nil }
+
   func play(_ radio: Radio) {
-    guard TranscodingSettings.streamingBitRate != nil else {
-      return show("Streaming on cellular is off")
-    }
+    guard !isRadioBlocked else { return show("Streaming on cellular is off") }
     if player.playRadioItem(radio: radio) { isNowPlayingPresented = true }
   }
 

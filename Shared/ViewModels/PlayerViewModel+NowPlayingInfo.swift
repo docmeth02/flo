@@ -62,12 +62,13 @@ extension PlayerViewModel {
   }
 
   /// Publishes the current song's cover for the player, and its title,
-  /// artist, duration and artwork for the system's Now Playing.
-  func publishNowPlaying(title: String, artist: String, duration: Double) {
+  /// artist, album, duration and artwork for the system's Now Playing.
+  func publishNowPlaying(title: String, artist: String, album: String, duration: Double) {
     // The text goes out at once; the artwork may have to be fetched.
     var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
     nowPlayingInfo[MPMediaItemPropertyTitle] = title
     nowPlayingInfo[MPMediaItemPropertyArtist] = artist
+    nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = album.isEmpty ? nil : album
     nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     MainActor.assumeIsolated {

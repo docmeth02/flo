@@ -172,6 +172,7 @@ class PlayerViewModel: ObservableObject {
   var anchorGenres: Set<String> = []
   private static let sessionTimeout: TimeInterval = 30 * 60
   private var ratingObservation: AnyCancellable?
+  private var avoidObservation: AnyCancellable?
   /// Bumped whenever the user starts something new; a mix built in the
   /// meantime is stale.
   private var startGeneration = 0
@@ -252,6 +253,15 @@ class PlayerViewModel: ObservableObject {
       self?.ratingObservation = RatingStore.shared.$ratings
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in self?.updateRatingCommands() }
+      // Avoiding the song playing, or its artist, skips it, wherever it was
+      // avoided on this device.
+      self?.avoidObservation = RatingStore.shared.avoided
+        .sink { [weak self] id in
+          guard let self, !self.isLiveRadio,
+            id == self.nowPlayingId || id == NowPlayingTarget.current?.artistId
+          else { return }
+          self.nextSong(userInitiated: true, leaving: true)
+        }
       self?.starObservation = StarStore.shared.$stars
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in self?.updateHeart() }
@@ -371,6 +381,7 @@ class PlayerViewModel: ObservableObject {
     self.publishNowPlaying(
       title: song.songName ?? "",
       artist: song.artistName ?? "",
+      album: song.albumName ?? "",
       duration: self.totalDuration)
     // Nothing is attached yet, so the restored position is published here.
     if !playAudio {
@@ -773,6 +784,15 @@ class PlayerViewModel: ObservableObject {
     }
   }
 
+  /// Plays songs similar to the artist's, unless the user started something
+  /// else meanwhile; false when the server had none.
+  @MainActor func playArtistRadio(id: String, name: String) async -> Bool {
+    await playWhenBuilt {
+      let songs = (try? await RadioService.shared.getSimilarSongs(id: id)) ?? []
+      return SongCollection.artistRadio(id: id, name: name, songs: songs)
+    }
+  }
+
   /// Builds a collection and plays it, unless one is already being built or
   /// the user started something else in the meantime.
   @MainActor private func playWhenBuilt(_ build: () async -> SongCollection) async -> Bool {
@@ -856,12 +876,15 @@ class PlayerViewModel: ObservableObject {
     setNowPlaying()
   }
 
-  func nextSong(userInitiated: Bool = false) {
+  /// `leaving` moves on to another song even where repeat would play this
+  /// one again: an avoided song is never repeated.
+  func nextSong(userInitiated: Bool = false, leaving: Bool = false) {
     guard !isLiveRadio else { return }
     if userInitiated {
       logSkipIfAbandoned()
     }
     reportStopped()
+    if leaving { return leaveSong() }
 
     let isLast = activeQueueIdx >= queue.count - 1
     switch playbackMode {
@@ -877,6 +900,22 @@ class PlayerViewModel: ObservableObject {
         activeQueueIdx += 1
         setNowPlaying()
       }
+    }
+  }
+
+  /// Plays the next entry that is another song, around the queue under
+  /// repeat; with none, the song falls silent and Keep Playing continues or
+  /// playback stops.
+  private func leaveSong() {
+    let left = nowPlayingId
+    let after = Array(activeQueueIdx + 1..<queue.count)
+    let around = playbackMode == PlaybackMode.repeatAlbum ? Array(0..<activeQueueIdx) : []
+    if let next = (after + around).first(where: { queue[$0].id != left }) {
+      activeQueueIdx = next
+      setNowPlaying()
+    } else {
+      pause()
+      autoPlayOrStop()
     }
   }
 
@@ -935,5 +974,11 @@ extension PlayerViewModel {
   var sourceName: String {
     guard let song = nowPlaying else { return "" }
     return song.playbackOrigin.isMix ? "Smart Mix" : song.contextName ?? ""
+  }
+
+  /// What Up Next continues: a mix says whether Keep Playing extends it.
+  var upNextSource: String {
+    guard isSmartMix else { return sourceName }
+    return UserDefaultsManager.keepPlaying ? "Smart Mix · Keep Playing on" : "Smart Mix"
   }
 }

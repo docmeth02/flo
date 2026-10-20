@@ -49,6 +49,22 @@ final class RatingStoreTests: XCTestCase {
     return SmartPlaybackService.effectiveRatings(of: songs, index: index, store: store)
   }
 
+  func testOnlyANewAvoidAsksToSkip() {
+    let store = makeStore()
+    var avoided: [String] = []
+    let observation = store.avoided.sink { avoided.append($0) }
+    defer { observation.cancel() }
+
+    store.set(5, playbackID: "s1")
+    store.set(1, playbackID: "s1")
+    store.set(0, playbackID: "s1")
+    store.setArtist(1, artistId: "ar1")
+    // Taste's Undo restores an Avoid without skipping.
+    store.set(1, playbackID: "s2", skipsPlaying: false)
+    store.setArtist(1, artistId: "ar2", skipsPlaying: false)
+    XCTAssertEqual(avoided, ["s1", "ar1"])
+  }
+
   func testSongRatingWinsOverItsAlbum() {
     let store = makeStore()
     let s1 = song("s1", album: "a1", rating: 4)

@@ -34,6 +34,21 @@ final class PinStore: ObservableObject {
     return Set(defaults.stringArray(forKey: key) ?? [])
   }
 
+  /// The pinned ones of the lists: albums, artists, playlists, then
+  /// stations, each in its list's order.
+  func targets(
+    albums: [Album], artists: [Artist] = [], playlists: [Playlist] = [], radios: [Radio] = []
+  ) -> [MenuTarget] {
+    func kept<T: Identifiable>(_ items: [T], _ kind: Kind) -> [T] where T.ID == String {
+      let ids = pinned(kind)
+      return ids.isEmpty ? [] : items.filter { ids.contains($0.id) }
+    }
+    return kept(albums, .album).map(MenuTarget.album)
+      + kept(artists, .artist).map(MenuTarget.artist)
+      + kept(playlists, .playlist).map(MenuTarget.playlist)
+      + kept(radios, .radio).map(MenuTarget.radio)
+  }
+
   func isPinned(_ id: String, _ kind: Kind) -> Bool {
     pinned(kind).contains(id)
   }

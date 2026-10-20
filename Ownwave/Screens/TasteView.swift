@@ -154,15 +154,17 @@ struct TasteView: View {
     summary?.boosted.removeAll { $0.kind == row.kind && $0.id == row.id }
     summary?.avoided.removeAll { $0.kind == row.kind && $0.id == row.id }
     app.show("\(toast) · \(row.title)") {
-      rate(row, stars)
+      // Taking back the change avoids nothing new.
+      rate(row, stars, skipsPlaying: false)
       Task { await reload() }
     }
   }
 
-  private func rate(_ row: TasteSummary.Rated, _ stars: Int) {
+  private func rate(_ row: TasteSummary.Rated, _ stars: Int, skipsPlaying: Bool = true) {
     switch row.kind {
-    case .song: RatingStore.shared.set(stars, playbackID: row.id)
-    case .artist: RatingStore.shared.setArtist(stars, artistId: row.id)
+    case .song: RatingStore.shared.set(stars, playbackID: row.id, skipsPlaying: skipsPlaying)
+    case .artist:
+      RatingStore.shared.setArtist(stars, artistId: row.id, skipsPlaying: skipsPlaying)
     }
   }
 

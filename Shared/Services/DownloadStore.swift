@@ -223,6 +223,14 @@ enum DownloadStore {
       ).compactMap(\.mediaFileId))
   }
 
+  /// Media ids that play without the server: downloaded or stream cached.
+  static func localMediaFileIds() -> Set<String> {
+    Set(
+      CoreDataManager.shared.getRecordsByEntity(entity: SongEntity.self).compactMap(\.mediaFileId)
+    )
+    .union(StreamCacheManager.shared.readyMediaFileIds())
+  }
+
   static func checkIfAlbumDownloaded(albumID: String) -> Bool {
     let isPlaylistEntityExist = CoreDataManager.shared.getRecordByKey(
       entity: PlaylistEntity.self, key: \PlaylistEntity.id, value: albumID, limit: 1)
