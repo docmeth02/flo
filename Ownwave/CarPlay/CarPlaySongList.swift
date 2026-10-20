@@ -276,34 +276,3 @@ import Combine
     }
   }
 }
-
-extension CarPlayImages {
-  /// Where a loaded cover goes: a list row or an element of an image row.
-  enum Cover {
-    case row(CPListItem, albumId: String)
-    case element(CPListImageRowItemRowElement, albumId: String)
-  }
-
-  /// Puts each album's cover in place, top down and one at a time, so a
-  /// long list asks for the covers it shows first; a cover not found keeps
-  /// the placeholder. Rows replaced or popped meanwhile are skipped, so the
-  /// loading ends with the list.
-  func loadCovers(_ covers: [Cover], size: CGSize) {
-    // Each target holds its row weakly and hands out a setter while it lives.
-    let targets = covers.map { cover -> (albumId: String, setter: () -> ((UIImage) -> Void)?) in
-      switch cover {
-      case .row(let item, let albumId):
-        (albumId, { [weak item] in item.map { item in { item.setImage($0) } } })
-      case .element(let element, let albumId):
-        (albumId, { [weak element] in element.map { element in { element.image = $0 } } })
-      }
-    }
-    Task { [weak self] in
-      for target in targets where !target.albumId.isEmpty {
-        guard let self else { return }
-        guard let set = target.setter() else { continue }
-        if let image = await cover(albumId: target.albumId, size: size) { set(image) }
-      }
-    }
-  }
-}

@@ -133,19 +133,14 @@ extension CarPlayController {
   /// The pins over the library lists, as on the phone's Home; offline only
   /// the albums downloaded here.
   private func pinned(offline: Bool) -> [MenuTarget] {
-    func pinned<T: Identifiable>(_ items: [T], _ kind: PinStore.Kind) -> [T] where T.ID == String {
-      let ids = PinStore.shared.pinned(kind)
-      return ids.isEmpty ? [] : items.filter { ids.contains($0.id) }
+    let pins = PinStore.shared
+    guard !offline else {
+      return pins.targets(
+        albums: albums.albums.filter { DownloadStore.checkIfAlbumDownloaded(albumID: $0.id) })
     }
-    let pinnedAlbums = pinned(albums.albums, .album)
-    if offline {
-      return pinnedAlbums.filter { DownloadStore.checkIfAlbumDownloaded(albumID: $0.id) }
-        .map(MenuTarget.album)
-    }
-    return pinnedAlbums.map(MenuTarget.album)
-      + pinned(albums.artists, .artist).map(MenuTarget.artist)
-      + pinned(albums.playlists, .playlist).map(MenuTarget.playlist)
-      + pinned(radios.radios, .radio).map(MenuTarget.radio)
+    return pins.targets(
+      albums: albums.albums, artists: albums.artists, playlists: albums.playlists,
+      radios: radios.radios)
   }
 
   /// A titled row of covers and glyph tiles; a tap opens the album, artist
