@@ -246,6 +246,24 @@ extension PlayerViewModel {
     guard let wait = connectionWait, !wait.isReloading else { return }
     RequestLog.shared.note("connection wait reload at \(Int(pendingStartPosition)) s")
     loadItem(at: pendingStartPosition)
+    connectionWait?.probedLoad = loadGeneration
+  }
+
+  /// A server that answers probes but not for this song (a hung music
+  /// mount) would keep the wait reloading it; the song counts as failed once
+  /// a fresh probe still reaches the server, else the wait goes on. The wait
+  /// stays reloading meanwhile, so the probe starts no other load.
+  private func skipIfServerAnswers(trackId: String?, load: Int) {
+    Task { @MainActor [weak self] in
+      let reachable = await ConnectivityMonitor.shared.canStream(maxAge: 0)
+      guard let self, self.loadGeneration == load, self.isCurrentTrack(trackId), self.isPlaying,
+        self.connectionWait != nil
+      else { return }
+      guard reachable else { return self.enterConnectionWait(cause: "no stream source") }
+      RequestLog.shared.note("connection wait: server answers, song does not")
+      self.isMediaFailed = true
+      self.skipFailedTrack(trackId: trackId)
+    }
   }
 
   func endConnectionWait(because cause: String) {
@@ -330,7 +348,12 @@ extension PlayerViewModel {
       // Paused, Play asks again.
       if case .failure(.unavailable) = result {
         self.isMediaLoading = false
-        if self.isPlaying { self.enterConnectionWait(cause: "no stream source") }
+        guard self.isPlaying else { return }
+        if self.connectionWait?.probedLoad == generation {
+          self.skipIfServerAnswers(trackId: trackId, load: generation)
+        } else {
+          self.enterConnectionWait(cause: "no stream source")
+        }
         return
       }
       guard case .success(let source) = result, let url = URL(string: source.url) else {
@@ -504,6 +527,9 @@ extension PlayerViewModel {
     loadItem(at: position)
   }
 
+  /// A watchdog is armed and has not run yet.
+  var isLoadWatchdogPending: Bool { loadWatchdog.map { !$0.isCancelled } ?? false }
+
   /// Treats an item that has not played after `loadTimeout` of trying as
   /// failed, or as a connection wait while the server is out of reach. A user
   /// who paused in the meantime is left alone, and so is a ready item the
@@ -514,6 +540,7 @@ extension PlayerViewModel {
 
     let trackId = nowPlayingId
     let watchdog = DispatchWorkItem { [weak self, weak item] in
+      self?.loadWatchdog = nil
       guard let self = self, self.isPlaying, let item = item, self.playerItem === item,
         !self.itemHasPlayed
       else { return }
