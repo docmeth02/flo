@@ -162,6 +162,9 @@
       let offlinePool = parts.count > 4 ? parts[4] : 0
       let skipRate = env["FLO_DEBUG_MIX_SIM_SKIP"].flatMap(Double.init) ?? 0.1
       let seeds = env["FLO_DEBUG_MIX_SIM_SEEDS"].flatMap(Int.init) ?? 3
+      guard days > 0, perDay > 0, count > 0, keepCount >= 0, offlinePool >= 0, seeds > 0 else {
+        return debugLog("sim: invalid FLO_DEBUG_MIX_SIM=\(spec) or seeds=\(seeds)")
+      }
 
       // A fresh login imports its history and ratings first.
       _ = await syncSongLibrary()
@@ -301,7 +304,8 @@
                   fold(.genre, genre, 1 / Double(entry.genres.count), at: now)
                 }
                 if let era = entry.era { fold(.era, era, 1, at: now) }
-                genres.formUnion(entry.genres)
+                // Keep Playing keeps the first heard song's genres.
+                if genres.isEmpty { genres = Set(entry.genres) }
                 last = song
                 now += song.duration > 0 ? song.duration : 240
               }

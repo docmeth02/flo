@@ -96,6 +96,7 @@ class PlayerViewModel: ObservableObject {
   var interruptionObservation = Set<AnyCancellable>()
   private var logoutObservation: AnyCancellable?
   private var reachabilityObservation: AnyCancellable?
+  var modeObservation: AnyCancellable?
   // The stored order while shuffling (`queue` is the play order), else empty.
   var unshuffledQueue: [QueueEntity] = []
 
