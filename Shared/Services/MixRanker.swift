@@ -50,7 +50,9 @@ struct MixRanker {
     let artistSkipDamping = 5.0
 
     let cooldownFloor = 0.05
-    let cooldownHours = 6.0
+    /// A heard song's weight is back to 63 % after this, 95 % after three
+    /// times as long. The variety sets it.
+    var cooldownHours = 72.0
     let titleCooldownFloor = 0.10
     let titleCooldownHours = 2.0
     /// Title siblings heard longer ago than this are fully cooled down.
@@ -62,7 +64,8 @@ struct MixRanker {
     let exploreBase = 0.25
     let exploreMaxPlays = 2
 
-    let playSomethingExplore = 1.0 / 6
+    /// The variety sets it.
+    var playSomethingExplore = 1.0 / 6
     let keepPlayingExplore = 1.0 / 3
     let keepPlayingExploreMax = 0.40
     let keepPlayingRampMinutes = 90.0
@@ -70,8 +73,8 @@ struct MixRanker {
     /// Preferred songs are sampled from this many candidates per wanted song.
     let preferredPoolFactor = 5
     /// Sampling weighs a preferred song by its weight to this power, so
-    /// favourites stand out of a long tail of weak songs. Settable for the
-    /// test that compares it with linear sampling.
+    /// favourites stand out of a long tail of weak songs. The variety sets
+    /// it, as does the test that compares it with linear sampling.
     var preferredSamplingExponent = 2.0
     let poolPerArtist = 4
 
@@ -84,6 +87,13 @@ struct MixRanker {
     let seedAlbumPenalty = 0.12
     /// Anchor genres bound the candidates while this many per wanted song remain.
     let anchorMinFactor = 3
+  }
+
+  /// How far mixes reach past the favourites: how long a heard song rests,
+  /// Play Something's explore share and how strongly sampling favours the
+  /// top. Balanced is the default.
+  enum Variety: String, CaseIterable, Sendable {
+    case familiar, balanced, adventurous
   }
 
   let config: Config
@@ -1068,5 +1078,22 @@ struct SplitMix64: RandomNumberGenerator {
     z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
     z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
     return z ^ (z >> 31)
+  }
+}
+
+extension MixRanker.Config {
+  init(variety: MixRanker.Variety) {
+    self.init()
+    switch variety {
+    case .familiar:
+      cooldownHours = 24
+      playSomethingExplore = 0.1
+    case .balanced:
+      break
+    case .adventurous:
+      cooldownHours = 168
+      playSomethingExplore = 1.0 / 3
+      preferredSamplingExponent = 1
+    }
   }
 }

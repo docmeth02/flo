@@ -187,6 +187,51 @@ extension PlayerViewModel {
       }
       return .success
     }
+
+    // Siri's and the car's shuffle and repeat. The car draws their state only
+    // for commands with a target.
+    commandCenter.changeShuffleModeCommand.addTarget { [weak self] event in
+      guard let event = event as? MPChangeShuffleModeCommandEvent else { return .commandFailed }
+      Task { @MainActor in
+        RequestLog.shared.note("audio remote shuffle \(event.shuffleType.rawValue)")
+        self?.setShuffle(event.shuffleType != .off)
+      }
+      return .success
+    }
+    commandCenter.changeRepeatModeCommand.addTarget { [weak self] event in
+      guard let event = event as? MPChangeRepeatModeCommandEvent else { return .commandFailed }
+      Task { @MainActor in
+        RequestLog.shared.note("audio remote repeat \(event.repeatType.rawValue)")
+        self?.setPlaybackMode(Self.playbackMode(for: event.repeatType))
+      }
+      return .success
+    }
+    // @Published hands over the new values before they are set.
+    modeObservation = $isShuffling.combineLatest($playbackMode)
+      .sink { isShuffling, mode in
+        commandCenter.changeShuffleModeCommand.currentShuffleType = isShuffling ? .items : .off
+        commandCenter.changeRepeatModeCommand.currentRepeatType = Self.repeatType(for: mode)
+      }
+  }
+
+  func setShuffle(_ on: Bool) {
+    if isShuffling != on { shuffleCurrentQueue() }
+  }
+
+  static func repeatType(for mode: String) -> MPRepeatType {
+    switch mode {
+    case PlaybackMode.repeatAlbum: .all
+    case PlaybackMode.repeatOnce: .one
+    default: .off
+    }
+  }
+
+  static func playbackMode(for type: MPRepeatType) -> String {
+    switch type {
+    case .all: PlaybackMode.repeatAlbum
+    case .one: PlaybackMode.repeatOnce
+    default: PlaybackMode.defaultPlayback
+    }
   }
 
   /// Rates the now playing song, from the player's stars or the remote like

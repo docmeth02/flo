@@ -271,51 +271,51 @@ final class MixRankerGoldenTests: XCTestCase {
 /// The mixes as the ranker gave them when they were recorded.
 private enum Golden {
   static let playSomething = """
-    songs: s3-1 s6-1 s2-5 s6-4 s4-3 x-media s7-5 s0-3 s7-4 s1-2 s5-1 s1-0
+    songs: s6-5 s3-3 s6-1 s2-0 s4-5 x-media s0-3 s7-5 s2-5 s1-5 s5-1 s1-4
     playSomething at=1790000000.0 eligible=51 explore=0.16666666666666666
     note: explore pool: 21 songs by 7 artists, quota 2, taken 2
-    preferred s3-1 Song s3-1 / Artist 3 | history: Played 3 times in 60 days | favourite, high artist affinity | src=sampled artist=.14 album=.05 genre=.14 era=.02 song=.14 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.51
+    preferred s6-5 Song s6-5 / Artist 6 | liked: From an artist you liked | liked artist, favourite genre | src=sampled artist=.11 album=.05 genre=.14 era=.02 song=.07 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.48
+    preferred s3-3 Song s3-3 / Artist 3 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.14 album=.05 genre=.14 era=.02 song=.08 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.44
     preferred s6-1 Song s6-1 / Artist 6 | rated: From an artist you rated 5 | artist boosted, liked artist, favourite genre | src=sampled artist=.11 album=.05 genre=.14 era=.02 song=.08 star=.00 coll=.08 rating=5(artist)+.35 skip=-.00 press=-.00 cool=1.00 final=.84
-    preferred s2-5 Song s2-5 / Artist 2 | liked: From Album 2-1, an album you liked | liked album, favourite, high artist affinity | src=sampled artist=.16 album=.05 genre=.08 era=.02 song=.08 star=.00 coll=.10 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.51
-    preferred s6-4 Song s6-4 / Artist 6 | liked: From an artist you liked | liked artist, favourite genre | src=sampled artist=.11 album=.05 genre=.14 era=.02 song=.05 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.46
-    preferred s4-3 Song s4-3 / Artist 4 | history: Fits what you play | favourite genre | src=sampled artist=.12 album=.05 genre=.12 era=.02 song=.05 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 cool=1.00 final=.36
+    preferred s2-0 Song s2-0 / Artist 2 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.16 album=.05 genre=.08 era=.02 song=.14 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=.64 final=.30
+    preferred s4-5 Song s4-5 / Artist 4 | history: Fits what you play | favourite, favourite genre | src=sampled artist=.12 album=.05 genre=.12 era=.02 song=.08 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 cool=1.00 final=.39
     explore mf-media Song x-media / Artist 3 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.59 genre=.85 plays=1 rating=0 skip=-.00 press=-.00 cool=1.00 final=1.19
-    preferred s7-5 Song s7-5 / Artist 7 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.17 album=.05 genre=.12 era=.02 song=.08 star=.00 coll=.00 rating=3+.00 skip=-.00 press=-.00 cool=1.00 final=.46
     preferred s0-3 Song s0-3 / Artist 0 | rated: You rated this 5 | boosted, favourite, high artist affinity | src=sampled artist=.19 album=.05 genre=.14 era=.02 song=.08 star=.00 coll=.00 rating=5+.35 skip=-.00 press=-.00 cool=1.00 final=.85
-    preferred s7-4 Song s7-4 / Artist 7 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.17 album=.05 genre=.12 era=.02 song=.08 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.46
-    preferred s1-2 Song s1-2 / Artist 1 | history: You play Artist 1 often · 6 plays in 60 days | favourite, high artist affinity | src=sampled artist=.18 album=.05 genre=.12 era=.02 song=.15 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.54
+    preferred s7-5 Song s7-5 / Artist 7 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.17 album=.05 genre=.12 era=.02 song=.08 star=.00 coll=.00 rating=3+.00 skip=-.00 press=-.00 cool=1.00 final=.46
+    preferred s2-5 Song s2-5 / Artist 2 | liked: From Album 2-1, an album you liked | liked album, favourite, high artist affinity | src=sampled artist=.16 album=.05 genre=.08 era=.02 song=.08 star=.00 coll=.10 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.51
+    preferred s1-5 Song s1-5 / Artist 1 | history: You play Artist 1 often · 6 plays in 60 days | high artist affinity | src=sampled artist=.18 album=.08 genre=.12 era=.02 song=.08 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.49
     explore s5-1 Song s5-1 / Artist 5 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.49 genre=.49 plays=2 rating=0 skip=-.00 press=-.02 cool=1.00 final=.70
-    preferred s1-0 Song s1-0 / Artist 1 | history: Played 6 times in 60 days | favourite, high artist affinity | src=sampled artist=.18 album=.05 genre=.12 era=.02 song=.12 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.51
+    preferred s1-4 Song s1-4 / Artist 1 | rated: From Album 1-0, an album you rated 4 | album rated 4, high artist affinity | src=sampled artist=.18 album=.05 genre=.12 era=.02 song=.06 star=.00 coll=.00 rating=4(album)+.20 skip=-.00 press=-.00 cool=1.00 final=.65
     """
 
   static let keepPlaying = """
-    songs: s0-3 s2-5 s0-5 s6-1 s1-4 s4-4 s1-3 s2-4 s5-2 s7-1 s3-0 s3-4
+    songs: s0-3 s7-0 s0-5 s7-1 s6-1 s1-3 x-guest s1-4 s6-3 s5-5 s3-3 s3-4
     keepPlaying at=1790000000.0 eligible=49 explore=0.3333333333333333
     note: anchor genres: Jazz (20 songs by 3 artists, not bounding)
     note: explore pool: 19 songs by 7 artists, quota 4, taken 4
     preferred s0-3 Song s0-3 / Artist 0 | rated: You rated this 5 | boosted, high artist affinity | src=sampled artist=.17 album=.00 genre=.11 era=.02 song=.00 star=.00 coll=.00 rating=5+.35 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.67
-    preferred s2-5 Song s2-5 / Artist 2 | liked: From Album 2-1, an album you liked | liked album, same artist as before | src=sampled artist=.09 album=.00 genre=.00 era=.00 song=.00 star=.00 coll=.10 rating=0+.00 skip=-.00 press=-.00 ctx=.15 cool=1.00 final=.36
+    preferred s7-0 Song s7-0 / Artist 7 | history: Fits this listening session | fits the session's genres, favourite genre | src=sampled artist=.10 album=.00 genre=.08 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 ctx=.15 cool=1.00 final=.36
     explore s0-5 Song s0-5 / Artist 0 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.69 genre=.69 plays=2 rating=0 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.94
-    preferred s6-1 Song s6-1 / Artist 6 | rated: From an artist you rated 5 | artist boosted, liked artist, favourite genre | src=sampled artist=.00 album=.00 genre=.11 era=.00 song=.00 star=.00 coll=.08 rating=5(artist)+.35 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.56
-    preferred s1-4 Song s1-4 / Artist 1 | rated: From Album 1-0, an album you rated 4 | album rated 4, fits the session's genres, high artist affinity | src=sampled artist=.13 album=.00 genre=.08 era=.00 song=.00 star=.00 coll=.00 rating=4(album)+.20 skip=-.00 press=-.00 ctx=.15 cool=1.00 final=.58
-    preferred s4-4 Song s4-4 / Artist 4 | history: Fits this listening session | fits the session's genres, favourite genre | src=sampled artist=.00 album=.00 genre=.08 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 ctx=.15 cool=1.00 final=.24
-    explore s1-3 Song s1-3 / Artist 1 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.52 genre=.52 plays=1 rating=0 skip=-.00 press=-.00 ctx=.15 cool=1.00 final=1.02
-    preferred s2-4 Song s2-4 / Artist 2 | history: Same artist as a song you just heard | same artist as before | src=sampled artist=.09 album=.00 genre=.00 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 ctx=.03 cool=1.00 final=.14
-    explore s5-2 Song s5-2 / Artist 5 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.00 genre=.00 plays=5 rating=0 skip=-.00 press=-.02 ctx=.00 cool=1.00 final=.10
     preferred s7-1 Song s7-1 / Artist 7 | history: Fits this listening session | fits the session's genres, favourite genre | src=sampled artist=.10 album=.00 genre=.08 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 ctx=.15 cool=1.00 final=.36
-    preferred s3-0 Song s3-0 / Artist 3 | history: Fits what you play | favourite, favourite genre | src=sampled artist=.06 album=.00 genre=.11 era=.00 song=.14 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.33
+    preferred s6-1 Song s6-1 / Artist 6 | rated: From an artist you rated 5 | artist boosted, liked artist, favourite genre | src=sampled artist=.00 album=.00 genre=.11 era=.00 song=.00 star=.00 coll=.08 rating=5(artist)+.35 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.56
+    explore s1-3 Song s1-3 / Artist 1 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.52 genre=.52 plays=1 rating=0 skip=-.00 press=-.00 ctx=.15 cool=1.00 final=1.02
+    preferred x-guest Song x-guest / Guest Band | history: Fits what you play | favourite genre | src=sampled artist=.00 album=.00 genre=.11 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.13
+    preferred s1-4 Song s1-4 / Artist 1 | rated: From Album 1-0, an album you rated 4 | album rated 4, fits the session's genres, high artist affinity | src=sampled artist=.13 album=.00 genre=.08 era=.00 song=.00 star=.00 coll=.00 rating=4(album)+.20 skip=-.00 press=-.00 ctx=.15 cool=1.00 final=.58
+    explore s6-3 Song s6-3 / Artist 6 | explore: Explore pick · new to you | less-played track by a frequent artist | src=explore artist=.00 genre=.69 plays=0 rating=0 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.94
+    preferred s5-5 Song s5-5 / Artist 5 | liked: You liked this song | liked | src=sampled artist=.00 album=.00 genre=.00 era=.00 song=.00 star=.25 coll=.00 rating=0+.00 skip=-.00 press=-.02 ctx=.00 cool=1.00 final=.25
+    preferred s3-3 Song s3-3 / Artist 3 | history: Fits what you play | favourite genre | src=sampled artist=.06 album=.00 genre=.11 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.19
     explore s3-4 Song s3-4 / Artist 3 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.25 genre=.69 plays=1 rating=0 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.84
     """
 
   static let keepPlayingBound = """
-    songs: s4-4 s1-3 s7-2 s1-2
+    songs: s4-4 s1-3 s7-2 s1-4
     keepPlaying at=1790000000.0 eligible=20 explore=0.5
     note: anchor genres: Jazz
     note: explore pool: 7 songs by 2 artists, quota 2, taken 2
     preferred s4-4 Song s4-4 / Artist 4 | history: Fits this listening session | fits the session's genres, favourite genre | src=sampled artist=.00 album=.00 genre=.08 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 ctx=.15 cool=1.00 final=.24
     explore s1-3 Song s1-3 / Artist 1 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.52 genre=.52 plays=1 rating=0 skip=-.00 press=-.00 ctx=.15 cool=1.00 final=1.02
     explore s7-2 Song s7-2 / Artist 7 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.43 genre=.52 plays=2 rating=0 skip=-.00 press=-.00 ctx=.15 cool=1.00 final=.78
-    preferred s1-2 Song s1-2 / Artist 1 | history: You play Artist 1 often · 6 plays in 60 days | favourite, fits the session's genres, high artist affinity | src=sampled artist=.13 album=.00 genre=.08 era=.00 song=.13 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 ctx=.15 cool=1.00 final=.51
+    preferred s1-4 Song s1-4 / Artist 1 | rated: From Album 1-0, an album you rated 4 | album rated 4, fits the session's genres, high artist affinity | src=sampled artist=.13 album=.00 genre=.08 era=.00 song=.00 star=.00 coll=.00 rating=4(album)+.20 skip=-.00 press=-.00 ctx=.15 cool=1.00 final=.58
     """
 
   static let coldStartOnRatings = """
@@ -350,7 +350,7 @@ private enum Golden {
     """
 
   static let coldStartToLibrary = """
-    songs: s0-2 s1-2 s0-3 s7-1 s1-5 s3-3 s6-2 s5-2 s4-4 s6-5 s3-2 s4-5 s2-0 s7-5 s2-4 s5-3 x-guest s1-0 s0-4 s1-1
+    songs: s0-2 s1-2 s0-3 s7-1 s1-5 s3-3 s6-2 s3-5 s5-2 s6-5 s4-5 s2-0 s7-5 s2-4 s5-3 s4-0 x-guest s1-0 s3-2 s1-1
     playSomething at=1790000000.0 eligible=52 explore=0.0
     note: cold start: server counts, their library
     note: explore pool: 0 songs by 0 artists, quota 3, taken 0
@@ -362,18 +362,18 @@ private enum Golden {
     preferred s1-5 Song s1-5 / Artist 1 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.24 album=.10 genre=.16 era=.04 song=.15 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.71
     preferred s3-3 Song s3-3 / Artist 3 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.22 album=.10 genre=.16 era=.03 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.70
     preferred s6-2 Song s6-2 / Artist 6 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.22 album=.10 genre=.16 era=.04 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.70
+    preferred s3-5 Song s3-5 / Artist 3 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.22 album=.10 genre=.16 era=.03 song=.12 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.66
     preferred s5-2 Song s5-2 / Artist 5 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.23 album=.10 genre=.16 era=.04 song=.13 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 cool=1.00 final=.66
-    preferred s4-4 Song s4-4 / Artist 4 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.23 album=.10 genre=.16 era=.03 song=.14 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 cool=1.00 final=.66
     preferred s6-5 Song s6-5 / Artist 6 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.22 album=.10 genre=.16 era=.04 song=.14 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.67
-    preferred s3-2 Song s3-2 / Artist 3 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.22 album=.09 genre=.16 era=.03 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.69
     preferred s4-5 Song s4-5 / Artist 4 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.23 album=.10 genre=.16 era=.03 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 cool=1.00 final=.69
     preferred s2-0 Song s2-0 / Artist 2 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.24 album=.10 genre=.16 era=.04 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.71
     preferred s7-5 Song s7-5 / Artist 7 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.24 album=.10 genre=.16 era=.03 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.71
     preferred s2-4 Song s2-4 / Artist 2 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.24 album=.10 genre=.16 era=.04 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.71
     preferred s5-3 Song s5-3 / Artist 5 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.23 album=.09 genre=.16 era=.04 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.02 cool=1.00 final=.68
+    preferred s4-0 Song s4-0 / Artist 4 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.23 album=.10 genre=.16 era=.03 song=.15 star=.00 coll=.00 rating=0+.00 skip=-.15 press=-.02 cool=1.00 final=.53
     preferred x-guest Song x-guest / Guest Band | history: Fits what you play | favourite genre | src=sampled artist=.00 album=.00 genre=.16 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.18
     preferred s1-0 Song s1-0 / Artist 1 | history: Fits what you play | favourite, high artist affinity | src=relaxed caps artist=.24 album=.10 genre=.16 era=.04 song=.13 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.69
-    preferred s0-4 Song s0-4 / Artist 0 | history: Fits what you play | favourite, high artist affinity | src=relaxed caps artist=.22 album=.10 genre=.16 era=.03 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.69
+    preferred s3-2 Song s3-2 / Artist 3 | history: Fits what you play | favourite, high artist affinity | src=relaxed caps artist=.22 album=.09 genre=.16 era=.03 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.69
     preferred s1-1 Song s1-1 / Artist 1 | history: Fits what you play | favourite, high artist affinity | src=relaxed caps artist=.24 album=.10 genre=.16 era=.04 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.72
     """
 
@@ -391,35 +391,35 @@ private enum Golden {
     """
 
   static let smallLibrary = """
-    songs: s0-2 s1-2 s0-3 s1-3 s0-1 s1-5 s0-4 s1-0 s0-0 x-live s0-5 s1-4 s1-1
+    songs: s0-3 s1-5 s0-2 s1-4 s0-5 s1-2 s0-4 s1-1 s0-0 s1-0 s0-1 s1-3 x-live
     keepPlaying at=1790000000.0 eligible=14 explore=0.3076923076923077
     note: explore pool: 7 songs by 2 artists, quota 6, taken 4
     note: caps relaxed
-    preferred s0-2 Song s0-2 / Artist 0 | liked: From an artist you liked | liked artist, favourite, high artist affinity | src=relaxed caps artist=.17 album=.08 genre=.11 era=.02 song=.11 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=.82 final=.48
-    preferred s1-2 Song s1-2 / Artist 1 | liked: From an artist you liked | liked artist, favourite, high artist affinity | src=relaxed caps artist=.13 album=.00 genre=.08 era=.00 song=.13 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.44
     preferred s0-3 Song s0-3 / Artist 0 | liked: From an artist you liked | liked artist, high artist affinity | src=relaxed caps artist=.17 album=.00 genre=.11 era=.02 song=.00 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.40
-    explore s1-3 Song s1-3 / Artist 1 | explore: Explore pick · not heard in 2 days | less-played track by a frequent artist | src=explore artist=.52 genre=.52 plays=1 rating=0 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.92
-    explore s0-1 Song s0-1 / Artist 0 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.69 genre=.69 plays=3 rating=0 skip=-.00 press=-.00 ctx=.00 cool=.59 final=.48
     preferred s1-5 Song s1-5 / Artist 1 | liked: From an artist you liked | liked artist, high artist affinity | src=relaxed caps artist=.13 album=.05 genre=.08 era=.00 song=.00 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.36
-    preferred s0-4 Song s0-4 / Artist 0 | liked: From an artist you liked | liked artist, high artist affinity | src=relaxed caps artist=.17 album=.08 genre=.11 era=.02 song=.00 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=.42 final=.20
-    preferred s1-0 Song s1-0 / Artist 1 | liked: From an artist you liked | liked artist, favourite, high artist affinity | src=relaxed caps artist=.13 album=.00 genre=.08 era=.00 song=.10 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.41
-    preferred s0-0 Song s0-0 / Artist 0 | liked: From an artist you liked | liked artist, high artist affinity | src=relaxed caps artist=.17 album=.08 genre=.11 era=.02 song=.07 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=.05 final=.03
-    preferred x-live Intro (Live) / Artist 1 | liked: From an artist you liked | liked artist, high artist affinity | src=relaxed caps artist=.13 album=.05 genre=.08 era=.00 song=.00 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=.45 final=.16
-    explore s0-5 Song s0-5 / Artist 0 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.69 genre=.69 plays=2 rating=0 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.94
+    preferred s0-2 Song s0-2 / Artist 0 | liked: From an artist you liked | liked artist, favourite, high artist affinity | src=relaxed caps artist=.17 album=.08 genre=.11 era=.02 song=.11 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=.17 final=.10
     explore s1-4 Song s1-4 / Artist 1 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.52 genre=.52 plays=4 rating=0 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.58
-    preferred s1-1 Song s1-1 / Artist 1 | liked: From an artist you liked | liked artist, favourite, high artist affinity | src=relaxed caps artist=.13 album=.05 genre=.08 era=.00 song=.12 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.48
+    explore s0-5 Song s0-5 / Artist 0 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.69 genre=.69 plays=2 rating=0 skip=-.00 press=-.00 ctx=.00 cool=1.00 final=.94
+    preferred s1-2 Song s1-2 / Artist 1 | liked: From an artist you liked | liked artist, favourite, high artist affinity | src=relaxed caps artist=.13 album=.00 genre=.08 era=.00 song=.13 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=.49 final=.22
+    preferred s0-4 Song s0-4 / Artist 0 | liked: From an artist you liked | liked artist, high artist affinity | src=relaxed caps artist=.17 album=.08 genre=.11 era=.02 song=.00 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=.09 final=.04
+    preferred s1-1 Song s1-1 / Artist 1 | liked: From an artist you liked | liked artist, favourite, high artist affinity | src=relaxed caps artist=.13 album=.05 genre=.08 era=.00 song=.12 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=.45 final=.22
+    preferred s0-0 Song s0-0 / Artist 0 | liked: From an artist you liked | liked artist, high artist affinity | src=relaxed caps artist=.17 album=.08 genre=.11 era=.02 song=.07 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=.05 final=.03
+    preferred s1-0 Song s1-0 / Artist 1 | liked: From an artist you liked | liked artist, favourite, high artist affinity | src=relaxed caps artist=.13 album=.00 genre=.08 era=.00 song=.10 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=.42 final=.17
+    explore s0-1 Song s0-1 / Artist 0 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.69 genre=.69 plays=3 rating=0 skip=-.00 press=-.00 ctx=.00 cool=.11 final=.09
+    explore s1-3 Song s1-3 / Artist 1 | explore: Explore pick · not heard in 2 days | less-played track by a frequent artist | src=explore artist=.52 genre=.52 plays=1 rating=0 skip=-.00 press=-.00 ctx=.00 cool=.53 final=.48
+    preferred x-live Intro (Live) / Artist 1 | liked: From an artist you liked | liked artist, high artist affinity | src=relaxed caps artist=.13 album=.05 genre=.08 era=.00 song=.00 star=.00 coll=.08 rating=0+.00 skip=-.00 press=-.00 ctx=.00 cool=.45 final=.16
     """
 
   static let genreCeiling = """
-    songs: s0-4 s1-0 s3-1 s6-2 s3-3 s0-5
+    songs: s0-3 s3-0 s1-0 s3-2 s6-0 s0-5
     playSomething at=1790000000.0 eligible=21 explore=0.16666666666666666
     note: explore pool: 3 songs by 1 artists, quota 1, taken 1
     note: caps relaxed
-    preferred s0-4 Song s0-4 / Artist 0 | history: Fits what you play | high artist affinity | src=sampled artist=.17 album=.08 genre=.11 era=.02 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.40
-    preferred s1-0 Song s1-0 / Artist 1 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.13 album=.00 genre=.08 era=.00 song=.10 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.33
-    preferred s3-1 Song s3-1 / Artist 3 | history: Fits what you play | favourite, favourite genre | src=sampled artist=.06 album=.00 genre=.11 era=.00 song=.15 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.34
-    preferred s6-2 Song s6-2 / Artist 6 | history: Fits what you play | favourite genre | src=relaxed genre artist=.00 album=.00 genre=.11 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.13
-    preferred s3-3 Song s3-3 / Artist 3 | history: Fits what you play | favourite genre | src=sampled artist=.06 album=.00 genre=.11 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.19
+    preferred s0-3 Song s0-3 / Artist 0 | history: Fits what you play | high artist affinity | src=sampled artist=.17 album=.00 genre=.11 era=.02 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.32
+    preferred s3-0 Song s3-0 / Artist 3 | history: Fits what you play | favourite, favourite genre | src=sampled artist=.06 album=.00 genre=.11 era=.00 song=.14 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=.78 final=.26
+    preferred s1-0 Song s1-0 / Artist 1 | history: Fits what you play | favourite, high artist affinity | src=sampled artist=.13 album=.00 genre=.08 era=.00 song=.10 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=.42 final=.14
+    preferred s3-2 Song s3-2 / Artist 3 | history: Fits what you play | favourite, favourite genre | src=sampled artist=.06 album=.00 genre=.11 era=.00 song=.16 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=.81 final=.28
+    preferred s6-0 Song s6-0 / Artist 6 | history: Fits what you play | favourite genre | src=relaxed genre artist=.00 album=.00 genre=.11 era=.00 song=.00 star=.00 coll=.00 rating=0+.00 skip=-.00 press=-.00 cool=1.00 final=.13
     explore s0-5 Song s0-5 / Artist 0 | explore: Explore pick · rarely played | less-played track by a frequent artist | src=explore artist=.69 genre=.69 plays=2 rating=0 skip=-.00 press=-.00 cool=1.00 final=.94
     """
 
