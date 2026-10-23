@@ -124,6 +124,9 @@ class PlayerViewModel: ObservableObject {
     let since: Date
     let timer: Timer
     var isReloading = false
+    /// The load a reachable probe started; it failing too means the server
+    /// answers but not for this song.
+    var probedLoad: Int?
   }
   var connectionWait: ConnectionWait? {
     didSet {
@@ -510,6 +513,7 @@ class PlayerViewModel: ObservableObject {
     let gen = playGeneration
     cancelSettle()
     pendingStart = PendingStart()
+    let wasPlaying = isPlaying
     MainActor.assumeIsolated { publishSiriTarget() }
     RequestLog.shared.note(
       "audio activate \(gen) playing=\(isPlaying) item=\(playerItem != nil)")
@@ -584,7 +588,9 @@ class PlayerViewModel: ObservableObject {
         self.player?.play()
         self.announceNowPlaying()
         self.reportPlayback(.playing)
-        self.armLoadWatchdog()
+        // A repeated Play (cars send one while a song is silent) keeps the
+        // pending deadline instead of pushing it back.
+        if !wasPlaying || !self.isLoadWatchdogPending { self.armLoadWatchdog() }
 
         self.isFinished = false
         self.isPlaying = true
@@ -692,15 +698,16 @@ class PlayerViewModel: ObservableObject {
   }
 
   func cyclePlaybackMode() {
-    if self.playbackMode == PlaybackMode.defaultPlayback {
-      self.playbackMode = PlaybackMode.repeatAlbum
-    } else if self.playbackMode == PlaybackMode.repeatAlbum {
-      self.playbackMode = PlaybackMode.repeatOnce
-    } else {
-      self.playbackMode = PlaybackMode.defaultPlayback
+    switch playbackMode {
+    case PlaybackMode.defaultPlayback: setPlaybackMode(PlaybackMode.repeatAlbum)
+    case PlaybackMode.repeatAlbum: setPlaybackMode(PlaybackMode.repeatOnce)
+    default: setPlaybackMode(PlaybackMode.defaultPlayback)
     }
+  }
 
-    UserDefaultsManager.playbackMode = self.playbackMode
+  func setPlaybackMode(_ mode: String) {
+    playbackMode = mode
+    UserDefaultsManager.playbackMode = mode
     precacheUpcoming()
   }
 

@@ -34,6 +34,19 @@ extension CarPlayController: @preconcurrency CPNowPlayingTemplateObserver {
     template.isUpNextButtonEnabled = true
     template.upNextTitle = "Up Next"
     template.add(self)
+    // The car draws shuffle and repeat from the command center's state only
+    // for commands with a target; Siri's shuffle and repeat arrive there too.
+    let commands = MPRemoteCommandCenter.shared()
+    commands.changeShuffleModeCommand.addTarget { [weak self] event in
+      guard let event = event as? MPChangeShuffleModeCommandEvent else { return .commandFailed }
+      Task { @MainActor in self?.setShuffle(event.shuffleType != .off, from: "remote") }
+      return .success
+    }
+    commands.changeRepeatModeCommand.addTarget { [weak self] event in
+      guard let event = event as? MPChangeRepeatModeCommandEvent else { return .commandFailed }
+      Task { @MainActor in self?.setRepeat(event.repeatType, from: "remote") }
+      return .success
+    }
     // @Published sends before the value is set, so the state is read one
     // main-queue turn later.
     player.$isShuffling.map { _ in () }
@@ -53,6 +66,25 @@ extension CarPlayController: @preconcurrency CPNowPlayingTemplateObserver {
 
   func stopNowPlaying() {
     CPNowPlayingTemplate.shared.remove(self)
+    let commands = MPRemoteCommandCenter.shared()
+    commands.changeShuffleModeCommand.removeTarget(nil)
+    commands.changeRepeatModeCommand.removeTarget(nil)
+  }
+
+  private func setShuffle(_ on: Bool, from source: String) {
+    RequestLog.shared.note("carplay: \(source) shuffle \(on ? "on" : "off")")
+    if player.isShuffling != on { player.shuffleCurrentQueue() }
+  }
+
+  private func setRepeat(_ type: MPRepeatType, from source: String) {
+    RequestLog.shared.note("carplay: \(source) repeat \(type.rawValue)")
+    let mode =
+      switch type {
+      case .all: PlaybackMode.repeatAlbum
+      case .one: PlaybackMode.repeatOnce
+      default: PlaybackMode.defaultPlayback
+      }
+    player.setPlaybackMode(mode)
   }
 
   func nowPlayingTemplateUpNextButtonTapped(_ nowPlayingTemplate: CPNowPlayingTemplate) {
@@ -99,8 +131,13 @@ extension CarPlayController: @preconcurrency CPNowPlayingTemplateObserver {
     let starImage = symbol(state.isBoosted ? "star.fill" : "star")
     let rate = CPNowPlayingImageButton(image: starImage) { [weak self] _ in self?.presentRate() }
     template.updateNowPlayingButtons([
-      CPNowPlayingShuffleButton { _ in player.shuffleCurrentQueue() },
-      CPNowPlayingRepeatButton { _ in player.cyclePlaybackMode() },
+      CPNowPlayingShuffleButton { [weak self] _ in
+        self?.setShuffle(!player.isShuffling, from: "button")
+      },
+      CPNowPlayingRepeatButton { _ in
+        RequestLog.shared.note("carplay: button repeat")
+        player.cyclePlaybackMode()
+      },
       heart, rate, playSomething,
     ])
   }
