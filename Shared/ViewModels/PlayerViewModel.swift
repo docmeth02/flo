@@ -692,15 +692,16 @@ class PlayerViewModel: ObservableObject {
   }
 
   func cyclePlaybackMode() {
-    if self.playbackMode == PlaybackMode.defaultPlayback {
-      self.playbackMode = PlaybackMode.repeatAlbum
-    } else if self.playbackMode == PlaybackMode.repeatAlbum {
-      self.playbackMode = PlaybackMode.repeatOnce
-    } else {
-      self.playbackMode = PlaybackMode.defaultPlayback
+    switch playbackMode {
+    case PlaybackMode.defaultPlayback: setPlaybackMode(PlaybackMode.repeatAlbum)
+    case PlaybackMode.repeatAlbum: setPlaybackMode(PlaybackMode.repeatOnce)
+    default: setPlaybackMode(PlaybackMode.defaultPlayback)
     }
+  }
 
-    UserDefaultsManager.playbackMode = self.playbackMode
+  func setPlaybackMode(_ mode: String) {
+    playbackMode = mode
+    UserDefaultsManager.playbackMode = mode
     precacheUpcoming()
   }
 
