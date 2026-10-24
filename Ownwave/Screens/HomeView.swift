@@ -54,55 +54,104 @@ struct HomeView: View {
   }
 
   private var header: some View {
-    HStack(spacing: 10) {
+    HStack(spacing: 8) {
       Wordmark()
       Spacer()
       NavigationLink(value: Route.watch) {
         Image(systemName: "applewatch")
       }
-      .buttonStyle(CircleButtonStyle(size: 42))
+      .buttonStyle(CircleButtonStyle(size: 38))
       .accessibilityLabel("Watch")
       NavigationLink(value: Route.settings) {
         Image(systemName: "gearshape")
       }
-      .buttonStyle(CircleButtonStyle(size: 42))
+      .buttonStyle(CircleButtonStyle(size: 38))
       .accessibilityLabel("Settings")
     }
     .padding(.horizontal, 4)
   }
 
+  /// The song loaded, if any, over Play Something.
   private var playCard: some View {
-    let hasNowPlaying = player.nowPlaying != nil
-    return VStack(spacing: 0) {
-      if hasNowPlaying { NowPlayingCard() }
-      Button {
-        Task { await app.playSomething() }
-      } label: {
-        Label(player.isGeneratingMix ? "Building mix…" : "Play Something", systemImage: "sparkles")
-      }
-      .buttonStyle(FillButtonStyle())
-      .disabled(player.isGeneratingMix)
-      .tourAnchor(.play)
-      .padding(
-        hasNowPlaying ? EdgeInsets(top: 16, leading: 14, bottom: 14, trailing: 14) : EdgeInsets())
+    VStack(spacing: 0) {
+      if player.nowPlaying != nil { NowPlayingCard() }
+      playSomething
     }
-    .background(hasNowPlaying ? palette.surface : .clear)
-    .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+    .background(palette.surface)
+    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+  }
+
+  private var playSomething: some View {
+    Button {
+      Task { await app.playSomething() }
+    } label: {
+      HStack(spacing: 12) {
+        Image(systemName: "sparkles")
+          .font(.system(size: 20, weight: .semibold))
+          .foregroundStyle(palette.accent)
+        VStack(alignment: .leading, spacing: 1) {
+          Text(player.isGeneratingMix ? "Building mix…" : "Play Something")
+            .font(.familjen(16, relativeTo: .headline))
+            .foregroundStyle(palette.text)
+          Text("New mix from your whole taste")
+            .font(.meta)
+            .foregroundStyle(palette.secondary)
+        }
+        .lineLimit(1)
+        Spacer(minLength: 0)
+        Group {
+          if player.isGeneratingMix {
+            ProgressView()
+          } else {
+            Image(systemName: "play.fill")
+          }
+        }
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundStyle(palette.accent)
+        .frame(width: 36, height: 36)
+        .background(palette.surface2, in: Circle())
+      }
+      .padding(.leading, 14)
+      .padding(.trailing, 12)
+      .padding(.vertical, 10)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .disabled(player.isGeneratingMix)
+    .tourAnchor(.play)
   }
 
   @ViewBuilder private var pinnedSection: some View {
     let pinned = pinned
     if !pinned.isEmpty {
-      section("Pinned") {
-        ForEach(pinned) { PinLink(target: $0) }
+      VStack(spacing: 12) {
+        SectionTitle("Pinned")
+        LazyVGrid(
+          columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8
+        ) {
+          ForEach(pinned) { PinLink(target: $0) }
+        }
       }
     }
   }
 
   @ViewBuilder private var recentSection: some View {
     if !albumViewModel.recentAlbums.isEmpty {
-      section("Recently Played") {
-        ForEach(albumViewModel.recentAlbums) { AlbumTile(album: $0, width: 150) }
+      VStack(spacing: 12) {
+        HStack(alignment: .firstTextBaseline) {
+          SectionTitle("Recently Played")
+          NavigationLink("See all", value: Route.recent)
+            .font(.rowSubtitle)
+            .foregroundStyle(palette.accent)
+            .padding(.trailing, 4)
+        }
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(alignment: .top, spacing: 12) {
+            ForEach(albumViewModel.recentAlbums) { AlbumTile(album: $0, width: 144) }
+          }
+          .padding(.horizontal, 16)
+        }
+        .padding(.horizontal, -16)
       }
     }
   }
@@ -110,34 +159,34 @@ struct HomeView: View {
   @ViewBuilder private var likedSection: some View {
     let songs = app.likedSongs
     if !songs.isEmpty {
-      VStack(spacing: 10) {
-        HStack(spacing: 14) {
+      VStack(spacing: 12) {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
           SectionTitle("Liked")
-          Button("See all") { openLibrary(.liked) }
-            .font(.rowSubtitle)
-            .foregroundStyle(palette.accent)
           Button {
             app.shuffle(SongCollection.liked(songs))
           } label: {
             Image(systemName: "shuffle")
           }
-          .buttonStyle(CircleButtonStyle(size: 36, foreground: palette.accent))
+          .buttonStyle(CircleButtonStyle(size: 32, foreground: palette.accent))
           .accessibilityLabel("Shuffle Liked Songs")
           Button {
             app.play(SongCollection.liked(songs))
           } label: {
-            Image(systemName: "play.fill").font(.system(size: 15, weight: .semibold))
+            Image(systemName: "play.fill")
           }
-          .buttonStyle(FillButtonStyle(height: 36))
-          .frame(width: 36)
+          .buttonStyle(CircleButtonStyle(size: 32, foreground: palette.accent))
           .accessibilityLabel("Play Liked Songs")
+          Button("See all") { openLibrary(.liked) }
+            .font(.rowSubtitle)
+            .foregroundStyle(palette.accent)
+            .padding(.leading, 4)
+            .padding(.trailing, 4)
         }
-        .padding(.trailing, 4)
-        VStack(spacing: 8) {
+        Platter {
           ForEach(Array(songs.prefix(3).enumerated()), id: \.element.id) { index, song in
             let menu = MenuTarget.song(
               song, context: SongCollection.Name.liked, isFromPlaylist: false)
-            SongRow(song: song, menu: menu, onCard: true) {
+            SongRow(song: song, menu: menu) {
               app.play(SongCollection.liked(songs), startingAt: index)
             } trailing: {
               Image(systemName: "heart.fill").foregroundStyle(Color.floLiked)
@@ -147,21 +196,10 @@ struct HomeView: View {
       }
     }
   }
-
-  /// A titled row of tiles that scrolls sideways to the screen's edges.
-  private func section(_ title: String, @ViewBuilder tiles: () -> some View) -> some View {
-    VStack(spacing: 12) {
-      SectionTitle(title)
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(alignment: .top, spacing: 12) { tiles() }
-          .padding(.horizontal, 16)
-      }
-      .padding(.horizontal, -16)
-    }
-  }
 }
 
-/// The playing song over its cover; a tap opens the player.
+/// The loaded song on its cover's shade: its state and time, Resume or
+/// Pause, and a tap anywhere else opens the player.
 private struct NowPlayingCard: View {
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var player: PlayerViewModel
@@ -172,65 +210,92 @@ private struct NowPlayingCard: View {
   var body: some View {
     let albumId = player.nowPlayingAlbumId
     let tint = shades?.tint ?? palette.accent
-    Button {
-      app.isNowPlayingPresented = true
-    } label: {
-      ZStack(alignment: .bottom) {
-        CoverArt(albumId: albumId, url: player.coverArt, radius: 0)
-        LinearGradient(
-          stops: [
-            .init(color: .clear, location: 0.15), .init(color: palette.surface, location: 0.92),
-          ],
-          startPoint: .top, endPoint: .bottom)
-        VStack(spacing: 3) {
-          Label(
-            player.isPlaying ? "Now Playing" : "Paused",
-            systemImage: player.isPlaying ? "pause.fill" : "play.fill"
-          )
-          .font(.buttonLabel)
+    HStack(spacing: 14) {
+      CoverArt(albumId: albumId, url: player.coverArt, radius: 14)
+        .frame(width: 108, height: 108)
+      VStack(alignment: .leading, spacing: 0) {
+        PlaybackLabel(
+          clock: player.clock, isPlaying: player.isPlaying,
+          duration: player.isLiveRadio ? nil : player.nowPlaying?.duration
+        )
+        .foregroundStyle(tint)
+        Text(player.nowPlaying?.songName ?? "")
+          .font(.familjen(20, relativeTo: .title3))
+          .foregroundStyle(palette.text)
+          .padding(.top, 5)
+        Text(player.nowPlaying?.artistName ?? "")
+          .font(.rowSubtitle)
           .foregroundStyle(tint)
-          Text(player.nowPlaying?.songName ?? "")
-            .font(.playerTitle)
-            .foregroundStyle(palette.text)
-          Text((player.nowPlaying?.artistName ?? "").uppercased())
-            .font(.rowSubtitle)
-            .tracking(0.3)
-            .foregroundStyle(palette.secondary)
-          ProgressLine(clock: player.clock, tint: tint, track: palette.surface2, height: 4)
-            .frame(width: 150)
-            .padding(.top, 8)
+        Spacer(minLength: 10)
+        Button {
+          player.togglePlayback()
+        } label: {
+          Label(
+            player.isPlaying ? "Pause" : "Resume",
+            systemImage: player.isPlaying ? "pause.fill" : "play.fill")
         }
-        .lineLimit(1)
-        .padding(.horizontal, 18)
-        .padding(.bottom, 6)
+        .buttonStyle(FillButtonStyle(tint: tint, height: 40))
       }
-      .frame(height: 196)
-      .contentShape(Rectangle())
+      .lineLimit(1)
+      .frame(maxHeight: .infinity)
     }
-    .buttonStyle(.plain)
+    .fixedSize(horizontal: false, vertical: true)
+    .padding(14)
+    .background(shades?.background ?? palette.surface2)
+    .contentShape(Rectangle())
+    .onTapGesture { app.isNowPlayingPresented = true }
+    .accessibilityAction(named: "Open Player") { app.isNowPlayingPresented = true }
     .coverShades($shades, albumId: albumId, url: player.coverArt)
   }
 }
 
-/// A pinned album, artist, playlist or radio: albums show their cover, the
-/// others their glyph. Radios play, the rest open.
+/// "PLAYING · 0:09 / 8:34", or "LIVE" for a station. It observes the clock
+/// itself, so Home does not redraw every second.
+private struct PlaybackLabel: View {
+  @ObservedObject var clock: PlayerClock
+  let isPlaying: Bool
+  /// Nil for a station, which has no length.
+  let duration: Double?
+
+  var body: some View {
+    Group {
+      if let duration {
+        Text(
+          "\(isPlaying ? "Playing" : "Paused") · "
+            + "\((clock.clampedProgress * duration).minuteSecond) / \(duration.minuteSecond)")
+      } else {
+        Text("Live")
+      }
+    }
+    .font(.counter)
+    .tracking(1.3)
+    .textCase(.uppercase)
+    .monospacedDigit()
+  }
+}
+
+/// A pinned album, artist, playlist or radio as a compact row: albums and
+/// playlists show their cover, artists and radios their glyph. Radios play,
+/// the rest open.
 private struct PinLink: View {
   let target: MenuTarget
 
   @EnvironmentObject private var app: AppModel
   @Environment(\.palette) private var palette
 
+  private let height: CGFloat = 56
+
   var body: some View {
     Group {
       switch target {
-      case .album(let album): NavigationLink(value: Route.album(album)) { tile }
-      case .artist(let artist): NavigationLink(value: Route.artist(artist)) { tile }
-      case .playlist(let playlist): NavigationLink(value: Route.playlist(playlist)) { tile }
+      case .album(let album): NavigationLink(value: Route.album(album)) { row }
+      case .artist(let artist): NavigationLink(value: Route.artist(artist)) { row }
+      case .playlist(let playlist): NavigationLink(value: Route.playlist(playlist)) { row }
       case .radio(let radio):
         Button {
           app.play(radio)
         } label: {
-          tile
+          row
         }
       case .song: EmptyView()
       }
@@ -239,30 +304,38 @@ private struct PinLink: View {
     .itemMenu(target)
   }
 
-  private var tile: some View {
-    VStack(alignment: .leading, spacing: 7) {
-      art.frame(width: 128, height: 128)
-      VStack(alignment: .leading, spacing: 1) {
-        Text(target.title)
-          .font(.rowSubtitle.weight(.semibold))
-          .foregroundStyle(palette.text)
-        Text(target.subtitle)
-          .font(.meta)
-          .foregroundStyle(palette.secondary)
-      }
-      .lineLimit(1)
+  private var row: some View {
+    HStack(spacing: 10) {
+      art
+      Text(target.title)
+        .font(.rowSubtitle.weight(.semibold))
+        .foregroundStyle(palette.text)
+        .lineLimit(1)
+      Spacer(minLength: 0)
     }
-    .frame(width: 128, alignment: .leading)
-    .contentShape(Rectangle())
+    .padding(.trailing, 10)
+    .frame(height: height)
+    .background(palette.surface)
+    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
   }
 
+  /// Covers fill the row's height at its rounded left edge; glyphs sit
+  /// inset.
   @ViewBuilder private var art: some View {
     switch target {
-    case .album(let album): CoverArt(albumId: album.id, radius: 14)
-    case .artist: GlyphTile.artist.squared(radius: 14)
-    case .playlist: GlyphTile.playlist.squared(radius: 14)
-    case .radio: GlyphTile.radio.squared(radius: 14)
+    case .album(let album):
+      CoverArt(albumId: album.id, radius: 0).frame(width: height, height: height)
+    case .playlist(let playlist):
+      CoverArt(albumId: playlist.id, artId: playlist.artId, radius: 0)
+        .frame(width: height, height: height)
+    case .artist: glyph(.artist)
+    case .radio: glyph(.radio)
     case .song: EmptyView()
     }
+  }
+
+  private func glyph(_ tile: GlyphTile) -> some View {
+    tile.frame(width: 40, height: 40).padding(.leading, 8)
   }
 }
