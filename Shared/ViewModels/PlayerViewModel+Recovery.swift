@@ -604,9 +604,12 @@ extension PlayerViewModel {
     }
 
     let generation = playGeneration
+    let load = loadGeneration
     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-      // A pause or play in the meantime means the user took over.
-      guard let self = self, self.playGeneration == generation, self.isCurrentTrack(trackId)
+      // A pause or play in the meantime means the user took over, a seek
+      // loaded the song again.
+      guard let self, self.playGeneration == generation, self.loadGeneration == load,
+        self.isCurrentTrack(trackId)
       else { return }
       self.nextSong()
     }

@@ -30,11 +30,13 @@ class LibraryCacheManager {
     lock.withLock { currentGeneration }
   }
 
-  func save<T: Encodable>(_ items: T, forKey key: Key, generation: Int) {
-    guard let data = try? JSONEncoder().encode(items) else { return }
-    lock.withLock {
-      guard generation == currentGeneration else { return }
-      try? data.write(to: fileURL(key), options: .atomic)
+  /// False when nothing was written.
+  @discardableResult
+  func save<T: Encodable>(_ items: T, forKey key: Key, generation: Int) -> Bool {
+    guard let data = try? JSONEncoder().encode(items) else { return false }
+    return lock.withLock {
+      guard generation == currentGeneration else { return false }
+      return (try? data.write(to: fileURL(key), options: .atomic)) != nil
     }
   }
 

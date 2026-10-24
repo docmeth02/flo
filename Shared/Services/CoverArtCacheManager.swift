@@ -11,6 +11,8 @@ class CoverArtCacheManager {
   private let fileManager = FileManager.default
   private let cacheDirectory = URL.cacheDirectory(named: "CoverArtCache")
   private var downloads: [String: Task<String?, Never>] = [:]
+  // Bumped by `clearCache()`; a download started before it is not kept.
+  private var generation = 0
   private let syncQueue = DispatchQueue(label: "flo.coverartcache")
 
   private init() {}
@@ -30,7 +32,9 @@ class CoverArtCacheManager {
     let download = syncQueue.sync { () -> Task<String?, Never>? in
       if cachedFilePath(albumId: albumId) != nil { return nil }
       if let running = downloads[albumId] { return running }
-      let task = Task { await self.download(albumId: albumId) }
+      let task = Task { [generation] in
+        await self.download(albumId: albumId, generation: generation)
+      }
       downloads[albumId] = task
       return task
     }
@@ -38,14 +42,18 @@ class CoverArtCacheManager {
     return await download.value
   }
 
-  private func download(albumId: String) async -> String? {
+  private func download(albumId: String, generation: Int) async -> String? {
     let params: [String: Any] = ["id": "al-\(albumId)", "size": AppPlatform.coverArtSize]
     if let tempFile = try? await APIManager.shared.subsonicDownload(
       endpoint: API.SubsonicEndpoint.coverArt, parameters: params)
     {
-      let target = fileURL(albumId: albumId)
-      try? fileManager.removeItem(at: target)
-      try? fileManager.moveItem(at: tempFile, to: target)
+      // On the queue a logout's clear runs on, so a download it outlived
+      // never moves the previous account's cover in.
+      syncQueue.sync {
+        guard generation == self.generation else { return }
+        _ = try? LocalFileManager.shared.moveFile(
+          source: tempFile, target: fileURL(albumId: albumId))
+      }
     }
     // A logout cancelled it, and a newer download may hold its place.
     if !Task.isCancelled { syncQueue.sync { downloads[albumId] = nil } }
@@ -54,11 +62,12 @@ class CoverArtCacheManager {
 
   func clearCache() {
     syncQueue.sync {
+      generation += 1
       downloads.values.forEach { $0.cancel() }
       downloads.removeAll()
+      try? fileManager.removeItem(at: cacheDirectory)
+      try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
     }
-    try? fileManager.removeItem(at: cacheDirectory)
-    try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
   }
 
   private func fileURL(albumId: String) -> URL {

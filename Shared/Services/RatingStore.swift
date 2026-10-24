@@ -162,8 +162,6 @@ import Foundation
     refreshedAt = Date()
     confirmed = [:]
     artistConfirmed = [:]
-    defaults.removeObject(forKey: UserDefaultsKeys.confirmedRatings)
-    defaults.removeObject(forKey: UserDefaultsKeys.confirmedArtistRatings)
     publish()
   }
 
@@ -210,11 +208,19 @@ import Foundation
     debugLog(
       "ratings refreshed: \(server.count) songs, \(albumRatings.count) albums, "
         + "\(artistServer.count) artists, \(edits.values.count + artistEdits.values.count) pending")
-    await Task.detached(priority: .utility) {
-      LibraryCacheManager.shared.save(songs, forKey: .ratedSongs, generation: cacheGeneration)
-      LibraryCacheManager.shared.save(albums, forKey: .ratedAlbums, generation: cacheGeneration)
-      LibraryCacheManager.shared.save(artists, forKey: .ratedArtists, generation: cacheGeneration)
+    let stored = await Task.detached(priority: .utility) {
+      let cache = LibraryCacheManager.shared
+      return [
+        cache.save(songs, forKey: .ratedSongs, generation: cacheGeneration),
+        cache.save(albums, forKey: .ratedAlbums, generation: cacheGeneration),
+        cache.save(artists, forKey: .ratedArtists, generation: cacheGeneration),
+      ].allSatisfy { $0 }
     }.value
+    // The stored confirmations go only once the cache holds what replaced
+    // them, and not when another was confirmed meanwhile.
+    guard stored, account == generation, confirmedEdits == confirmations else { return }
+    defaults.removeObject(forKey: UserDefaultsKeys.confirmedRatings)
+    defaults.removeObject(forKey: UserDefaultsKeys.confirmedArtistRatings)
   }
 
   private func publish() {

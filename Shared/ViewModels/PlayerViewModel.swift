@@ -562,21 +562,20 @@ class PlayerViewModel: ObservableObject {
           let song = self.nowPlaying
         {
           let trackId = song.id
-          if self.reloadedFailedTrackId != trackId {
+          if self.isLiveRadio {
+            // A station has no next song to skip to; each Play connects again.
+            self.reloadRadioItem()
+          } else if self.reloadedFailedTrackId != trackId {
             self.reloadedFailedTrackId = trackId
-            if self.isLiveRadio {
-              self.reloadRadioItem()
-            } else {
-              // A song that was under way picks up where it broke, one that
-              // never started where it was meant to begin.
-              self.isPlaying = true
-              self.resumedAtListened = self.secondsListened
-              self.loadItem(
-                at: self.lastObservedTime > 5
-                  ? floor(self.lastObservedTime) : self.pendingStartPosition)
-              self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
-              return
-            }
+            // A song that was under way picks up where it broke, one that
+            // never started where it was meant to begin.
+            self.isPlaying = true
+            self.resumedAtListened = self.secondsListened
+            self.loadItem(
+              at: self.lastObservedTime > 5
+                ? floor(self.lastObservedTime) : self.pendingStartPosition)
+            self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
+            return
           } else {
             // The failed item may already be counted, which would leave the
             // skip's guard with nothing to do and the player stuck.
@@ -688,6 +687,8 @@ class PlayerViewModel: ObservableObject {
       lastObservedTime = target
       loadItem(at: target)
     } else {
+      // A short jump forward is not heard either.
+      lastObservedTime = target
       player?.seek(
         to: CMTime(seconds: target - streamOffset, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
       // A fresh grace period from the new position.
@@ -783,9 +784,11 @@ class PlayerViewModel: ObservableObject {
         let service = SmartPlaybackService.shared
         songs = byArtist(
           online ? await service.loadCachedLibrary().songs : await service.offlinePlayableSongs())
-        if online, songs.isEmpty { songs = byArtist(await service.syncSongLibrary()) }
-        // The sync may have failed because the link went.
-        if songs.isEmpty { songs = byArtist(await service.offlinePlayableSongs()) }
+        if online, songs.isEmpty {
+          songs = byArtist(await service.syncSongLibrary())
+          // The sync may have failed because the link went.
+          if songs.isEmpty { songs = byArtist(await service.offlinePlayableSongs()) }
+        }
         songs.shuffle()
       }
       return .artist(id: id, name: name, songs: songs)
