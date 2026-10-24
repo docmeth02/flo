@@ -146,6 +146,7 @@ struct LoginView: View {
       }
     }
     .contentShape(Rectangle())
-    .onTapGesture { focus = field }
+    // Alongside the field's own taps, which place the cursor.
+    .simultaneousGesture(TapGesture().onEnded { focus = field })
   }
 }

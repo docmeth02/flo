@@ -113,7 +113,43 @@ struct Platter<Content: View>: View {
       }
     }
     .padding(.horizontal, 12)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .onPlatter()
+  }
+}
+
+extension View {
+  /// The platter's surface and corners behind a card: a group of rows, a
+  /// Settings group, a Taste card.
+  func onPlatter() -> some View { modifier(OnPlatter()) }
+}
+
+private struct OnPlatter: ViewModifier {
+  @Environment(\.palette) private var palette
+
+  func body(content: Content) -> some View {
+    content.background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+  }
+}
+
+/// The trailing chevron of a row that opens something.
+struct Chevron: View {
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    Image(systemName: "chevron.right")
+      .font(.system(size: 14, weight: .semibold))
+      .foregroundStyle(palette.secondary)
+  }
+}
+
+/// Green while the server or watch answers, else the secondary color.
+struct StatusDot: View {
+  let isOn: Bool
+
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    Circle().fill(isOn ? Color.floDownloaded : palette.secondary).frame(width: 7, height: 7)
   }
 }
 

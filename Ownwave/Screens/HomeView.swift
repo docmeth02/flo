@@ -41,18 +41,21 @@ struct HomeView: View {
       .padding(.bottom, 24)
     }
     .toolbar(.hidden, for: .navigationBar)
-    // Again once the album list arrives: right after signing in there is no
-    // cache to read yet.
-    .task(id: albumViewModel.albums.isEmpty) {
+    // Again as the lists arrive: right after signing in there is no cache to
+    // read yet.
+    .task(
+      id: [
+        albumViewModel.albums.isEmpty, albumViewModel.artists.isEmpty,
+        albumViewModel.playlists.isEmpty,
+      ]
+    ) {
       albumViewModel.fetchStarredSongsIfStale()
       await albumViewModel.loadRecentAlbums()
       albums = await albumViewModel.loadedOrCached(albumViewModel.albums, .albums)
       artists = await albumViewModel.loadedOrCached(albumViewModel.artists, .artists)
       playlists = await albumViewModel.loadedOrCached(albumViewModel.playlists, .playlists)
-      if albums.isEmpty {
-        albumViewModel.fetchAlbums()
-        albumViewModel.getPlaylists()
-      }
+      if albums.isEmpty { albumViewModel.fetchAlbums() }
+      if playlists.isEmpty { albumViewModel.getPlaylists() }
       if !pins.pinned(.radio).isEmpty, radios.radios.isEmpty { radios.fetchAllRadios() }
       // Siri and Shortcuts read the artist names from this cache.
       await albumViewModel.cacheArtistsIfNeeded()

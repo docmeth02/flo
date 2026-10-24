@@ -88,8 +88,7 @@ struct PlaylistRow<Trailing: View>: View {
     guard playlist.songCount > 0 else {
       return playlist.comment.isEmpty ? "Playlist" : playlist.comment
     }
-    let minutes = Int((playlist.duration / 60).rounded())
-    return "\(counted(playlist.songCount, "song")) · \(minutes) min"
+    return songsAndLength(playlist.songCount, seconds: playlist.duration)
   }
 
   var body: some View {
@@ -120,7 +119,7 @@ struct LazyPlatter<Content: View>: View {
   var body: some View {
     LazyVStack(spacing: 0) { content }
       .padding(.horizontal, 12)
-      .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+      .onPlatter()
   }
 }
 
@@ -193,12 +192,17 @@ struct BlurredBackdrop: View {
   }
 }
 
+/// "12 songs · 48 min", the count alone without a length.
+func songsAndLength(_ songs: Int, seconds: Double) -> String {
+  let count = counted(songs, "song")
+  return seconds > 0 ? "\(count) · \(Int((seconds / 60).rounded())) min" : count
+}
+
 extension [Song] {
   /// "12 songs · 48 min", empty while no song is loaded.
   var countAndLength: String {
     guard !isEmpty else { return "" }
-    let seconds = reduce(0) { $0 + ($1.duration.isFinite ? $1.duration : 0) }
-    let minutes = Int((seconds / 60).rounded())
-    return "\(counted(count, "song")) · \(minutes) min"
+    return songsAndLength(
+      count, seconds: reduce(0) { $0 + ($1.duration.isFinite ? $1.duration : 0) })
   }
 }

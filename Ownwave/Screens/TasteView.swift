@@ -261,7 +261,7 @@ private struct TasteProfile: View {
       }
     }
     .padding(EdgeInsets(top: 18, leading: 16, bottom: 16, trailing: 16))
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .onPlatter()
   }
 }
 
@@ -331,7 +331,7 @@ private struct VarietyCard: View {
         .fixedSize(horizontal: false, vertical: true)
     }
     .padding(EdgeInsets(top: 18, leading: 16, bottom: 16, trailing: 16))
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .onPlatter()
     .sensoryFeedback(.selection, trigger: variety)
     .onChange(of: variety) { WatchLink.shared.updateWatch() }
   }
@@ -363,15 +363,22 @@ private struct VarietyCard: View {
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
       .contentShape(Rectangle())
+      .onTapGesture { select(at: $0.x, inset: inset, room: room) }
+      // Sideways only, so a scroll that starts on the slider still scrolls.
       .gesture(
-        DragGesture(minimumDistance: 0).onChanged { drag in
-          let position = (drag.location.x - inset) / room * CGFloat(Self.stops.count - 1)
-          let stop = min(max(Int(position.rounded()), 0), Self.stops.count - 1)
-          select(Self.stops[stop])
+        DragGesture(minimumDistance: 6).onChanged { drag in
+          guard abs(drag.translation.width) > abs(drag.translation.height) else { return }
+          select(at: drag.location.x, inset: inset, room: room)
         }
       )
     }
     .frame(height: Self.knob + 8)
+  }
+  /// The stop nearest to `x` on the track.
+  private func select(at x: CGFloat, inset: CGFloat, room: CGFloat) {
+    guard room > 0 else { return }
+    let position = (x - inset) / room * CGFloat(Self.stops.count - 1)
+    select(Self.stops[min(max(Int(position.rounded()), 0), Self.stops.count - 1)])
   }
 
   private var labels: some View {
@@ -441,7 +448,7 @@ private struct RecipeCard: View {
     }
     .padding(18)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .onPlatter()
   }
 
   /// One segment per kind in the mix, as wide as its share.

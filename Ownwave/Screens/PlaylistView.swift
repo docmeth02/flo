@@ -29,8 +29,7 @@ struct PlaylistView: View {
   private var meta: String {
     var length = songs.countAndLength
     if length.isEmpty, playlist.songCount > 0 {
-      length = counted(playlist.songCount, "song")
-      if playlist.duration > 0 { length += " · \(Int((playlist.duration / 60).rounded())) min" }
+      length = songsAndLength(playlist.songCount, seconds: playlist.duration)
     }
     return length.isEmpty ? "Playlist" : "Playlist · " + length
   }

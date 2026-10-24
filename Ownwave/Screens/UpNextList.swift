@@ -108,7 +108,6 @@ private struct QueueCollection: UIViewRepresentable {
     /// Shows the queue's order, unless the list shows it already.
     private func applyQueue(animated: Bool) {
       guard let dataSource else { return }
-      entries = Dictionary(list.upNext.map { ($0.objectID, $0) }) { first, _ in first }
       let songs = list.upNext.map { Item.song($0.objectID) }
       let shown = dataSource.snapshot()
       if shown.sectionIdentifiers == [.top, .songs],
@@ -116,6 +115,7 @@ private struct QueueCollection: UIViewRepresentable {
       {
         return
       }
+      entries = Dictionary(list.upNext.map { ($0.objectID, $0) }) { first, _ in first }
       var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
       snapshot.appendSections([.top, .songs])
       snapshot.appendItems([.top], toSection: .top)
@@ -228,14 +228,20 @@ private struct QueueCollection: UIViewRepresentable {
     }
 
     /// Hands a drag to the queue, both positions in play order; a refused
-    /// move puts the rows back in the queue's order.
+    /// move, or one made on rows the queue moved past meanwhile (the song
+    /// ended mid-drag), puts the rows back in the queue's order.
     private func didReorder(_ transaction: NSDiffableDataSourceTransaction<Section, Item>) {
-      guard
+      let player = list.player
+      let shown = transaction.initialSnapshot.itemIdentifiers(inSection: .songs)
+      let upcoming = player.queue.dropFirst(player.activeQueueIdx + 1).map {
+        Item.song($0.objectID)
+      }
+      guard shown == upcoming,
         let changes = transaction.sectionTransactions.first(where: {
           $0.sectionIdentifier == .songs
         })?
         .difference
-      else { return }
+      else { return applyQueue(animated: true) }
       var from: Int?
       var to: Int?
       for change in changes {
@@ -244,8 +250,8 @@ private struct QueueCollection: UIViewRepresentable {
         case .insert(let offset, _, _): to = offset
         }
       }
-      let start = list.player.activeQueueIdx + 1
-      if let from, let to, list.player.moveInQueue(from: start + from, to: start + to) { return }
+      let start = player.activeQueueIdx + 1
+      if let from, let to, player.moveInQueue(from: start + from, to: start + to) { return }
       applyQueue(animated: true)
     }
 

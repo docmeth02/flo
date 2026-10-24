@@ -28,12 +28,8 @@ struct WatchAlbumsView: View {
                 art: .cover(albumId: album.id), title: album.name,
                 subtitle: album.subtitle(withBitrate: true), artSize: 44
               ) {
-                if let progress = album.progress {
-                  Text("\(Int(progress * 100))%")
-                    .font(.rowSubtitle)
-                    .monospacedDigit()
-                    .foregroundStyle(palette.secondary)
-                } else {
+                // The subtitle says how far one on its way is.
+                if album.progress == nil {
                   Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.floDownloaded)
                 }
               }
@@ -46,7 +42,6 @@ struct WatchAlbumsView: View {
       .padding(.bottom, 24)
     }
     .navigationBarTitleDisplayMode(.inline)
-    .followsSendProgress()
   }
 }
 
@@ -110,13 +105,15 @@ struct WatchAlbum: Identifiable {
 extension View {
   /// Stop Sending on an album on its way: a send that hangs (a watch app
   /// reinstalled meanwhile) can go again.
-  func watchAlbumMenu(_ album: WatchAlbum) -> some View {
-    contextMenu {
-      if album.state == .sending {
+  @ViewBuilder func watchAlbumMenu(_ album: WatchAlbum) -> some View {
+    if album.state == .sending {
+      contextMenu {
         Button("Stop Sending", systemImage: "xmark", role: .destructive) {
           WatchLink.shared.stopSend(album.id)
         }
       }
+    } else {
+      self
     }
   }
 

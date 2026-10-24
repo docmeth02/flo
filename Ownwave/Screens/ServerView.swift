@@ -24,7 +24,7 @@ struct ServerView: View {
             Text(UserDefaultsManager.serverBaseURL).truncationMode(.middle)
           }
           detail("User") { Text(username) }
-          detail("Version") { Text(version.map { "Navidrome \($0)" } ?? "Navidrome") }
+          detail("Version") { Text(ServerAccount.product(version: version)) }
           detail("Status") {
             HStack(spacing: 6) {
               StatusDot(isOn: connectivity.isServerReachable)
@@ -87,20 +87,14 @@ enum ServerAccount {
     await LibraryAPI.serverVersion()?.split(separator: " ").first.map(String.init)
   }
 
+  /// "Navidrome 0.64.2", or just "Navidrome" while the version is unknown.
+  static func product(version: String?) -> String {
+    version.map { "Navidrome \($0)" } ?? "Navidrome"
+  }
+
   /// "Navidrome 0.64.2 · anna"
   static func line(version: String?, username: String) -> String {
-    let name = version.map { "Navidrome \($0)" } ?? "Navidrome"
+    let name = product(version: version)
     return username.isEmpty ? name : "\(name) · \(username)"
-  }
-}
-
-/// Green while the server or watch answers, else the secondary color.
-struct StatusDot: View {
-  let isOn: Bool
-
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    Circle().fill(isOn ? Color.floDownloaded : palette.secondary).frame(width: 7, height: 7)
   }
 }

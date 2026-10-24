@@ -43,16 +43,29 @@ struct ChipBar<Value: Hashable>: View {
         }
         Text(option.label)
       }
+    }
+    .buttonStyle(ChipStyle(isOn: isOn))
+    .accessibilityAddTraits(isOn ? .isSelected : [])
+    .animation(.snappy(duration: 0.2), value: isOn)
+  }
+}
+
+/// A quiet chip: on the platter, or filled in the text color when chosen.
+/// The chip bars and Search's recent queries.
+struct ChipStyle: ButtonStyle {
+  var isOn = false
+
+  @Environment(\.palette) private var palette
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
       .font(.rowSubtitle.weight(.semibold))
       .foregroundStyle(isOn ? palette.background : palette.text)
       .padding(.horizontal, 15)
       .padding(.vertical, 9)
       .background(isOn ? palette.text : palette.surface, in: Capsule())
       .contentShape(Capsule())
-    }
-    .buttonStyle(.plain)
-    .accessibilityAddTraits(isOn ? .isSelected : [])
-    .animation(.snappy(duration: 0.2), value: isOn)
+      .opacity(configuration.isPressed ? 0.75 : 1)
   }
 }
 

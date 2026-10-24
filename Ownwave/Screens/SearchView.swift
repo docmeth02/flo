@@ -47,6 +47,7 @@ struct SearchView: View {
   private struct Found {
     let query: String
     let results: LibrarySearch.Results
+    let top: MenuTarget?
   }
 
   var body: some View {
@@ -58,13 +59,7 @@ struct SearchView: View {
           section("Recent") {
             FlowLayout(spacing: 8) {
               ForEach(recents, id: \.self) { recent in
-                Button(recent) { query = recent }
-                  .font(.rowSubtitle)
-                  .foregroundStyle(palette.text)
-                  .padding(.horizontal, 15)
-                  .padding(.vertical, 9)
-                  .background(palette.surface, in: Capsule())
-                  .buttonStyle(.plain)
+                Button(recent) { query = recent }.buttonStyle(ChipStyle())
               }
             }
           }
@@ -123,7 +118,7 @@ struct SearchView: View {
           query, artists: artists, albums: albumList, songs: songs, limits: .phone)
       }.value
       guard !Task.isCancelled else { return }
-      found = results.map { Found(query: query, results: $0) }
+      found = results.map { Found(query: query, results: $0, top: topResult(query, $0)) }
     }
   }
 
@@ -182,7 +177,7 @@ struct SearchView: View {
   @ViewBuilder
   private func results(_ found: Found) -> some View {
     let results = found.results
-    let top = topResult(found.query, results)
+    let top = found.top
     let artists = pinnedFirst(
       results.artists.map(MenuTarget.artist).filter { $0.id != top?.id })
     let albumTargets = pinnedFirst(
@@ -190,13 +185,12 @@ struct SearchView: View {
     let playlists = pinnedFirst(
       albums.playlists.filter { $0.name.localizedStandardContains(found.query) }
         .map(MenuTarget.playlist))
-    let songs = results.songs.map { MenuTarget.song($0, context: SongCollection.Name.search, isFromPlaylist: false) }
-      .filter { $0.id != top?.id }
+    let songs = results.songs.map(songTarget).filter { $0.id != top?.id }
 
     if let top {
       section("Top result") { topCard(top) }
     } else if playlists.isEmpty {
-      Text("Nothing on the server matches \u{201C}\(found.query)\u{201D}.")
+      Text("Nothing matches \u{201C}\(found.query)\u{201D}.")
         .font(.rowSubtitle)
         .foregroundStyle(palette.secondary)
         .multilineTextAlignment(.center)
@@ -230,7 +224,7 @@ struct SearchView: View {
   private func topResult(_ query: String, _ results: LibrarySearch.Results) -> MenuTarget? {
     let candidates: [MenuTarget] =
       results.artists.map(MenuTarget.artist) + results.albums.map(MenuTarget.album)
-      + results.songs.map { MenuTarget.song($0, context: SongCollection.Name.search, isFromPlaylist: false) }
+      + results.songs.map(songTarget)
     let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
     let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
     func match(_ name: String) -> Int {
@@ -243,6 +237,10 @@ struct SearchView: View {
           < (-match(b.element.title), isPinned(b.element) ? 0 : 1, b.offset)
       }?
       .element
+  }
+
+  private func songTarget(_ song: Song) -> MenuTarget {
+    .song(song, context: SongCollection.Name.search, isFromPlaylist: false)
   }
 
   private func isPinned(_ target: MenuTarget) -> Bool {
@@ -367,7 +365,7 @@ struct SearchView: View {
       topAction(target)
         .padding(.trailing, 14)
     }
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .onPlatter()
     .itemMenu(target)
   }
 

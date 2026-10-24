@@ -76,10 +76,10 @@ struct WatchView: View {
         .font(.rowSubtitle)
         .foregroundStyle(palette.secondary)
         if let watch {
-          let music = Text(Self.size(watch.musicBytes))
+          let music = Text(watch.musicBytes.fileSize)
             .fontWeight(.semibold)
             .foregroundStyle(palette.accent)
-          Text("\(music) music · \(Self.size(watch.freeBytes)) free")
+          Text("\(music) music · \(watch.freeBytes.fileSize) free")
             .font(.meta)
             .foregroundStyle(palette.secondary)
             .padding(.top, 6)
@@ -100,10 +100,6 @@ struct WatchView: View {
     return link.isSignedIn ? "Connected · signed in" : "Connected · not signed in"
   }
 
-  private static func size(_ bytes: Int64) -> String {
-    ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
-  }
-
   // MARK: - Sign-in and settings
 
   private var signInCard: some View {
@@ -119,7 +115,7 @@ struct WatchView: View {
       }
     }
     .padding(16)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .onPlatter()
   }
 
   private var shareRow: some View {
@@ -133,7 +129,7 @@ struct WatchView: View {
     }
     .tint(palette.fill)
     .padding(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .onPlatter()
   }
 
   // MARK: - Albums
@@ -224,10 +220,13 @@ private struct StorageRing: View {
     let share = Double(music) / Double(max(music + free, 1))
     ZStack {
       Circle().stroke(palette.surface2, lineWidth: Self.width)
-      Circle()
-        .trim(from: 0, to: share)
-        .stroke(palette.accent, style: StrokeStyle(lineWidth: Self.width, lineCap: .round))
-        .rotationEffect(.degrees(-90))
+      // Round caps would draw a dot for nothing.
+      if share > 0 {
+        Circle()
+          .trim(from: 0, to: share)
+          .stroke(palette.accent, style: StrokeStyle(lineWidth: Self.width, lineCap: .round))
+          .rotationEffect(.degrees(-90))
+      }
       Image(systemName: "applewatch")
         .font(.system(size: 34, weight: .medium))
         .foregroundStyle(palette.accent)

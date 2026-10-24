@@ -64,6 +64,10 @@ struct LibraryView: View {
   @AppStorage("albumSort") private var albumOrder = AlbumOrder.added
   @AppStorage("artistSort") private var artistOrder = ArtistOrder.name
   @AppStorage("playlistSort") private var playlistOrder = PlaylistOrder.name
+  // The last sorts, so a redraw sorts again only when a list or order changed.
+  @State private var albumSort = SortMemo<Album, AlbumOrder>()
+  @State private var artistSort = SortMemo<Artist, ArtistOrder>()
+  @State private var playlistSort = SortMemo<Playlist, PlaylistOrder>()
 
   var body: some View {
     ScrollView {
@@ -124,7 +128,7 @@ struct LibraryView: View {
                 art: .glyph(.artist), title: artist.name,
                 subtitle: counted(artist.albumCount, "album"), artSize: 46
               ) {
-                chevron
+                Chevron()
               }
             }
             .buttonStyle(.plain)
@@ -145,7 +149,7 @@ struct LibraryView: View {
         LazyPlatter {
           ForEach(playlists) { playlist in
             NavigationLink(value: Route.playlist(playlist)) {
-              PlaylistRow(playlist: playlist) { chevron }
+              PlaylistRow(playlist: playlist) { Chevron() }
             }
             .buttonStyle(.plain)
             .itemMenu(.playlist(playlist))
@@ -180,46 +184,50 @@ struct LibraryView: View {
     }
   }
 
-  private var chevron: some View {
-    Image(systemName: "chevron.right")
-      .font(.system(size: 14, weight: .semibold))
-      .foregroundStyle(palette.secondary)
-  }
-
   private var sortedAlbums: [Album] {
-    let albums = albumViewModel.albums
-    return switch albumOrder {
-    // An album without a date sorts last: the empty string is the smallest.
-    case .added: albums.sorted { $0.createdAt > $1.createdAt }
-    case .name: albums.sorted { $0.name.precedes($1.name) }
-    case .artist:
-      albums.sorted {
-        $0.albumArtist == $1.albumArtist
-          ? $0.name.precedes($1.name) : $0.albumArtist.precedes($1.albumArtist)
-      }
-    case .year:
-      albums.sorted {
-        $0.minYear == $1.minYear ? $0.name.precedes($1.name) : $0.minYear > $1.minYear
+    albumSort.sorted(albumViewModel.albums, by: albumOrder) { albums, order in
+      switch order {
+      // An album without a date sorts last: the empty string is the smallest.
+      case .added:
+        albums.sorted {
+          $0.createdAt == $1.createdAt ? $0.name.precedes($1.name) : $0.createdAt > $1.createdAt
+        }
+      case .name: albums.sorted { $0.name.precedes($1.name) }
+      case .artist:
+        albums.sorted {
+          $0.albumArtist == $1.albumArtist
+            ? $0.name.precedes($1.name) : $0.albumArtist.precedes($1.albumArtist)
+        }
+      case .year:
+        albums.sorted {
+          $0.minYear == $1.minYear ? $0.name.precedes($1.name) : $0.minYear > $1.minYear
+        }
       }
     }
   }
 
   private var sortedArtists: [Artist] {
-    let artists = albumViewModel.artists
-    return switch artistOrder {
-    case .name: artists.sorted { $0.name.precedes($1.name) }
-    case .albums:
-      artists.sorted {
-        $0.albumCount == $1.albumCount ? $0.name.precedes($1.name) : $0.albumCount > $1.albumCount
+    artistSort.sorted(albumViewModel.artists, by: artistOrder) { artists, order in
+      switch order {
+      case .name: artists.sorted { $0.name.precedes($1.name) }
+      case .albums:
+        artists.sorted {
+          $0.albumCount == $1.albumCount
+            ? $0.name.precedes($1.name) : $0.albumCount > $1.albumCount
+        }
       }
     }
   }
 
   private var sortedPlaylists: [Playlist] {
-    let playlists = albumViewModel.playlists
-    return switch playlistOrder {
-    case .name: playlists.sorted { $0.name.precedes($1.name) }
-    case .updated: playlists.sorted { $0.updatedAt > $1.updatedAt }
+    playlistSort.sorted(albumViewModel.playlists, by: playlistOrder) { playlists, order in
+      switch order {
+      case .name: playlists.sorted { $0.name.precedes($1.name) }
+      case .updated:
+        playlists.sorted {
+          $0.updatedAt == $1.updatedAt ? $0.name.precedes($1.name) : $0.updatedAt > $1.updatedAt
+        }
+      }
     }
   }
 
@@ -483,5 +491,18 @@ private struct CachedSongsView: View {
     .containerBackground(palette.background, for: .navigation)
     .navigationTitle("Cached")
     .navigationBarTitleDisplayMode(.inline)
+  }
+}
+
+/// A list's last sort, kept while neither the list nor the order changes; a
+/// list that is the same array compares in constant time.
+private final class SortMemo<Item: Equatable, Order: Equatable> {
+  private var last: (items: [Item], order: Order, sorted: [Item])?
+
+  func sorted(_ items: [Item], by order: Order, _ sort: ([Item], Order) -> [Item]) -> [Item] {
+    if let last, last.order == order, last.items == items { return last.sorted }
+    let sorted = sort(items, order)
+    last = (items, order, sorted)
+    return sorted
   }
 }

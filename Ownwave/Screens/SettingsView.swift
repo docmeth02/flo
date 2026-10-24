@@ -32,6 +32,8 @@ struct SettingsView: View {
   @State private var username = ""
   @State private var serverVersion: String?
   @State private var storage = StorageBar.Sizes()
+  /// Bumped by each refresh; only the newest measurement is shown.
+  @State private var storageRefreshes = 0
   @State private var confirmsClearCache = false
   @State private var confirmsDeleteDownloads = false
 
@@ -170,7 +172,7 @@ struct SettingsView: View {
     }
     .padding(.vertical, 12)
     .padding(.horizontal, 14)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .onPlatter()
     .contentShape(Rectangle())
   }
 
@@ -193,7 +195,7 @@ struct SettingsView: View {
       .padding(.top, 4)
     }
     .padding(14)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .onPlatter()
   }
 
   private func clearButton(_ title: String, action: @escaping () -> Void) -> some View {
@@ -209,7 +211,12 @@ struct SettingsView: View {
   }
 
   private func refreshStorage() {
-    Task { storage = await StorageBar.Sizes.measure() }
+    storageRefreshes += 1
+    let refresh = storageRefreshes
+    Task {
+      let sizes = await StorageBar.Sizes.measure()
+      if refresh == storageRefreshes { storage = sizes }
+    }
   }
 
   /// A stored bitrate as its picker shows it.
@@ -269,7 +276,7 @@ struct SettingsGroup<Content: View>: View {
       }
     }
     .padding(.horizontal, 14)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .onPlatter()
   }
 }
 
@@ -306,17 +313,6 @@ struct SettingsRow<Control: View>: View {
     .frame(minHeight: 50)
     .opacity(isEnabled ? 1 : 0.45)
     .contentShape(Rectangle())
-  }
-}
-
-/// The trailing chevron of a row that opens something.
-private struct Chevron: View {
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    Image(systemName: "chevron.right")
-      .font(.system(size: 14, weight: .semibold))
-      .foregroundStyle(palette.secondary)
   }
 }
 
@@ -361,7 +357,7 @@ private struct StorageBar: View {
       }
       .frame(height: Self.height)
       // The free room goes under the legend when the line is too long.
-      let free = Text("\(Self.size(sizes.free)) free")
+      let free = Text("\(sizes.free.fileSize) free")
       ViewThatFits(in: .horizontal) {
         HStack(spacing: 14) {
           legend
@@ -390,7 +386,12 @@ private struct StorageBar: View {
     ].filter { $0.bytes > 0 }
     let room = width - Self.gap * CGFloat(max(parts.count - 1, 0))
     let total = max(Double(parts.reduce(0) { $0 + $1.bytes }), 1)
-    return parts.map { ($0.color, max(Self.height, room * Double($0.bytes) / total)) }
+    var widths = parts.map { max(Self.height, room * Double($0.bytes) / total) }
+    // A small part shows at least a dot; the widest gives up that room.
+    if let widest = widths.indices.max(by: { widths[$0] < widths[$1] }) {
+      widths[widest] -= widths.reduce(0, +) - room
+    }
+    return zip(parts, widths).map { ($0.color, $1) }
   }
 
   private var legend: some View {
@@ -403,13 +404,10 @@ private struct StorageBar: View {
   private func key(_ title: String, _ bytes: Int64, _ color: Color) -> some View {
     HStack(spacing: 6) {
       Circle().fill(color).frame(width: 8, height: 8)
-      Text("\(title) \(Self.size(bytes))")
+      Text("\(title) \(bytes.fileSize)")
     }
   }
 
-  private static func size(_ bytes: Int64) -> String {
-    ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
-  }
 }
 
 /// The server's requests and the connection, to tell a slow or broken server

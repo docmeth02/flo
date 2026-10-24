@@ -87,21 +87,20 @@ final class AppModel: ObservableObject {
 
   /// Downloads the songs of an album the phone does not have yet.
   func download(_ album: Album) {
-    download(album, songs: album.songs) { DownloadSession.shared.enqueue($0) }
+    download(album) { DownloadSession.shared.enqueue($0) }
   }
 
   /// Downloads a playlist with its mosaic cover, as an album.
   func download(_ playlist: Playlist) {
-    download(Album(from: playlist), songs: playlist.songs) { album in
+    download(Album(from: playlist)) { album in
       var playlist = playlist
       playlist.songs = album.songs
       DownloadSession.shared.enqueue(playlist)
     }
   }
 
-  private func download(_ album: Album, songs known: [Song], enqueue: @escaping (Album) -> Void) {
+  private func download(_ album: Album, enqueue: @escaping (Album) -> Void) {
     var album = album
-    album.songs = known
     let account = AuthService.shared.accountKey
     Task {
       album.songs = await songs(of: album)
