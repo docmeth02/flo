@@ -65,6 +65,22 @@ struct QueueOrders<Row: AnyObject> {
     }
   }
 
+  /// Up Next's drag: puts `row` at `index` of the play order, never at or
+  /// before the current row, and in the stored order right after the row it
+  /// now follows.
+  mutating func move(_ row: Row, to index: Int) {
+    guard row !== current, let from = played.firstIndex(where: { $0 === row }) else { return }
+    played.remove(at: from)
+    let target = min(max(index, currentIndex + 1), played.count)
+    played.insert(row, at: target)
+    if isShuffling {
+      let anchor = played[target - 1]
+      stored.removeAll { $0 === row }
+      Self.insert([row], after: anchor, in: &stored)
+    }
+    updateCurrentIndex()
+  }
+
   /// Undo of a removal: puts `row` back at `index` in the play order, but
   /// never before the current row, where it would not play again, and at
   /// `storedIndex` in the stored order; at the end where the order got shorter.
@@ -137,6 +153,17 @@ extension PlayerViewModel {
     guard isEditable, queue.indices.contains(index), index != activeQueueIdx else { return false }
     let entity = queue[index]
     return editQueue { $0.moveNext(entity) }
+  }
+
+  /// Moves the row at `from` (play order) to `to`, both after the current
+  /// song, as Up Next's drag handles do.
+  @discardableResult
+  func moveInQueue(from: Int, to: Int) -> Bool {
+    guard isEditable, queue.indices.contains(from), from > activeQueueIdx,
+      to > activeQueueIdx, to < queue.count, from != to
+    else { return false }
+    let entity = queue[from]
+    return editQueue { $0.move(entity, to: to) }
   }
 
   // A live radio's queue is the station alone.

@@ -103,7 +103,7 @@ struct ArtistView: View {
         Label("Top Songs", systemImage: "music.note.list").foregroundStyle(palette.accent)
       }
     }
-    .buttonStyle(PlatterButtonStyle(height: 56))
+    .buttonStyle(PlatterButtonStyle(height: 50))
     .disabled(radio.isLoadingRadio || player.isGeneratingMix)
   }
 

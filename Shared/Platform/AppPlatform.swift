@@ -21,6 +21,8 @@ enum AppPlatform {
     /// Cover tiles are 36 to 100 points at 2x, so 200 px is the largest the
     /// watch shows.
     static let coverArtSize = 200
+    /// Recently Played on the watch's Home.
+    static let recentAlbumCount = 4
     /// The largest stream cache Settings offers; the downloads need the room.
     static let largestStreamCache: Int64 = 1_073_741_824
     /// The watch's streaming limit applies on every network.
@@ -50,6 +52,8 @@ enum AppPlatform {
     static let didBecomeActive = UIApplication.didBecomeActiveNotification
     /// Now Playing's cover is 322 points wide at 3x.
     static let coverArtSize = 1000
+    /// Home shows the first few, Recently Played's See all the rest.
+    static let recentAlbumCount = 24
     static let largestStreamCache: Int64 = 5_368_709_120
     static let keepsStartThroughInterruptions = false
 

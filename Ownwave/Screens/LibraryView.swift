@@ -13,6 +13,39 @@ enum LibraryChip: String, CaseIterable, Identifiable {
   var title: String { rawValue.capitalized }
 }
 
+/// The orders the Library's sortable lists offer, kept per list.
+private enum AlbumOrder: String, CaseIterable {
+  case added, name, artist, year
+
+  var label: String {
+    switch self {
+    case .added: "Recently added"
+    case .name: "A–Z"
+    case .artist: "Artist"
+    case .year: "Year"
+    }
+  }
+}
+
+private enum ArtistOrder: String, CaseIterable {
+  case name, albums
+
+  var label: String { self == .name ? "A–Z" : "Most albums" }
+}
+
+private enum PlaylistOrder: String, CaseIterable {
+  case name, updated
+
+  var label: String { self == .name ? "A–Z" : "Recently updated" }
+}
+
+extension String {
+  /// Ascending as Finder sorts names: case-insensitive, numbers by value.
+  fileprivate func precedes(_ other: String) -> Bool {
+    localizedStandardCompare(other) == .orderedAscending
+  }
+}
+
 struct LibraryView: View {
   @EnvironmentObject private var app: AppModel
   // Liked follows the heart of the song playing.
@@ -28,12 +61,21 @@ struct LibraryView: View {
   // hook picks the chip.
   @Binding var chip: LibraryChip
   @State private var cachedSongs: [Song] = []
+  @AppStorage("albumSort") private var albumOrder = AlbumOrder.added
+  @AppStorage("artistSort") private var artistOrder = ArtistOrder.name
+  @AppStorage("playlistSort") private var playlistOrder = PlaylistOrder.name
+  // The last sorts, so a redraw sorts again only when a list or order changed.
+  @State private var albumSort = SortMemo<Album, AlbumOrder>()
+  @State private var artistSort = SortMemo<Artist, ArtistOrder>()
+  @State private var playlistSort = SortMemo<Playlist, PlaylistOrder>()
 
   var body: some View {
     ScrollView {
       VStack(spacing: 16) {
         PageTitle("Library")
-        chips
+        ChipBar(
+          options: LibraryChip.allCases.map { ($0, $0.title, $0 == .liked ? "heart.fill" : nil) },
+          selection: $chip)
         content
       }
       .padding(.horizontal, 16)
@@ -43,41 +85,18 @@ struct LibraryView: View {
     .toolbar(.hidden, for: .navigationBar)
     .refreshable { await refresh() }
     .task(id: chip) { load() }
-    // An album being downloaded shows up with its first song.
+    // An album being downloaded shows up with its first song, in Downloads
+    // and as a mark in the grid.
     .onReceive(downloadSession.downloadFinished) { id in
-      guard chip == .downloads else { return }
+      guard chip == .downloads || chip == .albums else { return }
       if !albumViewModel.downloadedAlbums.contains(where: { $0.id == id }) {
         albumViewModel.fetchDownloadedAlbums()
       }
-      storage.getLocalStorageInformation()
+      if chip == .downloads { storage.getLocalStorageInformation() }
     }
     #if DEBUG
       .onAppear { applyDebugChip() }
     #endif
-  }
-
-  private var chips: some View {
-    ScrollViewReader { proxy in
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 8) {
-          ForEach(LibraryChip.allCases) { item in
-            let selected = item == chip
-            Button(item.title) { chip = item }
-              .font(.rowSubtitle.weight(.semibold))
-              .foregroundStyle(selected ? palette.ink : palette.text)
-              .padding(.horizontal, 15)
-              .padding(.vertical, 9)
-              .background(selected ? palette.fill : palette.surface, in: Capsule())
-              .accessibilityAddTraits(selected ? .isSelected : [])
-          }
-        }
-        .padding(.horizontal, 16)
-      }
-      .padding(.horizontal, -16)
-      // The chips overflow the width; the chosen one stays in view.
-      .onAppear { proxy.scrollTo(chip) }
-      .onChange(of: chip) { withAnimation { proxy.scrollTo(chip) } }
-    }
   }
 
   @ViewBuilder private var content: some View {
@@ -87,28 +106,34 @@ struct LibraryView: View {
         albumViewModel.state(.albums), isEmpty: albumViewModel.albums.isEmpty,
         empty: "No albums yet"
       ) {
-        LazyVGrid(
-          columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 2), spacing: 18
-        ) {
-          ForEach(albumViewModel.albums) { AlbumTile(album: $0) }
-        }
+        ListHeader(
+          count: counted(albumViewModel.albums.count, "album"),
+          orders: AlbumOrder.allCases.map { ($0, $0.label) }, order: $albumOrder)
+        AlbumGrid(
+          albums: sortedAlbums, downloaded: Set(albumViewModel.downloadedAlbums.map(\.id)))
       }
     case .artists:
       listed(
         albumViewModel.state(.artists), isEmpty: albumViewModel.artists.isEmpty,
         empty: "No artists yet"
       ) {
-        LazyVStack(spacing: 8) {
-          ForEach(albumViewModel.artists) { artist in
+        let artists = sortedArtists
+        ListHeader(
+          count: counted(artists.count, "artist"),
+          orders: ArtistOrder.allCases.map { ($0, $0.label) }, order: $artistOrder)
+        LazyPlatter {
+          ForEach(artists) { artist in
             NavigationLink(value: Route.artist(artist)) {
               ItemRow(
                 art: .glyph(.artist), title: artist.name,
                 subtitle: counted(artist.albumCount, "album"), artSize: 46
-              )
+              ) {
+                Chevron()
+              }
             }
             .buttonStyle(.plain)
-            .card()
             .itemMenu(.artist(artist))
+            .hairlineAbove(artist.id != artists.first?.id)
           }
         }
       }
@@ -117,25 +142,28 @@ struct LibraryView: View {
         albumViewModel.state(.playlists), isEmpty: albumViewModel.playlists.isEmpty,
         empty: "No playlists yet"
       ) {
-        LazyVStack(spacing: 8) {
-          ForEach(albumViewModel.playlists) { playlist in
+        let playlists = sortedPlaylists
+        ListHeader(
+          count: counted(playlists.count, "playlist"),
+          orders: PlaylistOrder.allCases.map { ($0, $0.label) }, order: $playlistOrder)
+        LazyPlatter {
+          ForEach(playlists) { playlist in
             NavigationLink(value: Route.playlist(playlist)) {
-              ItemRow(
-                art: .glyph(.playlist), title: playlist.name,
-                subtitle: playlist.comment.isEmpty ? "Playlist" : playlist.comment, artSize: 46
-              )
+              PlaylistRow(playlist: playlist) { Chevron() }
             }
             .buttonStyle(.plain)
-            .card()
             .itemMenu(.playlist(playlist))
+            .hairlineAbove(playlist.id != playlists.first?.id)
           }
         }
+        ListFooter("Playlists you make in Navidrome show up here.")
       }
     case .radios:
       listed(
         radios.state, isEmpty: radios.radios.isEmpty, empty: "No radios on the server"
       ) {
-        LazyVStack(spacing: 8) {
+        ListHeader(count: counted(radios.radios.count, "station"))
+        LazyPlatter {
           ForEach(radios.radios) { radio in
             Button {
               app.play(radio)
@@ -144,8 +172,8 @@ struct LibraryView: View {
                 art: .glyph(.radio), title: radio.name, subtitle: "Internet radio", artSize: 46)
             }
             .buttonStyle(.plain)
-            .card()
             .itemMenu(.radio(radio))
+            .hairlineAbove(radio.id != radios.radios.first?.id)
           }
         }
       }
@@ -153,6 +181,53 @@ struct LibraryView: View {
       liked
     case .downloads:
       downloads
+    }
+  }
+
+  private var sortedAlbums: [Album] {
+    albumSort.sorted(albumViewModel.albums, by: albumOrder) { albums, order in
+      switch order {
+      // An album without a date sorts last: the empty string is the smallest.
+      case .added:
+        albums.sorted {
+          $0.createdAt == $1.createdAt ? $0.name.precedes($1.name) : $0.createdAt > $1.createdAt
+        }
+      case .name: albums.sorted { $0.name.precedes($1.name) }
+      case .artist:
+        albums.sorted {
+          $0.albumArtist == $1.albumArtist
+            ? $0.name.precedes($1.name) : $0.albumArtist.precedes($1.albumArtist)
+        }
+      case .year:
+        albums.sorted {
+          $0.minYear == $1.minYear ? $0.name.precedes($1.name) : $0.minYear > $1.minYear
+        }
+      }
+    }
+  }
+
+  private var sortedArtists: [Artist] {
+    artistSort.sorted(albumViewModel.artists, by: artistOrder) { artists, order in
+      switch order {
+      case .name: artists.sorted { $0.name.precedes($1.name) }
+      case .albums:
+        artists.sorted {
+          $0.albumCount == $1.albumCount
+            ? $0.name.precedes($1.name) : $0.albumCount > $1.albumCount
+        }
+      }
+    }
+  }
+
+  private var sortedPlaylists: [Playlist] {
+    playlistSort.sorted(albumViewModel.playlists, by: playlistOrder) { playlists, order in
+      switch order {
+      case .name: playlists.sorted { $0.name.precedes($1.name) }
+      case .updated:
+        playlists.sorted {
+          $0.updatedAt == $1.updatedAt ? $0.name.precedes($1.name) : $0.updatedAt > $1.updatedAt
+        }
+      }
     }
   }
 
@@ -168,6 +243,9 @@ struct LibraryView: View {
         isLoading: states.contains(where: \.isLoading), failed: states.contains(where: \.failed)),
       isEmpty: songs.isEmpty && albums.isEmpty && artists.isEmpty, empty: "Nothing liked yet"
     ) {
+      ListHeader(
+        count: [(songs.count, "song"), (albums.count, "album"), (artists.count, "artist")]
+          .filter { $0.0 > 0 }.map { counted($0.0, $0.1) }.joined(separator: " · "))
       if !songs.isEmpty {
         HStack(spacing: 10) {
           Button {
@@ -184,17 +262,16 @@ struct LibraryView: View {
           .buttonStyle(PlatterButtonStyle(height: 50))
         }
       }
-      LazyVStack(spacing: 8) {
+      LazyPlatter {
         ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
           let menu = MenuTarget.song(
             song, context: SongCollection.Name.liked, isFromPlaylist: false)
-          SongRow(
-            song: song, menu: menu, subtitle: "\(song.artist) · song", artSize: 46, onCard: true
-          ) {
+          SongRow(song: song, menu: menu, subtitle: "\(song.artist) · song", artSize: 46) {
             app.play(SongCollection.liked(songs), startingAt: index)
           } trailing: {
             heart
           }
+          .hairlineAbove(index > 0)
         }
         ForEach(albums) { album in
           NavigationLink(value: Route.album(album)) {
@@ -206,8 +283,8 @@ struct LibraryView: View {
             }
           }
           .buttonStyle(.plain)
-          .card()
           .itemMenu(.album(album))
+          .hairlineAbove(!songs.isEmpty || album.id != albums.first?.id)
         }
         ForEach(artists) { artist in
           NavigationLink(value: Route.artist(artist)) {
@@ -216,8 +293,8 @@ struct LibraryView: View {
             }
           }
           .buttonStyle(.plain)
-          .card()
           .itemMenu(.artist(artist))
+          .hairlineAbove(!songs.isEmpty || !albums.isEmpty || artist.id != artists.first?.id)
         }
       }
     }
@@ -234,7 +311,9 @@ struct LibraryView: View {
     if albums.isEmpty && cachedSongs.isEmpty {
       StateView(kind: .empty("Download an album to play it without a connection."))
     } else {
-      LazyVStack(spacing: 8) {
+      ListHeader(
+        count: "\(counted(albums.count, "album")) · \(storage.localDirectorySize)")
+      LazyPlatter {
         if !cachedSongs.isEmpty {
           NavigationLink {
             CachedSongsView(songs: cachedSongs)
@@ -247,21 +326,17 @@ struct LibraryView: View {
             }
           }
           .buttonStyle(.plain)
-          .card()
         }
-        ForEach(albums) { DownloadRow(album: $0) }
+        ForEach(albums) { album in
+          DownloadRow(album: album)
+            .hairlineAbove(!cachedSongs.isEmpty || album.id != albums.first?.id)
+        }
       }
       let rate = UserDefaultsManager.downloadBitRate
-      Text(
-        // The setting, not the files: earlier downloads keep their bitrate.
-        (rate == TranscodingSettings.sourceBitRate
+      // The setting, not the files: earlier downloads keep their bitrate.
+      ListFooter(
+        rate == TranscodingSettings.sourceBitRate
           ? "Downloads in original quality." : "Downloads at \(rate) kbps.")
-          + " \(storage.localDirectorySize) on this iPhone."
-      )
-      .font(.meta)
-      .foregroundStyle(palette.secondary)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.horizontal, 4)
     }
   }
 
@@ -287,7 +362,9 @@ struct LibraryView: View {
   /// was loaded a moment ago.
   private func load() {
     switch chip {
-    case .albums: albumViewModel.fetchAlbums()
+    case .albums:
+      albumViewModel.fetchAlbums()
+      albumViewModel.fetchDownloadedAlbums()
     case .artists: albumViewModel.getArtists()
     case .playlists: albumViewModel.getPlaylists()
     case .radios: radios.fetchAllRadios()
@@ -345,7 +422,6 @@ private struct DownloadRow: View {
       }
     }
     .buttonStyle(.plain)
-    .card()
     .itemMenu(.album(album))
   }
 
@@ -385,7 +461,7 @@ private struct DownloadRow: View {
       }
       .font(.system(size: 20))
     }
-    .padding(.vertical, 10)
+    .padding(.vertical, 8)
     .contentShape(Rectangle())
   }
 }
@@ -415,5 +491,18 @@ private struct CachedSongsView: View {
     .containerBackground(palette.background, for: .navigation)
     .navigationTitle("Cached")
     .navigationBarTitleDisplayMode(.inline)
+  }
+}
+
+/// A list's last sort, kept while neither the list nor the order changes; a
+/// list that is the same array compares in constant time.
+private final class SortMemo<Item: Equatable, Order: Equatable> {
+  private var last: (items: [Item], order: Order, sorted: [Item])?
+
+  func sorted(_ items: [Item], by order: Order, _ sort: ([Item], Order) -> [Item]) -> [Item] {
+    if let last, last.order == order, last.items == items { return last.sorted }
+    let sorted = sort(items, order)
+    last = (items, order, sorted)
+    return sorted
   }
 }

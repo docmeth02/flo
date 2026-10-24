@@ -27,6 +27,9 @@ extension SongCollection {
     static let keepPlaying = "Auto Play"
     static let liked = "Liked Songs"
     static let cached = "Cached"
+    static let search = "Search"
+    /// After the artist's name: "BABYMETAL Radio".
+    static let artistRadioSuffix = " Radio"
   }
 
   static func smartShuffle(_ songs: [Song]) -> SongCollection {
@@ -47,7 +50,7 @@ extension SongCollection {
 
   /// One song picked from the search results.
   static func search(_ song: Song) -> SongCollection {
-    SongCollection(id: "search", name: "Search", songs: [song])
+    SongCollection(id: "search", name: Name.search, songs: [song])
   }
 
   /// The artist's top songs, or its songs from the library.
@@ -56,6 +59,6 @@ extension SongCollection {
   }
 
   static func artistRadio(id: String, name: String, songs: [Song]) -> SongCollection {
-    SongCollection(id: id, name: "\(name) Radio", songs: songs)
+    SongCollection(id: id, name: name + Name.artistRadioSuffix, songs: songs)
   }
 }

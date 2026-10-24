@@ -12,7 +12,14 @@ struct Playlist: Codable, Identifiable, Hashable, Playable {
   let ownerName: String
   let coverArtId: String?
   var songs: [Song] = []
+  /// The server's counts, 0 when unknown.
+  var songCount = 0
+  var duration: Double = 0
+  /// When it last changed, ISO 8601; empty when unknown.
+  var updatedAt = ""
   var isPlaylist: Bool { true }
+  /// The server's cover for it, a mosaic of its albums.
+  var artId: String { coverArtId ?? (id.hasPrefix("pl-") ? id : "pl-\(id)") }
 
   enum CodingKeys: String, CodingKey {
     case id
@@ -21,6 +28,9 @@ struct Playlist: Codable, Identifiable, Hashable, Playable {
     case ownerName
     case coverArtId
     case songs
+    case songCount
+    case duration
+    case updatedAt
   }
 
   init(
@@ -48,5 +58,8 @@ struct Playlist: Codable, Identifiable, Hashable, Playable {
     self.ownerName = try container.decode(String.self, forKey: .ownerName)
     self.coverArtId = try container.decodeIfPresent(String.self, forKey: .coverArtId)
     self.songs = try container.decodeIfPresent([Song].self, forKey: .songs) ?? []
+    self.songCount = try container.decodeIfPresent(Int.self, forKey: .songCount) ?? 0
+    self.duration = try container.decodeIfPresent(Double.self, forKey: .duration) ?? 0
+    self.updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt) ?? ""
   }
 }

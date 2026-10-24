@@ -15,13 +15,15 @@ enum CoverTint {
 
   /// A local `url` or the album's downloaded cover first, the cover cache
   /// otherwise, so offline playback keeps its artwork.
-  static func coverFile(albumId: String, url: String = "") async -> String? {
+  static func coverFile(albumId: String, url: String = "", artId: String? = nil) async
+    -> String?
+  {
     if url.hasPrefix("/"), FileManager.default.fileExists(atPath: url) { return url }
     guard !albumId.isEmpty else { return nil }
     if let downloaded = DownloadStore.downloadedCoverPath(albumId: albumId) {
       return downloaded
     }
-    return await CoverArtCacheManager.shared.coverPath(albumId: albumId)
+    return await CoverArtCacheManager.shared.coverPath(albumId: albumId, artId: artId)
   }
 
   @MainActor

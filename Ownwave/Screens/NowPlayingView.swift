@@ -17,8 +17,8 @@ struct NowPlayingView: View {
   @Environment(\.dismiss) private var dismiss
 
   /// A drag commits once its damped distance passes this, about 165 pt of
-  /// finger travel.
-  private static let threshold: CGFloat = 70
+  /// finger travel; the pull at Up Next's top uses it too.
+  static let threshold: CGFloat = 70
 
   @State private var shades: CoverShades?
   @State private var showsQueue = false
@@ -26,7 +26,6 @@ struct NowPlayingView: View {
   /// state, so an interrupted pull (the phone locked mid-drag) springs back.
   @GestureState(resetTransaction: Transaction(animation: .spring(duration: 0.4)))
   private var drag: CGFloat = 0
-  @State private var queuePosition = ScrollPosition(edge: .top)
 
   private var albumId: String { player.nowPlayingAlbumId }
 
@@ -47,21 +46,13 @@ struct NowPlayingView: View {
           .gesture(playerDrag)
           // A station has no queue to show.
           if !player.isLiveRadio {
-            ScrollView {
-              UpNextPage(
-                song: song, tint: shades?.tint ?? palette.accent,
-                showPlayer: { show(queue: false) })
-                .padding(.top, insets.top)
-                .padding(.bottom, insets.bottom + 24)
-            }
+            UpNextList(
+              tint: shades?.tint ?? palette.accent,
+              insets: EdgeInsets(
+                top: insets.top, leading: 0, bottom: insets.bottom + 24, trailing: 0),
+              isShown: showsQueue, showPlayer: { show(queue: false) }
+            )
             .ignoresSafeArea()
-            .scrollIndicators(.hidden)
-            .scrollPosition($queuePosition)
-            .onScrollPhaseChange { old, _, context in
-              if old == .interacting, context.geometry.contentOffset.y < -Self.threshold {
-                show(queue: false)
-              }
-            }
             .frame(height: page)
           }
         }
@@ -127,7 +118,6 @@ struct NowPlayingView: View {
 
   private func show(queue: Bool) {
     withAnimation(.smooth(duration: 0.5)) { showsQueue = queue }
-    if !queue { queuePosition.scrollTo(edge: .top) }
   }
 
   /// The design's resistance: the farther the finger, the less the player
@@ -139,8 +129,8 @@ struct NowPlayingView: View {
   }
 }
 
-/// The first page: cover, song, scrubber, transport, rating and the peek at
-/// Up Next.
+/// The first page: cover, song, scrubber, transport, the row of shuffle,
+/// rating and repeat, why the mix picked the song, and the peek at Up Next.
 private struct PlayerPage: View {
   let song: QueueEntity
   let tint: Color
@@ -157,12 +147,11 @@ private struct PlayerPage: View {
   var body: some View {
     VStack(spacing: 16) {
       header
-      CoverArt(albumId: player.nowPlayingAlbumId, url: player.coverArt, radius: 18)
+      CoverArt(albumId: player.nowPlayingAlbumId, url: player.coverArt, radius: 20)
         .aspectRatio(1, contentMode: .fit)
-        .frame(maxWidth: 322)
+        .frame(maxWidth: 345)
         .shadow(color: .black.opacity(0.35), radius: 25, y: 24)
       titleRow
-      if let why = mixes.shownReason(for: song) { pill(why.note) }
       if player.isLiveRadio {
         Text("Live")
           .font(.meta.weight(.semibold))
@@ -170,12 +159,12 @@ private struct PlayerPage: View {
           .frame(height: 43)
       } else {
         Scrubber(
-          clock: player.clock, duration: song.duration, tint: tint, status: status,
-          seek: player.seek(to:))
+          clock: player.clock, duration: song.duration, status: status, seek: player.seek(to:))
       }
       transport
       if !player.isLiveRadio {
-        stars
+        utilityRow
+        reason
         Spacer(minLength: 0)
         peek
       } else {
@@ -189,14 +178,7 @@ private struct PlayerPage: View {
     HStack {
       GlassCircle(systemImage: "chevron.down", action: close)
       Spacer()
-      VStack(spacing: 1) {
-        Text("Playing from")
-          .font(.counter)
-          .tracking(0.12 * 11)
-          .textCase(.uppercase)
-          .foregroundStyle(palette.secondary)
-        Text(player.sourceName).font(.playingFrom).lineLimit(1)
-      }
+      source
       Spacer()
       // A station is neither queued nor liked like a song.
       if player.isLiveRadio {
@@ -243,17 +225,40 @@ private struct PlayerPage: View {
     .buttonStyle(.plain)
   }
 
-  /// Why the mix picked the song, tucked up to the title row.
-  private func pill(_ note: String) -> some View {
-    Text(note)
-      .font(.rowSubtitle)
-      .foregroundStyle(palette.secondary)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.vertical, 9)
-      .padding(.horizontal, 12)
-      .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-      .tourAnchor(.why)
-      .padding(.top, -6)
+  /// Where the queue came from, behind a glyph for its kind.
+  private var source: some View {
+    HStack(spacing: 6) {
+      Image(systemName: sourceSymbol)
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(tint)
+      Text(player.sourceName).font(.source).lineLimit(1)
+    }
+    .padding(.horizontal, 12)
+    .frame(height: 28)
+    .glassEffect(.regular, in: Capsule())
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("Playing from \(player.sourceName)")
+  }
+
+  /// The queue entry knows only its queue's name and whether a playlist
+  /// queued it, so the rest is told by the name.
+  private var sourceSymbol: String {
+    if player.isLiveRadio { return "dot.radiowaves.left.and.right" }
+    switch song.playbackOrigin {
+    case .smartShuffle, .keepPlaying: return "sparkles"
+    case .starred: return "heart.fill"
+    case .cached: return "arrow.down.circle"
+    case .playlist: return "music.note.list"
+    case .album:
+      guard let name = song.contextName else { return "music.note" }
+      if name == song.albumName { return "square.stack" }
+      if name == song.artistName { return "music.mic" }
+      if name == SongCollection.Name.search { return "magnifyingglass" }
+      if name.hasSuffix(SongCollection.Name.artistRadioSuffix) {
+        return "dot.radiowaves.left.and.right"
+      }
+      return "music.note"
+    }
   }
 
   /// Why the song is not playing, when it waits on more than its data.
@@ -264,39 +269,45 @@ private struct PlayerPage: View {
   }
 
   private var transport: some View {
-    HStack {
+    HStack(spacing: 40) {
       if !player.isLiveRadio {
-        Button(action: player.shuffleCurrentQueue) {
-          Image(systemName: "shuffle")
-            .font(.system(size: 20, weight: .semibold))
-            .foregroundStyle(player.isShuffling ? tint : palette.secondary)
-            .frame(width: 44, height: 44)
-        }
-        Spacer()
         Button(action: player.prevSong) { skipGlyph("backward.fill") }
-        Spacer()
       }
       PlayPauseButton(tint: tint)
       if !player.isLiveRadio {
-        Spacer()
         Button {
           player.nextSong(userInitiated: true)
         } label: {
           skipGlyph("forward.fill")
         }
-        Spacer()
-        Button(action: player.cyclePlaybackMode) {
-          Image(systemName: player.playbackMode == PlaybackMode.repeatOnce ? "repeat.1" : "repeat")
-            .font(.system(size: 20, weight: .semibold))
-            .foregroundStyle(
-              player.playbackMode == PlaybackMode.defaultPlayback ? palette.secondary : tint
-            )
-            .frame(width: 44, height: 44)
-        }
       }
     }
     .buttonStyle(.plain)
-    .padding(.horizontal, 2)
+  }
+
+  /// Shuffle, the rating and repeat under the transport.
+  private var utilityRow: some View {
+    HStack {
+      Button(action: player.shuffleCurrentQueue) {
+        modeGlyph("shuffle", isOn: player.isShuffling)
+      }
+      Spacer(minLength: 0)
+      stars
+      Spacer(minLength: 0)
+      Button(action: player.cyclePlaybackMode) {
+        modeGlyph(
+          player.playbackMode == PlaybackMode.repeatOnce ? "repeat.1" : "repeat",
+          isOn: player.playbackMode != PlaybackMode.defaultPlayback)
+      }
+    }
+    .buttonStyle(.plain)
+  }
+
+  private func modeGlyph(_ name: String, isOn: Bool) -> some View {
+    Image(systemName: name)
+      .font(.system(size: 20, weight: .semibold))
+      .foregroundStyle(isOn ? tint : palette.secondary)
+      .frame(width: 44, height: 44)
   }
 
   private func skipGlyph(_ name: String) -> some View {
@@ -309,36 +320,61 @@ private struct PlayerPage: View {
 
   private var rating: Int { ratings.rating(for: song.id ?? "") }
 
-  private static let ratingLabels = [
-    "", "Avoided · won’t come up in mixes", "Rated 2", "Rated 3", "Rated 4",
-    "Boosted · comes up more often",
-  ]
+  private static let ratingLabels = ["", "Avoided", "Rated 2", "Rated 3", "Rated 4", "Boosted"]
 
+  private var ratingColor: Color {
+    switch rating {
+    case 1: .floDestructive
+    case 5: .floWarning
+    default: palette.secondary
+    }
+  }
+
+  /// Five stars and the rating's label after them.
   private var stars: some View {
-    VStack(spacing: 6) {
-      HStack(spacing: 6) {
+    HStack(spacing: 10) {
+      HStack(spacing: 0) {
         ForEach(1...5, id: \.self) { n in
           Button {
             rate(n)
           } label: {
             Image(systemName: n <= rating ? "star.fill" : "star")
-              .font(.system(size: 24, weight: .medium))
+              .font(.system(size: 18, weight: .medium))
               .foregroundStyle(
                 n > rating ? palette.secondary : rating == 1 ? Color.floDestructive : .floWarning
               )
-              .frame(width: 40, height: 40)
+              .frame(width: 28, height: 44)
+              .contentShape(Rectangle())
           }
-          .buttonStyle(.plain)
+          .accessibilityLabel(counted(n, "star"))
         }
       }
-      // Holds its line while unrated, so nothing below moves.
-      Text(Self.ratingLabels[rating].isEmpty ? " " : Self.ratingLabels[rating])
-        .font(.meta)
-        .foregroundStyle(palette.secondary)
+      // Every label holds the slot, so the stars stay put as the rating
+      // changes.
+      ZStack(alignment: .leading) {
+        ForEach(Self.ratingLabels, id: \.self) { Text($0).hidden() }
+        Text(Self.ratingLabels[rating]).foregroundStyle(ratingColor)
+      }
+      .font(.meta.weight(.semibold))
     }
-    .padding(.top, 4)
-    .padding(.bottom, 6)
     .tourAnchor(.rate)
+  }
+
+  /// Why the mix picked the song, on a line kept while there is none, so
+  /// the page does not move between songs.
+  private var reason: some View {
+    Text(" ")
+      .hidden()
+      .frame(maxWidth: .infinity)
+      .overlay {
+        if let why = mixes.shownReason(for: song) {
+          ReasonLabel(reason: why, isShort: false)
+            .foregroundStyle(palette.secondary)
+            .tourAnchor(.why)
+        }
+      }
+      .font(.meta)
+      .padding(.top, -10)
   }
 
   /// Tapping the current rating again clears it.
@@ -400,7 +436,7 @@ private struct PlayPauseButton: View {
       Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
         .font(.system(size: 32))
         .foregroundStyle(palette.background)
-        .frame(width: 82, height: 82)
+        .frame(width: 76, height: 76)
         .background(palette.text, in: Circle())
         .overlay {
           Circle().inset(by: -3).stroke(palette.hairline, lineWidth: 6)
@@ -421,12 +457,12 @@ private struct PlayPauseButton: View {
   }
 }
 
-/// The song's position, draggable, with elapsed and remaining time; observes
-/// the clock itself so the player does not redraw every second.
+/// The song's position as a thin track with a knob, draggable, with elapsed
+/// and remaining time; observes the clock itself so the player does not
+/// redraw every second.
 private struct Scrubber: View {
   @ObservedObject var clock: PlayerClock
   let duration: Double
-  let tint: Color
   let status: String?
   let seek: (Double) -> Void
 
@@ -441,11 +477,18 @@ private struct Scrubber: View {
     VStack(spacing: 7) {
       GeometryReader { proxy in
         let width = max(proxy.size.width, 1)
+        let knob: CGFloat = dragged == nil ? 10 : 14
         ZStack(alignment: .leading) {
           Capsule().fill(palette.hairline)
-          Capsule().fill(tint).frame(width: width * shown)
+          Capsule().fill(palette.text).frame(width: width * shown)
         }
-        .frame(height: 5)
+        .frame(height: 4)
+        .overlay(alignment: .leading) {
+          Circle()
+            .fill(palette.text)
+            .frame(width: knob, height: knob)
+            .offset(x: min(max(width * shown - knob / 2, 0), width - knob))
+        }
         .frame(maxHeight: .infinity)
         .contentShape(Rectangle())
         .onTapGesture { seek(min(max($0.x / width, 0), 1)) }
@@ -480,143 +523,7 @@ private struct Scrubber: View {
   }
 }
 
-/// The second page: the song playing and the songs after it in play order,
-/// each removable with Undo.
-private struct UpNextPage: View {
-  let song: QueueEntity
-  let tint: Color
-  let showPlayer: () -> Void
-
-  @EnvironmentObject private var app: AppModel
-  @EnvironmentObject private var player: PlayerViewModel
-  @ObservedObject private var mixes = RecommendationLog.shared
-  @Environment(\.palette) private var palette
-
-  /// The rows after the current one, with their index in the play order.
-  private var upNext: [(offset: Int, element: QueueEntity)] {
-    Array(player.queue.enumerated().dropFirst(player.activeQueueIdx + 1))
-  }
-
-  private var meta: String {
-    player.isSmartMix ? player.upNextSource : counted(player.queue.count, "song")
-  }
-
-  var body: some View {
-    VStack(spacing: 14) {
-      HStack(spacing: 12) {
-        GlassCircle(systemImage: "chevron.down", action: showPlayer)
-        Text("Up Next").font(.sectionTitle).frame(maxWidth: .infinity, alignment: .leading)
-        Text(meta).font(.meta).foregroundStyle(palette.secondary)
-      }
-      current
-      LazyVStack(spacing: 8) {
-        ForEach(upNext, id: \.element.objectID) { index, item in
-          row(item, at: index)
-        }
-      }
-      if upNext.isEmpty {
-        Text(
-          UserDefaultsManager.keepPlaying
-            ? "Nothing up next. Keep Playing will continue with Smart Shuffle."
-            : "Nothing up next."
-        )
-        .font(.rowSubtitle)
-        .foregroundStyle(palette.secondary)
-        .multilineTextAlignment(.center)
-        .padding(.top, 24)
-      }
-    }
-    .padding(.horizontal, 20)
-  }
-
-  private var current: some View {
-    HStack(spacing: 12) {
-      CoverArt(albumId: player.nowPlayingAlbumId, url: player.coverArt, radius: 8)
-        .frame(width: 52, height: 52)
-      VStack(alignment: .leading, spacing: 1) {
-        Text(song.songName ?? "Unknown")
-          .font(.rowTitle.weight(.bold))
-          .foregroundStyle(tint)
-        Text(song.artistName ?? "Unknown")
-          .font(.rowSubtitle)
-          .foregroundStyle(palette.secondary)
-        ProgressLine(clock: player.clock, tint: tint).padding(.top, 6)
-      }
-      .lineLimit(1)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      Button(action: player.togglePlayback) {
-        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-          .font(.system(size: 20))
-          .foregroundStyle(palette.text)
-          .frame(width: 44, height: 44)
-      }
-      .buttonStyle(.plain)
-    }
-    .padding(.vertical, 10)
-    .padding(.leading, 10)
-    .padding(.trailing, 8)
-    .contentShape(Rectangle())
-    .onTapGesture(perform: showPlayer)
-    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-  }
-
-  private func row(_ item: QueueEntity, at index: Int) -> some View {
-    HStack(spacing: 12) {
-      CoverArt(albumId: item.albumId ?? "", radius: 7).frame(width: 44, height: 44)
-      VStack(alignment: .leading, spacing: 2) {
-        Text(item.songName ?? "Unknown").font(.rowTitle.weight(.semibold))
-        Text(item.artistName ?? "Unknown").font(.meta).foregroundStyle(palette.secondary)
-        if let why = mixes.shownReason(for: item) {
-          Text(why.note).font(.whyLine).foregroundStyle(palette.secondary).padding(.top, 1)
-        }
-      }
-      .lineLimit(1)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      Button {
-        remove(at: index)
-      } label: {
-        Image(systemName: "xmark")
-          .font(.system(size: 14, weight: .semibold))
-          .foregroundStyle(palette.secondary)
-          .frame(width: 36, height: 36)
-          .contentShape(Rectangle())
-      }
-      .buttonStyle(.plain)
-    }
-    .padding(.vertical, 10)
-    .padding(.leading, 12)
-    .padding(.trailing, 6)
-    .contentShape(Rectangle())
-    .onTapGesture { player.playFromQueue(idx: index) }
-    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-  }
-
-  private func remove(at index: Int) {
-    guard let removed = player.removeFromQueue(at: index) else { return }
-    app.show("Removed from Up Next") { player.undoRemove(removed) }
-  }
-}
-
-/// A 40 pt round glass button: the chevrons and the song's •••.
-private struct GlassCircle: View {
-  let systemImage: String
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) { Self.label(systemImage) }.buttonStyle(.plain)
-  }
-
-  static func label(_ systemImage: String) -> some View {
-    Image(systemName: systemImage)
-      .font(.system(size: 17, weight: .semibold))
-      .frame(width: 40, height: 40)
-      .glassEffect(.regular.interactive(), in: Circle())
-  }
-}
-
 extension Font {
-  /// The queue's source under "Playing from".
-  fileprivate static let playingFrom = familjen(14, relativeTo: .subheadline)
-  /// The reason under an Up Next row.
-  fileprivate static let whyLine = system(.caption)
+  /// The queue's source in the header's pill.
+  fileprivate static let source = familjen(14, relativeTo: .subheadline)
 }

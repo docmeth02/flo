@@ -12,6 +12,11 @@ extension Double {
   }
 }
 
+extension Int64 {
+  /// "1.4 GB", a size on disk.
+  var fileSize: String { ByteCountFormatter.string(fromByteCount: self, countStyle: .file) }
+}
+
 extension String {
   /// The string cut to at most `length` characters, the last one an ellipsis.
   func truncated(to length: Int) -> String {

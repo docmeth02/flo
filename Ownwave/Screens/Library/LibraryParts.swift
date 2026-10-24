@@ -6,12 +6,18 @@
 import SwiftUI
 
 /// An album's cover with its name and a line under it, opening the album:
-/// Recently Played, the Library grid and an artist's albums. Without a
-/// `width` it fills its grid column.
+/// Recently Played, the Library grid, Search and an artist's albums. Without
+/// a `width` it fills its grid column.
 struct AlbumTile: View {
   let album: Album
   var subtitle: String?
   var width: CGFloat?
+  var mark: Mark?
+
+  /// A glyph after the line under the name.
+  enum Mark {
+    case downloaded, pinned
+  }
 
   @Environment(\.palette) private var palette
 
@@ -24,9 +30,23 @@ struct AlbumTile: View {
           Text(album.name)
             .font(.rowSubtitle.weight(.semibold))
             .foregroundStyle(palette.text)
-          Text(subtitle ?? album.albumArtist)
-            .font(.meta)
-            .foregroundStyle(palette.secondary)
+          HStack(spacing: 4) {
+            Text(subtitle ?? album.albumArtist)
+            switch mark {
+            case .downloaded:
+              Image(systemName: "arrow.down.circle.fill")
+                .foregroundStyle(Color.floDownloaded)
+                .accessibilityLabel("Downloaded")
+            case .pinned:
+              Image(systemName: "pin.fill")
+                .foregroundStyle(palette.accent)
+                .accessibilityLabel("Pinned")
+            case nil:
+              EmptyView()
+            }
+          }
+          .font(.meta)
+          .foregroundStyle(palette.secondary)
         }
         .lineLimit(1)
       }
@@ -35,6 +55,110 @@ struct AlbumTile: View {
     }
     .buttonStyle(.plain)
     .itemMenu(.album(album))
+  }
+}
+
+/// Albums two to a row, as the Library and Recently Played show them.
+struct AlbumGrid: View {
+  let albums: [Album]
+  /// The albums on the phone, marked as downloaded.
+  var downloaded: Set<String> = []
+
+  var body: some View {
+    LazyVGrid(
+      columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 2), spacing: 18
+    ) {
+      ForEach(albums) { album in
+        AlbumTile(album: album, mark: downloaded.contains(album.id) ? .downloaded : nil)
+      }
+    }
+  }
+}
+
+/// A playlist with its mosaic cover and its length, for the Library and
+/// Search.
+struct PlaylistRow<Trailing: View>: View {
+  let playlist: Playlist
+  @ViewBuilder var trailing: Trailing
+
+  @Environment(\.palette) private var palette
+
+  /// "3 songs · 16 min"; the comment while the server gives no count.
+  private var subtitle: String {
+    guard playlist.songCount > 0 else {
+      return playlist.comment.isEmpty ? "Playlist" : playlist.comment
+    }
+    return songsAndLength(playlist.songCount, seconds: playlist.duration)
+  }
+
+  var body: some View {
+    HStack(spacing: 12) {
+      CoverArt(albumId: playlist.id, artId: playlist.artId, radius: 7)
+        .frame(width: 46, height: 46)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(playlist.name).font(.rowTitle).foregroundStyle(palette.text)
+        Text(subtitle).font(.rowSubtitle).foregroundStyle(palette.secondary)
+      }
+      .lineLimit(1)
+      Spacer(minLength: 0)
+      trailing
+    }
+    .padding(.vertical, 8)
+    .contentShape(Rectangle())
+  }
+}
+
+/// Rows on one platter like `Platter`, but made as they scroll into view,
+/// for the Library's long lists. Every row but the first draws its hairline
+/// with `hairlineAbove()`.
+struct LazyPlatter<Content: View>: View {
+  @ViewBuilder var content: Content
+
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    LazyVStack(spacing: 0) { content }
+      .padding(.horizontal, 12)
+      .onPlatter()
+  }
+}
+
+extension View {
+  /// The hairline over a row of a `LazyPlatter`, unless `shown` is false
+  /// for its first row.
+  func hairlineAbove(_ shown: Bool = true) -> some View {
+    modifier(HairlineAbove(shown: shown))
+  }
+}
+
+private struct HairlineAbove: ViewModifier {
+  let shown: Bool
+
+  @Environment(\.palette) private var palette
+
+  func body(content: Content) -> some View {
+    content.overlay(alignment: .top) {
+      if shown { palette.hairline.frame(height: 1).padding(.leading, 12) }
+    }
+  }
+}
+
+/// A note under a list, such as the playlists' and the downloads' setting.
+struct ListFooter: View {
+  let text: String
+
+  @Environment(\.palette) private var palette
+
+  init(_ text: String) { self.text = text }
+
+  var body: some View {
+    Text(text)
+      .font(.meta)
+      .foregroundStyle(palette.secondary)
+      .multilineTextAlignment(.center)
+      .frame(maxWidth: .infinity)
+      .padding(.horizontal, 8)
+      .padding(.top, 12)
   }
 }
 
@@ -68,12 +192,17 @@ struct BlurredBackdrop: View {
   }
 }
 
+/// "12 songs · 48 min", the count alone without a length.
+func songsAndLength(_ songs: Int, seconds: Double) -> String {
+  let count = counted(songs, "song")
+  return seconds > 0 ? "\(count) · \(Int((seconds / 60).rounded())) min" : count
+}
+
 extension [Song] {
   /// "12 songs · 48 min", empty while no song is loaded.
   var countAndLength: String {
     guard !isEmpty else { return "" }
-    let seconds = reduce(0) { $0 + ($1.duration.isFinite ? $1.duration : 0) }
-    let minutes = Int((seconds / 60).rounded())
-    return "\(counted(count, "song")) · \(minutes) min"
+    return songsAndLength(
+      count, seconds: reduce(0) { $0 + ($1.duration.isFinite ? $1.duration : 0) })
   }
 }

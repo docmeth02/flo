@@ -5,8 +5,8 @@
 
 import SwiftUI
 
-/// The paired watch: whether it answers, what it holds and its room, its
-/// sign-in, whether it follows this phone's settings, and albums to send.
+/// The paired watch: whether it answers, its room, its sign-in, whether it
+/// follows this phone's settings, what it holds, and albums to send.
 struct WatchView: View {
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
@@ -20,9 +20,9 @@ struct WatchView: View {
     ScrollView {
       VStack(spacing: 22) {
         PageTitle("Watch")
-        statusCard
+        status
         if link.isPaired, link.isAppInstalled {
-          signInCard
+          if !link.isSignedIn { signInCard }
           shareRow
           onWatchSection
           if link.isSignedIn { suggestionsSection }
@@ -55,138 +55,110 @@ struct WatchView: View {
       albumViewModel.fetchDownloadedAlbums()
       await albumViewModel.loadRecentAlbums()
     }
-    // The system reports no transfer progress by itself; the bars follow it here.
-    .task(id: link.sends.isEmpty) {
-      while !link.sends.isEmpty, !Task.isCancelled {
-        try? await Task.sleep(for: .seconds(2))
-        link.sends.map(\.id).forEach { link.updateProgress($0) }
-      }
-    }
+    .followsSendProgress()
   }
 
   // MARK: - Status
 
-  private var statusCard: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      HStack(spacing: 14) {
-        GlyphTile(systemImage: "applewatch", radius: 16).frame(width: 56, height: 56)
-        VStack(alignment: .leading, spacing: 2) {
-          // No case size: the phone is not told it.
-          Text("Apple Watch").font(.buttonLabel)
-          HStack(spacing: 6) {
-            Circle()
-              .fill(
-                link.isPaired && link.isAppInstalled ? Color.floDownloaded : palette.secondary
-              )
-              .frame(width: 7, height: 7)
-            Text(statusLine)
-          }
-          .font(.rowSubtitle)
-          .foregroundStyle(palette.secondary)
+  /// The watch's music share of its room as a ring, its connection and its
+  /// sizes. The watch reports no other use, so the rest of the ring is free.
+  private var status: some View {
+    let watch = link.isPaired && link.isAppInstalled ? link.watch : nil
+    return HStack(spacing: 18) {
+      StorageRing(music: watch?.musicBytes ?? 0, free: watch?.freeBytes ?? 0)
+      VStack(alignment: .leading, spacing: 2) {
+        // No case size: the phone is not told it.
+        Text("Apple Watch").font(.familjen(22, relativeTo: .title2))
+        HStack(spacing: 6) {
+          StatusDot(isOn: link.isPaired && link.isAppInstalled)
+          Text(statusLine)
         }
-        Spacer(minLength: 0)
+        .font(.rowSubtitle)
+        .foregroundStyle(palette.secondary)
+        if let watch {
+          let music = Text(watch.musicBytes.fileSize)
+            .fontWeight(.semibold)
+            .foregroundStyle(palette.accent)
+          Text("\(music) music · \(watch.freeBytes.fileSize) free")
+            .font(.meta)
+            .foregroundStyle(palette.secondary)
+            .padding(.top, 6)
+        }
       }
-      if link.isPaired, link.isAppInstalled, let watch = link.watch {
-        StorageBar(music: watch.musicBytes, free: watch.freeBytes)
-      }
+      .lineLimit(1)
+      Spacer(minLength: 0)
     }
-    .padding(16)
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .padding(.horizontal, 4)
   }
 
   private var statusLine: String {
     if !link.isPaired { return "No watch paired" }
     if !link.isAppInstalled { return "Ownwave is not on this watch" }
     // Reachable only while the app is in front; transfers go on without it.
-    return link.isReachable ? "App open on the watch" : "Connected"
+    if link.isReachable { return "App open on the watch" }
+    guard link.watch != nil else { return "Connected" }
+    return link.isSignedIn ? "Connected · signed in" : "Connected · not signed in"
   }
 
   // MARK: - Sign-in and settings
 
-  @ViewBuilder private var signInCard: some View {
-    if link.isSignedIn, let account = link.watch?.account {
-      HStack(spacing: 12) {
-        Image(systemName: "checkmark.circle.fill")
-          .font(.system(size: 22))
-          .foregroundStyle(Color.floDownloaded)
-        VStack(alignment: .leading, spacing: 1) {
-          Text("Watch signed in").font(.rowTitle.weight(.semibold))
-          Text("\(account.user) · \(account.host)")
-            .font(.rowSubtitle)
-            .foregroundStyle(palette.secondary)
-        }
-        .lineLimit(1)
-        Spacer(minLength: 0)
+  private var signInCard: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Sign in the watch").font(.buttonLabel)
+      Button(link.signIn == .sending ? "Sending to watch…" : "Sign in watch") {
+        link.signInWatch()
       }
-      .padding(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
-      .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-    } else {
-      VStack(alignment: .leading, spacing: 12) {
-        Text("Sign in the watch").font(.buttonLabel)
-        Button(link.signIn == .sending ? "Sending to watch…" : "Sign in watch") {
-          link.signInWatch()
-        }
-        .buttonStyle(FillButtonStyle(height: 48))
-        .disabled(link.signIn == .sending)
-        if case .failed(let message) = link.signIn {
-          Text(message).font(.rowSubtitle).foregroundStyle(palette.secondary)
-        }
+      .buttonStyle(FillButtonStyle(height: 48))
+      .disabled(link.signIn == .sending)
+      if case .failed(let message) = link.signIn {
+        Text(message).font(.rowSubtitle).foregroundStyle(palette.secondary)
       }
-      .padding(16)
-      .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
+    .padding(16)
+    .onPlatter()
   }
 
   private var shareRow: some View {
     Toggle(isOn: $shareSettings) {
       VStack(alignment: .leading, spacing: 2) {
         Text("Share settings").font(.rowTitle.weight(.semibold))
-        Text("Bitrates, Keep Playing and cellular downloads follow this iPhone")
+        Text("Bitrates, Keep Playing, Mix variety and cellular downloads follow this iPhone")
           .font(.rowSubtitle)
           .foregroundStyle(palette.secondary)
       }
     }
-    .tint(Color.floDownloaded)
-    .padding(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
-    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .tint(palette.fill)
+    .padding(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
+    .onPlatter()
   }
 
   // MARK: - Albums
 
   private var onWatchSection: some View {
-    // An album still arriving shows once, as a send, not also with a check.
-    let collections = (link.watch?.collections ?? []).filter { collection in
-      link.watch?.incoming[collection.id] == nil && !link.sends.contains { $0.id == collection.id }
-    }
-    return VStack(spacing: 8) {
-      SectionTitle("On the watch")
-      ForEach(collections) { collection in
-        let kbps = collection.kbps.map { " · \($0) kbps" } ?? ""
-        let left = collection.downloading ?? 0
-        ItemRow(
-          art: .cover(albumId: collection.id), title: collection.name,
-          subtitle: left > 0
-            ? "Downloading on the watch" : counted(collection.songs, "song") + kbps,
-          artSize: 44
-        ) {
-          if left > 0 {
-            Text("\(collection.songs * 100 / (collection.songs + left))%")
-              .font(.rowSubtitle)
-              .monospacedDigit()
-              .foregroundStyle(palette.secondary)
-          } else {
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.floDownloaded)
-          }
+    let albums = WatchAlbum.all(link)
+    return VStack(spacing: 10) {
+      HStack(spacing: 14) {
+        SectionTitle("On the watch")
+        if !albums.isEmpty {
+          NavigationLink("See all \(albums.count)", value: Route.watchAlbums)
+            .font(.rowSubtitle)
+            .foregroundStyle(palette.accent)
         }
-        .card()
       }
-      ForEach(link.sends) { SendRow(send: $0) }
-      if collections.isEmpty, link.sends.isEmpty {
-        Text(link.watch == nil ? "The watch has not reported yet." : "Nothing on the watch yet.")
+      if albums.isEmpty {
+        Text(WatchAlbum.emptyText(link))
           .font(.rowSubtitle)
           .foregroundStyle(palette.secondary)
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(.horizontal, 4)
+      } else {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(alignment: .top, spacing: 12) {
+            ForEach(albums) { ShelfTile(album: $0) }
+          }
+          .padding(.horizontal, 16)
+        }
+        .padding(.horizontal, -16)
       }
     }
   }
@@ -194,23 +166,28 @@ struct WatchView: View {
   @ViewBuilder private var suggestionsSection: some View {
     let suggestions = suggestions
     if !suggestions.isEmpty {
-      VStack(spacing: 8) {
+      VStack(spacing: 10) {
         SectionTitle("Send to watch")
-        ForEach(suggestions) { album in
-          ItemRow(
-            art: .cover(albumId: album.id), title: album.name, subtitle: album.albumArtist,
-            artSize: 44
-          ) {
-            Button("Send") { link.send(album) }
-              .font(.rowSubtitle.weight(.bold))
-              .foregroundStyle(palette.accent)
-              .padding(.vertical, 7)
-              .padding(.horizontal, 14)
-              .background(palette.surface2, in: Capsule())
+        Platter {
+          ForEach(suggestions) { album in
+            ItemRow(
+              art: .cover(albumId: album.id), title: album.name, subtitle: album.albumArtist,
+              artSize: 44
+            ) {
+              Button {
+                link.send(album)
+              } label: {
+                Image(systemName: "arrow.up")
+                  .font(.system(size: 15, weight: .bold))
+                  .foregroundStyle(palette.accent)
+                  .frame(width: 36, height: 36)
+                  .background(palette.surface2, in: Circle())
+              }
               .buttonStyle(.plain)
+              .accessibilityLabel("Send to Watch")
+            }
+            .itemMenu(.album(album))
           }
-          .card()
-          .itemMenu(.album(album))
         }
       }
       .tourAnchor(.send)
@@ -229,69 +206,84 @@ struct WatchView: View {
   }
 }
 
-/// The watch's music and free room as one bar with a legend. The watch
-/// reports no other use, so the rest of the bar is free.
-private struct StorageBar: View {
+/// The watch's music against its room, around a watch glyph.
+private struct StorageRing: View {
   let music: Int64
   let free: Int64
 
   @Environment(\.palette) private var palette
 
-  var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      GeometryReader { proxy in
-        let total = max(music + free, 1)
-        palette.surface2
-          .overlay(alignment: .leading) {
-            palette.accent.frame(width: proxy.size.width * Double(music) / Double(total))
-          }
-          .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-      }
-      .frame(height: 10)
-      HStack(spacing: 14) {
-        HStack(spacing: 5) {
-          RoundedRectangle(cornerRadius: 2).fill(palette.accent).frame(width: 8, height: 8)
-          Text("Music \(Self.size(music))")
-        }
-        Text("\(Self.size(free)) free")
-      }
-      .font(.meta)
-      .foregroundStyle(palette.secondary)
-    }
-  }
+  private static let side: CGFloat = 96
+  private static let width: CGFloat = 8
 
-  private static func size(_ bytes: Int64) -> String {
-    ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+  var body: some View {
+    let share = Double(music) / Double(max(music + free, 1))
+    ZStack {
+      Circle().stroke(palette.surface2, lineWidth: Self.width)
+      // Round caps would draw a dot for nothing.
+      if share > 0 {
+        Circle()
+          .trim(from: 0, to: share)
+          .stroke(palette.accent, style: StrokeStyle(lineWidth: Self.width, lineCap: .round))
+          .rotationEffect(.degrees(-90))
+      }
+      Image(systemName: "applewatch")
+        .font(.system(size: 34, weight: .medium))
+        .foregroundStyle(palette.accent)
+    }
+    .padding(Self.width / 2)
+    .frame(width: Self.side, height: Self.side)
+    .accessibilityHidden(true)
   }
 }
 
-/// An album on its way to the watch, with its progress.
-private struct SendRow: View {
-  let send: WatchLink.Send
+/// An album on the watch's shelf: the cover with a check once it is there,
+/// or a progress bar while it is on its way.
+private struct ShelfTile: View {
+  let album: WatchAlbum
 
   @Environment(\.palette) private var palette
 
+  private static let side: CGFloat = 112
+
   var body: some View {
-    HStack(spacing: 12) {
-      CoverArt(albumId: send.album.id, radius: 7).frame(width: 44, height: 44)
-      VStack(alignment: .leading, spacing: 2) {
-        Text(send.album.name).font(.rowTitle).lineLimit(1)
-        Text("Sending").font(.rowSubtitle).foregroundStyle(palette.secondary)
-        // The Downloads list's look for the same thing.
-        ProgressView(value: send.progress).tint(palette.accent).padding(.top, 3)
-      }
-      Text("\(Int(send.progress * 100))%")
-        .font(.rowSubtitle)
-        .monospacedDigit()
+    VStack(alignment: .leading, spacing: 0) {
+      CoverArt(albumId: album.id, radius: 14)
+        .frame(width: Self.side, height: Self.side)
+        .overlay(alignment: .bottomTrailing) {
+          if album.progress == nil {
+            Image(systemName: "checkmark.circle.fill")
+              .font(.system(size: 18))
+              .foregroundStyle(Color.floDownloaded)
+              .frame(width: 22, height: 22)
+              .background(palette.background, in: Circle())
+              .padding(6)
+          }
+        }
+        .overlay(alignment: .bottom) {
+          if let progress = album.progress {
+            // Over any cover, so in fixed colors as the design has them.
+            GeometryReader { proxy in
+              Capsule().fill(.black.opacity(0.45))
+                .overlay(alignment: .leading) {
+                  Capsule().fill(.white).frame(width: proxy.size.width * progress)
+                }
+            }
+            .frame(height: 4)
+            .padding(8)
+          }
+        }
+      Text(album.name)
+        .font(.meta.weight(.semibold))
+        .lineLimit(1)
+        .padding(.top, 6)
+      Text(album.subtitle(withBitrate: false))
+        .font(.caption)
         .foregroundStyle(palette.secondary)
+        .lineLimit(1)
     }
-    .padding(.vertical, 8)
-    .card()
-    // A send that hangs (a watch app reinstalled meanwhile) can go again.
-    .contextMenu {
-      Button("Stop Sending", systemImage: "xmark", role: .destructive) {
-        WatchLink.shared.stopSend(send.id)
-      }
-    }
+    .frame(width: Self.side)
+    .contentShape(Rectangle())
+    .watchAlbumMenu(album)
   }
 }

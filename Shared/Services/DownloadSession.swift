@@ -150,8 +150,7 @@ final class DownloadSession: NSObject, ObservableObject {
   func enqueue(_ playlist: Playlist) {
     let id = playlist.id
     DownloadStore.savePlaylist(playlist)
-    Self.downloadCover(
-      artId: playlist.coverArtId ?? (id.hasPrefix("pl-") ? id : "pl-\(id)"), as: id)
+    Self.downloadCover(artId: playlist.artId, as: id)
 
     // Once per album and one at a time, so they neither time out queued
     // behind each other nor crowd the songs; a stored one stays.

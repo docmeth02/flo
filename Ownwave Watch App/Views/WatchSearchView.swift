@@ -121,7 +121,7 @@ struct WatchSearchView: View {
             title: song.title,
             artist: song.artist,
             isPlaying: playerViewModel.isCurrent(song),
-            onHold: { menu = .song(song, context: "Search", isFromPlaylist: false) }
+            onHold: { menu = .song(song, context: SongCollection.Name.search, isFromPlaylist: false) }
           ) {
             let search = SongCollection.search(song)
             if playerViewModel.playItem(item: search) { showPlayer() }

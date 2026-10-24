@@ -65,3 +65,20 @@ struct CircleButtonStyle: ButtonStyle {
       .opacity(configuration.isPressed ? 0.7 : 1)
   }
 }
+
+/// A 40 pt round glass button: the chevrons and the song's •••.
+struct GlassCircle: View {
+  let systemImage: String
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) { Self.label(systemImage) }.buttonStyle(.plain)
+  }
+
+  static func label(_ systemImage: String) -> some View {
+    Image(systemName: systemImage)
+      .font(.system(size: 17, weight: .semibold))
+      .frame(width: 40, height: 40)
+      .glassEffect(.regular.interactive(), in: Circle())
+  }
+}

@@ -75,18 +75,31 @@ final class AppModel: ObservableObject {
   }
 
   /// The album's whole track list from the server: an album screen may show
-  /// only the songs downloaded here. Without the server, the songs known.
+  /// only the songs downloaded here. A downloaded playlist opened as an album
+  /// asks for the playlist's. Without the server, the songs known.
   func songs(of album: Album) async -> [Song] {
     guard ConnectivityMonitor.shared.canReachServer else { return album.songs }
     // An empty answer (the album gone from the server) keeps what is known.
-    guard let songs = try? await LibraryAPI.getSongFromAlbum(id: album.id),
-      !songs.isEmpty
-    else { return album.songs }
+    let request = album.isPlaylist ? LibraryAPI.getSongsByPlaylist : LibraryAPI.getSongFromAlbum
+    guard let songs = try? await request(album.id), !songs.isEmpty else { return album.songs }
     return songs
   }
 
   /// Downloads the songs of an album the phone does not have yet.
   func download(_ album: Album) {
+    download(album) { DownloadSession.shared.enqueue($0) }
+  }
+
+  /// Downloads a playlist with its mosaic cover, as an album.
+  func download(_ playlist: Playlist) {
+    download(Album(from: playlist)) { album in
+      var playlist = playlist
+      playlist.songs = album.songs
+      DownloadSession.shared.enqueue(playlist)
+    }
+  }
+
+  private func download(_ album: Album, enqueue: @escaping (Album) -> Void) {
     var album = album
     let account = AuthService.shared.accountKey
     Task {
@@ -98,7 +111,7 @@ final class AppModel: ObservableObject {
       guard album.songs.contains(where: { !onPhone.contains($0.playbackID) }) else {
         return show("Already on this iPhone")
       }
-      DownloadSession.shared.enqueue(album)
+      enqueue(album)
       let bitRate = UserDefaultsManager.downloadBitRate
       if AppPlatform.isOnCellular, !UserDefaultsManager.downloadOverCellular {
         show("Downloads when on Wi-Fi")

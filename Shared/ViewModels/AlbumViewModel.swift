@@ -389,7 +389,7 @@ class AlbumViewModel: ObservableObject {
     await LibraryCacheManager.read { $0.load([T].self, forKey: library.cacheKey) ?? [] }
   }
 
-  /// The last four albums played, from the server's mirrored plays and the
+  /// The albums played last, as many as the platform shows, from the server's mirrored plays and the
   /// local ones not mirrored yet. Never asks the server.
   @MainActor func loadRecentAlbums() async {
     let cacheGeneration = LibraryCacheManager.shared.generation
@@ -407,7 +407,7 @@ class AlbumViewModel: ObservableObject {
       plays.sorted { $0.at > $1.at }
         .compactMap { songs[$0.id].flatMap { byId[$0.albumId] } }
         .filter { seen.insert($0.id).inserted }
-        .prefix(4))
+        .prefix(AppPlatform.recentAlbumCount))
   }
 
   func fetchDownloadedAlbums() {

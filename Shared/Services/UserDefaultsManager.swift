@@ -161,4 +161,13 @@ enum UserDefaultsManager {
       UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.keepPlaying)
     }
   }
+
+  /// How far smart mixes reach past the favourites (Taste's Mix variety).
+  static var mixVariety: MixRanker.Variety {
+    get {
+      UserDefaults.standard.string(forKey: UserDefaultsKeys.mixVariety)
+        .flatMap(MixRanker.Variety.init) ?? .balanced
+    }
+    set { UserDefaults.standard.set(newValue.rawValue, forKey: UserDefaultsKeys.mixVariety) }
+  }
 }

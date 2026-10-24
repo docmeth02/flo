@@ -13,6 +13,8 @@ struct CoverArt: View {
   let albumId: String
   /// A local path for a downloaded album, else empty.
   var url: String = ""
+  /// Another cover the server keeps under `albumId`, as a playlist's.
+  var artId: String?
   var radius: CGFloat = 8
 
   @Environment(\.palette) private var palette
@@ -63,7 +65,7 @@ struct CoverArt: View {
           return
         }
         let pixels = Int(side * scale)
-        let path = await CoverTint.coverFile(albumId: albumId, url: url)
+        let path = await CoverTint.coverFile(albumId: albumId, url: url, artId: artId)
         let cgImage = await Task.detached(priority: .userInitiated) {
           path.flatMap { Thumbnail.image(URL(fileURLWithPath: $0), pixels: pixels) }
         }.value

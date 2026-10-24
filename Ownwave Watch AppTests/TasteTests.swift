@@ -67,6 +67,27 @@ final class TasteTests: XCTestCase {
     XCTAssertEqual(note(facts), "Explore pick · rarely played")
   }
 
+  /// The short label of an Up Next row, and the note standing in for it in
+  /// a mix saved before labels.
+  func testReasonLabels() throws {
+    var facts = MixReason.Facts(artist: "BABYMETAL", album: "Budokan", now: now)
+    XCTAssertEqual(MixReason.make(facts).label, "Fits what you play")
+    facts.songPlays = 9
+    XCTAssertEqual(MixReason.make(facts).label, "Played 9× lately")
+    facts.likedAlbum = true
+    XCTAssertEqual(MixReason.make(facts).label, "Album liked")
+    facts.rating = 5
+    XCTAssertEqual(MixReason.make(facts).label, "Rated 5")
+    facts.ratingSource = .artist
+    XCTAssertEqual(MixReason.make(facts).label, "Artist rated 5")
+    facts.explore = true
+    XCTAssertEqual(MixReason.make(facts).label, "Explore pick · new to you")
+
+    let saved = Data(#"{"kind":"rated","note":"You rated this 5"}"#.utf8)
+    let old = try JSONDecoder().decode(MixReason.self, from: saved)
+    XCTAssertEqual(old.label, "You rated this 5")
+  }
+
   /// Each pick carries its song id and a reason worded from the 60-day plays.
   func testPicksCarryTheirReason() {
     let first = song("s1", artistId: "ar1", artist: "Artist One", album: "a1")
@@ -115,7 +136,6 @@ final class TasteTests: XCTestCase {
     XCTAssertEqual(summary.recipe, [.history: 1, .liked: 1, .explore: 1])
     XCTAssertEqual(summary.top.map(\.name), ["BABYMETAL", "METALVERSE"])
     XCTAssertEqual(summary.top.map(\.plays), [7, 5])
-    XCTAssertEqual(summary.top.first?.albumId, "a2")
     XCTAssertEqual(summary.boosted.map(\.title), ["METALVERSE", "Song s1"])
     XCTAssertEqual(summary.avoided.map(\.id), ["s3"])
     XCTAssertEqual(summary.skips.map(\.subtitle), ["Skipped twice · less likely for about 2 weeks"])

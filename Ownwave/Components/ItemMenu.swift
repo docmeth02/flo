@@ -29,6 +29,9 @@ struct ItemMenuItems: View {
       let liked = actions.isLiked(target)
       button(liked ? "Unlike" : "Like", liked ? "heart.slash" : "heart", .like)
     }
+    if case .playlist(let playlist) = target {
+      Button("Download", systemImage: "arrow.down.circle") { app.download(playlist) }
+    }
     if case .album(let album) = target {
       Button("Download", systemImage: "arrow.down.circle") { app.download(album) }
       if watch.isAppInstalled {
