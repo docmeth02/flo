@@ -12,6 +12,12 @@ enum Route: Hashable {
   case playlist(Playlist)
   case settings
   case watch
+  /// Home's Recently Played, all of it.
+  case recent
+  /// The server card of Settings: the account and Sign Out.
+  case server
+  /// Everything on the watch.
+  case watchAlbums
 }
 
 extension EnvironmentValues {
@@ -219,6 +225,9 @@ struct AppTabs: View {
             case .playlist(let playlist): PlaylistView(playlist: playlist)
             case .settings: SettingsView()
             case .watch: WatchView()
+            case .recent: RecentlyPlayedView()
+            case .server: ServerView()
+            case .watchAlbums: WatchAlbumsView()
             }
           }
           .containerBackground(palette.background, for: .navigation)

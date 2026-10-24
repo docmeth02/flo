@@ -169,7 +169,8 @@ final class SmartPlaybackService {
     var rng = SplitMix64(seed: seed)
 
     let started = DispatchTime.now().uptimeNanoseconds
-    let (picked, record) = MixRanker().rank(
+    let ranker = MixRanker(config: MixRanker.Config(variety: UserDefaultsManager.mixVariety))
+    let (picked, record) = ranker.rank(
       library: songs, index: index, affinity: await affinity, journal: await journal,
       pendingPlays: pendingPlays, recentPlays: await recentPlays, ratings: ratings,
       starred: starred, likedAlbums: liked.albums, likedArtists: liked.artists, mode: mode,

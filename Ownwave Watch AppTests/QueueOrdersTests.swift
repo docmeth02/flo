@@ -145,4 +145,30 @@ final class QueueOrdersTests: XCTestCase {
     XCTAssertEqual(ids(orders.played), "abecd")
     assertConsistent(orders, current: "b")
   }
+
+  func testMove() {
+    var orders = shuffled()
+    orders.move(row("d"), to: 2)
+    XCTAssertEqual(ids(orders.played), "cadeb")
+    // Stored right after the row it now follows.
+    XCTAssertEqual(ids(orders.stored), "adbce")
+    assertConsistent(orders, current: "a")
+
+    orders.move(row("e"), to: 4)
+    XCTAssertEqual(ids(orders.played), "cadbe")
+    XCTAssertEqual(ids(orders.stored), "adbec")
+    assertConsistent(orders, current: "a")
+
+    // Never before or onto the current row, and the current row stays.
+    orders.move(row("b"), to: 0)
+    XCTAssertEqual(ids(orders.played), "cabde")
+    orders.move(row("a"), to: 4)
+    XCTAssertEqual(ids(orders.played), "cabde")
+    assertConsistent(orders, current: "a")
+
+    orders = unshuffled()
+    orders.move(row("c"), to: 4)
+    XCTAssertEqual(ids(orders.played), "abdec")
+    assertConsistent(orders, current: "b")
+  }
 }

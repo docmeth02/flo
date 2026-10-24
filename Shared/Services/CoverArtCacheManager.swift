@@ -25,15 +25,17 @@ class CoverArtCacheManager {
 
   /// Local path of the album's cover, downloading it first when needed; nil
   /// when that failed. Concurrent callers for the same album share one
-  /// download.
-  func coverPath(albumId: String) async -> String? {
+  /// download. `artId` names another cover kept under `albumId`, such as a
+  /// playlist's "pl-" mosaic.
+  func coverPath(albumId: String, artId: String? = nil) async -> String? {
     guard !albumId.isEmpty else { return nil }
 
     let download = syncQueue.sync { () -> Task<String?, Never>? in
       if cachedFilePath(albumId: albumId) != nil { return nil }
       if let running = downloads[albumId] { return running }
       let task = Task { [generation] in
-        await self.download(albumId: albumId, generation: generation)
+        await self.download(
+          albumId: albumId, artId: artId ?? "al-\(albumId)", generation: generation)
       }
       downloads[albumId] = task
       return task
@@ -42,8 +44,8 @@ class CoverArtCacheManager {
     return await download.value
   }
 
-  private func download(albumId: String, generation: Int) async -> String? {
-    let params: [String: Any] = ["id": "al-\(albumId)", "size": AppPlatform.coverArtSize]
+  private func download(albumId: String, artId: String, generation: Int) async -> String? {
+    let params: [String: Any] = ["id": artId, "size": AppPlatform.coverArtSize]
     if let tempFile = try? await APIManager.shared.subsonicDownload(
       endpoint: API.SubsonicEndpoint.coverArt, parameters: params)
     {

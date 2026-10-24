@@ -142,6 +142,9 @@ import WatchKit
         UserDefaultsManager.downloadOverCellular = cellular
         DownloadSession.shared.cellularAccessChanged()
       }
+      if let variety = phone.mixVariety.flatMap(MixRanker.Variety.init) {
+        UserDefaultsManager.mixVariety = variety
+      }
     }
     UserDefaultsManager.settingsFollowPhone = phone.share
     sending = phone.sending

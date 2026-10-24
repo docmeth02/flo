@@ -21,6 +21,9 @@ struct Album: Codable, Hashable, Identifiable, Playable {
   var rating: Int?
   /// A playlist shown or downloaded as an album.
   var isPlaylist = false
+  /// When the server added the album, ISO 8601, which sorts as text; empty
+  /// when unknown.
+  var createdAt = ""
 
   var isExplicit: Bool {
     if explicitStatus.isExplicit {
@@ -44,6 +47,7 @@ struct Album: Codable, Hashable, Identifiable, Playable {
     case starred
     case rating
     case isPlaylist
+    case createdAt
   }
 
   init(from decoder: any Decoder) throws {
@@ -64,6 +68,7 @@ struct Album: Codable, Hashable, Identifiable, Playable {
     self.starred = try container.decodeIfPresent(Bool.self, forKey: .starred) ?? false
     self.rating = try? container.decodeIfPresent(Int.self, forKey: .rating)
     self.isPlaylist = try container.decodeIfPresent(Bool.self, forKey: .isPlaylist) ?? false
+    self.createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt) ?? ""
   }
 
   init(
