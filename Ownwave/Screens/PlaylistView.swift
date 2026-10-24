@@ -58,7 +58,7 @@ struct PlaylistView: View {
           Platter {
             // A playlist can hold a song twice.
             ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
-              PlaylistRow(
+              PlaylistTrackRow(
                 song: song, menu: .song(song, context: playlist.name, isFromPlaylist: true)
               ) {
                 app.play(Album(from: loaded), startingAt: index)
@@ -93,7 +93,7 @@ struct PlaylistView: View {
 
 /// A playlist song: its cover, the title with a waveform in the accent
 /// while it plays, the artist, its length and the ••• menu.
-private struct PlaylistRow: View {
+private struct PlaylistTrackRow: View {
   let song: Song
   let menu: MenuTarget
   let play: () -> Void

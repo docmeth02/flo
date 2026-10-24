@@ -190,7 +190,7 @@ struct SearchView: View {
     let playlists = pinnedFirst(
       albums.playlists.filter { $0.name.localizedStandardContains(found.query) }
         .map(MenuTarget.playlist))
-    let songs = results.songs.map { MenuTarget.song($0, context: "Search", isFromPlaylist: false) }
+    let songs = results.songs.map { MenuTarget.song($0, context: SongCollection.Name.search, isFromPlaylist: false) }
       .filter { $0.id != top?.id }
 
     if let top {
@@ -230,7 +230,7 @@ struct SearchView: View {
   private func topResult(_ query: String, _ results: LibrarySearch.Results) -> MenuTarget? {
     let candidates: [MenuTarget] =
       results.artists.map(MenuTarget.artist) + results.albums.map(MenuTarget.album)
-      + results.songs.map { MenuTarget.song($0, context: "Search", isFromPlaylist: false) }
+      + results.songs.map { MenuTarget.song($0, context: SongCollection.Name.search, isFromPlaylist: false) }
     let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
     let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
     func match(_ name: String) -> Int {

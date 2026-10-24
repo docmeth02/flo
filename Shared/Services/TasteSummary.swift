@@ -16,8 +16,6 @@ struct TasteSummary: Sendable {
     /// Nil for an artist the cached list does not know.
     let artist: Artist?
     let plays: Int
-    /// The album of the artist's most-played song, for its cover hue.
-    let albumId: String
   }
 
   struct Rated: Sendable, Identifiable {
@@ -63,15 +61,15 @@ struct TasteSummary: Sendable {
     let songs = Dictionary(library.map { ($0.playbackID, $0) }) { first, _ in first }
     let artistsById = Dictionary(artists.map { ($0.id, $0) }) { first, _ in first }
 
-    // Most-played songs first: an artist takes the spelling, the listed
-    // artist and the album of its most-played song that has them.
-    var groups: [String: (plays: Int, artist: Artist?, name: String, albumId: String)] = [:]
+    // Most-played songs first: an artist takes the spelling and the listed
+    // artist of its most-played song that has them.
+    var groups: [String: (plays: Int, artist: Artist?, name: String)] = [:]
     let byPlays = plays.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
     for (id, count) in byPlays {
       guard let entry = index.songs[id], !entry.artistKey.isEmpty, let song = songs[id] else {
         continue
       }
-      var group = groups[entry.artistKey] ?? (0, nil, song.artist, song.albumId)
+      var group = groups[entry.artistKey] ?? (0, nil, song.artist)
       group.plays += count
       if group.artist == nil, let artistId = entry.artistId, let artist = artistsById[artistId] {
         group.artist = artist
@@ -81,8 +79,7 @@ struct TasteSummary: Sendable {
     }
     summary.top = groups.map {
       TopArtist(
-        id: $0.key, name: $0.value.name, artist: $0.value.artist, plays: $0.value.plays,
-        albumId: $0.value.albumId)
+        id: $0.key, name: $0.value.name, artist: $0.value.artist, plays: $0.value.plays)
     }
     .sorted { $0.plays != $1.plays ? $0.plays > $1.plays : $0.name < $1.name }
     .prefix(topCount).map { $0 }

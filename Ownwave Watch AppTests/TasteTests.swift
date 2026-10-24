@@ -136,7 +136,6 @@ final class TasteTests: XCTestCase {
     XCTAssertEqual(summary.recipe, [.history: 1, .liked: 1, .explore: 1])
     XCTAssertEqual(summary.top.map(\.name), ["BABYMETAL", "METALVERSE"])
     XCTAssertEqual(summary.top.map(\.plays), [7, 5])
-    XCTAssertEqual(summary.top.first?.albumId, "a2")
     XCTAssertEqual(summary.boosted.map(\.title), ["METALVERSE", "Song s1"])
     XCTAssertEqual(summary.avoided.map(\.id), ["s3"])
     XCTAssertEqual(summary.skips.map(\.subtitle), ["Skipped twice · less likely for about 2 weeks"])

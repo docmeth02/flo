@@ -253,9 +253,10 @@ private struct PlayerPage: View {
       guard let name = song.contextName else { return "music.note" }
       if name == song.albumName { return "square.stack" }
       if name == song.artistName { return "music.mic" }
-      // SongCollection.search and .artistRadio name their queues so.
-      if name == "Search" { return "magnifyingglass" }
-      if name.hasSuffix(" Radio") { return "dot.radiowaves.left.and.right" }
+      if name == SongCollection.Name.search { return "magnifyingglass" }
+      if name.hasSuffix(SongCollection.Name.artistRadioSuffix) {
+        return "dot.radiowaves.left.and.right"
+      }
       return "music.note"
     }
   }

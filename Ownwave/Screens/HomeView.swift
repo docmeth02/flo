@@ -17,8 +17,8 @@ struct HomeView: View {
 
   @StateObject private var radios = RadiosViewModel()
   // The lists pins are looked up in, loaded or cached, read again on every
-  // return so a pin made elsewhere shows up. Home never asks the server for
-  // them.
+  // return so a pin made elsewhere shows up. Home asks the server for them
+  // only while there is no cache.
   @State private var albums: [Album] = []
   @State private var artists: [Artist] = []
   @State private var playlists: [Playlist] = []
@@ -41,12 +41,18 @@ struct HomeView: View {
       .padding(.bottom, 24)
     }
     .toolbar(.hidden, for: .navigationBar)
-    .task {
+    // Again once the album list arrives: right after signing in there is no
+    // cache to read yet.
+    .task(id: albumViewModel.albums.isEmpty) {
       albumViewModel.fetchStarredSongsIfStale()
       await albumViewModel.loadRecentAlbums()
       albums = await albumViewModel.loadedOrCached(albumViewModel.albums, .albums)
       artists = await albumViewModel.loadedOrCached(albumViewModel.artists, .artists)
       playlists = await albumViewModel.loadedOrCached(albumViewModel.playlists, .playlists)
+      if albums.isEmpty {
+        albumViewModel.fetchAlbums()
+        albumViewModel.getPlaylists()
+      }
       if !pins.pinned(.radio).isEmpty, radios.radios.isEmpty { radios.fetchAllRadios() }
       // Siri and Shortcuts read the artist names from this cache.
       await albumViewModel.cacheArtistsIfNeeded()
@@ -147,7 +153,7 @@ struct HomeView: View {
         }
         ScrollView(.horizontal, showsIndicators: false) {
           HStack(alignment: .top, spacing: 12) {
-            ForEach(albumViewModel.recentAlbums) { AlbumTile(album: $0, width: 144) }
+            ForEach(albumViewModel.recentAlbums.prefix(10)) { AlbumTile(album: $0, width: 144) }
           }
           .padding(.horizontal, 16)
         }
