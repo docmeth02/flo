@@ -5,7 +5,7 @@
 
 import SwiftUI
 
-/// The Taste tab's parts, one segment each.
+/// The Taste tab's parts, one chip each.
 enum TasteSegment: String, CaseIterable, Identifiable {
   case profile, top, boosted, avoided, skips
 
@@ -58,9 +58,7 @@ struct TasteView: View {
   }
 
   private var segments: some View {
-    Segmented(
-      options: TasteSegment.allCases.map { ($0, $0.title) }, selection: $segment, filled: false,
-      font: .meta.weight(.semibold))
+    ChipBar(options: TasteSegment.allCases.map { ($0, $0.title, nil) }, selection: $segment)
   }
 
   @ViewBuilder private func content(_ summary: TasteSummary) -> some View {
@@ -227,6 +225,7 @@ private struct TasteProfile: View {
     VStack(spacing: 12) {
       RecipeCard(recipe: summary.recipe, size: summary.recipeSize).tourAnchor(.taste)
       soundCard
+      VarietyCard()
       LazyVGrid(
         columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12
       ) {
@@ -266,10 +265,12 @@ private struct TasteProfile: View {
   }
 }
 
-/// A card's title with its muted meta on the right.
+/// A card's title with its meta on the right: muted, or a chosen value in
+/// the accent.
 private struct CardHeader: View {
   let title: String
   let meta: String
+  var isValue = false
 
   @Environment(\.palette) private var palette
 
@@ -277,8 +278,126 @@ private struct CardHeader: View {
     HStack(alignment: .firstTextBaseline, spacing: 10) {
       Text(title).font(.sectionTitle)
       Spacer(minLength: 0)
-      Text(meta).font(.meta).foregroundStyle(palette.secondary)
+      Text(meta)
+        .font(isValue ? .meta.weight(.semibold) : .meta)
+        .foregroundStyle(isValue ? palette.accent : palette.secondary)
     }
+  }
+}
+
+extension MixRanker.Variety {
+  fileprivate var title: String { rawValue.capitalized }
+
+  /// What it changes, after `MixRanker.Config(variety:)`.
+  fileprivate var detail: String {
+    switch self {
+    case .familiar: "A heard song rests about a day; fewer picks explore."
+    case .balanced: "A heard song rests about 3 days; a sixth of a mix explores."
+    case .adventurous: "A heard song rests about a week; a third of a mix explores."
+    }
+  }
+}
+
+/// How far Play Something reaches past the favourites, on a slider with a
+/// stop per variety. A watch that follows the phone takes it along.
+private struct VarietyCard: View {
+  @AppStorage(UserDefaultsKeys.mixVariety) private var variety = MixRanker.Variety.balanced
+
+  @Environment(\.palette) private var palette
+
+  private static let stops = MixRanker.Variety.allCases
+  private static let knob: CGFloat = 28
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      CardHeader(title: "Mix variety", meta: variety.title, isValue: true)
+      VStack(spacing: 6) {
+        slider
+        labels
+      }
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel("Mix variety")
+      .accessibilityValue(variety.title)
+      .accessibilityAdjustableAction { direction in
+        switch direction {
+        case .increment: step(1)
+        case .decrement: step(-1)
+        @unknown default: break
+        }
+      }
+      Text(variety.detail)
+        .font(.meta)
+        .foregroundStyle(palette.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(EdgeInsets(top: 18, leading: 16, bottom: 16, trailing: 16))
+    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .sensoryFeedback(.selection, trigger: variety)
+    .onChange(of: variety) { WatchLink.shared.updateWatch() }
+  }
+
+  private var index: Int { Self.stops.firstIndex(of: variety) ?? 1 }
+
+  /// The track with the chosen part filled, a dot at each stop still ahead
+  /// and the knob; a tap or a drag snaps to the nearest stop.
+  private var slider: some View {
+    GeometryReader { proxy in
+      let inset = Self.knob / 2
+      let room = proxy.size.width - Self.knob
+      let x = inset + room * CGFloat(index) / CGFloat(Self.stops.count - 1)
+      ZStack(alignment: .leading) {
+        Capsule().fill(palette.surface2).frame(height: 6).padding(.horizontal, inset - 3)
+        Capsule().fill(palette.accent).frame(width: x - inset + 6, height: 6)
+          .offset(x: inset - 3)
+        ForEach(Self.stops.indices.filter { $0 > index }, id: \.self) { stop in
+          Circle()
+            .fill(palette.secondary.opacity(0.6))
+            .frame(width: 6, height: 6)
+            .offset(x: inset - 3 + room * CGFloat(stop) / CGFloat(Self.stops.count - 1))
+        }
+        Circle()
+          .fill(.white)
+          .frame(width: Self.knob, height: Self.knob)
+          .shadow(color: .black.opacity(0.3), radius: 3, y: 2)
+          .offset(x: x - inset)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+      .contentShape(Rectangle())
+      .gesture(
+        DragGesture(minimumDistance: 0).onChanged { drag in
+          let position = (drag.location.x - inset) / room * CGFloat(Self.stops.count - 1)
+          let stop = min(max(Int(position.rounded()), 0), Self.stops.count - 1)
+          select(Self.stops[stop])
+        }
+      )
+    }
+    .frame(height: Self.knob + 8)
+  }
+
+  private var labels: some View {
+    HStack {
+      ForEach(Self.stops, id: \.self) { stop in
+        let isOn = stop == variety
+        Button(stop.title) { select(stop) }
+          .buttonStyle(.plain)
+          .font(isOn ? .meta.weight(.semibold) : .meta)
+          .foregroundStyle(isOn ? palette.text : palette.secondary)
+          .frame(
+            maxWidth: .infinity,
+            alignment: stop == Self.stops.first
+              ? .leading : stop == Self.stops.last ? .trailing : .center)
+      }
+    }
+  }
+
+  private func step(_ offset: Int) {
+    let stop = min(max(index + offset, 0), Self.stops.count - 1)
+    select(Self.stops[stop])
+  }
+
+  private func select(_ stop: MixRanker.Variety) {
+    guard stop != variety else { return }
+    withAnimation(.snappy(duration: 0.25)) { variety = stop }
   }
 }
 
@@ -289,6 +408,10 @@ private struct RecipeCard: View {
 
   @Environment(\.palette) private var palette
   @Environment(\.colorScheme) private var scheme
+
+  /// The shares in the counters' mono face, a size up from `.counter`.
+  private static let shareFont = Font.custom(
+    "JetBrainsMono-Medium", size: 13, relativeTo: .footnote)
 
   var body: some View {
     VStack(alignment: .leading, spacing: 14) {
@@ -301,14 +424,13 @@ private struct RecipeCard: View {
         ) {
           ForEach(MixReason.Kind.allCases, id: \.self) { kind in
             HStack(spacing: 8) {
-              Circle().fill(color(kind)).frame(width: 10, height: 10)
-              Text(label(kind)).lineLimit(1)
+              Circle().fill(kind.color(scheme)).frame(width: 8, height: 8)
+              Text(label(kind)).font(.rowSubtitle).lineLimit(1)
               Spacer(minLength: 0)
               Text("\(Int((Double(recipe[kind] ?? 0) / Double(size) * 100).rounded()))%")
-                .fontWeight(.semibold)
-                .monospacedDigit()
+                .font(Self.shareFont)
+                .foregroundStyle(palette.secondary)
             }
-            .font(.rowSubtitle)
           }
         }
       } else {
@@ -331,13 +453,13 @@ private struct RecipeCard: View {
       let room = proxy.size.width - 3 * CGFloat(parts.count - 1)
       HStack(spacing: 3) {
         ForEach(parts, id: \.0) { kind, count in
-          RoundedRectangle(cornerRadius: 7, style: .continuous)
-            .fill(color(kind))
+          Capsule()
+            .fill(kind.color(scheme))
             .frame(width: room * CGFloat(count) / CGFloat(size))
         }
       }
     }
-    .frame(height: 14)
+    .frame(height: 10)
   }
 
   private func label(_ kind: MixReason.Kind) -> String {
@@ -349,20 +471,6 @@ private struct RecipeCard: View {
     case .rated: "Rated high"
     case .explore: "Explore"
     }
-  }
-
-  /// The design's category hues, one lightness and chroma per scheme.
-  private func color(_ kind: MixReason.Kind) -> Color {
-    let degrees: Double =
-      switch kind {
-      case .history: 300
-      case .liked: 15
-      case .rated: 75
-      case .explore: 190
-      }
-    let dark = scheme == .dark
-    return CoverTint.color(
-      hue: degrees * .pi / 180, lightness: dark ? 0.78 : 0.56, chroma: dark ? 0.12 : 0.15)
   }
 }
 
@@ -379,8 +487,9 @@ private struct Treemap: View {
     GeometryReader { proxy in
       let weights = artists.map { Double($0.plays).squareRoot() }
       let frames = Self.layout(weights, in: CGRect(origin: .zero, size: proxy.size))
-      ForEach(Array(zip(artists, frames)), id: \.0.id) { artist, frame in
-        TreemapTile(artist: artist, size: frame.size)
+      ForEach(Array(zip(artists, frames).enumerated()), id: \.element.0.id) { rank, tile in
+        let (artist, frame) = tile
+        TreemapTile(artist: artist, rank: rank, size: frame.size)
           .frame(width: frame.width, height: frame.height)
           .offset(x: frame.minX, y: frame.minY)
       }
@@ -403,17 +512,17 @@ private struct Treemap: View {
   }
 }
 
-/// One artist of Your sound, in the hue of its most-played album's cover.
+/// One artist of Your sound on a quiet wash of the accent, stronger for the
+/// more played.
 private struct TreemapTile: View {
   let artist: TasteSummary.TopArtist
+  let rank: Int
   let size: CGSize
 
   @Environment(\.palette) private var palette
-  @Environment(\.colorScheme) private var scheme
-  @State private var hue: Double?
 
-  /// The lilac accent's OKLCH hue, for artists without a coloured cover.
-  private static let accentHue = 300 * Double.pi / 180
+  /// The accent's share in each tile, by rank, as in the design.
+  private static let washes = [0.34, 0.22, 0.16, 0.12, 0.08]
 
   var body: some View {
     if let known = artist.artist {
@@ -425,7 +534,7 @@ private struct TreemapTile: View {
 
   private var tile: some View {
     let tiny = size.height < 50
-    let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+    let wash = Self.washes[min(rank, Self.washes.count - 1)]
     return VStack(alignment: .leading, spacing: 3) {
       Text(artist.name)
         .font(nameFont(tiny: tiny))
@@ -442,34 +551,18 @@ private struct TreemapTile: View {
         ? EdgeInsets(top: 0, leading: 8, bottom: 9, trailing: 8)
         : EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
     )
-    .background(gradient, in: shape)
-    .overlay { shape.strokeBorder(palette.hairline, lineWidth: 1) }
-    .contentShape(shape)
-    .task(id: artist.albumId) { hue = await CoverTint.hue(albumId: artist.albumId) }
-  }
-
-  /// Bold, smaller as the tile gets smaller.
-  private func nameFont(tiny: Bool) -> Font {
-    let style: Font.TextStyle = size.width >= 130 ? .body : tiny ? .caption2 : .footnote
-    return .system(style, weight: .bold)
-  }
-
-  /// The design's 160 degree gradient, top left to bottom right.
-  private var gradient: LinearGradient {
-    let hue = hue ?? Self.accentHue
-    let colors =
-      scheme == .dark
-      ? [
-        CoverTint.color(hue: hue, lightness: 0.44, chroma: 0.1),
-        CoverTint.color(hue: hue, lightness: 0.26, chroma: 0.06),
-      ]
-      : [
-        CoverTint.color(hue: hue, lightness: 0.94, chroma: 0.045),
-        CoverTint.color(hue: hue, lightness: 0.83, chroma: 0.08),
-      ]
-    return LinearGradient(
-      colors: colors, startPoint: UnitPoint(x: 0.33, y: 0.03), endPoint: UnitPoint(x: 0.67, y: 0.97)
+    .background(
+      palette.surface.mix(with: palette.accent, by: wash),
+      in: RoundedRectangle(cornerRadius: 12, style: .continuous)
     )
+    .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+  }
+
+  /// The brand face, smaller as the tile gets smaller.
+  private func nameFont(tiny: Bool) -> Font {
+    size.width >= 130
+      ? .familjen(17, relativeTo: .body)
+      : tiny ? .familjen(13, relativeTo: .caption) : .familjen(14, relativeTo: .footnote)
   }
 }
 
