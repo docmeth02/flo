@@ -64,12 +64,17 @@ extension PlayerViewModel {
   /// Publishes the current song's cover for the player, and its title,
   /// artist, album, duration and artwork for the system's Now Playing.
   func publishNowPlaying(title: String, artist: String, album: String, duration: Double) {
-    // The text goes out at once; the artwork may have to be fetched.
+    let albumId = nowPlayingAlbumId
+    coverArt = DownloadStore.coverURL(albumId: albumId)
+    let cover = coverArt.hasPrefix("/") ? UIImage(contentsOfFile: coverArt) : nil
+    // The text goes out at once, with the cover when it is on the device and
+    // never with the previous song's, which a song without one would keep.
     var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
     nowPlayingInfo[MPMediaItemPropertyTitle] = title
     nowPlayingInfo[MPMediaItemPropertyArtist] = artist
     nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = album.isEmpty ? nil : album
     nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
+    nowPlayingInfo[MPMediaItemPropertyArtwork] = cover.map(Self.artwork)
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     MainActor.assumeIsolated {
       updateRatingCommands()
@@ -77,20 +82,17 @@ extension PlayerViewModel {
       if NowPlayingTarget.current != nil { publishSiriTarget() }
     }
 
-    let albumId = nowPlayingAlbumId
-    coverArt = DownloadStore.coverURL(albumId: albumId)
-    if coverArt.hasPrefix("/") {
-      if let image = UIImage(contentsOfFile: coverArt) { Self.setArtwork(image) }
-    } else if !albumId.isEmpty {
-      let trackId = nowPlayingId
-      Task { @MainActor [weak self] in
-        // Shares the cover cache's single download with the album art views,
-        // and only for the song still playing.
-        guard let path = await CoverArtCacheManager.shared.coverPath(albumId: albumId),
-          let image = UIImage(contentsOfFile: path), let self, self.isCurrentTrack(trackId)
-        else { return }
-        Self.setArtwork(image)
-      }
+    guard cover == nil, !albumId.isEmpty else { return }
+    let trackId = nowPlayingId
+    Task { @MainActor [weak self] in
+      // Shares the cover cache's single download with the album art views,
+      // and only for the song still playing.
+      guard let path = await CoverArtCacheManager.shared.coverPath(albumId: albumId),
+        let image = UIImage(contentsOfFile: path), let self, self.isCurrentTrack(trackId)
+      else { return }
+      var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
+      info[MPMediaItemPropertyArtwork] = Self.artwork(image)
+      MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
   }
 
@@ -99,10 +101,8 @@ extension PlayerViewModel {
     NowPlayingTarget.publish(nowPlaying, isLiveRadio: isLiveRadio)
   }
 
-  private static func setArtwork(_ image: UIImage) {
-    var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
-    info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-    MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+  private static func artwork(_ image: UIImage) -> MPMediaItemArtwork {
+    MPMediaItemArtwork(boundsSize: image.size) { _ in image }
   }
 
   func updateNowPlayingInfo(progress: TimeInterval, rate: Float) {

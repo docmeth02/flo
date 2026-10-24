@@ -119,8 +119,10 @@ final class SmartPlaybackService {
     // it has not answered for a few seconds.
     let monitor = ConnectivityMonitor.shared
     var verdict = await monitor.canStream(waitingAtMost: Self.verdictWait)
-    if verdict == nil, await offlinePlayableSongs().isEmpty {
-      verdict = await monitor.canStream()
+    var offline: [Song]?
+    if verdict == nil {
+      offline = await offlinePlayableSongs()
+      if offline?.isEmpty == true { verdict = await monitor.canStream() }
     }
     let canStream = verdict ?? false
 
@@ -141,7 +143,7 @@ final class SmartPlaybackService {
     // Streaming switched off on this network (the phone on cellular) leaves
     // the songs on the device as well.
     if !canStream || songs.isEmpty || TranscodingSettings.streamingBitRate == nil {
-      songs = await offlinePlayableSongs()
+      if let offline { songs = offline } else { songs = await offlinePlayableSongs() }
     }
     guard !songs.isEmpty else { return ([], nil) }
 

@@ -7,7 +7,8 @@ import Foundation
 
 struct RadioList: SubsonicResponseData {
   static let key = "internetRadioStations"
-  let internetRadioStation: [Radio]
+  // Left out when the server has no stations.
+  let internetRadioStation: [Radio]?
 }
 
 struct Radio: Codable, Identifiable, Hashable {

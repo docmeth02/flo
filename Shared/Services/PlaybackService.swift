@@ -25,8 +25,9 @@ class PlaybackService {
   /// keys in queue order, so they break the tie.
   func getQueue() -> [QueueEntity] {
     let request = QueueEntity.fetchRequest()
-    return ((try? context.fetch(request)) ?? [])
-      .sorted { ($0.position, Self.primaryKey($0)) < ($1.position, Self.primaryKey($1)) }
+    return ((try? context.fetch(request)) ?? []).sorted { a, b in
+      a.position != b.position ? a.position < b.position : Self.primaryKey(a) < Self.primaryKey(b)
+    }
   }
 
   private static func primaryKey(_ entity: QueueEntity) -> Int {
@@ -35,7 +36,7 @@ class PlaybackService {
   }
 
   func clearQueue() {
-    CoreDataManager.shared.deleteRecords(entity: QueueEntity.self)
+    store(order: [])
   }
 
   /// A new, unsaved queue row for `song`; `context` names the collection it
