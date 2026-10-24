@@ -55,24 +55,37 @@
       }
     }
 
-    /// Two albums on the watch and one on its way, from the cached library.
+    /// Two albums on the watch, one it downloads itself and one on its way,
+    /// from the cached library.
     private func showDemo(signedIn: Bool) {
       Task { @MainActor in
         try? await Task.sleep(for: .seconds(3))
-        let albums = AppModel.shared.albums.albums
+        // The album list loads with the Library, which a debug screen skips.
+        let library = AppModel.shared.albums
+        if library.albums.isEmpty { library.fetchAlbums() }
+        for _ in 0..<20 where library.albums.isEmpty {
+          try? await Task.sleep(for: .milliseconds(500))
+        }
+        let albums = library.albums
         var state = Link.WatchState()
         if signedIn, let key = AuthService.shared.accountKey {
           state.account = .init(
             user: "demo", host: URL(string: UserDefaultsManager.serverBaseURL)?.host ?? "", key: key
           )
         }
-        state.collections = albums.prefix(2).map {
-          .init(id: $0.id, name: $0.name, songs: 11, kbps: 192)
+        state.collections = albums.prefix(3).enumerated().map {
+          .init(
+            id: $1.id, name: $1.name, songs: 11, kbps: 192, downloading: $0 == 2 ? 4 : nil)
         }
         state.musicBytes = 1_400_000_000
         state.freeBytes = 18_300_000_000
-        let sends = albums.dropFirst(2).prefix(1).map { Send(album: $0, songs: 9, progress: 0.4) }
-        showDemo(state, sends: Array(sends))
+        let sends = albums.dropFirst(3).prefix(1).map { Send(album: $0, songs: 9, progress: 0.4) }
+        // The progress poll drops a send nothing is under way for, so the
+        // made-up one is put back for a minute.
+        for _ in 0..<60 {
+          showDemo(state, sends: Array(sends))
+          try? await Task.sleep(for: .seconds(1))
+        }
       }
     }
   }
