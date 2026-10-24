@@ -7,7 +7,6 @@ import SwiftUI
 
 struct SettingsView: View {
   @EnvironmentObject private var app: AppModel
-  @EnvironmentObject private var auth: AuthViewModel
   @EnvironmentObject private var flooo: FloooViewModel
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @Environment(\.palette) private var palette
@@ -32,88 +31,85 @@ struct SettingsView: View {
   private var cacheLimit = Int(UserDefaultsManager.streamCacheMaxSize)
   @State private var username = ""
   @State private var serverVersion: String?
-  @State private var cachedSongs = 0
-  @State private var confirmsLogout = false
+  @State private var storage = StorageBar.Sizes()
   @State private var confirmsClearCache = false
   @State private var confirmsDeleteDownloads = false
 
-  /// The offered limits, highest first as the design lists them.
+  /// The offered limits, highest first.
   private static let limits: [(value: String, label: String)] = TranscodingSettings.bitRates
-    .filter { $0 != TranscodingSettings.sourceBitRate }.reversed().map { ($0, $0) }
+    .filter { $0 != TranscodingSettings.sourceBitRate }.reversed().map { ($0, "\($0) kbps") }
   private static let limitsWithOriginal = [(TranscodingSettings.sourceBitRate, "Original")] + limits
   private static let cacheLimits = StreamCacheManager.cacheLimits.map { (Int($0.bytes), $0.label) }
 
   var body: some View {
     ScrollView {
-      VStack(spacing: 22) {
+      VStack(alignment: .leading, spacing: 0) {
         PageTitle("Settings")
-        section("Server") { server }
-        section("Appearance") {
-          Segmented(
-            options: Appearance.allCases.map { ($0, $0.rawValue.capitalized) },
-            selection: $appearance, filled: false)
-        }
-        Button {
-          tourSeen = false
-          app.tour = .play
-        } label: {
-          Text("Show the tour again")
-            .font(.rowTitle.weight(.semibold))
-            .foregroundStyle(palette.accent)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .card(horizontal: 16, vertical: 14)
-        }
-        .buttonStyle(.plain)
-        section("Playback") {
-          toggle(
-            "Keep Playing", "Smart Shuffle continues when the queue ends", isOn: $keepPlaying)
-          toggle(
-            "Why this song", "Show the reason in Now Playing and Up Next", isOn: $showMixReasons)
-          toggle(
-            "Stream on cellular", "Uses the cellular bitrate below", isOn: $streamOnCellular)
-        }
-        section("Streaming on Wi-Fi (kbps)") {
-          Segmented(options: Self.limitsWithOriginal, selection: offered($wifiBitRate))
-        }
-        section("Streaming on cellular (kbps)") {
-          Segmented(options: Self.limits, selection: offered($cellularBitRate))
-        }
-        section("Streaming cache") {
-          Segmented(options: Self.cacheLimits, selection: $cacheLimit)
-          storage("Cached songs", "\(flooo.streamCacheSize) · \(counted(cachedSongs, "song"))") {
-            confirmsClearCache = true
+        NavigationLink(value: Route.server) { server }
+          .buttonStyle(.plain)
+          .padding(.top, 14)
+
+        caption("Playback")
+        SettingsGroup {
+          SettingsRow("Keep Playing", systemImage: "infinity") {
+            Toggle("Keep Playing", isOn: $keepPlaying)
           }
-          Text(
-            "Songs you stream are kept here and the next two are fetched ahead, so they play "
-              + "again without a connection. The least recently played go first when it is full."
-          )
-          .font(.meta)
-          .foregroundStyle(palette.secondary)
-          .padding(.horizontal, 4)
+          SettingsRow("Why this song", systemImage: "questionmark.circle") {
+            Toggle("Why this song", isOn: $showMixReasons)
+          }
         }
-        section("Downloads (kbps)") {
+        Text(
+          "Smart Shuffle continues when the queue ends. Show the reason in Now Playing and Up Next."
+        )
+        .font(.meta)
+        .foregroundStyle(palette.secondary)
+        .padding(.horizontal, 14)
+        .padding(.top, 6)
+
+        caption("Quality")
+        SettingsGroup {
+          SettingsRow("Streaming on Wi-Fi", systemImage: "wifi") {
+            picker("Streaming on Wi-Fi", Self.limitsWithOriginal, offered($wifiBitRate))
+          }
+          SettingsRow("Stream on cellular", systemImage: "cellularbars") {
+            Toggle("Stream on cellular", isOn: $streamOnCellular)
+          }
+          SettingsRow("Cellular bitrate") {
+            picker("Cellular bitrate", Self.limits, offered($cellularBitRate))
+          }
+          .disabled(!streamOnCellular)
           // Original as on the watch: the phone has room for lossless files.
-          Segmented(options: Self.limitsWithOriginal, selection: offered($downloadBitRate))
-          toggle(
-            "Download on cellular", "Downloads wait for Wi-Fi when this is off",
-            isOn: $downloadOverCellular)
-        }
-        storage("Downloads on this iPhone", flooo.localDirectorySize) {
-          confirmsDeleteDownloads = true
-        }
-        NavigationLink {
-          DiagnosticsView()
-        } label: {
-          HStack {
-            Text("Diagnostics").font(.rowTitle.weight(.semibold))
-            Spacer()
-            Image(systemName: "chevron.right")
-              .font(.system(size: 14, weight: .semibold))
-              .foregroundStyle(palette.secondary)
+          SettingsRow("Downloads", systemImage: "arrow.down.circle") {
+            picker("Downloads", Self.limitsWithOriginal, offered($downloadBitRate))
           }
-          .card(horizontal: 16, vertical: 14)
+          SettingsRow("Download on cellular") {
+            Toggle("Download on cellular", isOn: $downloadOverCellular)
+          }
         }
-        .buttonStyle(.plain)
+
+        caption("Storage")
+        storageCard
+
+        caption("General")
+        SettingsGroup {
+          SettingsRow("Appearance", systemImage: "circle.lefthalf.filled") {
+            picker(
+              "Appearance", Appearance.allCases.map { ($0, $0.rawValue.capitalized) }, $appearance)
+          }
+          Button {
+            tourSeen = false
+            app.tour = .play
+          } label: {
+            SettingsRow("Show the tour again", systemImage: "flag") { Chevron() }
+          }
+          .buttonStyle(.plain)
+          NavigationLink {
+            DiagnosticsView()
+          } label: {
+            SettingsRow("Diagnostics", systemImage: "stethoscope") { Chevron() }
+          }
+          .buttonStyle(.plain)
+        }
       }
       .padding(.horizontal, 16)
       .padding(.bottom, 24)
@@ -133,16 +129,12 @@ struct SettingsView: View {
       StreamCacheManager.shared.setLimit(Int64(cacheLimit))
       refreshStorage()
     }
-    .task { serverVersion = await LibraryAPI.serverVersion() }
+    // Deleting the downloads finishes later.
+    .onReceive(DownloadSession.shared.downloadsRemoved) { refreshStorage() }
+    .task { serverVersion = await ServerAccount.version() }
     .onAppear {
-      if case .found(let login) = KeychainManager.loadAuth() { username = login.username }
+      username = ServerAccount.username
       refreshStorage()
-    }
-    .alert("Change Server?", isPresented: $confirmsLogout) {
-      Button("Cancel", role: .cancel) {}
-      Button("Sign Out", role: .destructive) { auth.logout() }
-    } message: {
-      Text("You will need to sign in again. Downloads stay on this iPhone.")
     }
     .confirmationDialog("Clear cached songs", isPresented: $confirmsClearCache) {
       Button("Clear Cached Songs", role: .destructive) {
@@ -153,79 +145,71 @@ struct SettingsView: View {
       Text("Cached songs come back as you listen.")
     }
     .confirmationDialog("Delete downloads", isPresented: $confirmsDeleteDownloads) {
-      Button("Delete All Downloads", role: .destructive) {
-        flooo.deleteAllDownloads()
-        refreshStorage()
-      }
+      Button("Delete All Downloads", role: .destructive) { flooo.deleteAllDownloads() }
     } message: {
       Text("Downloaded albums have to be downloaded again.")
     }
   }
 
+  /// The server, its version and the user; opens the Server screen.
   private var server: some View {
     HStack(spacing: 12) {
-      Image(systemName: "server.rack")
-        .font(.system(size: 18, weight: .medium))
-        .foregroundStyle(palette.accent)
-        .frame(width: 42, height: 42)
-        .background(palette.surface2, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+      GlyphTile(systemImage: "server.rack", radius: 12).frame(width: 44, height: 44)
       VStack(alignment: .leading, spacing: 1) {
-        Text(serverName).font(.rowTitle.weight(.semibold)).lineLimit(1)
+        Text(ServerAccount.host).font(.rowTitle.weight(.semibold))
         HStack(spacing: 6) {
-          Circle()
-            .fill(connectivity.isServerReachable ? Color.floDownloaded : palette.secondary)
-            .frame(width: 7, height: 7)
-          Text(serverLine)
+          StatusDot(isOn: connectivity.isServerReachable)
+          Text(ServerAccount.line(version: serverVersion, username: username))
         }
         .font(.rowSubtitle)
         .foregroundStyle(palette.secondary)
       }
+      .lineLimit(1)
       Spacer(minLength: 0)
-      Button("Change") { confirmsLogout = true }
-        .font(.rowSubtitle)
-        .foregroundStyle(palette.accent)
+      Chevron()
     }
-    .card(horizontal: 16, vertical: 14)
+    .padding(.vertical, 12)
+    .padding(.horizontal, 14)
+    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .contentShape(Rectangle())
   }
 
-  /// "Navidrome 0.64.2 · anna"
-  private var serverLine: String {
-    // Navidrome appends its build, "0.64.2 (10114574)".
-    let version = serverVersion?.split(separator: " ").first
-    let name = version.map { "Navidrome \($0)" } ?? "Navidrome"
-    return username.isEmpty ? name : "\(name) · \(username)"
-  }
-
-  /// The server without its scheme, e.g. "music.home.lan" or
-  /// "example.com/navidrome".
-  private var serverName: String {
-    let url = UserDefaultsManager.serverBaseURL
-    guard let components = URLComponents(string: url), let host = components.host else {
-      return url
-    }
-    return host + (components.port.map { ":\($0)" } ?? "") + components.path
-  }
-
-  /// The room something takes on the phone, with Clear.
-  private func storage(_ title: String, _ detail: String, clear: @escaping () -> Void)
-    -> some View
-  {
-    HStack {
-      VStack(alignment: .leading, spacing: 2) {
-        Text(title).font(.rowTitle.weight(.semibold))
-        Text(detail).font(.rowSubtitle).foregroundStyle(palette.secondary)
+  /// What the cache and the downloads take of the room left, the cache
+  /// limit, and the buttons that clear them.
+  private var storageCard: some View {
+    VStack(spacing: 0) {
+      StorageBar(sizes: storage)
+      palette.hairline.frame(height: 1).padding(.top, 14)
+      HStack {
+        Text("Cache limit")
+        Spacer(minLength: 8)
+        picker("Cache limit", Self.cacheLimits, $cacheLimit).labelsHidden()
       }
-      Spacer()
-      Button("Clear", action: clear)
+      .frame(minHeight: 50)
+      HStack(spacing: 8) {
+        clearButton("Clear cache") { confirmsClearCache = true }
+        clearButton("Delete downloads") { confirmsDeleteDownloads = true }
+      }
+      .padding(.top, 4)
+    }
+    .padding(14)
+    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+  }
+
+  private func clearButton(_ title: String, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Text(title)
         .font(.rowSubtitle.weight(.semibold))
         .foregroundStyle(Color.floDestructive)
+        .frame(maxWidth: .infinity, minHeight: 36)
+        .background(palette.surface2, in: Capsule())
+        .contentShape(Capsule())
     }
-    .card(horizontal: 16, vertical: 14)
+    .buttonStyle(.plain)
   }
 
   private func refreshStorage() {
-    flooo.getLocalStorageInformation()
-    cachedSongs = StreamCacheManager.shared.getCachedSongs().count
+    Task { storage = await StorageBar.Sizes.measure() }
   }
 
   /// A stored bitrate as its picker shows it.
@@ -237,25 +221,194 @@ struct SettingsView: View {
     }
   }
 
-  private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(title)
-        .font(.rowSubtitle.weight(.semibold))
-        .foregroundStyle(palette.secondary)
-        .padding(.horizontal, 4)
-      content()
+  /// A menu of `options` that shows the chosen one: "Original ⌃⌄".
+  private func picker<Value: Hashable>(
+    _ title: String, _ options: [(value: Value, label: String)], _ selection: Binding<Value>
+  ) -> some View {
+    Picker(title, selection: selection) {
+      ForEach(options, id: \.value) { Text($0.label).tag($0.value) }
+    }
+    .pickerStyle(.menu)
+    .tint(palette.secondary)
+  }
+
+  private func caption(_ title: String) -> some View {
+    Text(title)
+      .font(.meta)
+      .foregroundStyle(palette.secondary)
+      .padding(.horizontal, 14)
+      .padding(.top, 20)
+      .padding(.bottom, 6)
+  }
+}
+
+/// The sizes rows share, so hairlines and rows without an icon line up with
+/// the titles.
+private enum RowMetrics {
+  static let icon: CGFloat = 30
+  static let textInset = icon + 12
+}
+
+/// Settings rows on one platter with hairlines between them, inset past the
+/// rows' icons.
+struct SettingsGroup<Content: View>: View {
+  var separatorInset = RowMetrics.textInset
+  @ViewBuilder var content: Content
+
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    VStack(spacing: 0) {
+      Group(subviews: content) { rows in
+        ForEach(rows) { row in
+          if row.id != rows.first?.id {
+            palette.hairline.frame(height: 1).padding(.leading, separatorInset)
+          }
+          row
+        }
+      }
+    }
+    .padding(.horizontal, 14)
+    .background(palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+  }
+}
+
+/// A settings row: an icon tile, the title and a control. A row without an
+/// icon keeps its title in line with the others, as a setting that belongs
+/// to the row above. Toggles and pickers keep their title for VoiceOver.
+struct SettingsRow<Control: View>: View {
+  let title: String
+  var systemImage: String?
+  @ViewBuilder var control: Control
+
+  @Environment(\.palette) private var palette
+  @Environment(\.isEnabled) private var isEnabled
+
+  init(_ title: String, systemImage: String? = nil, @ViewBuilder control: () -> Control) {
+    self.title = title
+    self.systemImage = systemImage
+    self.control = control()
+  }
+
+  var body: some View {
+    HStack(spacing: 12) {
+      if let systemImage {
+        Image(systemName: systemImage)
+          .font(.system(size: 15, weight: .medium))
+          .foregroundStyle(palette.accent)
+          .frame(width: RowMetrics.icon, height: RowMetrics.icon)
+          .background(palette.surface2, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+      }
+      Text(title).frame(maxWidth: .infinity, alignment: .leading)
+      control.labelsHidden().tint(palette.fill)
+    }
+    .padding(.leading, systemImage == nil ? RowMetrics.textInset : 0)
+    .frame(minHeight: 50)
+    .opacity(isEnabled ? 1 : 0.45)
+    .contentShape(Rectangle())
+  }
+}
+
+/// The trailing chevron of a row that opens something.
+private struct Chevron: View {
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    Image(systemName: "chevron.right")
+      .font(.system(size: 14, weight: .semibold))
+      .foregroundStyle(palette.secondary)
+  }
+}
+
+/// The cache and the downloads against the room left on the iPhone, as one
+/// bar with a legend.
+private struct StorageBar: View {
+  struct Sizes {
+    var cache: Int64 = 0
+    var downloads: Int64 = 0
+    var free: Int64 = 0
+
+    /// Reads the sizes off the main thread.
+    static func measure() async -> Sizes {
+      async let cache = StreamCacheManager.shared.calculateCacheSize()
+      async let downloads = LocalFileManager.shared.downloadsBytes()
+      async let free = Task.detached(priority: .userInitiated) {
+        let key = URLResourceKey.volumeAvailableCapacityForImportantUsageKey
+        let values = try? URL.homeDirectory.resourceValues(forKeys: [key])
+        return values?.volumeAvailableCapacityForImportantUsage ?? 0
+      }.value
+      return await Sizes(cache: cache, downloads: downloads, free: free)
     }
   }
 
-  private func toggle(_ title: String, _ subtitle: String, isOn: Binding<Bool>) -> some View {
-    Toggle(isOn: isOn) {
-      VStack(alignment: .leading, spacing: 2) {
-        Text(title).font(.rowTitle.weight(.semibold))
-        Text(subtitle).font(.rowSubtitle).foregroundStyle(palette.secondary)
+  let sizes: Sizes
+
+  @Environment(\.palette) private var palette
+
+  private static let height: CGFloat = 10
+  private static let gap: CGFloat = 3
+
+  var body: some View {
+    VStack(spacing: 10) {
+      GeometryReader { proxy in
+        HStack(spacing: Self.gap) {
+          ForEach(Array(parts(width: proxy.size.width).enumerated()), id: \.offset) {
+            RoundedRectangle(cornerRadius: Self.height / 2)
+              .fill($0.element.color)
+              .frame(width: $0.element.width)
+          }
+        }
       }
+      .frame(height: Self.height)
+      // The free room goes under the legend when the line is too long.
+      let free = Text("\(Self.size(sizes.free)) free")
+      ViewThatFits(in: .horizontal) {
+        HStack(spacing: 14) {
+          legend
+          Spacer(minLength: 0)
+          free
+        }
+        VStack(alignment: .leading, spacing: 4) {
+          legend
+          free
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .font(.meta)
+      .foregroundStyle(palette.secondary)
+      .lineLimit(1)
     }
-    .tint(palette.fill)
-    .card(horizontal: 16, vertical: 14)
+  }
+
+  /// The parts that hold something, with their widths; a small one stays as
+  /// wide as the bar is high, so it shows.
+  private func parts(width: CGFloat) -> [(color: Color, width: CGFloat)] {
+    let parts = [
+      (color: palette.accent, bytes: sizes.cache),
+      (color: Color.floDownloaded, bytes: sizes.downloads),
+      (color: palette.surface2, bytes: sizes.free),
+    ].filter { $0.bytes > 0 }
+    let room = width - Self.gap * CGFloat(max(parts.count - 1, 0))
+    let total = max(Double(parts.reduce(0) { $0 + $1.bytes }), 1)
+    return parts.map { ($0.color, max(Self.height, room * Double($0.bytes) / total)) }
+  }
+
+  private var legend: some View {
+    HStack(spacing: 14) {
+      key("Cache", sizes.cache, palette.accent)
+      key("Downloads", sizes.downloads, Color.floDownloaded)
+    }
+  }
+
+  private func key(_ title: String, _ bytes: Int64, _ color: Color) -> some View {
+    HStack(spacing: 6) {
+      Circle().fill(color).frame(width: 8, height: 8)
+      Text("\(title) \(Self.size(bytes))")
+    }
+  }
+
+  private static func size(_ bytes: Int64) -> String {
+    ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
   }
 }
 
