@@ -10,8 +10,6 @@ class AuthViewModel: ObservableObject {
   @Published var username: String = ""
   @Published var password: String = ""
 
-  @Published var showAlert: Bool = false
-  @Published var alertMessage: String = ""
   /// Why the last sign-in failed; nil while one runs and after success.
   @Published var loginError: AuthError?
 
@@ -238,8 +236,6 @@ class AuthViewModel: ObservableObject {
       } catch {
         self.isSubmitting = false
         self.loginError = error
-        self.alertMessage = error.loginMessage
-        self.showAlert = true
       }
     }
   }

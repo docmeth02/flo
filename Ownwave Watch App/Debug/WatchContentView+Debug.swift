@@ -336,10 +336,11 @@
       case "login", "login-error":
         let auth = AuthViewModel()
         if name == "login-error" {
-          let error = AuthError.invalidCredentials(message: "")
-          auth.loginError = error
-          auth.alertMessage = error.loginMessage
-          auth.showAlert = true
+          // What a rejected sign-in leaves on the screen.
+          auth.serverUrl = "https://music.example.com"
+          auth.username = "anna"
+          auth.password = "password"
+          auth.loginError = .invalidCredentials(message: "")
         }
         debugLoginScreen = DebugScreen(view: AnyView(WatchLoginView(viewModel: auth)))
         return debugLog("screen hook: showing \(name)")

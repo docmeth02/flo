@@ -49,13 +49,22 @@ struct LoginView: View {
                 .textInputAutocapitalization(.never)
                 .submitLabel(.next)
             }
-            field(.password, "Password") {
+            field(.password, "Password", isRejected: auth.loginError?.isCredentialError == true) {
               SecureField("Password", text: $auth.password, prompt: Text(""))
                 .textContentType(.password)
                 .submitLabel(.go)
             }
           }
           .padding(.top, 44)
+
+          if let error = auth.loginError {
+            Label(error.loginMessage, systemImage: "exclamationmark.circle.fill")
+              .font(.meta)
+              .foregroundStyle(Color.floDestructive)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .padding(.horizontal, 4)
+              .padding(.top, 10)
+          }
 
           Spacer(minLength: 32)
 
@@ -64,7 +73,9 @@ struct LoginView: View {
               if auth.isSubmitting {
                 ProgressView().tint(palette.ink)
               }
-              Text(auth.isSubmitting ? "Signing in…" : "Sign in")
+              Text(
+                auth.isSubmitting ? "Signing in…" : auth.loginError == nil ? "Sign in" : "Try again"
+              )
             }
           }
           .buttonStyle(FillButtonStyle())
@@ -92,11 +103,6 @@ struct LoginView: View {
       case .password, nil: submit()
       }
     }
-    .alert("Login Failed", isPresented: $auth.showAlert) {
-      Button("OK") {}
-    } message: {
-      Text(auth.alertMessage)
-    }
   }
 
   /// A soft light of the accent behind the wordmark.
@@ -118,17 +124,18 @@ struct LoginView: View {
   }
 
   /// An input under its small label on a platter; the focused one is
-  /// outlined in the accent.
-  private func field(_ field: Field, _ label: String, @ViewBuilder input: () -> some View)
-    -> some View
-  {
-    let isFocused = focus == field
+  /// outlined in the accent, a rejected password in red.
+  private func field(
+    _ field: Field, _ label: String, isRejected: Bool = false,
+    @ViewBuilder input: () -> some View
+  ) -> some View {
+    let ring = isRejected ? Color.floDestructive : focus == field ? palette.accent : nil
     return VStack(alignment: .leading, spacing: 3) {
       Text(label)
         .font(.counter)
         .tracking(1.2)
         .textCase(.uppercase)
-        .foregroundStyle(isFocused ? palette.accent : palette.secondary)
+        .foregroundStyle(ring ?? palette.secondary)
         // The field says its own name.
         .accessibilityHidden(true)
       input()
@@ -140,9 +147,9 @@ struct LoginView: View {
     .padding(.bottom, 11)
     .background(palette.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     .overlay {
-      if isFocused {
+      if let ring {
         RoundedRectangle(cornerRadius: 16, style: .continuous)
-          .strokeBorder(palette.accent, lineWidth: 1.5)
+          .strokeBorder(ring, lineWidth: 1.5)
       }
     }
     .contentShape(Rectangle())

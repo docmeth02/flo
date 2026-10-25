@@ -8,7 +8,7 @@
 
   // Simulator verification only. FLO_DEBUG_SCREEN=home|library|taste|search|
   // settings|server|watch|watchalbums|recent|album|artist|playlist|nowplaying|
-  // widgets opens that screen
+  // widgets|login-error opens that screen
   // once the library answered (album, artist and playlist: the first of each,
   // or the one named by FLO_DEBUG_SCREEN_ID), for screenshots.
   extension AppTabs {
@@ -50,9 +50,32 @@
         }
       case "nowplaying": app.isNowPlayingPresented = true
       case "widgets": WidgetGallery.present()
+      case "login-error": presentLoginError()
       default: break
       }
       debugLog("screen hook: \(screen)")
+    }
+
+    /// The sign-in screen as a rejected sign-in leaves it, over the signed-in
+    /// app, so the simulator keeps its login.
+    private func presentLoginError() {
+      let auth = AuthViewModel()
+      auth.serverUrl = "https://music.example.com"
+      auth.username = "anna"
+      auth.password = "password"
+      auth.loginError = .invalidCredentials(message: "")
+      let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+      guard var top = scene?.keyWindow?.rootViewController else { return }
+      while let presented = top.presentedViewController { top = presented }
+      let palette = top.traitCollection.userInterfaceStyle == .dark ? Palette.dark : Palette.light
+      let host = UIHostingController(
+        rootView: LoginView()
+          .environmentObject(auth)
+          .environment(\.palette, palette)
+          .tint(palette.accent)
+          .foregroundStyle(palette.text))
+      host.modalPresentationStyle = .fullScreen
+      top.present(host, animated: false)
     }
   }
 #endif
