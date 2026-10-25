@@ -130,3 +130,48 @@ enum CoverTint {
       blue: gamma(-0.0041960863 * l2 - 0.7034186147 * m2 + 1.7076147010 * s2))
   }
 }
+
+/// The colors derived from a cover's hue, light and dark; the watch only
+/// knows dark.
+struct CoverShades {
+  /// Text, icons and the Play fill.
+  let tint: Color
+  /// Behind tinted elements.
+  let background: Color
+
+  init(hue: Double, scheme: ColorScheme) {
+    let dark = scheme == .dark
+    tint = CoverTint.color(hue: hue, lightness: dark ? 0.86 : 0.48, chroma: dark ? 0.1 : 0.14)
+    background = CoverTint.color(hue: hue, lightness: dark ? 0.3 : 0.9, chroma: dark ? 0.07 : 0.05)
+  }
+}
+
+extension View {
+  /// Keeps `shades` at the colors of the album's cover in the color scheme
+  /// in use; nil until the cover is read, and for a gray one.
+  func coverShades(_ shades: Binding<CoverShades?>, albumId: String, url: String = "") -> some View
+  {
+    modifier(CoverShading(shades: shades, albumId: albumId, url: url))
+  }
+}
+
+private struct CoverShading: ViewModifier {
+  @Binding var shades: CoverShades?
+  let albumId: String
+  let url: String
+
+  @Environment(\.colorScheme) private var scheme
+
+  private struct Key: Equatable {
+    let albumId: String
+    let scheme: ColorScheme
+  }
+
+  func body(content: Content) -> some View {
+    // The hue is memoized per album, so a new scheme only mixes the colors.
+    content.task(id: Key(albumId: albumId, scheme: scheme)) {
+      let hue = await CoverTint.hue(albumId: albumId, url: url)
+      shades = hue.map { CoverShades(hue: $0, scheme: scheme) }
+    }
+  }
+}

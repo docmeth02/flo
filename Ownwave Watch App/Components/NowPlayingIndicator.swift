@@ -44,28 +44,6 @@ struct NowPlayingIndicator: View {
   }
 }
 
-/// A cover's two dark shades, as on the phone: the tint for text and the
-/// backdrop of a tinted card. Nil until the cover is read, and for a gray one.
-struct CoverShades {
-  let tint: Color
-  let background: Color
-
-  init(hue: Double) {
-    tint = CoverTint.color(hue: hue, lightness: 0.86, chroma: 0.1)
-    background = CoverTint.color(hue: hue, lightness: 0.3, chroma: 0.07)
-  }
-}
-
-extension View {
-  /// Keeps `shades` at the colors of the album's cover.
-  func coverShades(_ shades: Binding<CoverShades?>, albumId: String, url: String = "") -> some View
-  {
-    task(id: albumId) {
-      shades.wrappedValue = await CoverTint.hue(albumId: albumId, url: url).map(CoverShades.init)
-    }
-  }
-}
-
 /// Observes the clock itself so the home screen does not redraw every second.
 private struct ProgressBar: View {
   @ObservedObject var clock: PlayerClock

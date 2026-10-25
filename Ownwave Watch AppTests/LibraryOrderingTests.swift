@@ -58,6 +58,20 @@ final class LibraryOrderingTests: XCTestCase {
       ["c", "a", "b"])
   }
 
+  func testMemoMakesAgainOnlyForANewInput() {
+    let memo = Memo<[Int], Int>()
+    var made = 0
+    let sum: ([Int]) -> Int = {
+      made += 1
+      return $0.reduce(0, +)
+    }
+    XCTAssertEqual(memo.value(for: [1, 2], make: sum), 3)
+    XCTAssertEqual(memo.value(for: [1, 2], make: sum), 3)
+    XCTAssertEqual(made, 1)
+    XCTAssertEqual(memo.value(for: [1, 2, 3], make: sum), 6)
+    XCTAssertEqual(made, 2)
+  }
+
   func testArtistSectionsFoldLettersAndCollectTheRest() {
     let artists = [
       "333-METAL", "[Unknown Artist]", "Ätna", "abba", "Ólafur Arnalds", "ＢＡＢＹＭＥＴＡＬ",

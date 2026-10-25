@@ -96,16 +96,30 @@ extension String {
   }
 }
 
-/// A list's last sort, kept while neither the list nor the order changes; a
-/// list that is the same array compares in constant time.
+/// The last value made from an input, kept while the input stays equal; an
+/// array that is the same compares in constant time.
+final class Memo<Input: Equatable, Value> {
+  private var last: (input: Input, value: Value)?
+
+  func value(for input: Input, make: (Input) -> Value) -> Value {
+    if let last, last.input == input { return last.value }
+    let value = make(input)
+    last = (input, value)
+    return value
+  }
+}
+
+/// A list's last sort, kept while neither the list nor the order changes.
 final class SortMemo<Order: LibraryOrder> {
-  private var last: (items: [Order.Item], order: Order, sorted: [Order.Item])?
+  private struct Input: Equatable {
+    let items: [Order.Item]
+    let order: Order
+  }
+
+  private let memo = Memo<Input, [Order.Item]>()
 
   func sorted(_ items: [Order.Item], by order: Order) -> [Order.Item] {
-    if let last, last.order == order, last.items == items { return last.sorted }
-    let sorted = order.sorted(items)
-    last = (items, order, sorted)
-    return sorted
+    memo.value(for: Input(items: items, order: order)) { $0.order.sorted($0.items) }
   }
 }
 
@@ -130,6 +144,7 @@ func artistSections(_ artists: [Artist]) -> [ArtistSection] {
       .uppercased()
     return letter.count == 1 && ("A"..."Z").contains(letter) ? letter : other
   }
-  return grouped.keys.sorted { $0 == other || ($1 != other && $0 < $1) }
+  // "#" sorts before the letters.
+  return grouped.keys.sorted()
     .map { ArtistSection(letter: $0, artists: grouped[$0] ?? []) }
 }
