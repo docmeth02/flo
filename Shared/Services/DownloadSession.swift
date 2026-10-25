@@ -178,23 +178,30 @@ final class DownloadSession: NSObject, ObservableObject {
 
   /// Queues the songs of `collection` that are not on the device yet. A song
   /// queued already keeps its job; failed ones start over at the current
-  /// bitrate.
+  /// bitrate, and a failed one `collection` does not list (offline a screen
+  /// lists only the songs on the device) at the bitrate it had.
   private func queueSongs(of collection: Album) {
     let wanted = DownloadJob.jobs(
       for: collection, isPlaylist: collection.isPlaylist,
       kbps: Int(UserDefaultsManager.downloadBitRate) ?? 0,
       downloaded: DownloadStore.downloadedMediaFileIds(collectionId: collection.id))
     let continuing = isDownloading(collectionId: collection.id)
+    let wantedIds = Set(wanted.map(\.id))
 
-    jobs.removeAll { $0.collectionId == collection.id && $0.failed }
+    jobs.removeAll { $0.collectionId == collection.id && $0.failed && wantedIds.contains($0.id) }
     jobs += wanted.filter { job in !jobs.contains { $0.id == job.id } }
-    // A tap does not wait out a retry.
+    // A tap does not wait out a retry, and a failed song left unlisted goes
+    // again.
     for index in jobs.indices where jobs[index].collectionId == collection.id {
       retries.removeValue(forKey: jobs[index].id)?.cancel()
       jobs[index].retryAt = nil
+      if jobs[index].failed {
+        jobs[index].failed = false
+        jobs[index].attempts = 0
+      }
     }
-    batches[collection.id] =
-      (continuing ? batches[collection.id] ?? [] : []).union(wanted.map(\.id))
+    let queued = jobs.filter { $0.collectionId == collection.id }.map(\.id)
+    batches[collection.id] = (continuing ? batches[collection.id] ?? [] : []).union(queued)
     store.save(jobs)
 
     for job in jobs where job.collectionId == collection.id { submit(job) }
