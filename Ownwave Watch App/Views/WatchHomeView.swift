@@ -104,12 +104,20 @@ struct WatchHomeView: View {
     .itemMenu($menu)
     .navigationTitle("")
     // Runs again on every return to Home, so a song just heard shows up, and
-    // after a login fills the artist cache Siri and Shortcuts read.
-    .task {
+    // after a login fills the artist cache Siri and Shortcuts read. Again as
+    // the lists arrive: right after signing in there is no cache to read.
+    .task(
+      id: [
+        albumViewModel.albums.isEmpty, albumViewModel.artists.isEmpty,
+        albumViewModel.playlists.isEmpty,
+      ]
+    ) {
       await albumViewModel.loadRecentAlbums()
       albums = await albumViewModel.loadedOrCached(albumViewModel.albums, .albums)
       artists = await albumViewModel.loadedOrCached(albumViewModel.artists, .artists)
       playlists = await albumViewModel.loadedOrCached(albumViewModel.playlists, .playlists)
+      if albums.isEmpty { albumViewModel.fetchAlbums() }
+      if playlists.isEmpty { albumViewModel.getPlaylists() }
       // Stations have no cache; asked once while one is pinned.
       if !pinStore.pinned(.radio).isEmpty, radios.radios.isEmpty { radios.fetchAllRadios() }
       await albumViewModel.cacheArtistsIfNeeded()
@@ -138,7 +146,8 @@ struct WatchHomeView: View {
     .clipShape(RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous))
   }
 
-  /// The whole strip plays; its round button says so.
+  /// The whole strip plays; its round mark says so. One tap target, so a
+  /// tap never starts two mixes.
   private var playSomething: some View {
     HStack(spacing: FloLayout.tileSpacing) {
       Image(systemName: "sparkles")
@@ -156,11 +165,8 @@ struct WatchHomeView: View {
           .fixedSize(horizontal: false, vertical: true)
       }
       Spacer(minLength: 0)
-      Button(action: playSomethingNow) {
-        Image(systemName: "play.fill")
-      }
-      .buttonStyle(FloRoundButtonStyle())
-      .accessibilityLabel("Play Something")
+      Image(systemName: "play.fill")
+        .floRoundGlyph()
     }
     .padding(.leading, 12)
     .padding(.trailing, 10)
@@ -171,6 +177,7 @@ struct WatchHomeView: View {
   }
 
   private func playSomethingNow() {
+    guard !playerViewModel.isGeneratingMix else { return }
     Task { if await playerViewModel.playSomething() { showPlayer() } }
   }
 
@@ -178,7 +185,7 @@ struct WatchHomeView: View {
   /// menu.
   private func pinRow(_ target: MenuTarget) -> some View {
     CoverRow(
-      tile: tile(of: target), title: target.title, subtitle: target.subtitle,
+      tile: CoverTile(target), title: target.title, subtitle: target.subtitle,
       tileSize: FloLayout.smallThumbnail
     )
     .holdable(
@@ -192,15 +199,6 @@ struct WatchHomeView: View {
         }
       },
       onHold: { menu = target })
-  }
-
-  private func tile(of target: MenuTarget) -> CoverRow<EmptyView>.Tile {
-    switch target {
-    case .album(let album): .cover(albumId: album.id)
-    case .playlist(let playlist): .cover(albumId: playlist.id, artId: playlist.artId)
-    case .radio: .glyph("dot.radiowaves.up.forward", round: true)
-    case .artist, .song: .artist
-    }
   }
 
   /// Two tiles a row, in one clear list row. Buttons, not navigation links:
@@ -246,7 +244,7 @@ private enum LibraryScreen: CaseIterable {
     case .artists: "music.mic"
     case .albums: "square.stack"
     case .playlists: "music.note.list"
-    case .radios: "dot.radiowaves.up.forward"
+    case .radios: CoverTile.radioGlyph
     case .downloads: "arrow.down.circle"
     case .settings: "gear"
     }

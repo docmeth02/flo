@@ -42,7 +42,7 @@ struct WatchSettingsView: View {
       Section {
         Group {
           Toggle(isOn: $keepPlaying) {
-            SettingLabel("Keep Playing", systemImage: "infinity")
+            IconRowLabel(title: "Keep Playing", systemImage: "infinity")
           }
           .joined(.first)
           ChoiceRow(
@@ -56,16 +56,16 @@ struct WatchSettingsView: View {
           )
           .joined(.middle)
           Toggle(isOn: $downloadOverCellular) {
-            SettingLabel("Cellular downloads", systemImage: "cellularbars")
+            IconRowLabel(title: "Cellular downloads", systemImage: "cellularbars")
           }
           .joined(.last)
+          // A value the iPhone applies restarts the downloads there.
+          .onChange(of: downloadOverCellular) {
+            if !settingsFollowPhone { DownloadSession.shared.cellularAccessChanged() }
+          }
         }
         .tint(.floLilac)
         .disabled(settingsFollowPhone)
-        // A value the iPhone applies restarts the downloads there.
-        .onChange(of: downloadOverCellular) {
-          if !settingsFollowPhone { DownloadSession.shared.cellularAccessChanged() }
-        }
         footer(
           settingsFollowPhone
             ? "Follows your iPhone"
@@ -103,7 +103,7 @@ struct WatchSettingsView: View {
       Section {
         NavigationLink(destination: WatchDiagnosticsView()) {
           HStack {
-            SettingLabel("Diagnostics", systemImage: "waveform.path.ecg")
+            IconRowLabel(title: "Diagnostics", systemImage: "waveform.path.ecg")
             Spacer(minLength: 4)
             Chevron()
           }
@@ -112,7 +112,7 @@ struct WatchSettingsView: View {
         Button {
           showRebuildHistoryAlert = true
         } label: {
-          SettingLabel("Rebuild History", systemImage: "clock.arrow.circlepath")
+          IconRowLabel(title: "Rebuild History", systemImage: "clock.arrow.circlepath")
         }
         .joined(.last)
       }
@@ -121,8 +121,9 @@ struct WatchSettingsView: View {
         Button(role: .destructive) {
           showLogoutAlert = true
         } label: {
-          SettingLabel(
-            "Log Out", systemImage: "rectangle.portrait.and.arrow.right", tint: .floDestructive)
+          IconRowLabel(
+            title: "Log Out", systemImage: "rectangle.portrait.and.arrow.right",
+            tint: .floDestructive, label: .floDestructive)
         }
         .joined(.alone)
       }
@@ -184,9 +185,7 @@ struct WatchSettingsView: View {
         Text(ServerAccount.authority)
           .font(.floRowTitle)
         HStack(spacing: 4) {
-          Circle()
-            .fill(connectivity.isServerReachable ? Color.floDownloaded : Color.floSecondary)
-            .frame(width: 6, height: 6)
+          StatusDot(color: connectivity.isServerReachable ? .floDownloaded : .floSecondary)
           // A server at the root of its host has no path to show.
           Text(ServerAccount.path.isEmpty ? status : ServerAccount.path)
         }
@@ -227,7 +226,7 @@ struct WatchSettingsView: View {
 
   private func key(_ title: String, _ bytes: Int64, _ color: Color) -> some View {
     HStack(spacing: 4) {
-      Circle().fill(color).frame(width: 6, height: 6)
+      StatusDot(color: color)
       Text("\(title) \(bytes.fileSize)")
     }
   }
@@ -249,7 +248,7 @@ struct WatchSettingsView: View {
 
   private func actionRow(_ title: String, action: @escaping () -> Void) -> some View {
     Button(role: .destructive, action: action) {
-      SettingLabel(title, tint: .floDestructive)
+      IconRowLabel(title: title, label: .floDestructive)
     }
   }
 }
@@ -277,7 +276,7 @@ private struct ChoiceRow<Value: Hashable>: View {
         HStack(spacing: 4) {
           VStack(alignment: .leading, spacing: 1) {
             label
-            value.padding(.leading, systemImage == nil ? 0 : SettingLabel.titleInset)
+            value.padding(.leading, systemImage == nil ? 0 : IconRowLabel.titleInset)
           }
           Spacer(minLength: 4)
           Chevron()
@@ -286,73 +285,12 @@ private struct ChoiceRow<Value: Hashable>: View {
     }
   }
 
-  private var label: some View { SettingLabel(title, systemImage: systemImage) }
+  private var label: some View { IconRowLabel(title: title, systemImage: systemImage) }
 
   private var value: some View {
     Text(options.first { $0.0 == selection }?.1 ?? "")
       .font(.floMeta)
       .foregroundStyle(Color.floSecondary)
-  }
-}
-
-private struct ChoiceList<Value: Hashable>: View {
-  let title: String
-  let options: [(Value, String)]
-  @Binding var selection: Value
-  @Environment(\.dismiss) private var dismiss
-
-  var body: some View {
-    List {
-      ForEach(options, id: \.0) { value, label in
-        Button {
-          selection = value
-          dismiss()
-        } label: {
-          HStack {
-            Text(label).font(.floRow)
-            Spacer(minLength: 4)
-            if value == selection {
-              Image(systemName: "checkmark").foregroundStyle(Color.floLilac)
-            }
-          }
-        }
-        .accessibilityAddTraits(value == selection ? .isSelected : [])
-        .floRow()
-      }
-    }
-    .floNavigationTitle(title)
-  }
-}
-
-/// A Settings row's title after its lilac icon; red for a destructive one.
-private struct SettingLabel: View {
-  let title: String
-  var systemImage: String?
-  var tint: Color?
-
-  static let iconWidth: CGFloat = 20
-  static let spacing: CGFloat = 8
-  /// Where the title starts after an icon.
-  static let titleInset = iconWidth + spacing
-
-  init(_ title: String, systemImage: String? = nil, tint: Color? = nil) {
-    self.title = title
-    self.systemImage = systemImage
-    self.tint = tint
-  }
-
-  var body: some View {
-    HStack(spacing: Self.spacing) {
-      if let systemImage {
-        Image(systemName: systemImage)
-          .font(.system(size: 16))
-          .foregroundStyle(tint ?? .floLilac)
-          .frame(width: Self.iconWidth)
-      }
-      Text(title)
-        .font(.floRow)
-        .foregroundStyle(tint ?? .floText)
-    }
   }
 }
 
@@ -362,6 +300,6 @@ extension View {
   fileprivate func joined(_ position: RowPosition) -> some View {
     floJoinedRow(
       position,
-      hairlineInset: FloLayout.joinedRowInsets.leading + SettingLabel.titleInset)
+      hairlineInset: FloLayout.joinedRowInsets.leading + IconRowLabel.titleInset)
   }
 }

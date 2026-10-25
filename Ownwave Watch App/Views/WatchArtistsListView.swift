@@ -9,8 +9,10 @@ struct WatchArtistsListView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
 
   @AppStorage(ArtistOrder.storageKey) private var order = ArtistOrder.name
-  // The last sort, so a redraw sorts again only when the list or order changed.
+  // The last sort and letters, so a redraw sorts and groups again only when
+  // the list or order changed.
   @State private var sort = SortMemo<ArtistOrder>()
+  @State private var sections = Memo<[Artist], [ArtistSection]>()
   @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
 
@@ -31,7 +33,7 @@ struct WatchArtistsListView: View {
         items: artists, kind: .artist, allLabel: order == .name ? nil : "All Artists"
       ) { artists, isPinnedPart in
         if order == .name, !isPinnedPart {
-          ForEach(artistSections(artists)) { section in
+          ForEach(sections.value(for: artists, make: artistSections)) { section in
             Section {
               rows(section.artists)
             } header: {

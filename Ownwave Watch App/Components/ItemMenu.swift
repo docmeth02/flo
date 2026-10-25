@@ -14,12 +14,11 @@ import WatchKit
 struct ItemMenu: View {
   enum Choice: Hashable {
     case action(MenuActions.Action)
-    /// Not a shared action: the phone downloads from its own menu.
+    /// Not a shared action: each app downloads through its own session.
     case download
   }
 
   let target: MenuTarget
-  let tile: CoverRow<EmptyView>.Tile
   /// Nil for an item that cannot be pinned.
   let isPinned: Bool?
   let isLiked: Bool
@@ -41,8 +40,10 @@ struct ItemMenu: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 6) {
-        CoverRow(tile: tile, title: target.title, subtitle: target.subtitle, titleLineLimit: 2)
-          .padding(.horizontal, 4)
+        CoverRow(
+          tile: CoverTile(target), title: target.title, subtitle: target.subtitle, titleLineLimit: 2
+        )
+        .padding(.horizontal, 4)
         if !tiles.isEmpty {
           HStack(spacing: 5) {
             ForEach(tiles, id: \.self) { choice in
@@ -97,7 +98,7 @@ struct ItemMenu: View {
 /// Rows on one platter with hairlines between them: the hold menu's list and
 /// the download control.
 struct PlatterRows: View {
-  struct Row: Identifiable {
+  struct Row {
     let title: String
     var detail = ""
     let systemImage: String
@@ -105,13 +106,9 @@ struct PlatterRows: View {
     var label: Color = .floText
     /// Nil for a line that only tells a state.
     var action: (() -> Void)?
-
-    var id: String { title }
   }
 
   private static let padding: CGFloat = 10
-  private static let iconWidth: CGFloat = 22
-  private static let spacing: CGFloat = 8
 
   let rows: [Row]
 
@@ -120,46 +117,24 @@ struct PlatterRows: View {
   }
 
   var body: some View {
-    VStack(spacing: 0) {
-      ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-        if index > 0 {
-          Color.floRowHairline
-            .frame(height: 0.5)
-            .padding(.leading, Self.padding + Self.iconWidth + Self.spacing)
-        }
-        if let action = row.action {
-          Button(action: action) { content(row) }
-            .buttonStyle(.plain)
-        } else {
-          content(row)
-        }
+    PlatterStack(rows, hairlineInset: Self.padding + IconRowLabel.titleInset) { _, row in
+      if let action = row.action {
+        Button(action: action) { content(row) }
+          .buttonStyle(.plain)
+      } else {
+        content(row)
       }
     }
-    .background(
-      RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous)
-        .fill(Color.floSurface))
   }
 
   private func content(_ row: Row) -> some View {
-    HStack(spacing: Self.spacing) {
-      Image(systemName: row.systemImage)
-        .font(.system(size: 17))
-        .foregroundStyle(row.tint)
-        .frame(width: Self.iconWidth)
-      VStack(alignment: .leading, spacing: 1) {
-        Text(row.title)
-          .font(.floRow)
-          .foregroundStyle(row.label)
-          .lineLimit(1)
-          .minimumScaleFactor(0.8)
-        if !row.detail.isEmpty {
-          Text(row.detail)
-            .font(.floMeta)
-            .foregroundStyle(Color.floSecondary)
-        }
-      }
-      Spacer(minLength: 0)
-    }
+    IconRowLabel(
+      title: row.title, detail: row.detail, systemImage: row.systemImage, tint: row.tint,
+      label: row.label
+    )
+    .lineLimit(1)
+    .minimumScaleFactor(0.8)
+    .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, Self.padding)
     .padding(.vertical, 4)
     .frame(minHeight: FloLayout.rowHeight)
@@ -194,7 +169,7 @@ private struct ItemMenuPresenter: ViewModifier {
     content
       .sheet(item: $target) { target in
         ItemMenu(
-          target: target, tile: tile(target),
+          target: target,
           isPinned: actions.isPinned(target),
           isLiked: actions.isLiked(target),
           canDownload: canDownload(target)
@@ -214,21 +189,6 @@ private struct ItemMenuPresenter: ViewModifier {
       .floToast($toast)
   }
 
-  private func tile(_ target: MenuTarget) -> CoverRow<EmptyView>.Tile {
-    switch target {
-    case .song(let song, _, _):
-      .cover(albumId: song.albumId)
-    case .album(let album):
-      .cover(albumId: album.id)
-    case .artist:
-      .artist
-    case .playlist(let playlist):
-      .cover(albumId: playlist.id, artId: playlist.artId)
-    case .radio:
-      .glyph("dot.radiowaves.up.forward", round: true)
-    }
-  }
-
   /// The album or playlist that Download would take.
   private func collection(_ target: MenuTarget) -> Album? {
     switch target {
@@ -238,11 +198,13 @@ private struct ItemMenuPresenter: ViewModifier {
     }
   }
 
-  /// Offered while nothing of it is on the watch: a partly downloaded one
-  /// gets its missing songs on its own screen.
+  /// Offered while nothing of it is on the watch or on its way from the
+  /// iPhone: a partly downloaded one gets its missing songs on its own
+  /// screen.
   private func canDownload(_ target: MenuTarget) -> Bool {
     guard let id = collection(target)?.id else { return false }
     return !downloads.isDownloading(collectionId: id)
+      && !PhoneLink.shared.isReceiving(collectionId: id)
       && !DownloadStore.checkIfAlbumDownloaded(albumID: id)
   }
 

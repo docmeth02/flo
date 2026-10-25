@@ -111,6 +111,7 @@ struct CollectionDetailView: View {
           onRemove: {
             onRemove()
             downloaded = false
+            downloadedIds = []
           })
 
         tracks.padding(.top, 4)
@@ -126,34 +127,23 @@ struct CollectionDetailView: View {
     }
   }
 
-  /// The rows of a List joined on one platter, drawn here for a scroll view.
   private var tracks: some View {
-    VStack(spacing: 0) {
-      // By position: a playlist can hold a song twice.
-      ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
-        if index > 0 {
-          Color.floRowHairline
-            .frame(height: 0.5)
-            .padding(.leading, TrackRowView.textInset)
+    // By position: a playlist can hold a song twice.
+    PlatterStack(songs, hairlineInset: TrackRowView.textInset) { index, song in
+      TrackRowView(
+        trackNumber: trackNumber(index, song),
+        title: song.title,
+        artist: song.artist == artist ? "" : song.artist,
+        isPlaying: playerViewModel.isCurrent(song),
+        tint: tint,
+        idleBackground: .clear,
+        onHold: {
+          menu = .song(song, context: title, isFromPlaylist: playable().isPlaylist)
         }
-        TrackRowView(
-          trackNumber: trackNumber(index, song),
-          title: song.title,
-          artist: song.artist == artist ? "" : song.artist,
-          isPlaying: playerViewModel.isCurrent(song),
-          tint: tint,
-          idleBackground: .clear,
-          onHold: {
-            menu = .song(song, context: title, isFromPlaylist: playable().isPlaylist)
-          }
-        ) {
-          if playerViewModel.playItem(item: playable(), startingAt: index) { showPlayer() }
-        }
+      ) {
+        if playerViewModel.playItem(item: playable(), startingAt: index) { showPlayer() }
       }
     }
-    .background(
-      RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous)
-        .fill(Color.floSurface))
   }
 
   private var backdrop: some View {

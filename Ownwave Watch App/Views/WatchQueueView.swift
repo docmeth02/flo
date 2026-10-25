@@ -116,8 +116,7 @@ struct WatchQueueView: View {
 
   private func row(_ item: QueueEntity) -> some View {
     HStack(spacing: FloLayout.tileSpacing) {
-      WatchAlbumArtView(albumId: item.albumId ?? "", size: FloLayout.smallThumbnail)
-        .clipShape(RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous))
+      CoverTile.cover(albumId: item.albumId ?? "").view(size: FloLayout.smallThumbnail)
       VStack(alignment: .leading, spacing: 1) {
         Text(item.songName ?? "Unknown")
           .font(.floRowTitle)
@@ -128,7 +127,7 @@ struct WatchQueueView: View {
       .lineLimit(1)
       Spacer(minLength: 0)
     }
-    .frame(minHeight: FloLayout.smallThumbnail + FloLayout.coverRowHeight - FloLayout.thumbnail)
+    .frame(minHeight: FloLayout.joinedRowHeight)
     .holdable(
       onTap: {
         if let index = position(of: item) { playerViewModel.playFromQueue(idx: index) }

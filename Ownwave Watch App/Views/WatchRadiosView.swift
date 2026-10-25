@@ -20,7 +20,7 @@ struct WatchRadiosView: View {
       state: viewModel.state,
       isEmpty: radios.isEmpty,
       empty: .empty(
-        systemImage: LibraryRow.radioGlyph, tint: .floLilac, title: "No radios",
+        systemImage: CoverTile.radioGlyph, tint: .floLilac, title: "No radios",
         message: "Add internet radio stations on your Navidrome server."),
       refresh: viewModel.refresh
     ) {
@@ -50,23 +50,15 @@ private struct RadioRow: View {
 
   let radio: Radio
 
-  private static let liveDot: CGFloat = 6
-
   var body: some View {
     HStack(spacing: FloLayout.tileSpacing) {
-      Image(systemName: LibraryRow.radioGlyph)
-        .font(.system(size: 16))
-        .foregroundStyle(Color.floLilac)
-        .frame(width: FloLayout.smallThumbnail, height: FloLayout.smallThumbnail)
-        .background(Circle().fill(Color.floTile))
+      CoverTile.radio.view(size: FloLayout.smallThumbnail)
       VStack(alignment: .leading, spacing: 1) {
         Text(radio.name)
           .font(.floRowTitle)
           .lineLimit(2)
         HStack(spacing: 4) {
-          Circle()
-            .fill(Color.floLiked)
-            .frame(width: Self.liveDot, height: Self.liveDot)
+          StatusDot(color: .floLiked)
           Text("Live stream")
             .font(.floMeta)
             .foregroundStyle(Color.floSecondary)

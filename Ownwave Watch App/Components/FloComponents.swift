@@ -16,38 +16,56 @@ struct Wordmark: View {
   }
 }
 
-/// A navigation row on the home screen: tinted glyph and a label.
-struct FloNavRow: View {
-  let title: String
-  let systemImage: String
-  var tint: Color = .floLilac
+/// A row's small cover, or a lilac glyph standing in for one.
+enum CoverTile {
+  /// The album's cover, read from its download when there is one; `artId`
+  /// for a cover of its own, such as a playlist's mosaic.
+  case cover(albumId: String, artId: String? = nil)
+  /// A lilac glyph, round for an artist or a station.
+  case glyph(String, round: Bool = false)
 
-  var body: some View {
-    HStack(spacing: 10) {
-      Image(systemName: systemImage)
-        .font(.system(size: 18))
-        .foregroundStyle(tint)
-        .frame(width: 22)
-      Text(title)
-        .font(.floRow)
-        .lineLimit(1)
+  /// A station's glyph, also on Artist Radio.
+  static let radioGlyph = "dot.radiowaves.up.forward"
+  /// The round glyph standing in for an artist's picture.
+  static let artist = glyph("music.mic", round: true)
+  static let radio = glyph(radioGlyph, round: true)
+
+  /// The cover or glyph of a menu's item.
+  init(_ target: MenuTarget) {
+    switch target {
+    case .song(let song, _, _): self = .cover(albumId: song.albumId)
+    case .album(let album): self = .cover(albumId: album.id)
+    case .artist: self = .artist
+    case .playlist(let playlist): self = .cover(albumId: playlist.id, artId: playlist.artId)
+    case .radio: self = .radio
     }
-    .frame(minHeight: FloLayout.rowHeight)
+  }
+
+  @ViewBuilder
+  func view(size: CGFloat) -> some View {
+    switch self {
+    case .cover(let albumId, let artId):
+      WatchAlbumArtView(albumId: albumId, artId: artId, size: size)
+        .clipShape(RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous))
+    case .glyph(let systemImage, let round):
+      Image(systemName: systemImage)
+        .font(.system(size: 16))
+        .foregroundStyle(Color.floLilac)
+        .frame(width: size, height: size)
+        .background(
+          (round
+            ? AnyShape(Circle())
+            : AnyShape(
+              RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous)))
+            .fill(Color.floTile))
+    }
   }
 }
 
 /// A row with a small cover or glyph tile, two lines and an optional
 /// trailing mark.
 struct CoverRow<Trailing: View>: View {
-  enum Tile {
-    /// The album's cover, read from its download when there is one; `artId`
-    /// for a cover of its own, such as a playlist's mosaic.
-    case cover(albumId: String, artId: String? = nil)
-    /// A lilac glyph, round for an artist or a station.
-    case glyph(String, round: Bool = false)
-  }
-
-  let tile: Tile
+  let tile: CoverTile
   let title: String
   let subtitle: String
   /// Nil: two lines without a subtitle, else one.
@@ -57,7 +75,7 @@ struct CoverRow<Trailing: View>: View {
 
   var body: some View {
     HStack(spacing: FloLayout.tileSpacing) {
-      tileView
+      tile.view(size: tileSize)
       VStack(alignment: .leading, spacing: 1) {
         Text(title)
           .font(.floRowTitle)
@@ -73,39 +91,13 @@ struct CoverRow<Trailing: View>: View {
       Spacer(minLength: 0)
       trailing
     }
-    // The tile with the margins a default row keeps around it.
-    .frame(minHeight: tileSize + FloLayout.coverRowHeight - FloLayout.thumbnail)
+    .frame(minHeight: FloLayout.coverRowHeight(tile: tileSize))
   }
-
-  @ViewBuilder
-  private var tileView: some View {
-    switch tile {
-    case .cover(let albumId, let artId):
-      WatchAlbumArtView(albumId: albumId, artId: artId, size: tileSize)
-        .clipShape(RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous))
-    case .glyph(let systemImage, let round):
-      Image(systemName: systemImage)
-        .font(.system(size: 16))
-        .foregroundStyle(Color.floLilac)
-        .frame(width: tileSize, height: tileSize)
-        .background(
-          (round
-            ? AnyShape(Circle())
-            : AnyShape(
-              RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous)))
-            .fill(Color.floTile))
-    }
-  }
-}
-
-extension CoverRow.Tile {
-  /// The round glyph standing in for an artist's picture.
-  static var artist: Self { .glyph("music.mic", round: true) }
 }
 
 extension CoverRow where Trailing == EmptyView {
   init(
-    tile: Tile, title: String, subtitle: String, titleLineLimit: Int? = nil,
+    tile: CoverTile, title: String, subtitle: String, titleLineLimit: Int? = nil,
     tileSize: CGFloat = FloLayout.thumbnail
   ) {
     self.init(
@@ -114,41 +106,6 @@ extension CoverRow where Trailing == EmptyView {
     ) {
       EmptyView()
     }
-  }
-}
-
-/// An album in a list: a tap runs `open`, a hold opens its menu.
-struct AlbumRow: View {
-  let album: Album
-  var isPinned = false
-  @Binding var menu: MenuTarget?
-  let open: () -> Void
-
-  var body: some View {
-    CoverRow(tile: .cover(albumId: album.id), title: album.name, subtitle: album.albumArtist) {
-      if isPinned { PinGlyph() }
-    }
-    .holdable(onTap: open, onHold: { menu = .album(album) })
-    .floRow()
-  }
-}
-
-/// An artist in a list: a tap runs `open`, a hold opens its menu.
-struct ArtistRow: View {
-  let artist: Artist
-  var isPinned = false
-  @Binding var menu: MenuTarget?
-  let open: () -> Void
-
-  var body: some View {
-    CoverRow(
-      tile: .artist, title: artist.name,
-      subtitle: artist.albumCount > 0 ? counted(artist.albumCount, "album") : ""
-    ) {
-      if isPinned { PinGlyph() }
-    }
-    .holdable(onTap: open, onHold: { menu = .artist(artist) })
-    .floRow()
   }
 }
 
@@ -181,6 +138,53 @@ struct Chevron: View {
   }
 }
 
+/// A row's title after its icon, with an optional detail under it:
+/// Settings, the hold menu's list, the download control.
+struct IconRowLabel: View {
+  let title: String
+  var detail = ""
+  var systemImage: String?
+  var tint: Color = .floLilac
+  var label: Color = .floText
+
+  private static let iconWidth: CGFloat = 22
+  private static let spacing: CGFloat = 8
+  /// Where the title starts after an icon, for hairlines and values under
+  /// it.
+  static let titleInset = iconWidth + spacing
+
+  var body: some View {
+    HStack(spacing: Self.spacing) {
+      if let systemImage {
+        Image(systemName: systemImage)
+          .font(.system(size: 17))
+          .foregroundStyle(tint)
+          .frame(width: Self.iconWidth)
+      }
+      VStack(alignment: .leading, spacing: 1) {
+        Text(title)
+          .font(.floRow)
+          .foregroundStyle(label)
+        if !detail.isEmpty {
+          Text(detail)
+            .font(.floMeta)
+            .foregroundStyle(Color.floSecondary)
+        }
+      }
+    }
+  }
+}
+
+/// A small dot in a status color: a live stream, a reachable server, a
+/// legend's key.
+struct StatusDot: View {
+  let color: Color
+
+  var body: some View {
+    Circle().fill(color).frame(width: 6, height: 6)
+  }
+}
+
 /// The title above a list section.
 struct FloSectionHeader: View {
   let title: String
@@ -206,7 +210,8 @@ struct StorageWarningRow: View {
     )
     .font(.floMeta)
     .foregroundStyle(Color.floWarningText)
-    .floRow()
+    .padding(.vertical, 8)
+    .floJoinedRow(.alone)
   }
 }
 
@@ -244,7 +249,7 @@ struct Badge: View {
     HStack(spacing: 4) {
       switch kind {
       case .live:
-        Circle().fill(Color.floLiked).frame(width: 6, height: 6)
+        StatusDot(color: .floLiked)
         Text("LIVE").fontWeight(.bold).tracking(0.4)
       case .offline:
         Image(systemName: "wifi.slash").font(.system(size: 10, weight: .semibold))
@@ -342,5 +347,42 @@ struct StateView: View {
     .background(
       RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous).fill(Color.floSurface)
     )
+  }
+}
+
+/// Picks one of a few values on a screen of its own, since the watch has no
+/// menus; picking one returns.
+struct ChoiceList<Value: Hashable>: View {
+  let title: String
+  let options: [(Value, String)]
+  @Binding var selection: Value
+  @Environment(\.dismiss) private var dismiss
+
+  var body: some View {
+    List {
+      ForEach(Array(options.enumerated()), id: \.element.0) { index, option in
+        let (value, label) = option
+        Button {
+          selection = value
+          dismiss()
+        } label: {
+          HStack {
+            Text(label).font(.floRow)
+            Spacer(minLength: 4)
+            if value == selection {
+              Image(systemName: "checkmark").foregroundStyle(Color.floLilac)
+            }
+          }
+          .frame(minHeight: FloLayout.rowHeight)
+        }
+        .accessibilityAddTraits(value == selection ? .isSelected : [])
+        .floJoinedRow(
+          RowPosition(index: index, count: options.count),
+          hairlineInset: FloLayout.joinedRowInsets.leading)
+      }
+    }
+    .listStyle(.plain)
+    .environment(\.defaultMinListRowHeight, 1)
+    .floNavigationTitle(title)
   }
 }

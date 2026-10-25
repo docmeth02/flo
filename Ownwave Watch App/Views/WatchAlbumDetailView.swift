@@ -15,8 +15,7 @@ struct WatchAlbumDetailView: View {
   @State private var isLoaded = false
   /// Bumped by a removed download, which loads the screen again.
   @State private var reloads = 0
-  @State private var tint: Color = .floLilac
-  @State private var shade: Color?
+  @State private var shades: CoverShades?
 
   /// The album with the tracks shown, as the player and downloads take it.
   private var loadedAlbum: Album {
@@ -39,8 +38,9 @@ struct WatchAlbumDetailView: View {
       title: album.name,
       meta: meta,
       songs: songs,
-      tint: tint,
-      shade: shade,
+      tint: shades?.tint ?? .floLilac,
+      // The design's dark shade of the cover's hue, at half strength.
+      shade: shades?.background.opacity(0.5),
       blursCover: true,
       artist: album.albumArtist,
       trackNumber: { _, song in song.trackNumber },
@@ -53,13 +53,7 @@ struct WatchAlbumDetailView: View {
         }
       }
     )
-    .task(id: album.id) {
-      tint = await CoverTint.color(albumId: album.id) ?? .floLilac
-      // The design's dark shade of the cover's hue, at half strength.
-      shade = await CoverTint.hue(albumId: album.id).map {
-        CoverTint.color(hue: $0, lightness: 0.3, chroma: 0.07).opacity(0.5)
-      }
-    }
+    .coverShades($shades, albumId: album.id)
     // Once: a return from a screen pushed on top keeps the loaded tracks,
     // also offline. A load cut short by that push or left empty runs again,
     // and so does one after a removed download.

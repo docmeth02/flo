@@ -47,7 +47,7 @@ struct WatchArtistDetailView: View {
           if artistDetailViewModel.isLoadingRadio {
             ProgressView()
           } else {
-            Label("Radio", systemImage: "dot.radiowaves.up.forward")
+            Label("Radio", systemImage: CoverTile.radioGlyph)
           }
         }
         .accessibilityLabel("Artist Radio")

@@ -114,7 +114,7 @@ struct SortHeader<Order: LibraryOrder & Hashable>: View {
 
   var body: some View {
     NavigationLink {
-      SortPicker(order: $order)
+      ChoiceList(title: "Sort", options: Order.allCases.map { ($0, $0.label) }, selection: $order)
     } label: {
       // Side by side as designed, stacked where a long order does not fit.
       ViewThatFits {
@@ -145,24 +145,6 @@ struct SortHeader<Order: LibraryOrder & Hashable>: View {
     }
     .fontWeight(.semibold)
     .foregroundStyle(Color.floLilac)
-  }
-}
-
-/// The orders of a list, checked as they are picked; picking one returns.
-private struct SortPicker<Order: LibraryOrder & Hashable>: View {
-  @Binding var order: Order
-  @Environment(\.dismiss) private var dismiss
-
-  var body: some View {
-    List {
-      Picker("Sort", selection: $order) {
-        ForEach(Array(Order.allCases), id: \.self) { Text($0.label).tag($0) }
-      }
-      .pickerStyle(.inline)
-      .labelsHidden()
-    }
-    .floNavigationTitle("Sort")
-    .onChange(of: order) { dismiss() }
   }
 }
 
@@ -210,10 +192,11 @@ struct LibraryList<Rows: View>: View {
         LibraryPlaceholder(kind: placeholder)
       } else {
         // Plain, so rows joined on one platter keep their size at the
-        // screen's edges. The default minimum row height stays: at 0 the
-        // rows before and in the first section went missing.
+        // screen's edges, and as low as their content; at 0 the rows before
+        // and in the first section went missing.
         List { rows }
           .listStyle(.plain)
+          .environment(\.defaultMinListRowHeight, 1)
       }
     }
     .floNavigationTitle(title)

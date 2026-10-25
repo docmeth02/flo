@@ -21,16 +21,12 @@ extension Color {
   /// The "wave" of the wordmark, a lighter lilac than the accent.
   static let floWave = Palette.dark.accent
   static let floSecondary = Palette.dark.secondary
-  /// Meta text on top of a cover.
-  static let floOnCover = Color(red: 0xD6 / 255, green: 0xD5 / 255, blue: 0xDE / 255)
   static let floWarningText = Color(red: 0xFF / 255, green: 0xB3 / 255, blue: 0x40 / 255)
   static let floDownloadedText = Color(red: 0x5E / 255, green: 0xE0 / 255, blue: 0x7A / 255)
   /// Elapsed and remaining time on Now Playing.
   static let floTimeText = Color(red: 0xC4 / 255, green: 0xC3 / 255, blue: 0xCF / 255)
   /// Behind a lilac glyph tile.
   static let floTile = Color(red: 0x2D / 255, green: 0x2A / 255, blue: 0x43 / 255)
-  /// The rule between the pinned rows and the full list.
-  static let floHairline = Color.white.opacity(0.14)
   /// Between rows joined on one platter.
   static let floRowHairline = Palette.dark.hairline
   /// Behind round buttons on a platter.
@@ -48,6 +44,9 @@ enum FloLayout {
   static let rowHeight: CGFloat = 44
   static let coverRowHeight: CGFloat = 52
   static let thumbnail: CGFloat = 36
+  /// A row with a `tile` sized tile, which keeps the margins a default row
+  /// keeps around its thumbnail.
+  static func coverRowHeight(tile: CGFloat) -> CGFloat { tile + coverRowHeight - thumbnail }
   static let thumbnailRadius: CGFloat = 6
   /// Between a row's tile and its text.
   static let tileSpacing: CGFloat = 10
@@ -61,6 +60,8 @@ enum FloLayout {
   static let joinedRowInsets = EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 10)
   /// A joined row's hairline starts under its text.
   static let joinedHairlineInset = joinedRowInsets.leading + smallThumbnail + tileSpacing
+  /// A row on a joined platter: its small tile with a cover row's margins.
+  static let joinedRowHeight = coverRowHeight(tile: smallThumbnail)
   /// A tile of a grid such as Home's library: icon above label.
   static let tileHeight: CGFloat = 48
   static let roundButton: CGFloat = 30
@@ -72,10 +73,7 @@ enum FloLayout {
 
 extension Font {
   static let floWordmark = familjen(18, relativeTo: .title3)
-  /// The playing song on the home screen.
-  static let floTitle = familjen(17, relativeTo: .headline)
   static let floSong = familjen(15, relativeTo: .headline)
-  static let floHero = familjen(18, relativeTo: .headline)
   // Text styles rather than point sizes, so the watch's text size applies.
   static let floRow = Font.system(.subheadline, weight: .medium)
   static let floRowTitle = Font.system(.subheadline, weight: .semibold)
@@ -110,18 +108,16 @@ struct FloPrimaryButtonStyle: ButtonStyle {
   }
 }
 
-/// Platter capsule with a tinted label: Shuffle, Try Again.
+/// Platter capsule with a tinted label: Try Again, Cancel.
 struct FloTintedButtonStyle: ButtonStyle {
   var tint: Color = .floLilac
   var platter: Color = .floSurface
   var height: CGFloat = 44
-  /// Menu rows are SF; buttons use the title face.
-  var isMenuRow = false
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(isMenuRow ? .floRowTitle : .floButton)
-      .tracking(isMenuRow ? 0 : Font.floButtonTracking)
+      .font(.floButton)
+      .tracking(Font.floButtonTracking)
       .foregroundStyle(tint)
       .frame(maxWidth: .infinity, minHeight: height)
       .background(Capsule().fill(platter))
@@ -170,8 +166,7 @@ private struct TileLabelStyle: LabelStyle {
   }
 }
 
-/// A round icon button: Play Something's play, an album's Shuffle, the
-/// search card's Artist Radio.
+/// A round icon button: an album's Shuffle, the search card's Artist Radio.
 struct FloRoundButtonStyle: ButtonStyle {
   var tint: Color = .floLilac
   var fill: Color = .floSurface2
@@ -179,11 +174,7 @@ struct FloRoundButtonStyle: ButtonStyle {
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.system(size: size / 2, weight: .semibold))
-      .foregroundStyle(tint)
-      .frame(width: size, height: size)
-      .background(Circle().fill(fill))
-      .contentShape(Circle())
+      .floRoundGlyph(tint: tint, fill: fill, size: size)
       .opacity(configuration.isPressed ? FloLayout.pressedOpacity : 1)
   }
 }
@@ -201,14 +192,69 @@ enum RowPosition {
   fileprivate var roundsBottom: Bool { self == .alone || self == .last }
 }
 
+/// Rows joined on one platter in a scroll view, with a hairline between
+/// them from `hairlineInset`: an album's tracks, the hold menu's list. In a
+/// List the rows join with `floJoinedRow` instead. Rows are told apart by
+/// position, so an item may appear twice.
+struct PlatterStack<Item, Row: View>: View {
+  let items: [Item]
+  let hairlineInset: CGFloat
+  let row: (_ index: Int, _ item: Item) -> Row
+
+  init(
+    _ items: [Item], hairlineInset: CGFloat,
+    @ViewBuilder row: @escaping (_ index: Int, _ item: Item) -> Row
+  ) {
+    self.items = items
+    self.hairlineInset = hairlineInset
+    self.row = row
+  }
+
+  var body: some View {
+    VStack(spacing: 0) {
+      ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+        if index > 0 {
+          RowHairline(inset: hairlineInset)
+        }
+        row(index, item)
+      }
+    }
+    .background(
+      RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous)
+        .fill(Color.floSurface))
+  }
+}
+
+/// The rule between two rows on one platter, starting under their text.
+private struct RowHairline: View {
+  let inset: CGFloat
+
+  var body: some View {
+    Color.floRowHairline
+      .frame(height: 0.5)
+      .padding(.leading, inset)
+  }
+}
+
 extension View {
+  /// A glyph on a disc, as a round button draws it.
+  func floRoundGlyph(
+    tint: Color = .floLilac, fill: Color = .floSurface2, size: CGFloat = FloLayout.roundButton
+  ) -> some View {
+    font(.system(size: size / 2, weight: .semibold))
+      .foregroundStyle(tint)
+      .frame(width: size, height: size)
+      .background(Circle().fill(fill))
+      .contentShape(Circle())
+  }
+
   /// A list row joined with its neighbours on one platter: the group's outer
   /// corners rounded, a hairline over every row but the first. The platter
   /// reaches up over the gap watchOS leaves between rows, and the hairline
   /// sits in its middle. The list wants `.listStyle(.plain)`, or the system
   /// shrinks the rows at the screen's edges and the platter falls apart, and
-  /// `.environment(\.defaultMinListRowHeight, 0)`, so a row is as low as its
-  /// content (a `CoverRow` keeps its own margins).
+  /// `.environment(\.defaultMinListRowHeight, 1)`, so a row is as low as its
+  /// content (a `CoverRow` keeps its own margins); at 0 watchOS skips rows.
   func floJoinedRow(
     _ position: RowPosition, hairlineInset: CGFloat = FloLayout.joinedHairlineInset
   ) -> some View {
@@ -225,9 +271,7 @@ extension View {
         ZStack(alignment: .top) {
           shape.fill(Color.floSurface)
           if !position.roundsTop {
-            Color.floRowHairline
-              .frame(height: 0.5)
-              .padding(.leading, hairlineInset)
+            RowHairline(inset: hairlineInset)
               .offset(y: FloLayout.listRowGap / 2)
           }
         }

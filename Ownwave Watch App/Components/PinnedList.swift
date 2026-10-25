@@ -44,11 +44,6 @@ struct PinnedList<Item: Identifiable, Rows: View>: View where Item.ID == String 
   }
 }
 
-extension FloLayout {
-  /// A row on a joined platter: its small tile with a cover row's margins.
-  static let joinedRowHeight = smallThumbnail + coverRowHeight - thumbnail
-}
-
 /// `row` for each item, each its own list row, joined on one platter.
 struct JoinedRows<Item: Identifiable, Row: View>: View {
   let items: [Item]
@@ -79,7 +74,7 @@ struct LibraryRow: View {
 
   var body: some View {
     CoverRow(
-      tile: Self.tile(target), title: target.title, subtitle: subtitle, titleLineLimit: 2,
+      tile: CoverTile(target), title: target.title, subtitle: subtitle, titleLineLimit: 2,
       tileSize: FloLayout.smallThumbnail
     ) {
       if isPinned {
@@ -95,19 +90,6 @@ struct LibraryRow: View {
     switch target {
     case .playlist(let playlist): songsAndLength(playlist.songCount, seconds: playlist.duration)
     default: target.subtitle
-    }
-  }
-
-  static let radioGlyph = "dot.radiowaves.up.forward"
-
-  /// The cover or glyph of `target`, for any cover row.
-  static func tile<Trailing>(_ target: MenuTarget) -> CoverRow<Trailing>.Tile {
-    switch target {
-    case .song(let song, _, _): .cover(albumId: song.albumId)
-    case .album(let album): .cover(albumId: album.id)
-    case .artist: .artist
-    case .playlist(let playlist): .cover(albumId: playlist.id, artId: playlist.artId)
-    case .radio: .glyph(radioGlyph, round: true)
     }
   }
 }

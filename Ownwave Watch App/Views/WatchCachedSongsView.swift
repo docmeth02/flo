@@ -26,9 +26,12 @@ struct WatchCachedSongsView: View {
           let cached = SongCollection.cached(songs)
           if playerViewModel.playItem(item: cached, startingAt: idx) { showPlayer() }
         }
+        // The row's own platter, as in Liked Songs.
+        .listRowInsets(EdgeInsets())
         .listRowBackground(Color.clear)
       }
     }
+    .listStyle(.plain)
     .floNavigationTitle("Cached")
     .itemMenu($menu)
   }

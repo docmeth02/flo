@@ -54,8 +54,9 @@ struct WatchSearchView: View {
           message: "Artists, albums and songs on your server.")
       }
     }
-    // Plain with the default row height, as in `LibraryList`.
+    // Plain and as low as the rows, as in `LibraryList`.
     .listStyle(.plain)
+    .environment(\.defaultMinListRowHeight, 1)
     .floNavigationTitle("Search")
     .searchable(text: $query)
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
@@ -162,12 +163,17 @@ struct WatchSearchView: View {
   }
 
   /// The best match on its own card: a tap opens it (a song plays), and an
-  /// artist's round button starts Artist Radio.
+  /// artist's round button beside it, outside the card's tap, starts Artist
+  /// Radio.
   private func topCard(_ target: MenuTarget) -> some View {
-    CoverRow(
-      tile: LibraryRow.tile(target), title: target.title, subtitle: topSubtitle(target),
-      titleLineLimit: 2, tileSize: FloLayout.smallThumbnail
-    ) {
+    HStack(spacing: 4) {
+      CoverRow(
+        tile: CoverTile(target), title: target.title, subtitle: topSubtitle(target),
+        titleLineLimit: 2, tileSize: FloLayout.smallThumbnail
+      ) {
+        if isPinned(target) { PinGlyph() }
+      }
+      .holdable(onTap: { open(target) }, onHold: { menu = target })
       if case .artist(let artist) = target {
         Button {
           Task {
@@ -176,17 +182,14 @@ struct WatchSearchView: View {
             }
           }
         } label: {
-          Image(systemName: LibraryRow.radioGlyph)
+          Image(systemName: CoverTile.radioGlyph)
         }
         .buttonStyle(FloRoundButtonStyle(tint: .floInk, fill: .floLilac))
         .disabled(playerViewModel.isGeneratingMix)
         .opacity(playerViewModel.isGeneratingMix ? FloLayout.pressedOpacity : 1)
         .accessibilityLabel("Artist Radio")
-      } else if isPinned(target) {
-        PinGlyph()
       }
     }
-    .holdable(onTap: { open(target) }, onHold: { menu = target })
   }
 
   private func topSubtitle(_ target: MenuTarget) -> String {
