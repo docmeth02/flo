@@ -93,6 +93,12 @@ struct WatchNowPlayingView: View {
   private func nowPlayingContent(_ song: QueueEntity) -> some View {
     VStack(spacing: 0) {
       VStack(spacing: 1) {
+        if !playerViewModel.isLiveRadio, !playerViewModel.sourceName.isEmpty {
+          CapsLabel(playerViewModel.sourceName, tint: accent)
+            .padding(.bottom, 2)
+            // On 41 and 42 mm the round toolbar buttons reach down beside it.
+            .padding(.horizontal, Self.compact ? 22 : 0)
+        }
         Text(song.songName ?? "Unknown")
           .font(.floSong)
           .foregroundStyle(.white)
@@ -103,7 +109,7 @@ struct WatchNowPlayingView: View {
         } else {
           Text(song.artistName ?? "Unknown")
             .font(.floMeta)
-            .foregroundStyle(Color.floOnCover)
+            .foregroundStyle(accent)
         }
       }
       .lineLimit(1)
@@ -115,9 +121,9 @@ struct WatchNowPlayingView: View {
           .padding(.top, 6)
 
         playPauseButton
-          .padding(.top, 8)
+          .padding(.top, 8 + Self.ringInset)
       } else {
-        HStack(spacing: Self.compact ? 0 : 4) {
+        HStack(spacing: Self.compact ? 4 : 8) {
           Button(action: {
             playerViewModel.prevSong()
             WKInterfaceDevice.current().play(.click)
@@ -125,6 +131,7 @@ struct WatchNowPlayingView: View {
             transportGlyph("backward.fill")
           }
           .buttonStyle(.plain)
+          .accessibilityLabel("Previous")
 
           playPauseButton
 
@@ -135,47 +142,53 @@ struct WatchNowPlayingView: View {
             transportGlyph("forward.fill")
           }
           .buttonStyle(.plain)
+          .accessibilityLabel("Next")
         }
-        .padding(.top, Self.compact ? 0 : 3)
+        // Room for the loading ring around the disc.
+        .padding(.vertical, Self.ringInset)
 
-        TimeLine(clock: playerViewModel.clock, duration: song.duration)
-          .font(.floTime)
-          .foregroundStyle(Color.floTimeText)
-          .padding(.top, Self.compact ? 0 : 2)
+        SeekBar(
+          clock: playerViewModel.clock, duration: song.duration, tint: accent,
+          seek: playerViewModel.seek(to:)
+        )
+        .padding(.horizontal, 12)
 
         HStack(spacing: 0) {
           Button(action: {
             playerViewModel.shuffleCurrentQueue()
             WKInterfaceDevice.current().play(.click)
           }) {
-            Image(systemName: "shuffle")
-              .font(.system(size: 22, weight: .semibold))
-              .foregroundStyle(playerViewModel.isShuffling ? accent : .floSecondary)
-              .frame(width: 44, height: 44)
+            utilityGlyph("shuffle", color: playerViewModel.isShuffling ? accent : .floSecondary)
           }
           .buttonStyle(.plain)
-          .contentShape(Circle())
+          .accessibilityLabel("Shuffle")
 
           Spacer(minLength: 0)
 
           // Not a Button: on the watch a button takes the whole touch, so a
           // long press on it never arrives. A tap stars, a hold rates.
-          Image(systemName: playerViewModel.isStarred ? "heart.fill" : "heart")
-            .font(.system(size: 22, weight: .semibold))
-            .foregroundStyle(playerViewModel.isStarred ? Color.floLiked : .floSecondary)
-            .overlay(alignment: .topTrailing) { ratingGlyph.offset(x: 7, y: -5) }
-            .frame(width: 44, height: 44)
-            .contentShape(Circle())
-            .onTapGesture {
-              playerViewModel.toggleStar()
-              WKInterfaceDevice.current().play(.click)
+          utilityGlyph(
+            playerViewModel.isStarred ? "heart.fill" : "heart",
+            color: playerViewModel.isStarred ? .floLiked : .floSecondary
+          )
+          .onTapGesture {
+            playerViewModel.toggleStar()
+            WKInterfaceDevice.current().play(.click)
+          }
+          .onLongPressGesture(minimumDuration: FloLayout.holdDuration) { openRating(song) }
+          .accessibilityLabel(playerViewModel.isStarred ? "Unlike" : "Like")
+          .accessibilityAddTraits(.isButton)
+          .accessibilityAction(named: "Rate") { openRating(song) }
+
+          if let chip = RatingChip(rating: rating) {
+            Spacer(minLength: 0)
+            Button {
+              openRating(song)
+            } label: {
+              chip
             }
-            .onLongPressGesture(minimumDuration: FloLayout.holdDuration) {
-              guard let id = song.id, !id.isEmpty else { return }
-              ratingTarget = id
-              showRating = true
-              WKInterfaceDevice.current().play(.click)
-            }
+            .buttonStyle(.plain)
+          }
 
           Spacer(minLength: 0)
 
@@ -183,30 +196,35 @@ struct WatchNowPlayingView: View {
             playerViewModel.cyclePlaybackMode()
             WKInterfaceDevice.current().play(.click)
           }) {
-            Image(
-              systemName: playerViewModel.playbackMode == PlaybackMode.repeatOnce
-                ? "repeat.1" : "repeat"
-            )
-            .font(.system(size: 22, weight: .semibold))
-            .foregroundStyle(
-              playerViewModel.playbackMode != PlaybackMode.defaultPlayback
-                ? accent : .floSecondary
-            )
-            .frame(width: 44, height: 44)
+            utilityGlyph(
+              playerViewModel.playbackMode == PlaybackMode.repeatOnce ? "repeat.1" : "repeat",
+              color: playerViewModel.playbackMode != PlaybackMode.defaultPlayback
+                ? accent : .floSecondary)
           }
           .buttonStyle(.plain)
-          .contentShape(Circle())
+          .accessibilityLabel("Repeat")
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 6)
         // Keeps the heart clear of the page dots.
         .padding(.bottom, Self.compact ? 6 : 8)
       }
     }
   }
 
+  /// The dialog rates the song it was opened on, even if playback moves on.
+  private func openRating(_ song: QueueEntity) {
+    guard let id = song.id, !id.isEmpty else { return }
+    ratingTarget = id
+    showRating = true
+    WKInterfaceDevice.current().play(.click)
+  }
+
   // The 41 and 42 mm screens need smaller transport controls to keep the
   // shuffle, heart and repeat row above the page dots.
-  private static let compact = WKInterfaceDevice.current().screenBounds.height < 240
+  fileprivate static let compact = WKInterfaceDevice.current().screenBounds.height < 240
+  private static let disc: CGFloat = compact ? 52 : 58
+  /// How far the loading ring reaches out of the disc.
+  private static let ringInset: CGFloat = 6
 
   private func transportGlyph(_ name: String) -> some View {
     Image(systemName: name)
@@ -214,6 +232,14 @@ struct WatchNowPlayingView: View {
       .foregroundStyle(.white)
       .frame(width: Self.compact ? 44 : 48, height: Self.compact ? 44 : 48)
       .contentShape(Rectangle())
+  }
+
+  private func utilityGlyph(_ name: String, color: Color) -> some View {
+    Image(systemName: name)
+      .font(.system(size: 20, weight: .semibold))
+      .foregroundStyle(color)
+      .frame(width: 34, height: 36)
+      .contentShape(Circle())
   }
 
   /// Fetching the stream, waiting for its data, as after a skip, or for the
@@ -239,89 +265,144 @@ struct WatchNowPlayingView: View {
     }
   }
 
-  /// A white disc inside a ring: song progress in the cover tint, or red for
-  /// live radio, which has no progress.
+  /// A white disc, ringed only while the song loads; the ring reaches out of
+  /// the button's frame, so the layout stays put.
   private var playPauseButton: some View {
     Button(action: {
       playerViewModel.togglePlayback()
       WKInterfaceDevice.current().play(.success)
     }) {
       ZStack {
-        if isLoading {
-          Circle().stroke(.white.opacity(0.22), lineWidth: 4)
-          spinner
-        } else if playerViewModel.isLiveRadio {
-          Circle().stroke(Color.floLiked, lineWidth: 4)
-        } else {
-          Circle().stroke(.white.opacity(0.22), lineWidth: 4)
-          ProgressRing(clock: playerViewModel.clock, color: accent)
-        }
         Circle()
           .fill(.white)
-          .frame(width: Self.compact ? 52 : 58, height: Self.compact ? 52 : 58)
         Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
           .font(.system(size: Self.compact ? 28 : 32))
           .foregroundStyle(Color.floInk)
       }
-      .padding(2)
-      .frame(width: Self.compact ? 66 : 74, height: Self.compact ? 66 : 74)
+      .frame(width: Self.disc, height: Self.disc)
+      .overlay {
+        if isLoading {
+          ZStack {
+            Circle().stroke(.white.opacity(0.22), lineWidth: 4)
+            spinner
+          }
+          .padding(-Self.ringInset)
+        }
+      }
       .contentShape(Circle())
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(playerViewModel.isPlaying ? "Pause" : "Play")
   }
 
   private var rating: Int {
     guard let song = playerViewModel.nowPlaying else { return 0 }
     return ratings.rating(for: song.id ?? "")
   }
-
-  /// A boosted or avoided song is marked on the heart; 3 is no statement.
-  @ViewBuilder private var ratingGlyph: some View {
-    if rating >= 4 {
-      Image(systemName: "sparkle")
-        .font(.system(size: 10, weight: .bold))
-        .foregroundStyle(Color.floLilac)
-    } else if (1...2).contains(rating) {
-      Image(systemName: "hand.thumbsdown.fill")
-        .font(.system(size: 10, weight: .bold))
-        .foregroundStyle(Color.floSecondary)
-    }
-  }
 }
 
-/// The song progress around the play button; observes the clock itself so the
-/// player does not redraw every second.
-private struct ProgressRing: View {
-  @ObservedObject var clock: PlayerClock
+/// A boosted or avoided song says so next to the heart; other ratings make
+/// no statement to the mix.
+private struct RatingChip: View {
+  let title: String
+  let systemImage: String
   let color: Color
 
-  var body: some View {
-    Circle()
-      .trim(from: 0, to: clock.clampedProgress)
-      .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-      .rotationEffect(.degrees(-90))
-  }
-}
-
-/// Elapsed and remaining time, e.g. "0:18 / -3:02".
-private struct TimeLine: View {
-  @ObservedObject var clock: PlayerClock
-  let duration: Double
-
-  var body: some View {
-    HStack(spacing: 6) {
-      Text(elapsed)
-      Text("/").opacity(0.5)
-      Text(remaining)
+  init?(rating: Int) {
+    switch rating {
+    case 5: (title, systemImage, color) = ("Boosted", "star.fill", .floWarning)
+    case 1: (title, systemImage, color) = ("Avoided", "hand.thumbsdown.fill", .floDestructive)
+    default: return nil
     }
   }
 
-  private var elapsed: String {
-    (clock.clampedProgress * duration).minuteSecond
+  var body: some View {
+    Group {
+      // The 41 and 42 mm row has no room for the label.
+      if WatchNowPlayingView.compact {
+        chip(Image(systemName: systemImage))
+      } else {
+        chip(
+          HStack(spacing: 4) {
+            Image(systemName: systemImage)
+            Text(title)
+          })
+      }
+    }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(title)
+    .accessibilityAddTraits(.isButton)
   }
 
-  private var remaining: String {
-    "-" + (duration * (1 - clock.clampedProgress)).minuteSecond
+  private func chip(_ content: some View) -> some View {
+    content
+      .font(.floCaption)
+      .foregroundStyle(color)
+      .lineLimit(1)
+      .padding(.horizontal, 8)
+      .frame(minHeight: 28)
+      .background(Capsule().fill(Color.floSurface2))
+      .fixedSize()
+  }
+}
+
+/// The song's position as a thin bar between elapsed and remaining time; a
+/// tap or a drag on the bar seeks. It observes the clock itself so the
+/// player does not redraw every second.
+private struct SeekBar: View {
+  @ObservedObject var clock: PlayerClock
+  let duration: Double
+  let tint: Color
+  let seek: (Double) -> Void
+
+  // The position under the finger while dragging.
+  @State private var dragged: Double?
+
+  private let knob: CGFloat = 7
+
+  var body: some View {
+    let shown = dragged ?? clock.clampedProgress
+    HStack(spacing: 6) {
+      Text((shown * duration).minuteSecond)
+      GeometryReader { proxy in
+        let width = max(proxy.size.width, 1)
+        Capsule()
+          .fill(.white.opacity(0.22))
+          .overlay(alignment: .leading) {
+            Capsule().fill(tint).frame(width: width * shown)
+          }
+          .frame(height: dragged == nil ? 3 : 5)
+          .overlay(alignment: .leading) {
+            Circle()
+              .fill(tint)
+              .frame(width: knob, height: knob)
+              .offset(x: min(max(width * shown - knob / 2, 0), width - knob))
+          }
+          .frame(maxHeight: .infinity)
+          .contentShape(Rectangle())
+          // Ahead of the page swipe, which would take a sideways drag.
+          .highPriorityGesture(
+            DragGesture(minimumDistance: 0)
+              .onChanged { dragged = min(max($0.location.x / width, 0), 1) }
+              .onEnded { _ in
+                if let dragged { seek(dragged) }
+                dragged = nil
+              }
+          )
+      }
+      .frame(height: 22)
+      Text("-" + (duration * (1 - shown)).minuteSecond)
+    }
+    .font(.floTime)
+    .foregroundStyle(Color.floTimeText)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("Position")
+    .accessibilityValue("\((shown * duration).minuteSecond) of \(duration.minuteSecond)")
+    .accessibilityAdjustableAction { direction in
+      guard duration > 0 else { return }
+      let step = (direction == .increment ? 15 : -15) / duration
+      seek(min(max(clock.clampedProgress + step, 0), 1))
+    }
   }
 }
 
