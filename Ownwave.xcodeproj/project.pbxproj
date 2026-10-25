@@ -363,6 +363,7 @@
 		DFAFDE4E036B82E291567101 /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C49134522C15BE0C00CCF2EB /* Strings.swift */; };
 		DFEBF89BC2595D5993AD1C74 /* RatingStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B27B0002A1B2C3D4E5F60002 /* RatingStoreTests.swift */; };
 		E09F669977950E432ABA0F32 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B67A5AB0BB9835696DB660 /* SettingsView.swift */; };
+		E0B47156C832B1DC5EC61F3E /* StorageBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47163AC3D672641450AF2CB8 /* StorageBar.swift */; };
 		E0D9C52A13756CF9925D50C1 /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		E0E2051C2ECAE641EC151B62 /* WatchLinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21A03CD944EFA80449CFC2FC /* WatchLinkProtocol.swift */; };
 		E1442A8B84C01EE321E02C9C /* PhoneLink+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D7E85400EE91596AC2581D9 /* PhoneLink+Debug.swift */; };
@@ -525,6 +526,7 @@
 		41ED1C069984CF677281CBB3 /* ArtistAppEntity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtistAppEntity.swift; sourceTree = "<group>"; };
 		42E5CFC7824F74C00E75D934 /* EngineRulesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EngineRulesTests.swift; sourceTree = "<group>"; };
 		42FB9F4AD7DF9AA1867619D9 /* RequestLog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RequestLog.swift; sourceTree = "<group>"; };
+		47163AC3D672641450AF2CB8 /* StorageBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StorageBar.swift; sourceTree = "<group>"; };
 		477F38684B1CD3B0BEE039A7 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		49C1611BCD0864A0BF006A78 /* LibraryParts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LibraryParts.swift; sourceTree = "<group>"; };
 		4A0A3A849C5FEAFB7E57BE5C /* Ownwave.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ownwave.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1015,6 +1017,7 @@
 				3A7C08695326856038595DD6 /* CoverBackdrop.swift */,
 				69686F2A305D35978AD719B0 /* DownloadControl.swift */,
 				620A1146AA567F7AD34C59A0 /* FloToast.swift */,
+				47163AC3D672641450AF2CB8 /* StorageBar.swift */,
 			);
 			name = Components;
 			path = Components;
@@ -1676,6 +1679,7 @@
 				B4E1A3F4BDAC6BA0D5073C65 /* ServerAccount.swift in Sources */,
 				1E32B6E3FB372FA476F40030 /* CollectionDownload.swift in Sources */,
 				06E6E0606F8BCCB6C7851C23 /* MixReasonStyle.swift in Sources */,
+				E0B47156C832B1DC5EC61F3E /* StorageBar.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
