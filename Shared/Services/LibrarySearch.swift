@@ -66,3 +66,42 @@ enum LibrarySearch {
     return Array((leading + rest).prefix(limit))
   }
 }
+
+extension LibrarySearch {
+  /// The best match: an exact name beats a name that starts with the query,
+  /// which beats any other match; on a tie a pinned item, then an artist
+  /// before an album before a song, then the search's own order.
+  static func topResult(
+    _ query: String, in results: Results, isPinned: (MenuTarget) -> Bool
+  ) -> MenuTarget? {
+    let candidates: [MenuTarget] =
+      results.artists.map(MenuTarget.artist) + results.albums.map(MenuTarget.album)
+      + results.songs.map(MenuTarget.searched)
+    let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
+    func match(_ name: String) -> Int {
+      if name.compare(query, options: options) == .orderedSame { return 2 }
+      return name.range(of: query, options: options.union(.anchored)) != nil ? 1 : 0
+    }
+    return candidates.enumerated()
+      .min { a, b in
+        (-match(a.element.title), isPinned(a.element) ? 0 : 1, a.offset)
+          < (-match(b.element.title), isPinned(b.element) ? 0 : 1, b.offset)
+      }?
+      .element
+  }
+
+  /// `targets` with the pinned ones first, each part in its order.
+  static func pinnedFirst(
+    _ targets: [MenuTarget], isPinned: (MenuTarget) -> Bool
+  ) -> [MenuTarget] {
+    targets.filter(isPinned) + targets.filter { !isPinned($0) }
+  }
+}
+
+extension MenuTarget {
+  /// A song found by Search, which the queue names as its origin.
+  static func searched(_ song: Song) -> MenuTarget {
+    .song(song, context: SongCollection.Name.search, isFromPlaylist: false)
+  }
+}

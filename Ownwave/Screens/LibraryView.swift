@@ -13,39 +13,6 @@ enum LibraryChip: String, CaseIterable, Identifiable {
   var title: String { rawValue.capitalized }
 }
 
-/// The orders the Library's sortable lists offer, kept per list.
-private enum AlbumOrder: String, CaseIterable {
-  case added, name, artist, year
-
-  var label: String {
-    switch self {
-    case .added: "Recently added"
-    case .name: "A–Z"
-    case .artist: "Artist"
-    case .year: "Year"
-    }
-  }
-}
-
-private enum ArtistOrder: String, CaseIterable {
-  case name, albums
-
-  var label: String { self == .name ? "A–Z" : "Most albums" }
-}
-
-private enum PlaylistOrder: String, CaseIterable {
-  case name, updated
-
-  var label: String { self == .name ? "A–Z" : "Recently updated" }
-}
-
-extension String {
-  /// Ascending as Finder sorts names: case-insensitive, numbers by value.
-  fileprivate func precedes(_ other: String) -> Bool {
-    localizedStandardCompare(other) == .orderedAscending
-  }
-}
-
 struct LibraryView: View {
   @EnvironmentObject private var app: AppModel
   // Liked follows the heart of the song playing.
@@ -61,13 +28,13 @@ struct LibraryView: View {
   // hook picks the chip.
   @Binding var chip: LibraryChip
   @State private var cachedSongs: [Song] = []
-  @AppStorage("albumSort") private var albumOrder = AlbumOrder.added
-  @AppStorage("artistSort") private var artistOrder = ArtistOrder.name
-  @AppStorage("playlistSort") private var playlistOrder = PlaylistOrder.name
+  @AppStorage(AlbumOrder.storageKey) private var albumOrder = AlbumOrder.added
+  @AppStorage(ArtistOrder.storageKey) private var artistOrder = ArtistOrder.name
+  @AppStorage(PlaylistOrder.storageKey) private var playlistOrder = PlaylistOrder.name
   // The last sorts, so a redraw sorts again only when a list or order changed.
-  @State private var albumSort = SortMemo<Album, AlbumOrder>()
-  @State private var artistSort = SortMemo<Artist, ArtistOrder>()
-  @State private var playlistSort = SortMemo<Playlist, PlaylistOrder>()
+  @State private var albumSort = SortMemo<AlbumOrder>()
+  @State private var artistSort = SortMemo<ArtistOrder>()
+  @State private var playlistSort = SortMemo<PlaylistOrder>()
 
   var body: some View {
     ScrollView {
@@ -184,51 +151,14 @@ struct LibraryView: View {
     }
   }
 
-  private var sortedAlbums: [Album] {
-    albumSort.sorted(albumViewModel.albums, by: albumOrder) { albums, order in
-      switch order {
-      // An album without a date sorts last: the empty string is the smallest.
-      case .added:
-        albums.sorted {
-          $0.createdAt == $1.createdAt ? $0.name.precedes($1.name) : $0.createdAt > $1.createdAt
-        }
-      case .name: albums.sorted { $0.name.precedes($1.name) }
-      case .artist:
-        albums.sorted {
-          $0.albumArtist == $1.albumArtist
-            ? $0.name.precedes($1.name) : $0.albumArtist.precedes($1.albumArtist)
-        }
-      case .year:
-        albums.sorted {
-          $0.minYear == $1.minYear ? $0.name.precedes($1.name) : $0.minYear > $1.minYear
-        }
-      }
-    }
-  }
+  private var sortedAlbums: [Album] { albumSort.sorted(albumViewModel.albums, by: albumOrder) }
 
   private var sortedArtists: [Artist] {
-    artistSort.sorted(albumViewModel.artists, by: artistOrder) { artists, order in
-      switch order {
-      case .name: artists.sorted { $0.name.precedes($1.name) }
-      case .albums:
-        artists.sorted {
-          $0.albumCount == $1.albumCount
-            ? $0.name.precedes($1.name) : $0.albumCount > $1.albumCount
-        }
-      }
-    }
+    artistSort.sorted(albumViewModel.artists, by: artistOrder)
   }
 
   private var sortedPlaylists: [Playlist] {
-    playlistSort.sorted(albumViewModel.playlists, by: playlistOrder) { playlists, order in
-      switch order {
-      case .name: playlists.sorted { $0.name.precedes($1.name) }
-      case .updated:
-        playlists.sorted {
-          $0.updatedAt == $1.updatedAt ? $0.name.precedes($1.name) : $0.updatedAt > $1.updatedAt
-        }
-      }
-    }
+    playlistSort.sorted(albumViewModel.playlists, by: playlistOrder)
   }
 
   /// Liked songs, then liked albums and artists out of the library lists,
@@ -491,18 +421,5 @@ private struct CachedSongsView: View {
     .containerBackground(palette.background, for: .navigation)
     .navigationTitle("Cached")
     .navigationBarTitleDisplayMode(.inline)
-  }
-}
-
-/// A list's last sort, kept while neither the list nor the order changes; a
-/// list that is the same array compares in constant time.
-private final class SortMemo<Item: Equatable, Order: Equatable> {
-  private var last: (items: [Item], order: Order, sorted: [Item])?
-
-  func sorted(_ items: [Item], by order: Order, _ sort: ([Item], Order) -> [Item]) -> [Item] {
-    if let last, last.order == order, last.items == items { return last.sorted }
-    let sorted = sort(items, order)
-    last = (items, order, sorted)
-    return sorted
   }
 }

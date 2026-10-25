@@ -31,7 +31,7 @@ struct SettingsView: View {
   private var cacheLimit = Int(UserDefaultsManager.streamCacheMaxSize)
   @State private var username = ""
   @State private var serverVersion: String?
-  @State private var storage = StorageBar.Sizes()
+  @State private var storage = StorageUsage()
   /// Bumped by each refresh; only the newest measurement is shown.
   @State private var storageRefreshes = 0
   @State private var confirmsClearCache = false
@@ -214,7 +214,7 @@ struct SettingsView: View {
     storageRefreshes += 1
     let refresh = storageRefreshes
     Task {
-      let sizes = await StorageBar.Sizes.measure()
+      let sizes = await StorageUsage.measure()
       if refresh == storageRefreshes { storage = sizes }
     }
   }
@@ -319,25 +319,7 @@ struct SettingsRow<Control: View>: View {
 /// The cache and the downloads against the room left on the iPhone, as one
 /// bar with a legend.
 private struct StorageBar: View {
-  struct Sizes {
-    var cache: Int64 = 0
-    var downloads: Int64 = 0
-    var free: Int64 = 0
-
-    /// Reads the sizes off the main thread.
-    static func measure() async -> Sizes {
-      async let cache = StreamCacheManager.shared.calculateCacheSize()
-      async let downloads = LocalFileManager.shared.downloadsBytes()
-      async let free = Task.detached(priority: .userInitiated) {
-        let key = URLResourceKey.volumeAvailableCapacityForImportantUsageKey
-        let values = try? URL.homeDirectory.resourceValues(forKeys: [key])
-        return values?.volumeAvailableCapacityForImportantUsage ?? 0
-      }.value
-      return await Sizes(cache: cache, downloads: downloads, free: free)
-    }
-  }
-
-  let sizes: Sizes
+  let sizes: StorageUsage
 
   @Environment(\.palette) private var palette
 
@@ -385,8 +367,7 @@ private struct StorageBar: View {
       (color: palette.surface2, bytes: sizes.free),
     ].filter { $0.bytes > 0 }
     let room = width - Self.gap * CGFloat(max(parts.count - 1, 0))
-    let total = max(Double(parts.reduce(0) { $0 + $1.bytes }), 1)
-    var widths = parts.map { max(Self.height, room * Double($0.bytes) / total) }
+    var widths = parts.map { max(Self.height, room * sizes.share(of: $0.bytes)) }
     // A small part shows at least a dot; the widest gives up that room.
     if let widest = widths.indices.max(by: { widths[$0] < widths[$1] }) {
       widths[widest] -= widths.reduce(0, +) - room

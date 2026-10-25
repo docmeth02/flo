@@ -146,7 +146,7 @@ import WatchConnectivity
     sends.append(Send(album: album, songs: max(1, album.songs.count)))
     let account = AuthService.shared.accountKey
     Task {
-      let songs = await app.songs(of: album)
+      let songs = await CollectionDownload.songs(of: album)
       // A logout meanwhile cleared the sends; these songs are the previous
       // account's.
       guard AuthService.shared.accountKey == account else { return }

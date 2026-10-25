@@ -230,11 +230,7 @@ import WatchKit
       return state
     }
     state.musicBytes = await bytes
-    // The volume's available capacity can be negative on watchOS; the file
-    // system's free size cannot.
-    let system = try? FileManager.default.attributesOfFileSystem(
-      forPath: URL.documentsDirectory.path)
-    state.freeBytes = max(0, (system?[.systemFreeSize] as? NSNumber)?.int64Value ?? 0)
+    state.freeBytes = StorageUsage.freeBytes()
     return state
   }
 }

@@ -191,18 +191,3 @@ struct BlurredBackdrop: View {
       .allowsHitTesting(false)
   }
 }
-
-/// "12 songs · 48 min", the count alone without a length.
-func songsAndLength(_ songs: Int, seconds: Double) -> String {
-  let count = counted(songs, "song")
-  return seconds > 0 ? "\(count) · \(Int((seconds / 60).rounded())) min" : count
-}
-
-extension [Song] {
-  /// "12 songs · 48 min", empty while no song is loaded.
-  var countAndLength: String {
-    guard !isEmpty else { return "" }
-    return songsAndLength(
-      count, seconds: reduce(0) { $0 + ($1.duration.isFinite ? $1.duration : 0) })
-  }
-}

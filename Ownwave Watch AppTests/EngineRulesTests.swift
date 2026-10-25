@@ -48,6 +48,25 @@ final class EngineRulesTests: XCTestCase {
     XCTAssertNil(AuthService.accountKey(serverURL: "", userId: "u1"))
   }
 
+  func testServerAccountSplitsAuthorityAndPath() {
+    let url = "https://anna:secret@Music.lan:4533/navidrome?x=1"
+    XCTAssertEqual(ServerAccount.authority(of: url), "Music.lan:4533")
+    XCTAssertEqual(ServerAccount.path(of: url), "/navidrome")
+    XCTAssertEqual(ServerAccount.authority(of: "https://music.lan"), "music.lan")
+    XCTAssertEqual(ServerAccount.path(of: "https://music.lan/"), "")
+    // An address that does not parse stays whole, without a path.
+    XCTAssertEqual(ServerAccount.authority(of: "music lan"), "music lan")
+    XCTAssertEqual(ServerAccount.path(of: "music lan"), "")
+  }
+
+  func testStorageShares() {
+    let usage = StorageUsage(cache: 100, downloads: 300, free: 600)
+    XCTAssertEqual(usage.used, 400)
+    XCTAssertEqual(usage.share(of: usage.downloads), 0.3, accuracy: 1e-9)
+    XCTAssertEqual(usage.share(of: usage.free), 0.6, accuracy: 1e-9)
+    XCTAssertEqual(StorageUsage().share(of: 0), 0)
+  }
+
   func testServerURLLosesWhitespaceAndTrailingSlashes() {
     XCTAssertEqual(
       UserDefaultsManager.baseURL(" https://music.lan/nd// \n"), "https://music.lan/nd")

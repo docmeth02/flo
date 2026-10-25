@@ -118,7 +118,11 @@ struct SearchView: View {
           query, artists: artists, albums: albumList, songs: songs, limits: .phone)
       }.value
       guard !Task.isCancelled else { return }
-      found = results.map { Found(query: query, results: $0, top: topResult(query, $0)) }
+      found = results.map {
+        Found(
+          query: query, results: $0,
+          top: LibrarySearch.topResult(query, in: $0, isPinned: isPinned))
+      }
     }
   }
 
@@ -185,7 +189,7 @@ struct SearchView: View {
     let playlists = pinnedFirst(
       albums.playlists.filter { $0.name.localizedStandardContains(found.query) }
         .map(MenuTarget.playlist))
-    let songs = results.songs.map(songTarget).filter { $0.id != top?.id }
+    let songs = results.songs.map(MenuTarget.searched).filter { $0.id != top?.id }
 
     if let top {
       section("Top result") { topCard(top) }
@@ -218,37 +222,12 @@ struct SearchView: View {
     rows("Songs", songs)
   }
 
-  /// The best match: an exact name beats a name that starts with the query,
-  /// which beats any other match; on a tie a pinned item, then an artist
-  /// before an album before a song, then the search's own order.
-  private func topResult(_ query: String, _ results: LibrarySearch.Results) -> MenuTarget? {
-    let candidates: [MenuTarget] =
-      results.artists.map(MenuTarget.artist) + results.albums.map(MenuTarget.album)
-      + results.songs.map(songTarget)
-    let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-    let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
-    func match(_ name: String) -> Int {
-      if name.compare(query, options: options) == .orderedSame { return 2 }
-      return name.range(of: query, options: options.union(.anchored)) != nil ? 1 : 0
-    }
-    return candidates.enumerated()
-      .min { a, b in
-        (-match(a.element.title), isPinned(a.element) ? 0 : 1, a.offset)
-          < (-match(b.element.title), isPinned(b.element) ? 0 : 1, b.offset)
-      }?
-      .element
-  }
-
-  private func songTarget(_ song: Song) -> MenuTarget {
-    .song(song, context: SongCollection.Name.search, isFromPlaylist: false)
-  }
-
   private func isPinned(_ target: MenuTarget) -> Bool {
     target.pin.map { pins.isPinned($0.id, $0.kind) } ?? false
   }
 
   private func pinnedFirst(_ targets: [MenuTarget]) -> [MenuTarget] {
-    targets.filter(isPinned) + targets.filter { !isPinned($0) }
+    LibrarySearch.pinnedFirst(targets, isPinned: isPinned)
   }
 
   private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
