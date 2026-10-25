@@ -100,7 +100,7 @@ struct HomeView: View {
           .foregroundStyle(palette.accent)
         VStack(alignment: .leading, spacing: 1) {
           Text(player.isGeneratingMix ? "Building mix…" : "Play Something")
-            .font(.familjen(16, relativeTo: .headline))
+            .font(.brand(16, relativeTo: .headline))
             .foregroundStyle(palette.text)
           Text("New mix from your whole taste")
             .font(.meta)
@@ -229,7 +229,7 @@ private struct NowPlayingCard: View {
         )
         .foregroundStyle(tint)
         Text(player.nowPlaying?.songName ?? "")
-          .font(.familjen(20, relativeTo: .title3))
+          .font(.brand(20, relativeTo: .title3))
           .foregroundStyle(palette.text)
           .padding(.top, 5)
         Text(player.nowPlaying?.artistName ?? "")

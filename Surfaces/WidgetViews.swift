@@ -59,7 +59,7 @@ struct PlaySomethingWidgetView: View {
         Image(systemName: "sparkles").font(.system(size: 22, weight: .medium))
       }
       Spacer(minLength: 0)
-      Text("Play Something").font(.familjen(21, relativeTo: .title3)).lineLimit(2)
+      Text("Play Something").font(.brand(21, relativeTo: .title3)).lineLimit(2)
       Text(snapshot.signedIn ? "Smart mix" : "Sign in to Ownwave")
         .font(.footnote).opacity(0.75).lineLimit(1).padding(.top, 2)
     }
@@ -121,7 +121,7 @@ struct NowPlayingWidgetView: View {
   private func songText(_ song: WidgetSnapshot.Song, titleSize: CGFloat) -> some View {
     VStack(alignment: .leading, spacing: 1) {
       NowPlayingLabel()
-      Text(song.title).font(.familjen(titleSize, relativeTo: .headline))
+      Text(song.title).font(.brand(titleSize, relativeTo: .headline))
         .lineLimit(family == .systemSmall ? 1 : 2)
       Text(song.artist).font(.footnote).opacity(0.75).lineLimit(1)
     }
@@ -138,7 +138,7 @@ struct NowPlayingWidgetView: View {
       }
       VStack(alignment: .leading, spacing: 1) {
         NowPlayingLabel()
-        Text("Nothing playing").font(.familjen(17, relativeTo: .headline))
+        Text("Nothing playing").font(.brand(17, relativeTo: .headline))
           .foregroundStyle(palette.text).lineLimit(1)
         Spacer(minLength: 8)
         PlaySomethingPill()
@@ -161,7 +161,7 @@ struct RecentlyPlayedWidgetView: View {
       } else {
         VStack(alignment: .leading, spacing: 12) {
           HStack {
-            Text("Recently Played").font(.familjen(15, relativeTo: .headline))
+            Text("Recently Played").font(.brand(15, relativeTo: .headline))
             Spacer(minLength: 0)
             BarsBadge()
           }
@@ -228,7 +228,7 @@ struct SignedOutWidgetView: View {
     VStack(alignment: .leading, spacing: 0) {
       BarsBadge()
       Spacer(minLength: 0)
-      Text("Sign in to Ownwave").font(.familjen(17, relativeTo: .headline)).lineLimit(2)
+      Text("Sign in to Ownwave").font(.brand(17, relativeTo: .headline)).lineLimit(2)
     }
     .foregroundStyle(palette.text)
     .widgetAccentable()
@@ -275,7 +275,7 @@ private struct PlaySomethingPill: View {
   var body: some View {
     Button(intent: PlaySomethingNowIntent()) {
       Label("Play Something", systemImage: "sparkles")
-        .font(.familjen(15, relativeTo: .subheadline))
+        .font(.brand(15, relativeTo: .subheadline))
         .lineLimit(1).minimumScaleFactor(0.8)
         .foregroundStyle(palette.ink)
         .padding(.horizontal, 12)

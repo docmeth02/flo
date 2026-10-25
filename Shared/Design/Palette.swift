@@ -53,15 +53,15 @@ extension Color {
 }
 
 extension Font {
-  /// The brand face for titles, the wordmark and button labels, scaling with
-  /// the text style `style`.
-  static func familjen(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
-    .custom("Familjen Grotesk", size: size, relativeTo: style).weight(.semibold)
+  /// The brand face for titles and button labels, scaling with the text
+  /// style `style`.
+  static func brand(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+    .custom("Inter Tight", size: size, relativeTo: style).weight(.semibold)
   }
 
-  /// Inter Tight, on trial in place of Familjen Grotesk outside the wordmark.
-  static func interTight(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
-    .custom("Inter Tight", size: size, relativeTo: style).weight(.semibold)
+  /// The wordmark's face, kept for the logo alone.
+  static func familjen(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+    .custom("Familjen Grotesk", size: size, relativeTo: style).weight(.semibold)
   }
 
   /// The mono face for counters, sizes and small caps labels, scaling with
@@ -72,7 +72,4 @@ extension Font {
 
   /// Small counters and labels such as "Playing from" and the tour's "1 of 6".
   static let counter = mono(11, relativeTo: .caption2)
-
-  /// Button labels are set 0.02 em tighter, as in the design.
-  static func buttonTracking(_ size: CGFloat) -> CGFloat { -0.02 * size }
 }

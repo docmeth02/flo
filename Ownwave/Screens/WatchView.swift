@@ -68,7 +68,7 @@ struct WatchView: View {
       StorageRing(music: watch?.musicBytes ?? 0, free: watch?.freeBytes ?? 0)
       VStack(alignment: .leading, spacing: 2) {
         // No case size: the phone is not told it.
-        Text("Apple Watch").font(.familjen(22, relativeTo: .title2))
+        Text("Apple Watch").font(.brand(22, relativeTo: .title2))
         HStack(spacing: 6) {
           StatusDot(isOn: link.isPaired && link.isAppInstalled)
           Text(statusLine)

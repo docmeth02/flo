@@ -73,7 +73,7 @@ enum FloLayout {
 
 extension Font {
   static let floWordmark = familjen(18, relativeTo: .title3)
-  static let floSong = interTight(15, relativeTo: .headline)
+  static let floSong = brand(14, relativeTo: .headline)
   // Text styles rather than point sizes, so the watch's text size applies.
   static let floRow = Font.system(.subheadline, weight: .medium)
   static let floRowTitle = Font.system(.subheadline, weight: .semibold)
@@ -81,10 +81,9 @@ extension Font {
   static let floSection = Font.system(.footnote, weight: .semibold)
   /// Badges and small labels.
   static let floCaption = Font.system(.caption2, weight: .semibold)
-  static let floTime = interTight(14, relativeTo: .caption2).monospacedDigit()
-  static let floButton = interTight(16, relativeTo: .subheadline)
-  static let floNavTitle = interTight(15, relativeTo: .headline)
-  static let floButtonTracking = buttonTracking(16)
+  static let floTime = brand(14, relativeTo: .caption2).monospacedDigit()
+  static let floButton = brand(16, relativeTo: .subheadline)
+  static let floNavTitle = brand(15, relativeTo: .headline)
   /// Mono small caps labels: "NOW PLAYING", "NEXT · 14 SONGS".
   static let floCaps = mono(9, relativeTo: .caption2)
   /// A tile's label.
@@ -100,7 +99,6 @@ struct FloPrimaryButtonStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.floButton)
-      .tracking(Font.floButtonTracking)
       .foregroundStyle(Color.floInk)
       .frame(maxWidth: .infinity, minHeight: height)
       .background(Capsule().fill(fill))
@@ -117,7 +115,6 @@ struct FloTintedButtonStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.floButton)
-      .tracking(Font.floButtonTracking)
       .foregroundStyle(tint)
       .frame(maxWidth: .infinity, minHeight: height)
       .background(Capsule().fill(platter))

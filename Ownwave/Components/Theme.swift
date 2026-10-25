@@ -14,14 +14,14 @@ extension EnvironmentValues {
 /// styles for everything people read, so Dynamic Type applies.
 extension Font {
   /// Screen titles such as Library and Your Taste.
-  static let pageTitle = familjen(34, relativeTo: .largeTitle)
+  static let pageTitle = brand(34, relativeTo: .largeTitle)
   /// Album, artist and playlist names over their header.
-  static let heroTitle = familjen(26, relativeTo: .title)
+  static let heroTitle = brand(26, relativeTo: .title)
   /// Section headers: Pinned, Recently Played, Top Songs.
-  static let sectionTitle = familjen(21, relativeTo: .title2)
+  static let sectionTitle = brand(21, relativeTo: .title2)
   /// The song on Now Playing.
-  static let playerTitle = familjen(24, relativeTo: .title2)
-  static let buttonLabel = familjen(17, relativeTo: .headline)
+  static let playerTitle = brand(24, relativeTo: .title2)
+  static let buttonLabel = brand(17, relativeTo: .headline)
   static let wordmark = familjen(26, relativeTo: .title)
   static let rowTitle = Font.system(.body, weight: .medium)
   static let rowSubtitle = Font.system(.subheadline)

@@ -328,7 +328,7 @@ struct SearchView: View {
           topArt(target)
           VStack(alignment: .leading, spacing: 2) {
             Text(target.title)
-              .font(.familjen(22, relativeTo: .title2))
+              .font(.brand(22, relativeTo: .title2))
               .foregroundStyle(palette.text)
             Text(topSubtitle(target))
               .font(.rowSubtitle)

@@ -10,6 +10,7 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>FamiljenGrotesk[wght].ttf</string>
+		<string>InterTight[wght].ttf</string>
 	</array>
 </dict>
 </plist>

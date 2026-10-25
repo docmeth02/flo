@@ -24,6 +24,7 @@
 	<array>
 		<string>FamiljenGrotesk[wght].ttf</string>
 		<string>JetBrainsMono-Medium.ttf</string>
+		<string>InterTight[wght].ttf</string>
 	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>

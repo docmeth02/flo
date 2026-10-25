@@ -525,5 +525,5 @@ private struct Scrubber: View {
 
 extension Font {
   /// The queue's source in the header's pill.
-  fileprivate static let source = familjen(14, relativeTo: .subheadline)
+  fileprivate static let source = brand(14, relativeTo: .subheadline)
 }

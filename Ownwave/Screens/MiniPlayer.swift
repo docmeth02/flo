@@ -59,7 +59,7 @@ struct MiniPlayer: View {
     } label: {
       HStack(spacing: 10) {
         Image(systemName: "sparkles").foregroundStyle(palette.accent)
-        Text("Play Something").font(.buttonLabel).tracking(Font.buttonTracking(17))
+        Text("Play Something").font(.buttonLabel)
         Spacer(minLength: 0)
         if player.isGeneratingMix { ProgressView() }
       }

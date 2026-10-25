@@ -545,6 +545,7 @@ private struct TreemapTile: View {
       Text(artist.name)
         .font(nameFont(tiny: tiny))
         .lineLimit(tiny ? 1 : 2)
+        .allowsTightening(true)
       if !tiny {
         Text(counted(artist.plays, "play"))
           .font(.caption.monospacedDigit())
@@ -567,8 +568,8 @@ private struct TreemapTile: View {
   /// The brand face, smaller as the tile gets smaller.
   private func nameFont(tiny: Bool) -> Font {
     size.width >= 130
-      ? .familjen(17, relativeTo: .body)
-      : tiny ? .familjen(13, relativeTo: .caption) : .familjen(14, relativeTo: .footnote)
+      ? .brand(17, relativeTo: .body)
+      : tiny ? .brand(12, relativeTo: .caption) : .brand(13, relativeTo: .footnote)
   }
 }
 

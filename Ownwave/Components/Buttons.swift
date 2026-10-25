@@ -17,7 +17,6 @@ struct FillButtonStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.buttonLabel)
-      .tracking(Font.buttonTracking(17))
       // A cover tint is light in dark mode and dark in light mode, like the
       // fill, so the palette's ink suits both.
       .foregroundStyle(palette.ink)
@@ -39,7 +38,6 @@ struct PlatterButtonStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.buttonLabel)
-      .tracking(Font.buttonTracking(17))
       .foregroundStyle(palette.text)
       .frame(maxWidth: .infinity)
       .frame(height: height)
