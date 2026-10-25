@@ -7,12 +7,13 @@
   import SwiftUI
 
   extension WatchContentView {
-    /// FLO_DEBUG_PIN=album:<id>|artist:<id> toggles a pin at launch,
+    /// FLO_DEBUG_PIN=<album|artist|playlist|radio>:<id> toggles a pin at launch,
     /// FLO_DEBUG_STAR=album:<id>|artist:<id> a star through StarStore, which
     /// logs when the server took it. FLO_DEBUG_STAR_PENDING=1 logs the stars
-    /// still waiting from the last session. FLO_DEBUG_MENU=song|album|artist
-    /// opens the hold menu for the first track of the first album, the first
-    /// album or the first artist over its screen, for screenshots.
+    /// still waiting from the last session.
+    /// FLO_DEBUG_MENU=song|album|artist|playlist|radio opens the hold menu for
+    /// the first track of the first album, or the first album, artist,
+    /// playlist or station over its screen, for screenshots.
     func runDebugMenuActions() async {
       let env = ProcessInfo.processInfo.environment
       if env["FLO_DEBUG_STAR_PENDING"] == "1" {
@@ -60,6 +61,18 @@
         guard let artist = artists.first else { return debugLog("menu hook: no artists") }
         screen = AnyView(WatchArtistsListView())
         target = .artist(artist)
+      case "playlist":
+        guard let playlist = try? await LibraryAPI.getPlaylists().first else {
+          return debugLog("menu hook: no playlists")
+        }
+        screen = AnyView(WatchPlaylistsListView())
+        target = .playlist(playlist)
+      case "radio":
+        guard let radio = try? await RadioService.shared.getAllRadios().first else {
+          return debugLog("menu hook: no radios")
+        }
+        screen = AnyView(WatchRadiosView())
+        target = .radio(radio)
       case nil: return
       case let other?: return debugLog("menu hook: unknown item \(other)")
       }
@@ -67,7 +80,7 @@
       debugScreen = DebugScreen(view: AnyView(DebugMenuScreen(content: screen, target: target)))
     }
 
-    /// "album:<id>" or "artist:<id>".
+    /// "<kind>:<id>", a `PinStore.Kind` such as "album:<id>".
     private static func debugItem(_ value: String) -> (PinStore.Kind, String)? {
       let parts = value.split(separator: ":", maxSplits: 1).map(String.init)
       guard parts.count == 2, let kind = PinStore.Kind(rawValue: parts[0]) else { return nil }

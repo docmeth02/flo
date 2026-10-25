@@ -67,6 +67,18 @@ final class EngineRulesTests: XCTestCase {
     XCTAssertEqual(StorageUsage().share(of: 0), 0)
   }
 
+  /// Only a rejected login reads as a wrong password.
+  func testLoginErrors() {
+    let rejected = AuthError.invalidCredentials(message: "Invalid Username or Password")
+    XCTAssertTrue(rejected.isCredentialError)
+    XCTAssertEqual(rejected.loginMessage, "Wrong username or password.")
+    let offline = AuthError.server(message: "The Internet connection appears to be offline.")
+    XCTAssertFalse(offline.isCredentialError)
+    XCTAssertEqual(offline.loginMessage, "The Internet connection appears to be offline.")
+    XCTAssertFalse(AuthError.sessionExpired.isCredentialError)
+    XCTAssertFalse(AuthError.unknown.isCredentialError)
+  }
+
   func testServerURLLosesWhitespaceAndTrailingSlashes() {
     XCTAssertEqual(
       UserDefaultsManager.baseURL(" https://music.lan/nd// \n"), "https://music.lan/nd")

@@ -117,9 +117,10 @@ struct SettingsView: View {
       .padding(.bottom, 24)
     }
     .navigationBarTitleDisplayMode(.inline)
-    // Keep Playing and the cellular and download bitrates are what the watch
-    // follows.
+    // Keep Playing, Why this song and the cellular and download bitrates are
+    // what the watch follows.
     .onChange(of: keepPlaying) { WatchLink.shared.updateWatch() }
+    .onChange(of: showMixReasons) { WatchLink.shared.updateWatch() }
     .onChange(of: cellularBitRate) { WatchLink.shared.updateWatch() }
     .onChange(of: downloadBitRate) { WatchLink.shared.updateWatch() }
     .onChange(of: downloadOverCellular) {

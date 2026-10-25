@@ -12,6 +12,8 @@ class AuthViewModel: ObservableObject {
 
   @Published var showAlert: Bool = false
   @Published var alertMessage: String = ""
+  /// Why the last sign-in failed; nil while one runs and after success.
+  @Published var loginError: AuthError?
 
   @Published var isSubmitting: Bool = false
   @Published var isLoggedIn: Bool = false
@@ -204,6 +206,7 @@ class AuthViewModel: ObservableObject {
   func login() {
     sessionGeneration += 1
     isSubmitting = true
+    loginError = nil
 
     // Watch text input often adds a trailing space, and a trailing slash
     // would double up with every endpoint path.
@@ -234,20 +237,8 @@ class AuthViewModel: ObservableObject {
         self.serverUrl = ""
       } catch {
         self.isSubmitting = false
-
-        switch error {
-        case .server(let message), .invalidCredentials(let message):
-          self.alertMessage = message
-
-        case .sessionExpired:
-          // A bare 401/403 without Navidrome's error body, e.g. from a
-          // reverse proxy in front of the server.
-          self.alertMessage = "The server refused the request. Please try again."
-
-        case .unknown:
-          self.alertMessage = "Unknown error occurred"
-        }
-
+        self.loginError = error
+        self.alertMessage = error.loginMessage
         self.showAlert = true
       }
     }

@@ -184,7 +184,9 @@
         try? await Task.sleep(nanoseconds: 1_000_000_000)
       }
       try? await Task.sleep(nanoseconds: 2_000_000_000)
-      guard let song = playerViewModel.nowPlaying else { return debugLog("rating hook: nothing playing") }
+      guard let song = playerViewModel.nowPlaying else {
+        return debugLog("rating hook: nothing playing")
+      }
       selectedTab = .nowPlaying
       playerViewModel.rateNowPlaying(rating)
       debugLog("rating hook: \(song.id ?? "") rated \(rating)")
@@ -284,16 +286,24 @@
     }
 
     // FLO_DEBUG_SCREEN=<name> pushes one screen four seconds after
-    // launch, for screenshots: albums, artists, album, playlist, artist, liked, radios,
-    // downloads, settings, queue, search (FLO_DEBUG_SEARCH=<query> fills in
-    // the query), login-error.
+    // launch, for screenshots: albums, artists, playlists, album, playlist,
+    // artist, liked, radios, downloads, settings, queue, search
+    // (FLO_DEBUG_SEARCH=<query> fills in the query); player selects the
+    // player page; login and login-error show the sign-in screen as a sheet.
     private func runDebugScreen() async {
       guard let name = ProcessInfo.processInfo.environment["FLO_DEBUG_SCREEN"] else { return }
       try? await Task.sleep(nanoseconds: 4_000_000_000)
 
       let view: AnyView
       switch name {
+      case "player":
+        guard playerViewModel.nowPlaying != nil else {
+          return debugLog("screen hook: nothing in the queue")
+        }
+        selectedTab = .nowPlaying
+        return debugLog("screen hook: showing \(name)")
       case "albums": view = AnyView(WatchAlbumsListView())
+      case "playlists": view = AnyView(WatchPlaylistsListView())
       case "artists": view = AnyView(WatchArtistsListView())
       case "album":
         guard let album = try? await LibraryAPI.getAlbum().first else {
@@ -323,10 +333,14 @@
       case "search":
         view = AnyView(
           WatchSearchView(query: ProcessInfo.processInfo.environment["FLO_DEBUG_SEARCH"] ?? ""))
-      case "login-error":
+      case "login", "login-error":
         let auth = AuthViewModel()
-        auth.alertMessage = "Wrong username or password."
-        auth.showAlert = true
+        if name == "login-error" {
+          let error = AuthError.invalidCredentials(message: "")
+          auth.loginError = error
+          auth.alertMessage = error.loginMessage
+          auth.showAlert = true
+        }
         debugLoginScreen = DebugScreen(view: AnyView(WatchLoginView(viewModel: auth)))
         return debugLog("screen hook: showing \(name)")
       default: return debugLog("screen hook: unknown screen \(name)")

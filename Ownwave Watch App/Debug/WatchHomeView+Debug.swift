@@ -25,4 +25,22 @@
       }
     }
   }
+
+  /// FLO_DEBUG_HOME_SCROLL=<anchor> (a `WatchHomeView.Anchor`) scrolls that
+  /// row to the bottom of the screen five seconds after Home appears.
+  struct DebugHomeScroll: ViewModifier {
+    func body(content: Content) -> some View {
+      ScrollViewReader { proxy in
+        content.task {
+          guard
+            let anchor = ProcessInfo.processInfo.environment["FLO_DEBUG_HOME_SCROLL"]
+              .flatMap(WatchHomeView.Anchor.init)
+          else { return }
+          try? await Task.sleep(for: .seconds(5))
+          proxy.scrollTo(anchor, anchor: .bottom)
+          debugLog("home scroll hook: \(anchor)")
+        }
+      }
+    }
+  }
 #endif

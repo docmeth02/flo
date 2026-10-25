@@ -50,4 +50,21 @@ final class WatchLinkTests: XCTestCase {
     XCTAssertEqual(Link.decode(Link.PhoneState.self, from: Link.encode(phone)), phone)
     XCTAssertNil(Link.decode(Link.FileInfo.self, from: Link.encode(phone)))
   }
+
+  /// A phone of an older build leaves out the newer fields.
+  func testOlderPhoneStateDecodes() throws {
+    let older = #"""
+      {"share":true,"streamingBitRate":"192","downloadBitRate":"0","keepPlaying":true,
+      "sending":{"a1":3}}
+      """#
+    let phone = try XCTUnwrap(
+      Link.decode(Link.PhoneState.self, from: ["payload": Data(older.utf8)]))
+    XCTAssertNil(phone.showMixReasons)
+    XCTAssertNil(phone.mixVariety)
+    XCTAssertEqual(phone.sending, ["a1": 3])
+
+    var newer = phone
+    newer.showMixReasons = false
+    XCTAssertEqual(Link.decode(Link.PhoneState.self, from: Link.encode(newer)), newer)
+  }
 }

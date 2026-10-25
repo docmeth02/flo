@@ -44,6 +44,8 @@ enum Link {
     var downloadOverCellular: Bool? = nil
     /// A `MixRanker.Variety`; nil from a phone before build 47.
     var mixVariety: String? = nil
+    /// "Why this song"; nil from a phone before build 48.
+    var showMixReasons: Bool? = nil
     /// The songs of each album the phone is sending; an album it gave up on
     /// drops out.
     var sending: [String: Int] = [:]

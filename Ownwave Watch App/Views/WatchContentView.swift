@@ -140,7 +140,8 @@ struct WatchContentView: View {
     }
     .onChange(of: authViewModel.isSubmitting) { _, submitting in
       guard !submitting else { return }
-      phone.signInFinished(error: authViewModel.isLoggedIn ? nil : authViewModel.alertMessage)
+      phone.signInFinished(
+        error: authViewModel.isLoggedIn ? nil : authViewModel.loginError?.loginMessage)
     }
     .onChange(of: authViewModel.isLoggedIn) { phone.publishState() }
     .onAppear(perform: takePlayRequest)

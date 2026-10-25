@@ -37,6 +37,27 @@ extension AuthError {
   }
 }
 
+extension AuthError {
+  /// What a sign-in screen says. Only a rejected login reads as a wrong
+  /// password; a server or network failure says what happened.
+  var loginMessage: String {
+    switch self {
+    case .invalidCredentials: "Wrong username or password."
+    case .server(let message): message
+    // A bare 401/403 without Navidrome's error body, e.g. from a reverse
+    // proxy in front of the server.
+    case .sessionExpired: "The server refused the request. Please try again."
+    case .unknown: "Unknown error occurred"
+    }
+  }
+
+  /// A rejected username or password, which marks the password field.
+  var isCredentialError: Bool {
+    if case .invalidCredentials = self { return true }
+    return false
+  }
+}
+
 extension Result where Failure == Error {
   /// The outcome of an async call, for code that handles both ends in one
   /// place. Runs on the caller's actor, so it adds no hop of its own.

@@ -145,6 +145,9 @@ import WatchKit
       if let variety = phone.mixVariety.flatMap(MixRanker.Variety.init) {
         UserDefaultsManager.mixVariety = variety
       }
+      if let showMixReasons = phone.showMixReasons {
+        UserDefaultsManager.showMixReasons = showMixReasons
+      }
     }
     UserDefaultsManager.settingsFollowPhone = phone.share
     sending = phone.sending

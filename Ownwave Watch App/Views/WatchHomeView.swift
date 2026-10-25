@@ -14,6 +14,12 @@ struct WatchHomeView: View {
   @State private var openedAlbum: Album?
   @State private var menu: MenuTarget?
 
+  /// Ids of Home's sections, kept across redesigns: screenshots scroll to
+  /// them (FLO_DEBUG_HOME_SCROLL).
+  enum Anchor: String {
+    case card, pinned, recent, library, settings
+  }
+
   var body: some View {
     List {
       if CoreDataManager.shared.isUsingVolatileStore {
@@ -45,6 +51,7 @@ struct WatchHomeView: View {
       .disabled(playerViewModel.isGeneratingMix)
       .listRowBackground(Color.clear)
       .listRowInsets(EdgeInsets())
+      .id(Anchor.card)
 
       if !albumViewModel.recentAlbums.isEmpty {
         Section {
@@ -52,7 +59,7 @@ struct WatchHomeView: View {
             AlbumRow(album: album, menu: $menu) { openedAlbum = album }
           }
         } header: {
-          FloSectionHeader("Recently Played")
+          FloSectionHeader("Recently Played").id(Anchor.recent)
         }
       }
 
@@ -82,7 +89,7 @@ struct WatchHomeView: View {
         }
         .floRow()
       } header: {
-        FloSectionHeader("Library")
+        FloSectionHeader("Library").id(Anchor.library)
       }
 
       Section {
@@ -99,6 +106,7 @@ struct WatchHomeView: View {
           FloNavRow(title: "Settings", systemImage: "gear", tint: .floSecondary)
         }
         .floRow()
+        .id(Anchor.settings)
       }
     }
     .scrollContentBackground(.hidden)
@@ -126,6 +134,7 @@ struct WatchHomeView: View {
     }
     #if DEBUG
       .task { await runDebugFetchAlbums() }
+      .modifier(DebugHomeScroll())
     #endif
   }
 }

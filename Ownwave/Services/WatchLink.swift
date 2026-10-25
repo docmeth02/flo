@@ -124,6 +124,7 @@ import WatchConnectivity
       keepPlaying: UserDefaultsManager.keepPlaying,
       downloadOverCellular: UserDefaultsManager.downloadOverCellular,
       mixVariety: UserDefaultsManager.mixVariety.rawValue,
+      showMixReasons: UserDefaultsManager.showMixReasons,
       sending: Self.songs(of: sends))
     do {
       try session.updateApplicationContext(Link.encode(phone))
