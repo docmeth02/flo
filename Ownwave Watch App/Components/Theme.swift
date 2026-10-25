@@ -73,7 +73,7 @@ enum FloLayout {
 
 extension Font {
   static let floWordmark = familjen(18, relativeTo: .title3)
-  static let floSong = familjen(15, relativeTo: .headline)
+  static let floSong = interTight(15, relativeTo: .headline)
   // Text styles rather than point sizes, so the watch's text size applies.
   static let floRow = Font.system(.subheadline, weight: .medium)
   static let floRowTitle = Font.system(.subheadline, weight: .semibold)
@@ -81,9 +81,9 @@ extension Font {
   static let floSection = Font.system(.footnote, weight: .semibold)
   /// Badges and small labels.
   static let floCaption = Font.system(.caption2, weight: .semibold)
-  static let floTime = familjen(14, relativeTo: .caption2).monospacedDigit()
-  static let floButton = familjen(16, relativeTo: .subheadline)
-  static let floNavTitle = familjen(15, relativeTo: .headline)
+  static let floTime = interTight(14, relativeTo: .caption2).monospacedDigit()
+  static let floButton = interTight(16, relativeTo: .subheadline)
+  static let floNavTitle = interTight(15, relativeTo: .headline)
   static let floButtonTracking = buttonTracking(16)
   /// Mono small caps labels: "NOW PLAYING", "NEXT · 14 SONGS".
   static let floCaps = mono(9, relativeTo: .caption2)

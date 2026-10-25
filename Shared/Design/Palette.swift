@@ -59,6 +59,11 @@ extension Font {
     .custom("Familjen Grotesk", size: size, relativeTo: style).weight(.semibold)
   }
 
+  /// Inter Tight, on trial in place of Familjen Grotesk outside the wordmark.
+  static func interTight(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+    .custom("Inter Tight", size: size, relativeTo: style).weight(.semibold)
+  }
+
   /// The mono face for counters, sizes and small caps labels, scaling with
   /// the text style `style`.
   static func mono(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
