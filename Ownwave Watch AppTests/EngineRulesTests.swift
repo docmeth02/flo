@@ -59,12 +59,27 @@ final class EngineRulesTests: XCTestCase {
     XCTAssertEqual(ServerAccount.path(of: "music lan"), "")
   }
 
-  func testStorageShares() {
-    let usage = StorageUsage(cache: 100, downloads: 300, free: 600)
-    XCTAssertEqual(usage.used, 400)
-    XCTAssertEqual(usage.share(of: usage.downloads), 0.3, accuracy: 1e-9)
-    XCTAssertEqual(usage.share(of: usage.free), 0.6, accuracy: 1e-9)
-    XCTAssertEqual(StorageUsage().share(of: 0), 0)
+  func testStorageBarWidths() {
+    XCTAssertEqual(StorageUsage(cache: 100, downloads: 300, free: 600).used, 400)
+    // Shares of the parts shown, here downloads and free without the cache.
+    XCTAssertEqual(
+      StorageUsage.barWidths([300, 700], in: 102, gap: 2, minimum: 5), [30, 70])
+    // A small part keeps the minimum; the widest gives up that room.
+    let widths = StorageUsage.barWidths([1, 999], in: 102, gap: 2, minimum: 5)
+    XCTAssertEqual(widths[0], 5)
+    XCTAssertEqual(widths.reduce(0, +), 100, accuracy: 1e-9)
+    // Nothing known yet, or no room: no widths below zero.
+    XCTAssertEqual(StorageUsage.barWidths([0, 0], in: 100, gap: 2, minimum: 5), [0, 0])
+    XCTAssertEqual(StorageUsage.barWidths([1, 2], in: 0, gap: 2, minimum: 5), [0, 0])
+    XCTAssertEqual(StorageUsage.barWidths([], in: 100, gap: 2, minimum: 5), [])
+    XCTAssertTrue(
+      StorageUsage.barWidths([1, 1, 1], in: 8, gap: 2, minimum: 5).allSatisfy { $0 >= 0 })
+  }
+
+  /// The platform's free space: the watch's file system figure, the phone's
+  /// important-usage capacity; known and never negative on both.
+  func testFreeBytes() {
+    XCTAssertGreaterThan(AppPlatform.freeBytes(), 0)
   }
 
   /// Only a rejected login reads as a wrong password.

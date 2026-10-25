@@ -233,7 +233,7 @@ import WatchKit
       return state
     }
     state.musicBytes = await bytes
-    state.freeBytes = StorageUsage.freeBytes()
+    state.freeBytes = AppPlatform.freeBytes()
     return state
   }
 }

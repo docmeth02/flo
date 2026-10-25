@@ -41,6 +41,15 @@ enum AppPlatform {
       return "\(device.systemName) \(device.systemVersion)"
     }
 
+    /// The room left on the watch: the file system's free size, since the
+    /// volume's available capacity can be negative on watchOS and its
+    /// important-usage figure does not exist there.
+    static func freeBytes() -> Int64 {
+      let system = try? FileManager.default.attributesOfFileSystem(
+        forPath: URL.documentsDirectory.path)
+      return max(0, (system?[.systemFreeSize] as? NSNumber)?.int64Value ?? 0)
+    }
+
     /// Activates the session and connects an output, asking for a device
     /// when none is in reach. Reports `false` without an error when the
     /// user dismissed the device list.
@@ -77,6 +86,14 @@ enum AppPlatform {
     @MainActor static var systemDescription: String {
       let device = UIDevice.current
       return "\(device.systemName) \(device.systemVersion)"
+    }
+
+    /// The room left for what the user keeps, counting what iOS would purge
+    /// to make it.
+    static func freeBytes() -> Int64 {
+      let key = URLResourceKey.volumeAvailableCapacityForImportantUsageKey
+      let values = try? URL.homeDirectory.resourceValues(forKeys: [key])
+      return values?.volumeAvailableCapacityForImportantUsage ?? 0
     }
 
     static func activateAudio(_ done: @escaping (Bool, Error?) -> Void) {

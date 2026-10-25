@@ -14,27 +14,27 @@ struct StorageUsage: Equatable {
 
   var used: Int64 { cache + downloads }
 
-  /// The part `bytes` is of the cache, the downloads and the room left
-  /// together, 0 while nothing is known.
-  func share(of bytes: Int64) -> Double {
-    let total = used + free
-    return total > 0 ? Double(bytes) / Double(total) : 0
-  }
-
   /// Reads the sizes off the main thread.
   static func measure() async -> StorageUsage {
     async let cache = StreamCacheManager.shared.calculateCacheSize()
     async let downloads = LocalFileManager.shared.downloadsBytes()
-    async let free = Task.detached(priority: .userInitiated) { freeBytes() }.value
+    async let free = Task.detached(priority: .userInitiated) { AppPlatform.freeBytes() }.value
     return await StorageUsage(cache: cache, downloads: downloads, free: free)
   }
 
-  /// The room left on the device. The file system's free size: the volume's
-  /// available capacity can be negative on watchOS, and its important-usage
-  /// figure does not exist there.
-  static func freeBytes() -> Int64 {
-    let system = try? FileManager.default.attributesOfFileSystem(
-      forPath: URL.documentsDirectory.path)
-    return max(0, (system?[.systemFreeSize] as? NSNumber)?.int64Value ?? 0)
+  /// The widths of a bar's parts, each its share of the parts together, in
+  /// `width` with `gap` between them. A small part stays `minimum` wide, so
+  /// it shows; the widest gives up that room.
+  static func barWidths(
+    _ parts: [Int64], in width: Double, gap: Double, minimum: Double
+  ) -> [Double] {
+    let total = parts.reduce(0, +)
+    let room = width - gap * Double(max(parts.count - 1, 0))
+    guard total > 0, room > 0 else { return parts.map { _ in 0 } }
+    var widths = parts.map { max(minimum, room * Double($0) / Double(total)) }
+    if let widest = widths.indices.max(by: { widths[$0] < widths[$1] }) {
+      widths[widest] = max(0, widths[widest] - (widths.reduce(0, +) - room))
+    }
+    return widths
   }
 }

@@ -367,12 +367,8 @@ private struct StorageBar: View {
       (color: Color.floDownloaded, bytes: sizes.downloads),
       (color: palette.surface2, bytes: sizes.free),
     ].filter { $0.bytes > 0 }
-    let room = width - Self.gap * CGFloat(max(parts.count - 1, 0))
-    var widths = parts.map { max(Self.height, room * sizes.share(of: $0.bytes)) }
-    // A small part shows at least a dot; the widest gives up that room.
-    if let widest = widths.indices.max(by: { widths[$0] < widths[$1] }) {
-      widths[widest] -= widths.reduce(0, +) - room
-    }
+    let widths = StorageUsage.barWidths(
+      parts.map(\.bytes), in: width, gap: Self.gap, minimum: Self.height)
     return zip(parts, widths).map { ($0.color, $1) }
   }
 

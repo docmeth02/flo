@@ -31,24 +31,25 @@ struct StorageBar: View {
     .accessibilityHidden(true)
   }
 
-  /// The parts that hold something and the room left, with their widths; a
-  /// small part stays as wide as the bar is high, so it shows.
+  /// The parts that hold something and the room left, with their widths.
   private func widths(in width: CGFloat) -> [(color: Color, width: CGFloat)] {
     let shown = (parts + [Part(color: .floSurface2, bytes: usage.free)]).filter { $0.bytes > 0 }
-    let room = width - Self.gap * CGFloat(max(shown.count - 1, 0))
-    var widths = shown.map { max(Self.height, room * usage.share(of: $0.bytes)) }
-    if let widest = widths.indices.max(by: { widths[$0] < widths[$1] }) {
-      widths[widest] -= widths.reduce(0, +) - room
-    }
+    let widths = StorageUsage.barWidths(
+      shown.map(\.bytes), in: width, gap: Self.gap, minimum: Self.height)
     return zip(shown, widths).map { ($0.color, $1) }
   }
 }
 
 extension View {
   /// Measures the storage when the view appears and again whenever
-  /// `trigger` changes; only the newest measurement lands.
+  /// `trigger` changes; only the newest measurement lands. A change waits a
+  /// moment first, so a burst of finished songs walks the folders once.
   func measuresStorage(_ usage: Binding<StorageUsage>, trigger: some Equatable) -> some View {
     task(id: trigger) {
+      if usage.wrappedValue != StorageUsage() {
+        try? await Task.sleep(for: .seconds(1))
+        guard !Task.isCancelled else { return }
+      }
       let measured = await StorageUsage.measure()
       if !Task.isCancelled { usage.wrappedValue = measured }
     }
