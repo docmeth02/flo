@@ -20,11 +20,17 @@ struct WatchArtistDetailView: View {
   @State private var openedAlbum: Album?
   @State private var menu: MenuTarget?
 
+  private static let glyphSize: CGFloat = 44
+
   let artist: Artist
 
   var body: some View {
+    let albums = albumViewModel.albums(byArtist: artist.id)
     List {
-      Section {
+      header
+        .listRowBackground(Color.clear)
+
+      HStack(spacing: 6) {
         Button(action: {
           radioTask = Task {
             let songs = await artistDetailViewModel.fetchArtistRadio(artist: artist)
@@ -41,10 +47,10 @@ struct WatchArtistDetailView: View {
           if artistDetailViewModel.isLoadingRadio {
             ProgressView()
           } else {
-            Label("Artist Radio", systemImage: "dot.radiowaves.up.forward")
+            Label("Radio", systemImage: "dot.radiowaves.up.forward")
           }
         }
-        .capsuleRow()
+        .accessibilityLabel("Artist Radio")
 
         // Top songs online, else the artist's songs on the watch, as Siri
         // plays an artist.
@@ -58,28 +64,38 @@ struct WatchArtistDetailView: View {
           if isLoadingTopSongs {
             ProgressView()
           } else {
-            Label("Top Songs", systemImage: "music.note.list")
+            Label {
+              Text("Top Songs").minimumScaleFactor(0.8)
+            } icon: {
+              Image(systemName: "chart.line.uptrend.xyaxis")
+            }
           }
         }
-        .capsuleRow()
       }
+      .buttonStyle(FloTileButtonStyle(alignment: .center))
       .disabled(artistDetailViewModel.isLoadingRadio || playerViewModel.isGeneratingMix)
+      .listRowBackground(Color.clear)
+      .listRowInsets(EdgeInsets())
 
       Section {
-        ForEach(albumViewModel.albums(byArtist: artist.id)) { album in
+        ForEach(Array(albums.enumerated()), id: \.element.id) { index, album in
           CoverRow(
             tile: .cover(albumId: album.id),
             title: album.name,
-            subtitle: album.minYear > 0 ? String(album.minYear) : ""
+            subtitle: album.minYear > 0 ? String(album.minYear) : "",
+            tileSize: FloLayout.smallThumbnail
           )
           .holdable(onTap: { openedAlbum = album }, onHold: { menu = .album(album) })
-          .floRow()
+          .floJoinedRow(RowPosition(index: index, count: albums.count))
         }
       } header: {
         FloSectionHeader("Albums")
       }
     }
-    .floNavigationTitle(artist.name)
+    .listStyle(.plain)
+    // Rows as low as their content, so the joined albums sit tight; 0 made
+    // watchOS skip rows.
+    .environment(\.defaultMinListRowHeight, 1)
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .itemMenu($menu)
     .onAppear {
@@ -92,13 +108,27 @@ struct WatchArtistDetailView: View {
       Text(ArtistDetailViewModel.noRadioMessage(failed: radioFailed))
     }
   }
-}
 
-extension View {
-  /// A capsule button as a whole list row, without the row platter.
-  fileprivate func capsuleRow() -> some View {
-    buttonStyle(FloTintedButtonStyle())
-      .listRowBackground(Color.clear)
-      .listRowInsets(EdgeInsets())
+  /// The artist stands in for a navigation title.
+  private var header: some View {
+    HStack(spacing: FloLayout.tileSpacing) {
+      Image(systemName: "music.mic")
+        .font(.system(size: 22))
+        .foregroundStyle(Color.floLilac)
+        .frame(width: Self.glyphSize, height: Self.glyphSize)
+        .background(Circle().fill(Color.floSurface2))
+      VStack(alignment: .leading, spacing: 1) {
+        Text(artist.name)
+          .font(.floSong)
+          .lineLimit(2)
+        if artist.albumCount > 0 {
+          Text(counted(artist.albumCount, "album"))
+            .font(.floMeta)
+            .foregroundStyle(Color.floSecondary)
+        }
+      }
+      Spacer(minLength: 0)
+    }
+    .accessibilityElement(children: .combine)
   }
 }
