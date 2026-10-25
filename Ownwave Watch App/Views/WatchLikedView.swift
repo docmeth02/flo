@@ -74,7 +74,8 @@ struct WatchLikedView: View {
     }
   }
 
-  /// Liked Songs: a tap opens the list, the round button shuffles it.
+  /// Liked Songs: a tap opens the list, the round button beside it, outside
+  /// the row's tap, shuffles it.
   private func songsRow(_ songs: [Song]) -> some View {
     HStack(spacing: 4) {
       HStack(spacing: FloLayout.tileSpacing) {
@@ -92,7 +93,8 @@ struct WatchLikedView: View {
         }
         .lineLimit(1)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .frame(maxWidth: .infinity, minHeight: FloLayout.joinedRowHeight, alignment: .leading)
+      .holdable(onTap: { showsSongs = true }, onHold: nil)
       Button {
         if playerViewModel.shuffleItem(item: SongCollection.liked(songs)) { showPlayer() }
       } label: {
@@ -101,8 +103,6 @@ struct WatchLikedView: View {
       .buttonStyle(FloRoundButtonStyle())
       .accessibilityLabel("Shuffle Liked Songs")
     }
-    .frame(minHeight: FloLayout.joinedRowHeight)
-    .holdable(onTap: { showsSongs = true }, onHold: nil)
   }
 
   @ViewBuilder

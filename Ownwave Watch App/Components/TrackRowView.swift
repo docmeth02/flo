@@ -72,6 +72,7 @@ extension View {
   /// Tap and hold on one plain view, which a `Button` cannot do on the watch:
   /// it takes the whole touch and the hold never arrives. The row dims while
   /// pressed, as a button would. Without `onHold` it is a plain tap target.
+  /// VoiceOver reads it as one button, with the menu as a named action.
   func holdable(onTap: @escaping () -> Void, onHold: (() -> Void)?) -> some View {
     modifier(HoldableRow(onTap: onTap, onHold: onHold))
   }
@@ -93,6 +94,11 @@ struct HoldableRow: ViewModifier {
         onHold()
       } onPressingChanged: {
         isPressed = $0
+      }
+      .accessibilityElement(children: .combine)
+      .accessibilityAddTraits(.isButton)
+      .accessibilityActions {
+        if let onHold { Button("Menu", action: onHold) }
       }
   }
 }

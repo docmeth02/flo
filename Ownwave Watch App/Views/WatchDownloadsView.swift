@@ -97,7 +97,8 @@ struct WatchDownloadsView: View {
       .lineLimit(1)
       StorageBar(usage: storage, parts: [.init(color: .floLilac, bytes: storage.downloads)])
     }
-    .accessibilityElement(children: .combine)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("Downloads \(storage.downloads.fileSize), \(storage.free.fileSize) free")
   }
 
   private func albumRow(_ album: Album) -> some View {

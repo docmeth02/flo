@@ -151,6 +151,9 @@ struct WatchNowPlayingView: View {
           clock: playerViewModel.clock, duration: song.duration, tint: accent,
           seek: playerViewModel.seek(to:)
         )
+        // A new song ends a drag begun on the one before, which would
+        // otherwise seek the new one on release.
+        .id(song.objectID)
         .padding(.horizontal, 12)
 
         HStack(spacing: 0) {
@@ -359,6 +362,9 @@ private struct SeekBar: View {
   @State private var dragged: Double?
 
   private let knob: CGFloat = 7
+  /// The band around the bar that seeks; a page swipe can start above or
+  /// below it.
+  private let hitHeight: CGFloat = 14
 
   var body: some View {
     let shown = dragged ?? clock.clampedProgress
@@ -378,7 +384,7 @@ private struct SeekBar: View {
               .frame(width: knob, height: knob)
               .offset(x: min(max(width * shown - knob / 2, 0), width - knob))
           }
-          .frame(maxHeight: .infinity)
+          .frame(height: hitHeight)
           .contentShape(Rectangle())
           // Ahead of the page swipe, which would take a sideways drag.
           .highPriorityGesture(
@@ -389,6 +395,7 @@ private struct SeekBar: View {
                 dragged = nil
               }
           )
+          .frame(maxHeight: .infinity)
       }
       .frame(height: 22)
       Text("-" + (duration * (1 - shown)).minuteSecond)
