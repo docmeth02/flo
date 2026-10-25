@@ -8,8 +8,15 @@ import WatchKit
 
 /// A song on its own surface platter, for scroll views. Inside a List, give
 /// the row a clear background so the platter is not drawn twice. A tap runs
-/// `action`, a hold `onHold` (the song menu).
+/// `action`, a hold `onHold` (the song menu). Without an artist the title
+/// stands alone.
 struct TrackRowView: View {
+  private static let padding: CGFloat = 10
+  private static let numberWidth: CGFloat = 18
+  private static let spacing: CGFloat = 9
+  /// Where the title starts, for hairlines between rows on one platter.
+  static let textInset = padding + numberWidth + spacing
+
   let trackNumber: Int
   let title: String
   let artist: String
@@ -21,7 +28,7 @@ struct TrackRowView: View {
   var action: () -> Void
 
   var body: some View {
-    HStack(spacing: 9) {
+    HStack(spacing: Self.spacing) {
       Group {
         if isPlaying {
           Image(systemName: "waveform")
@@ -29,26 +36,28 @@ struct TrackRowView: View {
             .foregroundStyle(tint)
         } else {
           Text("\(trackNumber)")
-            .font(.system(.caption, weight: .semibold).monospacedDigit())
+            .font(.counter)
             .foregroundStyle(Color.floSecondary)
         }
       }
-      .frame(width: 18)
+      .frame(width: Self.numberWidth)
 
       VStack(alignment: .leading, spacing: 1) {
         Text(title)
           .font(.system(.subheadline, weight: isPlaying ? .semibold : .medium))
           .foregroundStyle(isPlaying ? tint : .white)
           .lineLimit(1)
-        Text(artist)
-          .font(.floMeta)
-          .foregroundStyle(Color.floSecondary)
-          .lineLimit(1)
+        if !artist.isEmpty {
+          Text(artist)
+            .font(.floMeta)
+            .foregroundStyle(Color.floSecondary)
+            .lineLimit(1)
+        }
       }
 
       Spacer(minLength: 0)
     }
-    .padding(.horizontal, 10)
+    .padding(.horizontal, Self.padding)
     .padding(.vertical, 4)
     .frame(minHeight: FloLayout.rowHeight)
     .background(

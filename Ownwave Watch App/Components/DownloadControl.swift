@@ -5,7 +5,8 @@
 
 import SwiftUI
 
-/// Download, progress, missing songs and removal of an album or playlist.
+/// Download, progress, missing songs, a failed download and removal of an
+/// album or playlist.
 struct DownloadControl: View {
   enum State: Equatable {
     case none
@@ -13,6 +14,9 @@ struct DownloadControl: View {
     /// Sent by the iPhone, which alone can stop it, so it has no Cancel.
     case receiving(percent: Int)
     case partial(missing: Int)
+    /// Songs the server would not deliver after their retries; Download
+    /// queues them again.
+    case failed
     case done
   }
 
@@ -21,82 +25,63 @@ struct DownloadControl: View {
   var onCancel: () -> Void
   var onRemove: () -> Void
 
+  private var remove: PlatterRows.Row {
+    PlatterRows.Row(
+      title: "Remove Download", systemImage: "trash", tint: .floDestructive,
+      label: .floDestructive, action: onRemove)
+  }
+
   var body: some View {
-    VStack(spacing: 6) {
-      switch state {
-      case .none:
-        row("Download", systemImage: "arrow.down.circle", tint: .floLilac, action: onDownload)
-      case .downloading(let percent), .receiving(let percent):
-        VStack(spacing: 6) {
-          HStack(alignment: .firstTextBaseline) {
-            Text("Downloading").font(.floRow)
-            Spacer()
-            Text("\(percent)%")
-              .font(.system(.footnote, weight: .semibold).monospacedDigit())
-              .foregroundStyle(Color.floLilac)
-          }
-          ProgressView(value: Double(percent), total: 100)
-            .tint(.floLilac)
-          if case .downloading = state {
-            Button("Cancel", action: onCancel)
-              .buttonStyle(
-                FloTintedButtonStyle(tint: .floDestructive, height: 36))
-          }
+    switch state {
+    case .none:
+      PlatterRows([
+        PlatterRows.Row(title: "Download", systemImage: "arrow.down.circle", action: onDownload)
+      ])
+    case .downloading(let percent), .receiving(let percent):
+      VStack(spacing: 6) {
+        HStack(alignment: .firstTextBaseline) {
+          Text("Downloading").font(.floRow)
+          Spacer()
+          Text("\(percent)%")
+            .font(.counter)
+            .foregroundStyle(Color.floLilac)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(
-          RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
-            .fill(Color.floSurface))
-      case .partial(let missing):
-        status(
-          "\(counted(missing, "song")) missing", systemImage: "exclamationmark.circle.fill",
-          tint: .floWarning, text: .floWarningText)
-        row(
-          "Download \(missing) missing", systemImage: "arrow.down.circle", tint: .floLilac,
-          action: onDownload)
-        row(
-          "Remove Download", systemImage: "trash", tint: .floDestructive, label: .floDestructive,
-          action: onRemove)
-      case .done:
-        status(
-          "Downloaded", systemImage: "checkmark.circle.fill", tint: .floDownloaded,
-          text: .floDownloadedText)
-        row(
-          "Remove Download", systemImage: "trash", tint: .floDestructive, label: .floDestructive,
-          action: onRemove)
-      }
-    }
-  }
-
-  private func status(_ title: String, systemImage: String, tint: Color, text: Color) -> some View {
-    HStack(spacing: 6) {
-      Image(systemName: systemImage).font(.system(size: 14)).foregroundStyle(tint)
-      Text(title).font(.floSection).foregroundStyle(text)
-      Spacer(minLength: 0)
-    }
-    .padding(.horizontal, 6)
-    .padding(.top, 4)
-  }
-
-  private func row(
-    _ title: String, systemImage: String, tint: Color, label: Color = .white,
-    action: @escaping () -> Void
-  ) -> some View {
-    Button(action: action) {
-      HStack(spacing: 8) {
-        Image(systemName: systemImage).font(.system(size: 18)).foregroundStyle(tint)
-        Text(title).font(.floRow).foregroundStyle(label)
-        Spacer(minLength: 0)
+        ProgressView(value: Double(percent), total: 100)
+          .tint(.floLilac)
+        if case .downloading = state {
+          Button("Cancel", action: onCancel)
+            .buttonStyle(
+              FloTintedButtonStyle(tint: .floDestructive, platter: .floSurface2, height: 36))
+        }
       }
       .padding(.horizontal, 12)
-      .frame(minHeight: FloLayout.rowHeight)
+      .padding(.vertical, 9)
       .background(
-        RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
-          .fill(Color.floSurface)
-      )
-      .contentShape(Rectangle())
+        RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous)
+          .fill(Color.floSurface))
+    case .partial(let missing):
+      PlatterRows([
+        PlatterRows.Row(
+          title: "\(counted(missing, "song")) missing", systemImage: "exclamationmark.circle.fill",
+          tint: .floWarning, label: .floWarningText),
+        PlatterRows.Row(
+          title: "Download Missing", systemImage: "arrow.down.circle", action: onDownload),
+        remove,
+      ])
+    case .failed:
+      PlatterRows([
+        PlatterRows.Row(
+          title: "Download failed", detail: "Try again", systemImage: "xmark.circle.fill",
+          tint: .floDestructive, action: onDownload),
+        remove,
+      ])
+    case .done:
+      PlatterRows([
+        PlatterRows.Row(
+          title: "Downloaded", systemImage: "checkmark.circle.fill", tint: .floDownloaded,
+          label: .floDownloadedText),
+        remove,
+      ])
     }
-    .buttonStyle(.plain)
   }
 }
