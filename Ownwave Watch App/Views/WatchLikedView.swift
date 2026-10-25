@@ -12,12 +12,15 @@ struct WatchLikedView: View {
   @EnvironmentObject var playerViewModel: PlayerViewModel
   @ObservedObject private var starStore = StarStore.shared
 
+  @Environment(\.showPlayer) private var showPlayer
+  @State private var showsSongs = false
   @State private var openedAlbum: Album?
   @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
 
-  private var hasSongs: Bool {
-    albumViewModel.starredSongs.contains { playerViewModel.isStarred($0) }
+  /// Unliked songs leave at once, before the list reloads.
+  private var songs: [Song] {
+    albumViewModel.starredSongs.filter { playerViewModel.isStarred($0) }
   }
 
   private var albums: [Album] {
@@ -36,42 +39,29 @@ struct WatchLikedView: View {
   }
 
   var body: some View {
-    let hasSongs = hasSongs
+    let songs = songs
     let albums = albums
     let artists = artists
     LibraryList(
       title: "Liked", state: state,
-      isEmpty: !hasSongs && albums.isEmpty && artists.isEmpty,
+      isEmpty: songs.isEmpty && albums.isEmpty && artists.isEmpty,
       empty: .empty(
         systemImage: "heart.fill", tint: .floLiked, title: "Nothing liked yet",
         message: "Liked songs, albums and artists show up here."),
       refresh: refresh
     ) {
-      if hasSongs {
-        NavigationLink(destination: WatchStarredSongsView()) {
-          FloNavRow(title: "Songs", systemImage: "heart.fill", tint: .floLiked)
-        }
-        .floRow()
+      if !songs.isEmpty {
+        songsRow(songs)
+          .floJoinedRow(.alone)
       }
-      if !albums.isEmpty {
-        Section {
-          ForEach(albums) { album in
-            AlbumRow(album: album, menu: $menu) { openedAlbum = album }
-          }
-        } header: {
-          FloSectionHeader("Albums")
-        }
+      section("Albums", albums) { album in
+        LibraryRow(target: .album(album), menu: $menu) { openedAlbum = album }
       }
-      if !artists.isEmpty {
-        Section {
-          ForEach(artists) { artist in
-            ArtistRow(artist: artist, menu: $menu) { openedArtist = artist }
-          }
-        } header: {
-          FloSectionHeader("Artists")
-        }
+      section("Artists", artists) { artist in
+        LibraryRow(target: .artist(artist), menu: $menu) { openedArtist = artist }
       }
     }
+    .navigationDestination(isPresented: $showsSongs) { WatchStarredSongsView() }
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .itemMenu($menu)
@@ -81,6 +71,50 @@ struct WatchLikedView: View {
       albumViewModel.fetchStarredSongs()
       albumViewModel.fetchAlbums()
       albumViewModel.getArtists()
+    }
+  }
+
+  /// Liked Songs: a tap opens the list, the round button shuffles it.
+  private func songsRow(_ songs: [Song]) -> some View {
+    HStack(spacing: 4) {
+      HStack(spacing: FloLayout.tileSpacing) {
+        Image(systemName: "heart.fill")
+          .font(.system(size: 16))
+          .foregroundStyle(Color.floLiked)
+          .frame(width: FloLayout.smallThumbnail, height: FloLayout.smallThumbnail)
+          .background(Circle().fill(Color.floLiked.opacity(0.22)))
+        VStack(alignment: .leading, spacing: 1) {
+          Text("Liked Songs")
+            .font(.floRowTitle)
+          Text("Play or shuffle")
+            .font(.floMeta)
+            .foregroundStyle(Color.floSecondary)
+        }
+        .lineLimit(1)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      Button {
+        if playerViewModel.shuffleItem(item: SongCollection.liked(songs)) { showPlayer() }
+      } label: {
+        Image(systemName: "shuffle")
+      }
+      .buttonStyle(FloRoundButtonStyle())
+      .accessibilityLabel("Shuffle Liked Songs")
+    }
+    .frame(minHeight: FloLayout.joinedRowHeight)
+    .holdable(onTap: { showsSongs = true }, onHold: nil)
+  }
+
+  @ViewBuilder
+  private func section<Item: Identifiable, Row: View>(
+    _ title: String, _ items: [Item], @ViewBuilder row: @escaping (Item) -> Row
+  ) -> some View {
+    if !items.isEmpty {
+      Section {
+        JoinedRows(items: items, row: row)
+      } header: {
+        FloSectionHeader(title)
+      }
     }
   }
 

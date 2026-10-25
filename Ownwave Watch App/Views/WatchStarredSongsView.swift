@@ -39,6 +39,8 @@ struct WatchStarredSongsView: View {
           let liked = SongCollection.liked(songs)
           if playerViewModel.playItem(item: liked, startingAt: idx) { showPlayer() }
         }
+        // The row's own platter, as wide as the platters of other lists.
+        .listRowInsets(EdgeInsets())
         .listRowBackground(Color.clear)
       }
     }
