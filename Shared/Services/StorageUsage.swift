@@ -12,8 +12,6 @@ struct StorageUsage: Equatable {
   var downloads: Int64 = 0
   var free: Int64 = 0
 
-  var used: Int64 { cache + downloads }
-
   /// Reads the sizes off the main thread.
   static func measure() async -> StorageUsage {
     async let cache = StreamCacheManager.shared.calculateCacheSize()

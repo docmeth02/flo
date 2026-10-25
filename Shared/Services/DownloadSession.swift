@@ -179,16 +179,20 @@ final class DownloadSession: NSObject, ObservableObject {
   /// Queues the songs of `collection` that are not on the device yet. A song
   /// queued already keeps its job; failed ones start over at the current
   /// bitrate, and a failed one `collection` does not list (offline a screen
-  /// lists only the songs on the device) at the bitrate it had.
+  /// lists only the songs on the device) at the bitrate it had, unless the
+  /// song arrived meanwhile, from the iPhone for one.
   private func queueSongs(of collection: Album) {
+    let downloaded = DownloadStore.downloadedMediaFileIds(collectionId: collection.id)
     let wanted = DownloadJob.jobs(
       for: collection, isPlaylist: collection.isPlaylist,
-      kbps: Int(UserDefaultsManager.downloadBitRate) ?? 0,
-      downloaded: DownloadStore.downloadedMediaFileIds(collectionId: collection.id))
+      kbps: Int(UserDefaultsManager.downloadBitRate) ?? 0, downloaded: downloaded)
     let continuing = isDownloading(collectionId: collection.id)
     let wantedIds = Set(wanted.map(\.id))
 
-    jobs.removeAll { $0.collectionId == collection.id && $0.failed && wantedIds.contains($0.id) }
+    jobs.removeAll {
+      $0.collectionId == collection.id && $0.failed
+        && (wantedIds.contains($0.id) || downloaded.contains($0.mediaFileId))
+    }
     jobs += wanted.filter { job in !jobs.contains { $0.id == job.id } }
     // A tap does not wait out a retry, and a failed song left unlisted goes
     // again.

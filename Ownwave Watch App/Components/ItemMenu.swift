@@ -213,6 +213,9 @@ private struct ItemMenuPresenter: ViewModifier {
   private func download(_ target: MenuTarget) async -> String? {
     guard let collection = collection(target) else { return nil }
     switch await CollectionDownload.prepare(collection) {
+    case .ready where PhoneLink.shared.isReceiving(collectionId: collection.id):
+      // The iPhone started sending it while the songs were asked.
+      return nil
     case .ready(let album):
       if case .playlist(var playlist) = target {
         playlist.songs = album.songs

@@ -60,7 +60,6 @@ final class EngineRulesTests: XCTestCase {
   }
 
   func testStorageBarWidths() {
-    XCTAssertEqual(StorageUsage(cache: 100, downloads: 300, free: 600).used, 400)
     // Shares of the parts shown, here downloads and free without the cache.
     XCTAssertEqual(
       StorageUsage.barWidths([300, 700], in: 102, gap: 2, minimum: 5), [30, 70])

@@ -7,9 +7,6 @@ import Alamofire
 import SwiftUI
 
 class FloooViewModel: ObservableObject {
-  @Published var downloadedAlbums: Int = 0
-  @Published var downloadedSongs: Int = 0
-
   @Published var localDirectorySize: String = "0 MB"
 
   static let shared = FloooViewModel()
@@ -39,9 +36,6 @@ class FloooViewModel: ObservableObject {
   }
 
   func getLocalStorageInformation() {
-    self.downloadedAlbums = CoreDataManager.shared.countRecords(entity: PlaylistEntity.self)
-    self.downloadedSongs = CoreDataManager.shared.countRecords(entity: SongEntity.self)
-
     Task {
       let directorySize = await LocalFileManager.shared.calculateDirectorySize()
 
