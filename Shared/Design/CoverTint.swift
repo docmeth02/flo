@@ -49,8 +49,10 @@ enum CoverTint {
   /// The cover (as `coverFile` finds it) drawn into a bitmap off the main
   /// thread: decoding a full cover there would stall a transition or every
   /// redraw.
-  static func decodedImage(albumId: String, url: String = "") async -> UIImage? {
-    let path = await coverFile(albumId: albumId, url: url)
+  static func decodedImage(albumId: String, url: String = "", artId: String? = nil) async
+    -> UIImage?
+  {
+    let path = await coverFile(albumId: albumId, url: url, artId: artId)
     return await Task.detached(priority: .userInitiated) {
       path.flatMap(UIImage.init(contentsOfFile:)).flatMap(decoded)
     }.value

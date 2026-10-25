@@ -7,31 +7,36 @@ import SwiftUI
 
 struct WatchAlbumArtView: View {
   let albumId: String
+  /// A cover of its own, such as a playlist's mosaic; the album's when nil.
+  var artId: String?
   var size: CGFloat = FloLayout.thumbnail
 
-  // The decoded cover, remembered together with the album it is for, so a
-  // view reused for another album never shows the previous cover.
-  @State private var loaded: (albumId: String, image: UIImage?)?
+  // The decoded cover, remembered together with the cover it is, so a view
+  // reused for another album never shows the previous cover.
+  @State private var loaded: (key: String, image: UIImage?)?
+
+  private var key: String { albumId + "|" + (artId ?? "") }
 
   private var image: UIImage? {
-    loaded?.albumId == albumId ? loaded?.image : nil
+    loaded?.key == key ? loaded?.image : nil
   }
 
   private var loadFailed: Bool {
-    loaded?.albumId == albumId && loaded?.image == nil
+    loaded?.key == key && loaded?.image == nil
   }
 
   var body: some View {
     content
-      .task(id: albumId) {
-        guard !albumId.isEmpty, loaded?.albumId != albumId else { return }
+      .task(id: key) {
+        let key = key
+        guard !albumId.isEmpty, loaded?.key != key else { return }
         // The download's cover, else one download through the cover cache
         // that serves this view, every other view of the album and the Now
         // Playing artwork.
-        let decoded = await CoverTint.decodedImage(albumId: albumId)
+        let decoded = await CoverTint.decodedImage(albumId: albumId, artId: artId)
         // The view may have moved on to another album while this loaded.
         guard !Task.isCancelled else { return }
-        loaded = (albumId, decoded)
+        loaded = (key, decoded)
       }
   }
 

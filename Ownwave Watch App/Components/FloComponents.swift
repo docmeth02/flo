@@ -40,8 +40,9 @@ struct FloNavRow: View {
 /// trailing mark.
 struct CoverRow<Trailing: View>: View {
   enum Tile {
-    /// The album's cover, read from its download when there is one.
-    case cover(albumId: String)
+    /// The album's cover, read from its download when there is one; `artId`
+    /// for a cover of its own, such as a playlist's mosaic.
+    case cover(albumId: String, artId: String? = nil)
     /// A lilac glyph, round for an artist or a station.
     case glyph(String, round: Bool = false)
   }
@@ -49,16 +50,19 @@ struct CoverRow<Trailing: View>: View {
   let tile: Tile
   let title: String
   let subtitle: String
+  /// Nil: two lines without a subtitle, else one.
+  var titleLineLimit: Int? = nil
+  var tileSize = FloLayout.thumbnail
   @ViewBuilder var trailing: Trailing
 
   var body: some View {
-    HStack(spacing: 10) {
+    HStack(spacing: FloLayout.tileSpacing) {
       tileView
       VStack(alignment: .leading, spacing: 1) {
         Text(title)
           .font(.floRowTitle)
           // Without a subtitle there is room for a long name.
-          .lineLimit(subtitle.isEmpty ? 2 : 1)
+          .lineLimit(titleLineLimit ?? (subtitle.isEmpty ? 2 : 1))
         if !subtitle.isEmpty {
           Text(subtitle)
             .font(.floMeta)
@@ -69,20 +73,21 @@ struct CoverRow<Trailing: View>: View {
       Spacer(minLength: 0)
       trailing
     }
-    .frame(minHeight: FloLayout.coverRowHeight)
+    // The tile with the margins a default row keeps around it.
+    .frame(minHeight: tileSize + FloLayout.coverRowHeight - FloLayout.thumbnail)
   }
 
   @ViewBuilder
   private var tileView: some View {
     switch tile {
-    case .cover(let albumId):
-      WatchAlbumArtView(albumId: albumId, size: FloLayout.thumbnail)
+    case .cover(let albumId, let artId):
+      WatchAlbumArtView(albumId: albumId, artId: artId, size: tileSize)
         .clipShape(RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous))
     case .glyph(let systemImage, let round):
       Image(systemName: systemImage)
         .font(.system(size: 16))
         .foregroundStyle(Color.floLilac)
-        .frame(width: FloLayout.thumbnail, height: FloLayout.thumbnail)
+        .frame(width: tileSize, height: tileSize)
         .background(
           (round
             ? AnyShape(Circle())
@@ -99,8 +104,14 @@ extension CoverRow.Tile {
 }
 
 extension CoverRow where Trailing == EmptyView {
-  init(tile: Tile, title: String, subtitle: String) {
-    self.init(tile: tile, title: title, subtitle: subtitle) {
+  init(
+    tile: Tile, title: String, subtitle: String, titleLineLimit: Int? = nil,
+    tileSize: CGFloat = FloLayout.thumbnail
+  ) {
+    self.init(
+      tile: tile, title: title, subtitle: subtitle, titleLineLimit: titleLineLimit,
+      tileSize: tileSize
+    ) {
       EmptyView()
     }
   }
@@ -138,6 +149,35 @@ struct ArtistRow: View {
     }
     .holdable(onTap: open, onHold: { menu = .artist(artist) })
     .floRow()
+  }
+}
+
+/// A mono small caps label: "NOW PLAYING" on Home's card, "NEXT · 14 SONGS"
+/// over Up Next, the sign-in field labels.
+struct CapsLabel: View {
+  let text: String
+  var tint: Color = .floSecondary
+
+  init(_ text: String, tint: Color = .floSecondary) {
+    self.text = text
+    self.tint = tint
+  }
+
+  var body: some View {
+    Text(text.uppercased())
+      .font(.floCaps)
+      .tracking(1)
+      .foregroundStyle(tint)
+      .lineLimit(1)
+  }
+}
+
+/// The trailing mark of a row that opens a screen.
+struct Chevron: View {
+  var body: some View {
+    Image(systemName: "chevron.right")
+      .font(.system(size: 12, weight: .semibold))
+      .foregroundStyle(Color.floSecondary)
   }
 }
 

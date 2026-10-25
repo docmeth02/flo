@@ -31,6 +31,10 @@ extension Color {
   static let floTile = Color(red: 0x2D / 255, green: 0x2A / 255, blue: 0x43 / 255)
   /// The rule between the pinned rows and the full list.
   static let floHairline = Color.white.opacity(0.14)
+  /// Between rows joined on one platter.
+  static let floRowHairline = Palette.dark.hairline
+  /// Behind round buttons on a platter.
+  static let floSurface2 = Palette.dark.surface2
 }
 
 /// Sizes shared by rows and their tiles.
@@ -45,6 +49,21 @@ enum FloLayout {
   static let coverRowHeight: CGFloat = 52
   static let thumbnail: CGFloat = 36
   static let thumbnailRadius: CGFloat = 6
+  /// Between a row's tile and its text.
+  static let tileSpacing: CGFloat = 10
+  /// The space watchOS keeps between two list rows, on every case size.
+  static let listRowGap: CGFloat = 5
+  /// A group of rows joined on one platter.
+  static let platterRadius: CGFloat = 16
+  /// The tile of a row on a joined platter.
+  static let smallThumbnail: CGFloat = 30
+  /// No vertical inset: the row's content keeps its margins.
+  static let joinedRowInsets = EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 10)
+  /// A joined row's hairline starts under its text.
+  static let joinedHairlineInset = joinedRowInsets.leading + smallThumbnail + tileSpacing
+  /// A tile of a grid such as Home's library: icon above label.
+  static let tileHeight: CGFloat = 48
+  static let roundButton: CGFloat = 30
   /// How far a pressed control fades.
   static let pressedOpacity: Double = 0.7
   /// How long a hold takes to open a row's menu or the rating dialog.
@@ -68,6 +87,10 @@ extension Font {
   static let floButton = familjen(16, relativeTo: .subheadline)
   static let floNavTitle = familjen(15, relativeTo: .headline)
   static let floButtonTracking = buttonTracking(16)
+  /// Mono small caps labels: "NOW PLAYING", "NEXT · 14 SONGS".
+  static let floCaps = mono(9, relativeTo: .caption2)
+  /// A tile's label.
+  static let floTile = Font.system(.footnote, weight: .semibold)
 }
 
 /// Filled capsule with an ink label: Play, Play Something, Login. Lilac,
@@ -106,7 +129,112 @@ struct FloTintedButtonStyle: ButtonStyle {
   }
 }
 
+/// A platter tile with its icon above its label (a `Label`): Home's library
+/// grid leading, the hold menu's actions centered.
+struct FloTileButtonStyle: ButtonStyle {
+  var alignment: HorizontalAlignment = .leading
+  var tint: Color = .floLilac
+  var height = FloLayout.tileHeight
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .labelStyle(TileLabelStyle(alignment: alignment, tint: tint))
+      .frame(
+        maxWidth: .infinity, minHeight: height,
+        alignment: Alignment(horizontal: alignment, vertical: .center)
+      )
+      .padding(.horizontal, 9)
+      .background(
+        RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
+          .fill(Color.floSurface)
+      )
+      .contentShape(RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous))
+      .opacity(configuration.isPressed ? FloLayout.pressedOpacity : 1)
+  }
+}
+
+private struct TileLabelStyle: LabelStyle {
+  let alignment: HorizontalAlignment
+  let tint: Color
+
+  func makeBody(configuration: Configuration) -> some View {
+    VStack(alignment: alignment, spacing: 4) {
+      configuration.icon
+        .font(.system(size: 18))
+        .foregroundStyle(tint)
+      configuration.title
+        .font(.floTile)
+        .foregroundStyle(Color.floText)
+        .lineLimit(1)
+    }
+  }
+}
+
+/// A round icon button: Play Something's play, an album's Shuffle, the
+/// search card's Artist Radio.
+struct FloRoundButtonStyle: ButtonStyle {
+  var tint: Color = .floLilac
+  var fill: Color = .floSurface2
+  var size = FloLayout.roundButton
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.system(size: size / 2, weight: .semibold))
+      .foregroundStyle(tint)
+      .frame(width: size, height: size)
+      .background(Circle().fill(fill))
+      .contentShape(Circle())
+      .opacity(configuration.isPressed ? FloLayout.pressedOpacity : 1)
+  }
+}
+
+/// Where a list row sits among the rows joined on one platter.
+enum RowPosition {
+  case alone, first, middle, last
+
+  init(index: Int, count: Int) {
+    self =
+      count <= 1 ? .alone : index == 0 ? .first : index == count - 1 ? .last : .middle
+  }
+
+  fileprivate var roundsTop: Bool { self == .alone || self == .first }
+  fileprivate var roundsBottom: Bool { self == .alone || self == .last }
+}
+
 extension View {
+  /// A list row joined with its neighbours on one platter: the group's outer
+  /// corners rounded, a hairline over every row but the first. The platter
+  /// reaches up over the gap watchOS leaves between rows, and the hairline
+  /// sits in its middle. The list wants `.listStyle(.plain)`, or the system
+  /// shrinks the rows at the screen's edges and the platter falls apart, and
+  /// `.environment(\.defaultMinListRowHeight, 0)`, so a row is as low as its
+  /// content (a `CoverRow` keeps its own margins).
+  func floJoinedRow(
+    _ position: RowPosition, hairlineInset: CGFloat = FloLayout.joinedHairlineInset
+  ) -> some View {
+    let radius = FloLayout.platterRadius
+    let shape = UnevenRoundedRectangle(
+      topLeadingRadius: position.roundsTop ? radius : 0,
+      bottomLeadingRadius: position.roundsBottom ? radius : 0,
+      bottomTrailingRadius: position.roundsBottom ? radius : 0,
+      topTrailingRadius: position.roundsTop ? radius : 0, style: .continuous)
+    return
+      self
+      .listRowInsets(FloLayout.joinedRowInsets)
+      .listRowBackground(
+        ZStack(alignment: .top) {
+          shape.fill(Color.floSurface)
+          if !position.roundsTop {
+            Color.floRowHairline
+              .frame(height: 0.5)
+              .padding(.leading, hairlineInset)
+              .offset(y: FloLayout.listRowGap / 2)
+          }
+        }
+        .padding(.top, position.roundsTop ? 0 : -FloLayout.listRowGap)
+      )
+  }
+
   /// The navigation title in the title face and lilac; the string form of
   /// `navigationTitle` always uses the system font.
   func floNavigationTitle(_ title: String) -> some View {

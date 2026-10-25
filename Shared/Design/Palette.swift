@@ -59,6 +59,15 @@ extension Font {
     .custom("Familjen Grotesk", size: size, relativeTo: style).weight(.semibold)
   }
 
+  /// The mono face for counters, sizes and small caps labels, scaling with
+  /// the text style `style`.
+  static func mono(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+    .custom("JetBrainsMono-Medium", size: size, relativeTo: style)
+  }
+
+  /// Small counters and labels such as "Playing from" and the tour's "1 of 6".
+  static let counter = mono(11, relativeTo: .caption2)
+
   /// Button labels are set 0.02 em tighter, as in the design.
   static func buttonTracking(_ size: CGFloat) -> CGFloat { -0.02 * size }
 }

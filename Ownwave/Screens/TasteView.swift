@@ -417,8 +417,7 @@ private struct RecipeCard: View {
   @Environment(\.colorScheme) private var scheme
 
   /// The shares in the counters' mono face, a size up from `.counter`.
-  private static let shareFont = Font.custom(
-    "JetBrainsMono-Medium", size: 13, relativeTo: .footnote)
+  private static let shareFont = Font.mono(13, relativeTo: .footnote)
 
   var body: some View {
     VStack(alignment: .leading, spacing: 14) {
