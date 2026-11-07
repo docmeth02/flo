@@ -15,9 +15,9 @@ dry_run=false
 
 cd "$(dirname "$0")/.."
 project=Ownwave.xcodeproj/project.pbxproj
-simulator=0B3254A5-34F8-4FC6-8C75-641D7EBA8331
+simulator=3072226E-5E69-4D8E-AF44-939E882778ED
 # The engine tests compile the shared sources for iOS.
-iphone_simulator=FCC76D75-A677-4993-944A-98777D8A0A67
+iphone_simulator=F0BB9960-F357-4197-95D5-F2B95B2C611C
 
 fail() { echo "release: $*" >&2; exit 1; }
 
