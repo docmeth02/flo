@@ -243,6 +243,9 @@ private struct ItemMenuPresenter: ViewModifier {
   }
 
   private func select(_ choice: ItemMenu.Choice, on target: MenuTarget) {
+    // Only from an open menu: the debug runner's delayed choice may come
+    // after it closed.
+    guard self.target?.id == target.id else { return }
     self.target = nil
     WKInterfaceDevice.current().play(.click)
     let perform: () async -> String?
