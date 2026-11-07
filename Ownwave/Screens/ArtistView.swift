@@ -91,7 +91,7 @@ struct ArtistView: View {
         if radio.isLoadingRadio {
           ProgressView()
         } else {
-          Label("Artist Radio", systemImage: "dot.radiowaves.up.forward")
+          Label("Artist Radio", systemImage: Glyph.radio)
             .foregroundStyle(palette.accent)
         }
       }
@@ -100,7 +100,7 @@ struct ArtistView: View {
       Button {
         Task { await app.playArtist(id: artist.id, name: artist.name) }
       } label: {
-        Label("Top Songs", systemImage: "music.note.list").foregroundStyle(palette.accent)
+        Label("Top Songs", systemImage: Glyph.playlist).foregroundStyle(palette.accent)
       }
     }
     .buttonStyle(PlatterButtonStyle(height: 50))

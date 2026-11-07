@@ -248,11 +248,11 @@ private struct PlayerPage: View {
     case .smartShuffle, .keepPlaying: return "sparkles"
     case .starred: return "heart.fill"
     case .cached: return "arrow.down.circle"
-    case .playlist: return "music.note.list"
+    case .playlist: return Glyph.playlist
     case .album:
       guard let name = song.contextName else { return "music.note" }
-      if name == song.albumName { return "square.stack" }
-      if name == song.artistName { return "music.mic" }
+      if name == song.albumName { return Glyph.album }
+      if name == song.artistName { return Glyph.artist }
       if name == SongCollection.Name.search { return "magnifyingglass" }
       if name.hasSuffix(SongCollection.Name.artistRadioSuffix) {
         return "dot.radiowaves.left.and.right"
