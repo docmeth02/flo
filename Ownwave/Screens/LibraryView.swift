@@ -19,7 +19,7 @@ struct LibraryView: View {
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @EnvironmentObject private var downloadSession: DownloadSession
-  @EnvironmentObject private var storage: FloooViewModel
+  @EnvironmentObject private var storage: DownloadStorage
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
 
@@ -64,7 +64,7 @@ struct LibraryView: View {
       } else if chip == .downloads {
         songCounts[id] = DownloadStore.downloadedMediaFileIds(collectionId: id).count
       }
-      if chip == .downloads { storage.getLocalStorageInformation() }
+      if chip == .downloads { storage.refresh() }
     }
     .onChange(of: albumViewModel.downloadedAlbums) {
       if chip == .downloads { songCounts = DownloadStore.downloadedSongCounts() }
@@ -315,7 +315,7 @@ struct LibraryView: View {
       albumViewModel.fetchDownloadedAlbums()
       songCounts = DownloadStore.downloadedSongCounts()
       cachedSongs = StreamCacheManager.shared.getCachedSongs()
-      storage.getLocalStorageInformation()
+      storage.refresh()
     }
   }
 

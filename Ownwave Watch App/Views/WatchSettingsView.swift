@@ -7,7 +7,7 @@ import SwiftUI
 
 struct WatchSettingsView: View {
   @EnvironmentObject var authViewModel: AuthViewModel
-  @EnvironmentObject var floooViewModel: FloooViewModel
+  @EnvironmentObject var downloadStorage: DownloadStorage
   @EnvironmentObject var downloads: DownloadSession
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
@@ -163,7 +163,7 @@ struct WatchSettingsView: View {
     .alert("Clear Downloads?", isPresented: $showClearAlert) {
       Button("Cancel", role: .cancel) {}
       Button("Clear", role: .destructive) {
-        floooViewModel.deleteAllDownloads()
+        downloadStorage.deleteAllDownloads()
       }
     } message: {
       Text("All downloaded music will be removed.")

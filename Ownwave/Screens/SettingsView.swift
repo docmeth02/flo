@@ -7,7 +7,7 @@ import SwiftUI
 
 struct SettingsView: View {
   @EnvironmentObject private var app: AppModel
-  @EnvironmentObject private var flooo: FloooViewModel
+  @EnvironmentObject private var downloadStorage: DownloadStorage
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @Environment(\.palette) private var palette
 
@@ -148,7 +148,7 @@ struct SettingsView: View {
       Text("Cached songs come back as you listen.")
     }
     .confirmationDialog("Delete downloads", isPresented: $confirmsDeleteDownloads) {
-      Button("Delete All Downloads", role: .destructive) { flooo.deleteAllDownloads() }
+      Button("Delete All Downloads", role: .destructive) { downloadStorage.deleteAllDownloads() }
     } message: {
       Text("Downloaded albums have to be downloaded again.")
     }

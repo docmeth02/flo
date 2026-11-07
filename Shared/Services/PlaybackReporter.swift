@@ -1,15 +1,15 @@
 //
-//  FloooViewModel.swift
-//  flo
+//  PlaybackReporter.swift
+//  Ownwave
 //
 
 import Alamofire
-import SwiftUI
+import Foundation
 
-class FloooViewModel: ObservableObject {
-  @Published var localDirectorySize: String = "0 MB"
-
-  static let shared = FloooViewModel()
+/// Tells the server what plays: playback states for its now playing list and
+/// scrobbles, which a submission hands to the outbox.
+final class PlaybackReporter {
+  static let shared = PlaybackReporter()
 
   private struct PlaybackReport {
     let state: PlaybackReportState
@@ -32,34 +32,6 @@ class FloooViewModel: ObservableObject {
       self?.waitingReports = []
       self?.lastPlayingReport = nil
       self?.reportPlaybackUnsupported = false
-    }
-  }
-
-  func getLocalStorageInformation() {
-    Task {
-      let directorySize = await LocalFileManager.shared.calculateDirectorySize()
-
-      await MainActor.run {
-        self.localDirectorySize = directorySize
-      }
-    }
-  }
-
-  func deleteAllDownloads() {
-    // A song still downloading would come back.
-    DownloadSession.shared.cancelAll()
-    LocalFileManager.shared.deleteDownloadedAlbums { result in
-      switch result {
-      case .success:
-        // Records go even when the media folder was already missing.
-        CoreDataManager.shared.clearDownloads()
-        DownloadSession.shared.downloadsRemoved.send()
-
-        self.getLocalStorageInformation()
-
-      case .failure(let error):
-        debugLog("deleteAllDownloads failed: \(error)")
-      }
     }
   }
 
