@@ -12,6 +12,33 @@
   // once the library answered (album, artist and playlist: the first of each,
   // or the one named by FLO_DEBUG_SCREEN_ID), for screenshots.
   extension AppTabs {
+    // FLO_DEBUG_INTENT=1 runs the Play Something intent three seconds after
+    // launch, FLO_DEBUG_INTENT=artist:<name> the Play Artist intent for the
+    // artist Siri would resolve that name to; both log what Siri would get.
+    func runDebugIntent() async {
+      guard let value = ProcessInfo.processInfo.environment["FLO_DEBUG_INTENT"] else { return }
+      try? await Task.sleep(for: .seconds(3))
+      do {
+        if value.hasPrefix("artist:") {
+          let name = String(value.dropFirst("artist:".count))
+          guard let artist = try await ArtistAppEntity.defaultQuery.entities(matching: name).first
+          else { return debugLog("intent hook: no cached artist matches \(name)") }
+          let intent = PlayArtistIntent()
+          intent.artist = artist
+          _ = try await intent.perform()
+        } else {
+          _ = try await PlaySomethingIntent().perform()
+        }
+        debugLog(
+          "intent hook: played \(AppModel.shared.player.nowPlaying?.songName ?? "-"), "
+            + "now playing shown \(AppModel.shared.isNowPlayingPresented)")
+      } catch let failure as PlayFailure {
+        debugLog("intent hook: says \(String(localized: failure.localizedStringResource))")
+      } catch {
+        debugLog("intent hook: failed \(error)")
+      }
+    }
+
     func runDebugScreen() async {
       let env = ProcessInfo.processInfo.environment
       guard let screen = env["FLO_DEBUG_SCREEN"] else { return }

@@ -138,15 +138,17 @@ final class AppModel: ObservableObject {
     if player.playRadioItem(radio: radio) { isNowPlayingPresented = true }
   }
 
-  /// Plays what Siri, Shortcuts or the Action Button asked for. Logged out,
-  /// the request is dropped.
-  func takePlayRequest() {
-    guard let request = PlayRequest.take(), auth.isLoggedIn else { return }
-    Task {
+  /// Plays what Siri, Shortcuts or the Action Button asked for while the
+  /// intent waits, so it also plays on a locked phone. The player is called
+  /// directly, as the widget intent and the car do, so Now Playing does not
+  /// open over the lock screen.
+  func perform(_ request: PlayRequest) async throws {
+    guard auth.isLoggedIn else { throw PlayFailure.signedOut }
+    let played =
       switch request {
-      case .something: await playSomething()
-      case .artist(let id, let name): await playArtist(id: id, name: name)
+      case .something: await player.playSomething()
+      case .artist(let id, let name): await player.playArtist(id: id, name: name)
       }
-    }
+    if !played { throw PlayFailure.nothingPlayed }
   }
 }
