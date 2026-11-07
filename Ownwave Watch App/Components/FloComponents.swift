@@ -24,11 +24,9 @@ enum CoverTile {
   /// A lilac glyph, round for an artist or a station.
   case glyph(String, round: Bool = false)
 
-  /// A station's glyph, also on Artist Radio.
-  static let radioGlyph = "dot.radiowaves.up.forward"
   /// The round glyph standing in for an artist's picture.
-  static let artist = glyph("music.mic", round: true)
-  static let radio = glyph(radioGlyph, round: true)
+  static let artist = glyph(Glyph.artist, round: true)
+  static let radio = glyph(Glyph.radio, round: true)
 
   /// The cover or glyph of a menu's item.
   init(_ target: MenuTarget) {

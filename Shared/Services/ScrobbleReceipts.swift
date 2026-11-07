@@ -18,19 +18,12 @@ final class ScrobbleReceipts {
   static let defaultURL = URL.applicationSupportDirectory
     .appendingPathComponent("scrobble-receipts.json")
 
-  private let fileURL: URL
+  private let file: JSONFile<Set<Receipt>>
   private var receipts: Set<Receipt>
 
   init(fileURL: URL = defaultURL) {
-    self.fileURL = fileURL
-    do {
-      receipts = try JSONDecoder().decode(Set<Receipt>.self, from: Data(contentsOf: fileURL))
-    } catch CocoaError.fileReadNoSuchFile {
-      receipts = []
-    } catch {
-      RequestLog.shared.note("scrobble receipts unreadable: \(error)")
-      receipts = []
-    }
+    file = JSONFile(fileURL: fileURL, label: "scrobble receipts", empty: [])
+    receipts = file.load()
   }
 
   func contains(_ receipt: Receipt) -> Bool {
@@ -62,12 +55,6 @@ final class ScrobbleReceipts {
   }
 
   private func save() {
-    do {
-      try FileManager.default.createDirectory(
-        at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-      try JSONEncoder().encode(receipts).write(to: fileURL, options: .atomic)
-    } catch {
-      RequestLog.shared.note("scrobble receipts not saved: \(error)")
-    }
+    file.save(receipts)
   }
 }

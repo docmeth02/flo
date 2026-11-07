@@ -15,16 +15,13 @@ struct AlbumView: View {
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
 
-  @State private var songs: [Song] = []
-  @State private var isLoaded = false
-  /// Bumped by a removed download, which loads the screen again.
-  @State private var reloads = 0
+  @StateObject private var loader = CollectionSongs()
   @State private var shades: CoverShades?
 
   /// The album with the tracks shown, for playing, downloading and the menu.
   private var loadedAlbum: Album {
     var loaded = album
-    loaded.songs = songs
+    loaded.songs = loader.songs
     return loaded
   }
 
@@ -42,7 +39,7 @@ struct AlbumView: View {
   private var meta: String {
     var parts: [String] = []
     if album.minYear > 0 { parts.append(String(album.minYear)) }
-    let length = songs.countAndLength
+    let length = loader.songs.countAndLength
     if !length.isEmpty { parts.append(length) }
     return parts.joined(separator: " · ")
   }
@@ -54,10 +51,7 @@ struct AlbumView: View {
           .frame(width: 236, height: 236)
           .shadow(color: .black.opacity(0.35), radius: 20, y: 18)
         titleBlock
-        CollectionActions(album: loadedAlbum, tint: tint) {
-          isLoaded = false
-          reloads += 1
-        }
+        CollectionActions(album: loadedAlbum, tint: tint, reload: loader.reload)
         tracks
       }
       .padding(.horizontal, 16)
@@ -76,14 +70,7 @@ struct AlbumView: View {
       }
     }
     .coverShades($shades, albumId: album.id)
-    // Once: a return from a screen pushed on top keeps the loaded tracks,
-    // also offline. A load cut short by that push or left empty runs again,
-    // and so does one after a removed download.
-    .task(id: reloads) {
-      guard !isLoaded else { return }
-      for await songs in albumViewModel.loadSongs(of: album) { self.songs = songs }
-      isLoaded = !Task.isCancelled && !songs.isEmpty
-    }
+    .task(id: loader.reloads) { await loader.load { albumViewModel.loadSongs(of: album) } }
   }
 
   private var titleBlock: some View {
@@ -111,9 +98,9 @@ struct AlbumView: View {
   // MARK: - Tracks
 
   @ViewBuilder private var tracks: some View {
-    if !songs.isEmpty {
+    if !loader.songs.isEmpty {
       Platter {
-        ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
+        ForEach(Array(loader.songs.enumerated()), id: \.element.id) { index, song in
           TrackRow(
             number: song.trackNumber, song: song, tint: tint,
             menu: .song(song, context: album.name, isFromPlaylist: false)

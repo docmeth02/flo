@@ -914,20 +914,27 @@ class PlayerViewModel: ObservableObject {
     }
   }
 
-  /// Plays the next entry that is another song, around the queue under
-  /// repeat; with none, the song falls silent and Keep Playing continues or
-  /// playback stops.
+  /// Plays the next entry that is another song; with none, the song falls
+  /// silent and Keep Playing continues or playback stops.
   private func leaveSong() {
-    let left = nowPlayingId
-    let after = Array(activeQueueIdx + 1..<queue.count)
-    let around = playbackMode == PlaybackMode.repeatAlbum ? Array(0..<activeQueueIdx) : []
-    if let next = (after + around).first(where: { queue[$0].id != left }) {
+    let ids = queue.map(\.id)
+    if let next = Self.leavingIndex(ids: ids, from: activeQueueIdx, mode: playbackMode) {
       activeQueueIdx = next
       setNowPlaying()
     } else {
       pause()
       autoPlayOrStop()
     }
+  }
+
+  /// The entry `leaveSong` plays: the first after `active` that is another
+  /// song, around the queue only under repeat all (repeat one would play the
+  /// song again, so it leaves as without repeat); nil when there is none.
+  static func leavingIndex(ids: [String?], from active: Int, mode: String) -> Int? {
+    guard ids.indices.contains(active) else { return nil }
+    let around = mode == PlaybackMode.repeatAlbum ? Array(0..<active) : []
+    let order = Array(active + 1..<ids.count) + around
+    return order.first { ids[$0] != ids[active] }
   }
 
   /// Caches the next two songs, so a dropout or a skip does not stop the

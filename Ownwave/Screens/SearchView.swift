@@ -390,7 +390,7 @@ struct SearchView: View {
         if radio.isLoadingRadio {
           ProgressView().tint(palette.ink)
         } else {
-          Image(systemName: "dot.radiowaves.up.forward")
+          Image(systemName: Glyph.radio)
         }
       }
       .buttonStyle(FillButtonStyle(height: 44))

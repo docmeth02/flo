@@ -21,7 +21,7 @@ class AlbumViewModel: ObservableObject {
     /// How long a loaded list is shown again without asking the server, so
     /// popping back from a detail screen does not reload the whole list.
     /// Liked songs change from Now Playing and always reload.
-    var maxAge: TimeInterval { self == .starredSongs ? 0 : AlbumViewModel.reloadAfter }
+    var maxAge: TimeInterval { self == .starredSongs ? 0 : ListState.reloadAfter }
 
     var cacheKey: LibraryCacheManager.Key {
       switch self {
@@ -32,8 +32,6 @@ class AlbumViewModel: ObservableObject {
       }
     }
   }
-
-  private static let reloadAfter: TimeInterval = 5 * 60
 
   /// A whole library list from the server; run on the main actor so it can
   /// tell StarStore what the list says.
@@ -209,7 +207,7 @@ class AlbumViewModel: ObservableObject {
   /// Liked Songs at most every few minutes, for the iPhone's Home, which
   /// shows them on every return; the Liked screens always reload.
   func fetchStarredSongsIfStale() {
-    fetchStarredSongs(maxAge: Self.reloadAfter)
+    fetchStarredSongs(maxAge: ListState.reloadAfter)
   }
 
   private func fetchStarredSongs(maxAge: TimeInterval?) {
@@ -277,7 +275,7 @@ class AlbumViewModel: ObservableObject {
       artistAlbums = []
       artistAlbumsLoadedAt = nil
     } else if let loadedAt = artistAlbumsLoadedAt,
-      Date().timeIntervalSince(loadedAt) < Self.reloadAfter
+      Date().timeIntervalSince(loadedAt) < ListState.reloadAfter
     {
       return
     }

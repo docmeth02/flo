@@ -182,7 +182,7 @@ struct WatchSearchView: View {
             }
           }
         } label: {
-          Image(systemName: CoverTile.radioGlyph)
+          Image(systemName: Glyph.radio)
         }
         .buttonStyle(FloRoundButtonStyle(tint: .floInk, fill: .floLilac))
         .disabled(playerViewModel.isGeneratingMix)

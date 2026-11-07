@@ -76,8 +76,8 @@ final class DownloadSessionTests: XCTestCase {
   func testJobStoreRoundTrip() throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { try? FileManager.default.removeItem(at: directory) }
-    let store = JobFile<DownloadJob>(
-      fileURL: directory.appendingPathComponent("jobs.json"), label: "download jobs")
+    let store = JSONFile<[DownloadJob]>.jobs(
+      at: directory.appendingPathComponent("jobs.json"), label: "download jobs")
     XCTAssertEqual(store.load(), [])
 
     let album = Album(

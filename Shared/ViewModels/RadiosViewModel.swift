@@ -6,26 +6,57 @@
 import Combine
 import Foundation
 
-class RadiosViewModel: ObservableObject {
-  @Published var radios: [Radio] = []
+/// The server's internet radio stations. The iPhone keeps one list for its
+/// screens and the car, the watch one per screen.
+@MainActor
+final class RadiosViewModel: ObservableObject {
+  @Published private(set) var radios: [Radio] = []
   @Published private(set) var state = ListState()
 
-  /// The task ends once the answer is shown.
-  @discardableResult
-  func fetchAllRadios() -> Task<Void, Never> {
-    state = ListState(isLoading: true)
+  private var loading: Task<Void, Never>?
+  /// Bumped by `reset()`, so an answer for the previous account is dropped.
+  private var generation = 0
 
-    return Task { @MainActor in
-      do {
-        self.radios = try await RadioService.shared.getAllRadios()
-        self.state = ListState(loadedAt: Date())
-      } catch {
-        self.state = ListState(failed: true)
-      }
+  /// Asks the server unless it is being asked or answered a moment ago.
+  func fetchAllRadios() {
+    if let loadedAt = state.loadedAt, Date().timeIntervalSince(loadedAt) < ListState.reloadAfter {
+      return
     }
+    load()
   }
 
-  @MainActor func refresh() async {
-    await fetchAllRadios().value
+  /// Asks the server again, or waits for the answer under way.
+  func refresh() async {
+    await load().value
+  }
+
+  /// Forgets the stations, for the next account.
+  func reset() {
+    generation += 1
+    loading = nil
+    radios = []
+    state = ListState()
+  }
+
+  /// The fetch under way, else a new one; it ends once the answer is shown.
+  @discardableResult
+  private func load() -> Task<Void, Never> {
+    if let loading { return loading }
+    let generation = generation
+    state = ListState(isLoading: true)
+    let task = Task {
+      let result = await Result { try await RadioService.shared.getAllRadios() }
+      guard generation == self.generation else { return }
+      loading = nil
+      switch result {
+      case .success(let radios):
+        self.radios = radios
+        state = ListState(loadedAt: Date())
+      case .failure:
+        state = ListState(failed: true)
+      }
+    }
+    loading = task
+    return task
   }
 }

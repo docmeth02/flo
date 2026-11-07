@@ -102,9 +102,9 @@ struct GlyphTile: View {
     }
   }
 
-  static let artist = GlyphTile(systemImage: "music.mic", round: true)
-  static let playlist = GlyphTile(systemImage: "music.note.list")
-  static let radio = GlyphTile(systemImage: "dot.radiowaves.up.forward", round: true)
+  static let artist = GlyphTile(systemImage: Glyph.artist, round: true)
+  static let playlist = GlyphTile(systemImage: Glyph.playlist)
+  static let radio = GlyphTile(systemImage: Glyph.radio, round: true)
 
   /// The same glyph on a square tile, for the larger tiles of pins and the
   /// playlist screen.

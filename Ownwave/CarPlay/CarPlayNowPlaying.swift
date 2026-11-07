@@ -140,9 +140,8 @@ extension CarPlayController: @preconcurrency CPNowPlayingTemplateObserver {
       .sink { [weak self] isLoggedIn in
         guard let self else { return }
         if isLoggedIn { return dismiss(.signedOut) }
-        // The lists pushed and the stations were the previous account's.
+        // The lists pushed were the previous account's.
         interfaceController.popToRootTemplate(animated: false, completion: nil)
-        radios.radios = []
         presentSignedOut()
       }
       .store(in: &subscriptions)

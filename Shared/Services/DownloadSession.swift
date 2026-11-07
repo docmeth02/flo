@@ -78,11 +78,11 @@ final class DownloadSession: NSObject, ObservableObject {
   private lazy var session = URLSession.background(
     identifier: "\(Bundle.main.bundleIdentifier ?? "flo").downloads", delegate: self)
 
-  private static let jobFile = JobFile<DownloadJob>(
-    fileURL: URL.applicationSupportDirectory.appendingPathComponent("download-jobs.json"),
+  private static let jobFile = JSONFile<[DownloadJob]>.jobs(
+    at: URL.applicationSupportDirectory.appendingPathComponent("download-jobs.json"),
     label: "download jobs")
 
-  private let store: JobFile<DownloadJob>
+  private let store: JSONFile<[DownloadJob]>
   private var tasks: [String: URLSessionTask] = [:]
   private var retries: [String: DispatchWorkItem] = [:]
   /// Job ids queued together per collection, for its progress.
@@ -95,7 +95,7 @@ final class DownloadSession: NSObject, ObservableObject {
   /// finished tasks still have their delivery queued.
   private var delivered = Set<Int>()
 
-  private init(store: JobFile<DownloadJob> = jobFile) {
+  private init(store: JSONFile<[DownloadJob]> = jobFile) {
     self.store = store
     let jobs = store.load()
     self.jobs = jobs

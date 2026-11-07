@@ -20,7 +20,7 @@ struct WatchAlbumsListView: View {
       title: "Albums", state: albumViewModel.state(.albums),
       isEmpty: albums.isEmpty,
       empty: .empty(
-        systemImage: "square.stack", tint: .floLilac, title: "No albums",
+        systemImage: Glyph.album, tint: .floLilac, title: "No albums",
         message: "Albums on your Navidrome server show up here."),
       refresh: albumViewModel.refreshAlbums
     ) {

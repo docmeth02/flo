@@ -166,6 +166,26 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertFalse(Player.keepsStart(activating, isPlaying: true, platformKeeps: false))
   }
 
+  /// Leaving an avoided song plays the next entry that is another song,
+  /// around the queue only under repeat all.
+  func testLeavingASongSkipsItsDuplicates() {
+    typealias Player = PlayerViewModel
+    let none = PlaybackMode.defaultPlayback
+    let all = PlaybackMode.repeatAlbum
+    let one = PlaybackMode.repeatOnce
+    let ids: [String?] = ["a", "b", "b", "c"]
+
+    XCTAssertEqual(Player.leavingIndex(ids: ids, from: 0, mode: none), 1)
+    XCTAssertEqual(Player.leavingIndex(ids: ids, from: 1, mode: none), 3)
+    XCTAssertEqual(Player.leavingIndex(ids: ids, from: 1, mode: one), 3)
+    XCTAssertNil(Player.leavingIndex(ids: ids, from: 3, mode: none))
+    XCTAssertNil(Player.leavingIndex(ids: ids, from: 3, mode: one))
+    XCTAssertEqual(Player.leavingIndex(ids: ids, from: 3, mode: all), 0)
+    XCTAssertEqual(Player.leavingIndex(ids: ["a", "b", "a"], from: 2, mode: all), 1)
+    XCTAssertNil(Player.leavingIndex(ids: ["c", "a", "b", "b"], from: 2, mode: none))
+    XCTAssertNil(Player.leavingIndex(ids: ["b", "b", "b"], from: 1, mode: all))
+  }
+
   func testBitRatesNoLongerOfferedReadAsTheDefault() {
     XCTAssertEqual(TranscodingSettings.offeredBitRate(nil), "192")
     for rate in ["32", "64", "96", "", "abc"] {

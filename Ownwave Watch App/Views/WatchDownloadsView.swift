@@ -55,7 +55,7 @@ struct WatchDownloadsView: View {
       if !cachedSongs.isEmpty {
         NavigationLink(destination: WatchCachedSongsView(songs: cachedSongs)) {
           CoverRow(
-            tile: .glyph("music.note.list"), title: "Cached songs",
+            tile: .glyph(Glyph.playlist), title: "Cached songs",
             subtitle: counted(cachedSongs.count, "song"), tileSize: FloLayout.smallThumbnail
           ) {
             Chevron()
@@ -131,10 +131,6 @@ struct WatchDownloadsView: View {
   }
 
   private func countSongs() {
-    songCounts = Dictionary(
-      albumViewModel.downloadedAlbums.map {
-        ($0.id, DownloadStore.downloadedMediaFileIds(collectionId: $0.id).count)
-      },
-      uniquingKeysWith: { first, _ in first })
+    songCounts = DownloadStore.downloadedSongCounts()
   }
 }
