@@ -14,7 +14,14 @@ struct JSONFile<Value: Codable> {
   let label: String
   /// What a missing or unreadable file reads as.
   let empty: Value
-  var options: Data.WritingOptions = .atomic
+  let options: Data.WritingOptions
+
+  init(fileURL: URL, label: String, empty: Value, options: Data.WritingOptions = .atomic) {
+    self.fileURL = fileURL
+    self.label = label
+    self.empty = empty
+    self.options = options
+  }
 
   func load() -> Value {
     do {

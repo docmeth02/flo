@@ -102,7 +102,7 @@ struct WatchDownloadsView: View {
   }
 
   private func albumRow(_ album: Album) -> some View {
-    let subtitle = [album.albumArtist, counted(songCounts[album.id, default: 0], "song")]
+    let subtitle = [album.albumArtist, songCounts[album.id].map { counted($0, "song") } ?? ""]
       .filter { !$0.isEmpty }.joined(separator: " · ")
     return CoverRow(
       tile: .cover(albumId: album.id), title: album.name, subtitle: subtitle,

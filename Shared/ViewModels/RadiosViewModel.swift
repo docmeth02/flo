@@ -13,16 +13,13 @@ final class RadiosViewModel: ObservableObject {
   @Published private(set) var radios: [Radio] = []
   @Published private(set) var state = ListState()
 
-  /// As long as the album lists, so a return to a screen does not ask again.
-  private static let reloadAfter: TimeInterval = 5 * 60
-
   private var loading: Task<Void, Never>?
   /// Bumped by `reset()`, so an answer for the previous account is dropped.
   private var generation = 0
 
   /// Asks the server unless it is being asked or answered a moment ago.
   func fetchAllRadios() {
-    if let loadedAt = state.loadedAt, Date().timeIntervalSince(loadedAt) < Self.reloadAfter {
+    if let loadedAt = state.loadedAt, Date().timeIntervalSince(loadedAt) < ListState.reloadAfter {
       return
     }
     load()
