@@ -223,6 +223,18 @@ enum DownloadStore {
       ).compactMap(\.mediaFileId))
   }
 
+  /// The number of downloaded songs per collection id (album or playlist),
+  /// counted as `downloadedMediaFileIds` counts them, in one fetch. A
+  /// collection without songs is missing.
+  static func downloadedSongCounts() -> [String: Int] {
+    var ids: [String: Set<String>] = [:]
+    for song in CoreDataManager.shared.getRecordsByEntity(entity: SongEntity.self) {
+      guard let collection = song.albumId, let mediaFileId = song.mediaFileId else { continue }
+      ids[collection, default: []].insert(mediaFileId)
+    }
+    return ids.mapValues(\.count)
+  }
+
   /// Media ids that play without the server: downloaded or stream cached.
   static func localMediaFileIds() -> Set<String> {
     Set(
