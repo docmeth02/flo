@@ -101,7 +101,7 @@ struct WatchHomeView: View {
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .navigationDestination(item: $openedPlaylist) { WatchPlaylistDetailView(playlist: $0) }
     .navigationDestination(item: $openedScreen) { $0.view }
-    .itemMenu($menu)
+    .itemMenu($menu, openedAlbum: $openedAlbum, openedArtist: $openedArtist)
     .navigationTitle("")
     // Runs again on every return to Home, so a song just heard shows up, and
     // after a login fills the artist cache Siri and Shortcuts read. Again as

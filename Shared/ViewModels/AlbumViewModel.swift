@@ -381,6 +381,14 @@ class AlbumViewModel: ObservableObject {
     return await Self.cached(library)
   }
 
+  /// The album with this id from the downloads or the library, else one made
+  /// of what the caller knows of it, so its screen can load the songs.
+  @MainActor func album(id: String, name: String, artist: String) async -> Album {
+    let library = await loadedOrCached(albums, .albums)
+    return (downloadedAlbums + library).first { $0.id == id }
+      ?? Album(id: id, name: name, albumArtist: artist, artist: artist)
+  }
+
   /// The cached copy of a library list, read off the main thread, for code
   /// without a view model (the App Intents).
   nonisolated(nonsending) static func cached<T: Codable>(_ library: Library) async -> [T] {

@@ -14,6 +14,9 @@ struct ItemMenuItems: View {
   @EnvironmentObject private var pins: PinStore
   @ObservedObject private var stars = StarStore.shared
   @ObservedObject private var watch = WatchLink.shared
+  @ObservedObject private var ratings = RatingStore.shared
+  @Environment(\.openRoute) private var openRoute
+  @Environment(\.shownItemId) private var shownItemId
 
   private var actions: MenuActions { MenuActions(player: app.player, pins: pins, stars: stars) }
 
@@ -29,6 +32,37 @@ struct ItemMenuItems: View {
       let liked = actions.isLiked(target)
       button(liked ? "Unlike" : "Like", liked ? "heart.slash" : "heart", .like)
     }
+    Section {
+      if case .song(let song, _, _) = target, !song.albumId.isEmpty, song.albumId != shownItemId {
+        Button("Go to Album", systemImage: Glyph.album) {
+          Task {
+            let album = await app.albums.album(
+              id: song.albumId, name: song.albumName, artist: song.artist)
+            openRoute(.album(album))
+          }
+        }
+      }
+      if showsGoToArtist {
+        Button("Go to Artist", systemImage: Glyph.artist) {
+          Task {
+            guard let artist = await target.artistToOpen() else {
+              return app.show("Artist not in your library")
+            }
+            openRoute(.artist(artist))
+          }
+        }
+      }
+      if target.canRate {
+        let boosted = actions.ownRating(target) == 5
+        let avoided = actions.ownRating(target) == 1
+        button(
+          actions.ratingTitle(.boost, on: target),
+          boosted ? "hand.thumbsup.fill" : "hand.thumbsup", .boost)
+        button(
+          actions.ratingTitle(.avoid, on: target),
+          avoided ? "hand.thumbsdown.fill" : "hand.thumbsdown", .avoid)
+      }
+    }
     if case .playlist(let playlist) = target {
       Button("Download", systemImage: "arrow.down.circle") { app.download(playlist) }
     }
@@ -38,6 +72,11 @@ struct ItemMenuItems: View {
         Button("Send to Watch", systemImage: "applewatch") { watch.send(album) }
       }
     }
+  }
+
+  /// Songs and albums, unless the menu is on their artist's screen.
+  private var showsGoToArtist: Bool {
+    target.offersArtist && (target.carriedArtistId == nil || target.carriedArtistId != shownItemId)
   }
 
   private func button(_ title: String, _ systemImage: String, _ action: MenuActions.Action)

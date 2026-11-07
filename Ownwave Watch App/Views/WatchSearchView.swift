@@ -61,7 +61,7 @@ struct WatchSearchView: View {
     .searchable(text: $query)
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
-    .itemMenu($menu)
+    .itemMenu($menu, openedAlbum: $openedAlbum, openedArtist: $openedArtist)
     .task {
       // Once: the view reappears after every pushed album or artist.
       guard library == nil else { return }

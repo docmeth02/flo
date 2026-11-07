@@ -535,13 +535,10 @@ extension CarPlayController {
   func openAlbum(id: String) {
     Task { [weak self] in
       guard let self else { return }
-      let library = await albums.loadedOrCached(albums.albums, .albums)
       let entry = player.queue.first { $0.albumId == id }
       openAlbum(
-        (albums.downloadedAlbums + library).first { $0.id == id }
-          ?? Album(
-            id: id, name: entry?.albumName ?? "", albumArtist: entry?.artistName ?? "",
-            artist: entry?.artistName ?? ""))
+        await albums.album(
+          id: id, name: entry?.albumName ?? "", artist: entry?.artistName ?? ""))
     }
   }
 

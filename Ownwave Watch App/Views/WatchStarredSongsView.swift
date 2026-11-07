@@ -11,6 +11,8 @@ struct WatchStarredSongsView: View {
   @ObservedObject private var starStore = StarStore.shared
 
   @Environment(\.showPlayer) private var showPlayer
+  @State private var openedAlbum: Album?
+  @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
 
   /// Unliked songs leave at once, before the list reloads.
@@ -44,7 +46,9 @@ struct WatchStarredSongsView: View {
         .listRowBackground(Color.clear)
       }
     }
-    .itemMenu($menu)
+    .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
+    .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
+    .itemMenu($menu, openedAlbum: $openedAlbum, openedArtist: $openedArtist)
     .onAppear {
       albumViewModel.fetchStarredSongs()
     }

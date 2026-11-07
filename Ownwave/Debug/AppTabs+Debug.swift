@@ -39,6 +39,46 @@
       }
     }
 
+    // FLO_DEBUG_MENU_ACTION=album|artist|boost|avoid runs that item menu row
+    // on the song playing (with FLO_DEBUG_PLAY_SOMETHING) or else the first
+    // cached song, six seconds after launch, and logs the toast or the push.
+    func runDebugMenuAction() async {
+      // Once per launch: a sign-in again rebuilds the tabs and would toggle a
+      // rating back.
+      guard let value = ProcessInfo.processInfo.environment["FLO_DEBUG_MENU_ACTION"],
+        !DebugMenuAction.hasRun
+      else { return }
+      DebugMenuAction.hasRun = true
+      try? await Task.sleep(for: .seconds(6))
+      let library = await SmartPlaybackService.shared.loadCachedLibrary().songs
+      let playing = app.player.nowPlayingId.flatMap { id in
+        library.first { $0.playbackID == id }
+      }
+      guard let song = playing ?? library.first else {
+        return debugLog("menu action hook: no song")
+      }
+      let target = MenuTarget.song(song, context: "", isFromPlaylist: false)
+      let actions = MenuActions(player: app.player, pins: PinStore.shared, stars: StarStore.shared)
+      switch value {
+      case "album":
+        let album = await app.albums.album(
+          id: song.albumId, name: song.albumName, artist: song.artist)
+        debugLog("menu action hook: opens album \(album.name)")
+        push(.album(album))
+      case "artist":
+        let artist = await target.artistToOpen()
+        debugLog("menu action hook: opens artist \(artist?.name ?? "none")")
+        if let artist { push(.artist(artist)) }
+      case "boost", "avoid":
+        let action: MenuActions.Action = value == "boost" ? .boost : .avoid
+        debugLog("menu action hook: \(actions.ratingTitle(action, on: target)) \(song.title)")
+        let toast = await actions.perform(action, on: target)
+        debugLog("menu action hook: says \(toast ?? "nothing")")
+        if let toast { app.show(toast) }
+      default: break
+      }
+    }
+
     func runDebugScreen() async {
       let env = ProcessInfo.processInfo.environment
       guard let screen = env["FLO_DEBUG_SCREEN"] else { return }
@@ -104,5 +144,8 @@
       host.modalPresentationStyle = .fullScreen
       top.present(host, animated: false)
     }
+  }
+  @MainActor private enum DebugMenuAction {
+    static var hasRun = false
   }
 #endif

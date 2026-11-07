@@ -927,6 +927,13 @@ class PlayerViewModel: ObservableObject {
     }
   }
 
+  /// Whether leaving the song playing moves on to another song: a later entry
+  /// or Keep Playing's continuation; else the song only falls silent.
+  var leavesForAnotherSong: Bool {
+    UserDefaultsManager.keepPlaying
+      || Self.leavingIndex(ids: queue.map(\.id), from: activeQueueIdx, mode: playbackMode) != nil
+  }
+
   /// The entry `leaveSong` plays: the first after `active` that is another
   /// song, around the queue only under repeat all (repeat one would play the
   /// song again, so it leaves as without repeat); nil when there is none.
