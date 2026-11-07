@@ -33,8 +33,8 @@ import Foundation
     }
   }
 
-  private static let jobFile = JobFile<Job>(
-    fileURL: URL.applicationSupportDirectory.appendingPathComponent("watch-sends.json"),
+  private static let jobFile = JSONFile<[Job]>.jobs(
+    at: URL.applicationSupportDirectory.appendingPathComponent("watch-sends.json"),
     label: "watch send jobs")
   fileprivate nonisolated static let outbox = URL.applicationSupportDirectory
     .appendingPathComponent("watch-outbox", isDirectory: true)

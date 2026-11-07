@@ -82,34 +82,14 @@ enum DownloadRetry {
   }
 }
 
-/// The jobs of a session on disk, so downloads outlive the process. A
-/// background launch may come while the device is locked, so the file stays
-/// readable then.
-struct JobFile<Job: Codable> {
-  let fileURL: URL
-  /// What the jobs are, for the log.
-  let label: String
-
-  func load() -> [Job] {
-    do {
-      return try JSONDecoder().decode([Job].self, from: Data(contentsOf: fileURL))
-    } catch CocoaError.fileReadNoSuchFile {
-      return []
-    } catch {
-      RequestLog.shared.note("\(label) unreadable: \(error)")
-      return []
-    }
-  }
-
-  func save(_ jobs: [Job]) {
-    do {
-      try FileManager.default.createDirectory(
-        at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-      try JSONEncoder().encode(jobs).write(
-        to: fileURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-    } catch {
-      RequestLog.shared.note("\(label) not saved: \(error)")
-    }
+extension JSONFile {
+  /// The jobs of a session on disk, so downloads outlive the process. A
+  /// background launch may come while the device is locked, so the file stays
+  /// readable then.
+  static func jobs<Job>(at fileURL: URL, label: String) -> Self where Value == [Job] {
+    JSONFile(
+      fileURL: fileURL, label: label, empty: [],
+      options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
   }
 }
 
