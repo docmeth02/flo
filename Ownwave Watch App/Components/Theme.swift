@@ -283,11 +283,4 @@ extension View {
       Text(title).font(.floNavTitle).tracking(-0.01 * 15).foregroundStyle(Color.floLilac)
     }
   }
-
-  /// A list row on the rounded surface platter.
-  func floRow(_ background: Color = .floSurface) -> some View {
-    listRowBackground(
-      RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous).fill(background)
-    )
-  }
 }
