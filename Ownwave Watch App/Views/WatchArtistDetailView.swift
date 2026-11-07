@@ -18,6 +18,7 @@ struct WatchArtistDetailView: View {
   @State private var radioTask: Task<Void, Never>?
   @State private var isLoadingTopSongs = false
   @State private var openedAlbum: Album?
+  @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
 
   private static let glyphSize: CGFloat = 44
@@ -97,7 +98,9 @@ struct WatchArtistDetailView: View {
     // watchOS skip rows.
     .environment(\.defaultMinListRowHeight, 1)
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
-    .itemMenu($menu)
+    // Go to Artist of another album artist's album, such as a compilation.
+    .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
+    .itemMenu($menu, showing: artist.id, openedArtist: $openedArtist)
     .onAppear {
       albumViewModel.fetchAlbumsByArtist(id: artist.id)
     }

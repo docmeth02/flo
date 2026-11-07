@@ -12,6 +12,7 @@ struct WatchAlbumsListView: View {
   // The last sort, so a redraw sorts again only when the list or order changed.
   @State private var sort = SortMemo<AlbumOrder>()
   @State private var openedAlbum: Album?
+  @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
 
   var body: some View {
@@ -30,7 +31,8 @@ struct WatchAlbumsListView: View {
       }
     }
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
-    .itemMenu($menu)
+    .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
+    .itemMenu($menu, openedArtist: $openedArtist)
     .onAppear {
       albumViewModel.fetchAlbums()
     }

@@ -64,7 +64,7 @@ struct WatchLikedView: View {
     .navigationDestination(isPresented: $showsSongs) { WatchStarredSongsView() }
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
-    .itemMenu($menu)
+    .itemMenu($menu, openedAlbum: $openedAlbum, openedArtist: $openedArtist)
     .onAppear {
       // The cached lists show at once; their stars may predate a like made
       // since, so they reload unless loaded a moment ago.

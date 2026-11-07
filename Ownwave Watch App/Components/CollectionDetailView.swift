@@ -40,6 +40,8 @@ struct CollectionDetailView: View {
   @Environment(\.showPlayer) private var showPlayer
   @State private var downloaded = false
   @State private var downloadedIds: Set<String> = []
+  @State private var openedAlbum: Album?
+  @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
 
   // From the downloaded records, so it is right as soon as a download ends.
@@ -120,7 +122,12 @@ struct CollectionDetailView: View {
       .padding(.bottom, 16)
     }
     .background { backdrop }
-    .itemMenu($menu)
+    .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
+    .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
+    // An album's own songs offer no Go to Album; a playlist's do.
+    .itemMenu(
+      $menu, showing: collectionId, openedAlbum: $openedAlbum, openedArtist: $openedArtist
+    )
     .onAppear { refreshDownloadState() }
     .onReceive(downloads.downloadFinished) { id in
       if id == collectionId { refreshDownloadState() }
