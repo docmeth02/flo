@@ -69,6 +69,44 @@ enum MenuTarget: Identifiable {
     }
   }
 
+  /// Boost and Avoid rate songs and artists; album ratings are not edited.
+  var canRate: Bool {
+    switch self {
+    case .song, .artist: true
+    case .album, .playlist, .radio: false
+    }
+  }
+
+  /// The artist Go to Artist opens, for a song or an album: by the id the
+  /// item carries, else (a downloaded song keeps none) the one cached artist
+  /// of its name. Nil when neither knows it.
+  func artistToOpen() async -> Artist? {
+    let id: String?
+    let name: String
+    switch self {
+    case .song(let song, _, _):
+      name = song.artist
+      if let known = [song.artistId, song.albumArtistId].compactMap({ $0 }).first(where: {
+        !$0.isEmpty
+      }) {
+        id = known
+      } else {
+        id = await NowPlayingTarget.artistId(of: song.playbackID, named: song.artist)
+      }
+    case .album(let album):
+      (id, name) =
+        album.artistId.isEmpty
+        ? (album.albumArtistId.isEmpty ? nil : album.albumArtistId, album.albumArtist)
+        : (album.artistId, album.artist)
+    case .artist, .playlist, .radio:
+      return nil
+    }
+    guard let id else { return nil }
+    let artists: [Artist] = await AlbumViewModel.cached(.artists)
+    return artists.first { $0.id == id }
+      ?? Artist(id: id, name: name, albumCount: 0, mbzArtistID: nil)
+  }
+
   /// What Play Next and Add to Queue put in the queue, in play order, and
   /// the collection the queue names as their origin. Albums and artists come
   /// from the cached library (synced first for an artist when it is empty);
@@ -130,7 +168,7 @@ enum MenuTarget: Identifiable {
 @MainActor
 struct MenuActions {
   enum Action {
-    case pin, playNext, addToQueue, like
+    case pin, playNext, addToQueue, like, boost, avoid
   }
 
   let player: PlayerViewModel
@@ -150,6 +188,36 @@ struct MenuActions {
     case .album(let album): stars.isStarred(album.id, listed: album.starred)
     case .artist(let artist): stars.isStarred(artist.id, listed: artist.starred)
     case .playlist, .radio: false
+    }
+  }
+
+  /// The item's own rating, which Boost and Avoid set and clear; nil for
+  /// what cannot be rated. A song without its own rating can still be
+  /// avoided through its album or artist, so a cleared Avoid says "cleared",
+  /// never "allowed".
+  func ownRating(_ target: MenuTarget) -> Int? {
+    switch target {
+    case .song(let song, _, _): RatingStore.shared.rating(for: song.playbackID)
+    case .artist(let artist): RatingStore.shared.artistRating(artist.id)
+    case .album, .playlist, .radio: nil
+    }
+  }
+
+  /// "Boost" or "Clear Boost", "Avoid" or "Clear Avoid".
+  func ratingTitle(_ action: Action, on target: MenuTarget) -> String {
+    let isSet = ownRating(target) == (action == .boost ? 5 : 1)
+    let name = action == .boost ? "Boost" : "Avoid"
+    return isSet ? "Clear \(name)" : name
+  }
+
+  /// Whether the target is what plays: the song, or the artist of the song,
+  /// as the player's Avoid skip matches it.
+  private func isPlaying(_ target: MenuTarget) -> Bool {
+    guard !player.isLiveRadio else { return false }
+    switch target {
+    case .song(let song, _, _): return player.nowPlayingId == song.playbackID
+    case .artist(let artist): return NowPlayingTarget.current?.artistId == artist.id
+    case .album, .playlist, .radio: return false
     }
   }
 
@@ -184,6 +252,22 @@ struct MenuActions {
       case .playlist, .radio: return nil
       }
       return starred ? "Liked" : "Removed from Liked"
+    case .boost, .avoid:
+      guard let current = ownRating(target) else { return nil }
+      let value = action == .boost ? 5 : 1
+      let rating = current == value ? 0 : value
+      // Read before the rating: an Avoid of what plays skips it at once.
+      let skips = rating == 1 && isPlaying(target)
+      switch target {
+      case .song(let song, _, _): RatingStore.shared.set(rating, playbackID: song.playbackID)
+      case .artist(let artist): RatingStore.shared.setArtist(rating, artistId: artist.id)
+      case .album, .playlist, .radio: return nil
+      }
+      switch rating {
+      case 5: return "Boosted"
+      case 1: return skips ? "Avoided · skipped" : "Avoided"
+      default: return action == .boost ? "Boost cleared" : "Avoid cleared"
+      }
     }
   }
 }

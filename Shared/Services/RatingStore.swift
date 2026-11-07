@@ -28,7 +28,7 @@ import Foundation
   private(set) var albumRatings: [String: Int] = [:]
   /// 1 to 5 per artist id, the server's overlaid with edits; unrated
   /// artists are absent.
-  private(set) var artistRatings: [String: Int] = [:]
+  @Published private(set) var artistRatings: [String: Int] = [:]
 
   private var server: [String: Int] = [:]
   private var artistServer: [String: Int] = [:]
@@ -226,7 +226,8 @@ import Foundation
   private func publish() {
     let merged = Self.merge(server, confirmed, edits.values)
     if merged != ratings { ratings = merged }
-    artistRatings = Self.merge(artistServer, artistConfirmed, artistEdits.values)
+    let mergedArtists = Self.merge(artistServer, artistConfirmed, artistEdits.values)
+    if mergedArtists != artistRatings { artistRatings = mergedArtists }
   }
 
   /// The server's ratings with the confirmed and then the waiting edits on top.

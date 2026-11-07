@@ -89,6 +89,10 @@ struct ItemMenu: View {
       ("Queue", "text.line.last.and.arrowtriangle.forward", .floLilac)
     case .action(.like):
       isLiked ? ("Unlike", "heart.fill", .floLiked) : ("Like", "heart", .floLiked)
+    case .action(.boost):
+      ("Boost", "hand.thumbsup", .floLilac)
+    case .action(.avoid):
+      ("Avoid", "hand.thumbsdown", .floLilac)
     case .download:
       ("Download", "arrow.down.circle", .floLilac)
     }
