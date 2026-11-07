@@ -77,6 +77,29 @@ enum MenuTarget: Identifiable {
     }
   }
 
+  /// The artist id a song or album carries, the one Go to Artist opens.
+  var carriedArtistId: String? {
+    switch self {
+    case .song(let song, _, _):
+      [song.artistId, song.albumArtistId].compactMap { $0 }.first { !$0.isEmpty }
+    // An album's own artist: a compilation's track artist field may name
+    // someone else, or "Various Artists".
+    case .album(let album): [album.albumArtistId, album.artistId].first { !$0.isEmpty }
+    case .artist, .playlist, .radio: nil
+    }
+  }
+
+  /// Whether Go to Artist can lead anywhere: a song without an id is still
+  /// found by its artist's name, an album (a downloaded playlist keeps none)
+  /// only by an id.
+  var offersArtist: Bool {
+    switch self {
+    case .song: true
+    case .album: carriedArtistId != nil
+    case .artist, .playlist, .radio: false
+    }
+  }
+
   /// The artist Go to Artist opens, for a song or an album: by the id the
   /// item carries, else (a downloaded song keeps none) the one cached artist
   /// of its name. Nil when neither knows it.
@@ -86,18 +109,14 @@ enum MenuTarget: Identifiable {
     switch self {
     case .song(let song, _, _):
       name = song.artist
-      if let known = [song.artistId, song.albumArtistId].compactMap({ $0 }).first(where: {
-        !$0.isEmpty
-      }) {
-        id = known
+      if let carried = carriedArtistId {
+        id = carried
       } else {
         id = await NowPlayingTarget.artistId(of: song.playbackID, named: song.artist)
       }
     case .album(let album):
-      (id, name) =
-        album.artistId.isEmpty
-        ? (album.albumArtistId.isEmpty ? nil : album.albumArtistId, album.albumArtist)
-        : (album.artistId, album.artist)
+      id = carriedArtistId
+      name = album.albumArtistId.isEmpty ? album.artist : album.albumArtist
     case .artist, .playlist, .radio:
       return nil
     }
@@ -257,7 +276,7 @@ struct MenuActions {
       let value = action == .boost ? 5 : 1
       let rating = current == value ? 0 : value
       // Read before the rating: an Avoid of what plays skips it at once.
-      let skips = rating == 1 && isPlaying(target)
+      let skips = rating == 1 && isPlaying(target) && player.leavesForAnotherSong
       switch target {
       case .song(let song, _, _): RatingStore.shared.set(rating, playbackID: song.playbackID)
       case .artist(let artist): RatingStore.shared.setArtist(rating, artistId: artist.id)

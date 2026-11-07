@@ -33,7 +33,7 @@ struct ItemMenuItems: View {
       button(liked ? "Unlike" : "Like", liked ? "heart.slash" : "heart", .like)
     }
     Section {
-      if case .song(let song, _, _) = target, song.albumId != shownItemId {
+      if case .song(let song, _, _) = target, !song.albumId.isEmpty, song.albumId != shownItemId {
         Button("Go to Album", systemImage: Glyph.album) {
           Task {
             let album = await app.albums.album(
@@ -76,13 +76,7 @@ struct ItemMenuItems: View {
 
   /// Songs and albums, unless the menu is on their artist's screen.
   private var showsGoToArtist: Bool {
-    switch target {
-    case .song(let song, _, _):
-      shownItemId == nil || ![song.artistId, song.albumArtistId].contains(shownItemId)
-    case .album(let album):
-      shownItemId == nil || ![album.artistId, album.albumArtistId].contains(shownItemId)
-    case .artist, .playlist, .radio: false
-    }
+    target.offersArtist && (target.carriedArtistId == nil || target.carriedArtistId != shownItemId)
   }
 
   private func button(_ title: String, _ systemImage: String, _ action: MenuActions.Action)

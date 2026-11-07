@@ -209,10 +209,13 @@ private struct ItemMenuPresenter: ViewModifier {
   @EnvironmentObject private var pinStore: PinStore
   @EnvironmentObject private var downloads: DownloadSession
   @ObservedObject private var starStore = StarStore.shared
+  // Boost and Avoid name what a tap does, so their titles follow the store.
+  @ObservedObject private var ratingStore = RatingStore.shared
   @State private var toast: FloToast.Message?
   /// The presented album or playlist when none of it is on the watch,
   /// looked up once per menu rather than on every render.
   @State private var absentCollection: String?
+  @State private var pendingGo: (choice: ItemMenu.Choice, target: MenuTarget)?
 
   private var actions: MenuActions {
     MenuActions(player: playerViewModel, pins: pinStore, stars: starStore)
@@ -220,18 +223,19 @@ private struct ItemMenuPresenter: ViewModifier {
 
   func body(content: Content) -> some View {
     content
-      .sheet(item: $target) { target in
+      // A push under a closing sheet can be dropped, so Go to runs once it
+      // is gone.
+      .sheet(item: $target, onDismiss: goPending) { target in
         ItemMenu(
           target: target, actions: actions, canDownload: canDownload(target),
           goTo: goTo(target)
         ) { select($0, on: target) }
-        .task(id: target.id) {
-          let id = collection(target)?.id
-          absentCollection = id.flatMap {
-            DownloadStore.checkIfAlbumDownloaded(albumID: $0) ? nil : $0
-          }
+        // A download that saves its first song meanwhile makes it present.
+        .onReceive(downloads.downloadFinished) { id in
+          if id == collection(target)?.id { lookUpDownload(target) }
         }
       }
+      .onChange(of: target?.id, initial: true) { lookUpDownload(target) }
       .floToast($toast)
       #if DEBUG
         .modifier(DebugMenuRunner(target: $target, goTo: goTo, select: select))
@@ -241,14 +245,17 @@ private struct ItemMenuPresenter: ViewModifier {
   private func select(_ choice: ItemMenu.Choice, on target: MenuTarget) {
     self.target = nil
     WKInterfaceDevice.current().play(.click)
+    let perform: () async -> String?
+    switch choice {
+    case .action(let action): perform = { await actions.perform(action, on: target) }
+    case .download: perform = { await download(target) }
+    case .goToAlbum, .goToArtist:
+      // The sheet's dismissal pushes it.
+      pendingGo = (choice, target)
+      return
+    }
     Task {
-      let text: String?
-      switch choice {
-      case .action(let action): text = await actions.perform(action, on: target)
-      case .download: text = await download(target)
-      case .goToAlbum, .goToArtist: text = await go(choice, from: target)
-      }
-      if let text {
+      if let text = await perform() {
         debugLog("menu toast: \(text)")
         toast = FloToast.Message(text: text)
       }
@@ -258,22 +265,15 @@ private struct ItemMenuPresenter: ViewModifier {
   /// Go to Album for a song, Go to Artist for a song or album, unless it
   /// leads to what this screen shows.
   private func goTo(_ target: MenuTarget) -> [ItemMenu.Choice] {
-    let artistIds: [String?]
     var choices: [ItemMenu.Choice] = []
-    switch target {
-    case .song(let song, _, _):
-      if openedAlbum != nil, !song.albumId.isEmpty, song.albumId != showing {
-        choices.append(.goToAlbum)
-      }
-      artistIds = [song.artistId, song.albumArtistId]
-    case .album(let album):
-      artistIds = [album.artistId, album.albumArtistId]
-    case .artist, .playlist, .radio:
-      return []
+    if case .song(let song, _, _) = target, openedAlbum != nil, !song.albumId.isEmpty,
+      song.albumId != showing
+    {
+      choices.append(.goToAlbum)
     }
-    // The id `artistToOpen` takes first.
-    let artistId = artistIds.compactMap { $0 }.first { !$0.isEmpty }
-    if openedArtist != nil, artistId == nil || artistId != showing {
+    if openedArtist != nil, target.offersArtist,
+      target.carriedArtistId == nil || target.carriedArtistId != showing
+    {
       choices.append(.goToArtist)
     }
     return choices
@@ -301,6 +301,20 @@ private struct ItemMenuPresenter: ViewModifier {
     case .album(let album): album
     case .playlist(let playlist): Album(from: playlist)
     case .song, .artist, .radio: nil
+    }
+  }
+
+  private func goPending() {
+    guard let (choice, target) = pendingGo else { return }
+    pendingGo = nil
+    Task {
+      if let text = await go(choice, from: target) { toast = FloToast.Message(text: text) }
+    }
+  }
+
+  private func lookUpDownload(_ target: MenuTarget?) {
+    absentCollection = target.flatMap(collection).flatMap {
+      DownloadStore.checkIfAlbumDownloaded(albumID: $0.id) ? nil : $0.id
     }
   }
 

@@ -43,9 +43,12 @@
     // on the song playing (with FLO_DEBUG_PLAY_SOMETHING) or else the first
     // cached song, six seconds after launch, and logs the toast or the push.
     func runDebugMenuAction() async {
-      guard let value = ProcessInfo.processInfo.environment["FLO_DEBUG_MENU_ACTION"] else {
-        return
-      }
+      // Once per launch: a sign-in again rebuilds the tabs and would toggle a
+      // rating back.
+      guard let value = ProcessInfo.processInfo.environment["FLO_DEBUG_MENU_ACTION"],
+        !DebugMenuAction.hasRun
+      else { return }
+      DebugMenuAction.hasRun = true
       try? await Task.sleep(for: .seconds(6))
       let library = await SmartPlaybackService.shared.loadCachedLibrary().songs
       let playing = app.player.nowPlayingId.flatMap { id in
@@ -141,5 +144,8 @@
       host.modalPresentationStyle = .fullScreen
       top.present(host, animated: false)
     }
+  }
+  @MainActor private enum DebugMenuAction {
+    static var hasRun = false
   }
 #endif
