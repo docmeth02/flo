@@ -15,6 +15,8 @@ final class AppModel: ObservableObject {
   let auth = AuthViewModel()
   let player = PlayerViewModel()
   let albums = AlbumViewModel()
+  /// The stations, one list for every screen and the car.
+  let radios = RadiosViewModel()
 
   @Published var isNowPlayingPresented = false
   @Published private(set) var toast: Toast?
@@ -36,6 +38,8 @@ final class AppModel: ObservableObject {
     // A logout ends a tour; `tourSeen` is only set at its end, so it starts
     // over after the next login instead of halfway.
     Self.onLogout { AppModel.shared.tour = nil }
+    // The next account must not see this one's stations.
+    Self.onLogout { AppModel.shared.radios.reset() }
   }
 
   /// Runs `action` on the main actor after every logout.

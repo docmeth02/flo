@@ -241,10 +241,10 @@ private enum LibraryScreen: CaseIterable {
     switch self {
     case .search: "magnifyingglass"
     case .liked: "heart.fill"
-    case .artists: "music.mic"
-    case .albums: "square.stack"
-    case .playlists: "music.note.list"
-    case .radios: CoverTile.radioGlyph
+    case .artists: Glyph.artist
+    case .albums: Glyph.album
+    case .playlists: Glyph.playlist
+    case .radios: Glyph.radio
     case .downloads: "arrow.down.circle"
     case .settings: "gear"
     }

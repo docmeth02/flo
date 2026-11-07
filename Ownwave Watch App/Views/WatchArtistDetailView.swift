@@ -47,7 +47,7 @@ struct WatchArtistDetailView: View {
           if artistDetailViewModel.isLoadingRadio {
             ProgressView()
           } else {
-            Label("Radio", systemImage: CoverTile.radioGlyph)
+            Label("Radio", systemImage: Glyph.radio)
           }
         }
         .accessibilityLabel("Artist Radio")
@@ -112,7 +112,7 @@ struct WatchArtistDetailView: View {
   /// The artist stands in for a navigation title.
   private var header: some View {
     HStack(spacing: FloLayout.tileSpacing) {
-      Image(systemName: "music.mic")
+      Image(systemName: Glyph.artist)
         .font(.system(size: 22))
         .foregroundStyle(Color.floLilac)
         .frame(width: Self.glyphSize, height: Self.glyphSize)

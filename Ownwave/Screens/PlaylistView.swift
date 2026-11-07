@@ -12,22 +12,19 @@ struct PlaylistView: View {
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @Environment(\.palette) private var palette
 
-  @State private var songs: [Song] = []
-  @State private var isLoaded = false
-  /// Bumped by a removed download, which loads the screen again.
-  @State private var reloads = 0
+  @StateObject private var loader = CollectionSongs()
 
   /// The playlist with the songs shown, for downloading and the menu.
   private var loaded: Playlist {
     var loaded = playlist
-    loaded.songs = songs
+    loaded.songs = loader.songs
     return loaded
   }
 
   /// "Playlist · 3 songs · 16 min", from the server's counts until the
   /// songs are loaded.
   private var meta: String {
-    var length = songs.countAndLength
+    var length = loader.songs.countAndLength
     if length.isEmpty, playlist.songCount > 0 {
       length = songsAndLength(playlist.songCount, seconds: playlist.duration)
     }
@@ -49,14 +46,11 @@ struct PlaylistView: View {
             .foregroundStyle(palette.secondary)
             .lineLimit(1)
         }
-        CollectionActions(playlist: loaded) {
-          isLoaded = false
-          reloads += 1
-        }
-        if !songs.isEmpty {
+        CollectionActions(playlist: loaded, reload: loader.reload)
+        if !loader.songs.isEmpty {
           Platter {
             // A playlist can hold a song twice.
-            ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
+            ForEach(Array(loader.songs.enumerated()), id: \.offset) { index, song in
               PlaylistTrackRow(
                 song: song, menu: .song(song, context: playlist.name, isFromPlaylist: true)
               ) {
@@ -80,13 +74,7 @@ struct PlaylistView: View {
         .accessibilityLabel("More")
       }
     }
-    // Once, as an album: a return from a screen pushed on top keeps the
-    // songs, also offline. A removed download loads them again.
-    .task(id: reloads) {
-      guard !isLoaded else { return }
-      for await songs in albumViewModel.loadSongs(of: playlist) { self.songs = songs }
-      isLoaded = !Task.isCancelled && !songs.isEmpty
-    }
+    .task(id: loader.reloads) { await loader.load { albumViewModel.loadSongs(of: playlist) } }
   }
 }
 

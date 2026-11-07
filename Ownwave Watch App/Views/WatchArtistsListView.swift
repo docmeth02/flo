@@ -22,7 +22,7 @@ struct WatchArtistsListView: View {
       title: "Artists", state: albumViewModel.state(.artists),
       isEmpty: artists.isEmpty,
       empty: .empty(
-        systemImage: "music.mic", tint: .floLilac, title: "No artists",
+        systemImage: Glyph.artist, tint: .floLilac, title: "No artists",
         message: "Artists on your Navidrome server show up here."),
       refresh: albumViewModel.refreshArtists
     ) {

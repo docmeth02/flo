@@ -23,11 +23,14 @@ struct LibraryView: View {
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
 
-  @StateObject private var radios = RadiosViewModel()
+  @ObservedObject private var radios = AppModel.shared.radios
   // Kept by the tabs, so Home can open a chip. Not private: the debug launch
   // hook picks the chip.
   @Binding var chip: LibraryChip
   @State private var cachedSongs: [Song] = []
+  /// Songs on the phone per downloaded album, counted when Downloads shows
+  /// and when the list or an album changes.
+  @State private var songCounts: [String: Int] = [:]
   @AppStorage(AlbumOrder.storageKey) private var albumOrder = AlbumOrder.added
   @AppStorage(ArtistOrder.storageKey) private var artistOrder = ArtistOrder.name
   @AppStorage(PlaylistOrder.storageKey) private var playlistOrder = PlaylistOrder.name
@@ -58,8 +61,13 @@ struct LibraryView: View {
       guard chip == .downloads || chip == .albums else { return }
       if !albumViewModel.downloadedAlbums.contains(where: { $0.id == id }) {
         albumViewModel.fetchDownloadedAlbums()
+      } else if chip == .downloads {
+        songCounts[id] = DownloadStore.downloadedMediaFileIds(collectionId: id).count
       }
       if chip == .downloads { storage.getLocalStorageInformation() }
+    }
+    .onChange(of: albumViewModel.downloadedAlbums) {
+      if chip == .downloads { songCounts = DownloadStore.downloadedSongCounts() }
     }
     #if DEBUG
       .onAppear { applyDebugChip() }
@@ -258,7 +266,7 @@ struct LibraryView: View {
           .buttonStyle(.plain)
         }
         ForEach(albums) { album in
-          DownloadRow(album: album)
+          DownloadRow(album: album, songCount: songCounts[album.id, default: 0])
             .hairlineAbove(!cachedSongs.isEmpty || album.id != albums.first?.id)
         }
       }
@@ -305,6 +313,7 @@ struct LibraryView: View {
       albumViewModel.getArtists()
     case .downloads:
       albumViewModel.fetchDownloadedAlbums()
+      songCounts = DownloadStore.downloadedSongCounts()
       cachedSongs = StreamCacheManager.shared.getCachedSongs()
       storage.getLocalStorageInformation()
     }
@@ -330,6 +339,7 @@ struct LibraryView: View {
 /// it downloads, and a failure a tap retries.
 private struct DownloadRow: View {
   let album: Album
+  let songCount: Int
 
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var downloads: DownloadSession
@@ -367,9 +377,7 @@ private struct DownloadRow: View {
           } else if downloading {
             Text("Downloading · \(Int(percent))%")
           } else {
-            Text(
-              counted(
-                DownloadStore.downloadedMediaFileIds(collectionId: album.id).count, "song"))
+            Text(counted(songCount, "song"))
           }
         }
         .font(.rowSubtitle)

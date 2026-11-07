@@ -20,7 +20,7 @@ struct WatchRadiosView: View {
       state: viewModel.state,
       isEmpty: radios.isEmpty,
       empty: .empty(
-        systemImage: CoverTile.radioGlyph, tint: .floLilac, title: "No radios",
+        systemImage: Glyph.radio, tint: .floLilac, title: "No radios",
         message: "Add internet radio stations on your Navidrome server."),
       refresh: viewModel.refresh
     ) {

@@ -11,22 +11,19 @@ struct WatchPlaylistDetailView: View {
 
   let playlist: Playlist
 
-  @State private var songs: [Song] = []
-  @State private var isLoaded = false
-  /// Bumped by a removed download, which loads the screen again.
-  @State private var reloads = 0
+  @StateObject private var loader = CollectionSongs()
 
   /// The playlist with the songs shown, as the player and downloads take it.
   private var loadedPlaylist: Playlist {
     var loaded = playlist
-    loaded.songs = songs
+    loaded.songs = loader.songs
     return loaded
   }
 
   /// "Playlist · 3 songs · 16 min", from the server's counts until the
   /// songs are loaded.
   private var meta: String {
-    var length = songs.countAndLength
+    var length = loader.songs.countAndLength
     if length.isEmpty, playlist.songCount > 0 {
       length = songsAndLength(playlist.songCount, seconds: playlist.duration)
     }
@@ -39,22 +36,14 @@ struct WatchPlaylistDetailView: View {
       artId: playlist.artId,
       title: playlist.name,
       meta: meta,
-      songs: songs,
+      songs: loader.songs,
       trackNumber: { index, _ in index + 1 },
       playable: { Album(from: loadedPlaylist) },
       onDownload: { downloads.enqueue(loadedPlaylist) },
       onRemove: {
-        albumViewModel.removeDownload(id: playlist.id) {
-          isLoaded = false
-          reloads += 1
-        }
+        albumViewModel.removeDownload(id: playlist.id, removed: loader.reload)
       }
     )
-    // Once, as an album.
-    .task(id: reloads) {
-      guard !isLoaded else { return }
-      for await songs in albumViewModel.loadSongs(of: playlist) { self.songs = songs }
-      isLoaded = !Task.isCancelled && !songs.isEmpty
-    }
+    .task(id: loader.reloads) { await loader.load { albumViewModel.loadSongs(of: playlist) } }
   }
 }

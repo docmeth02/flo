@@ -33,8 +33,7 @@ final class CarPlayController: NSObject, CPInterfaceControllerDelegate, CPTabBar
   let app = AppModel.shared
   var player: PlayerViewModel { app.player }
   var albums: AlbumViewModel { app.albums }
-  /// The car's own station list; each phone screen keeps its own too.
-  let radios = RadiosViewModel()
+  var radios: RadiosViewModel { app.radios }
   private(set) var tabBar: CPTabBarTemplate!
   private var tabs: [TabScreen] = []
   /// The pushed song lists; each lives while its template is on the stack.

@@ -6,14 +6,6 @@
 import CarPlay
 import Combine
 
-/// The SF Symbols of the phone's glyph tiles, and the album placeholder.
-enum Glyph {
-  static let album = "square.stack"
-  static let artist = "music.mic"
-  static let playlist = "music.note.list"
-  static let radio = "dot.radiowaves.up.forward"
-}
-
 // The four tabs and the lists pushed from them.
 extension CarPlayController {
   /// Whether the server answers, once per change.
@@ -48,9 +40,10 @@ extension CarPlayController {
       reachability.map { _ in }.eraseToAnyPublisher())
     return TabScreen(
       template: template,
-      sections: { [unowned self] in homeSections(playSomething: playSomething) },
+      sections: { [weak self] in self?.homeSections(playSomething: playSomething) ?? [] },
       changes: changes.eraseToAnyPublisher(),
-      selected: { [unowned self] in
+      selected: { [weak self] in
+        guard let self else { return }
         albums.fetchStarredSongsIfStale()
         let albums = albums
         Task { await albums.loadRecentAlbums() }
@@ -72,7 +65,7 @@ extension CarPlayController {
     if albums.albums.isEmpty { albums.albums = cachedAlbums }
     if albums.artists.isEmpty { albums.artists = cachedArtists }
     if albums.playlists.isEmpty { albums.playlists = cachedPlaylists }
-    if !PinStore.shared.pinned(.radio).isEmpty, radios.radios.isEmpty { radios.fetchAllRadios() }
+    if !PinStore.shared.pinned(.radio).isEmpty { radios.fetchAllRadios() }
   }
 
   /// Play Something, the pins, the recent albums and the liked songs.
@@ -205,7 +198,8 @@ extension CarPlayController {
       albums.$playlists.map { _ in }, radios.$radios.map { _ in })
     return TabScreen(
       template: template,
-      sections: { [unowned self] in
+      sections: { [weak self] in
+        guard let self else { return [] }
         func count(_ list: [some Any], _ library: AlbumViewModel.Library) -> Int? {
           list.isEmpty && albums.state(library).loadedAt == nil ? nil : list.count
         }
@@ -380,9 +374,9 @@ extension CarPlayController {
       reachability.map { _ in }.eraseToAnyPublisher())
     return TabScreen(
       template: template,
-      sections: { [unowned self] in likedSections(songs) },
+      sections: { [weak self] in self?.likedSections(songs) ?? [] },
       changes: changes.eraseToAnyPublisher(),
-      selected: { [unowned self] in albums.fetchStarredSongs() })
+      selected: { [weak self] in self?.albums.fetchStarredSongs() })
   }
 
   /// Shuffle, the liked songs, then the liked albums and artists, as many as
@@ -475,7 +469,7 @@ extension CarPlayController {
       reload.eraseToAnyPublisher())
     return TabScreen(
       template: template,
-      sections: { [unowned self] in downloadsSections(downloading: &downloading) },
+      sections: { [weak self] in self?.downloadsSections(downloading: &downloading) ?? [] },
       changes: changes.eraseToAnyPublisher(),
       selected: { reload.send() })
   }
@@ -500,6 +494,7 @@ extension CarPlayController {
       rows.append(item)
     }
     let downloaded = albums.downloadedAlbums.prefix(CPListTemplate.maximumItemCount - rows.count)
+    let songCounts = DownloadStore.downloadedSongCounts()
     downloading = [:]
     let albumRows = downloaded.map { album in
       let isDownloading = session.isDownloading(collectionId: album.id)
@@ -511,7 +506,7 @@ extension CarPlayController {
         detail = "Download failed · retry on iPhone"
         status = images.status("exclamationmark.circle.fill", color: .floDestructive)
       } else {
-        detail = counted(DownloadStore.downloadedMediaFileIds(collectionId: album.id).count, "song")
+        detail = counted(songCounts[album.id, default: 0], "song")
         status = images.status("checkmark.circle.fill", color: .floDownloaded)
       }
       let item = albumRow(album, detail: detail)
