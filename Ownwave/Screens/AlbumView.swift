@@ -71,6 +71,7 @@ struct AlbumView: View {
     }
     .coverShades($shades, albumId: album.id)
     .task(id: loader.reloads) { await loader.load { albumViewModel.loadSongs(of: album) } }
+    .environment(\.shownItemId, album.id)
   }
 
   private var titleBlock: some View {

@@ -23,6 +23,11 @@ enum Route: Hashable {
 extension EnvironmentValues {
   /// Switches to the Library tab on one of its chips (Home's See all).
   @Entry var openLibrary = EnvironmentAction<LibraryChip> { _ in }
+  /// Pushes a screen onto the tab in front, closing Now Playing first.
+  @Entry var openRoute = EnvironmentAction<Route> { _ in }
+  /// The album or artist whose screen a menu is on, so it does not offer to
+  /// open that screen again.
+  @Entry var shownItemId: String?
 }
 
 /// The app's look: follows the system, or stays dark or light (Settings).
@@ -122,13 +127,22 @@ struct AppTabs: View {
     .fullScreenCover(isPresented: $app.isNowPlayingPresented) {
       NowPlayingView()
     }
+    // Outside the cover, so Now Playing's menu gets it too.
+    .environment(\.openRoute, EnvironmentAction(push))
     .onOpenURL(perform: open)
     .onChange(of: app.tour) { follow($1) }
     .task { await startTourOnce() }
     #if DEBUG
       .task { await runDebugScreen() }
       .task { await runDebugIntent() }
+      .task { await runDebugMenuAction() }
     #endif
+  }
+
+  /// Pushes `route` onto the tab in front, over a closed Now Playing.
+  func push(_ route: Route) {
+    app.isNowPlayingPresented = false
+    paths[tab, default: NavigationPath()].append(route)
   }
 
   /// The widgets' links: `ownwave://nowplaying`, `ownwave://album/<id>`, and

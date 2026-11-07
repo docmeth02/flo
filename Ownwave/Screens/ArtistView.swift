@@ -67,6 +67,7 @@ struct ArtistView: View {
     .task(id: artist.id) { await loadTopSongs() }
     .coverShades($shades, albumId: albums.first?.id ?? "")
     .onDisappear { radioTask?.cancel() }
+    .environment(\.shownItemId, artist.id)
     .alert(artist.name, isPresented: $showsRadioError) {
       Button("OK") {}
     } message: {
