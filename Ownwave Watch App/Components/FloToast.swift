@@ -7,7 +7,7 @@ import SwiftUI
 
 /// A short message over the bottom of a screen, with Undo when the change
 /// can be taken back. It clears `message` itself after `duration`.
-struct FloToast: View {
+struct Toast: View {
   struct Message: Equatable {
     let id = UUID()
     let text: String
@@ -49,8 +49,8 @@ struct FloToast: View {
 }
 
 extension View {
-  /// Shows `message` as a `FloToast` over the bottom of this view.
-  func floToast(_ message: Binding<FloToast.Message?>) -> some View {
-    overlay(alignment: .bottom) { FloToast(message: message).padding(.bottom, 4) }
+  /// Shows `message` as a `Toast` over the bottom of this view.
+  func toast(_ message: Binding<Toast.Message?>) -> some View {
+    overlay(alignment: .bottom) { Toast(message: message).padding(.bottom, 4) }
   }
 }

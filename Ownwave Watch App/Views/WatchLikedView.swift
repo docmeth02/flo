@@ -52,7 +52,7 @@ struct WatchLikedView: View {
     ) {
       if !songs.isEmpty {
         songsRow(songs)
-          .floJoinedRow(.alone)
+          .joinedRow(.alone)
       }
       section("Albums", albums) { album in
         LibraryRow(target: .album(album), menu: $menu) { openedAlbum = album }
@@ -78,11 +78,11 @@ struct WatchLikedView: View {
   /// the row's tap, shuffles it.
   private func songsRow(_ songs: [Song]) -> some View {
     HStack(spacing: 4) {
-      HStack(spacing: FloLayout.tileSpacing) {
+      HStack(spacing: WatchLayout.tileSpacing) {
         Image(systemName: "heart.fill")
           .font(.system(size: 16))
           .foregroundStyle(Color.liked)
-          .frame(width: FloLayout.smallThumbnail, height: FloLayout.smallThumbnail)
+          .frame(width: WatchLayout.smallThumbnail, height: WatchLayout.smallThumbnail)
           .background(Circle().fill(Color.liked.opacity(0.22)))
         VStack(alignment: .leading, spacing: 1) {
           Text("Liked Songs")
@@ -93,14 +93,14 @@ struct WatchLikedView: View {
         }
         .lineLimit(1)
       }
-      .frame(maxWidth: .infinity, minHeight: FloLayout.joinedRowHeight, alignment: .leading)
+      .frame(maxWidth: .infinity, minHeight: WatchLayout.joinedRowHeight, alignment: .leading)
       .holdable(onTap: { showsSongs = true }, onHold: nil)
       Button {
         if playerViewModel.shuffleItem(item: SongCollection.liked(songs)) { showPlayer() }
       } label: {
         Image(systemName: "shuffle")
       }
-      .buttonStyle(FloRoundButtonStyle())
+      .buttonStyle(RoundButtonStyle())
       .accessibilityLabel("Shuffle Liked Songs")
     }
   }
@@ -113,7 +113,7 @@ struct WatchLikedView: View {
       Section {
         JoinedRows(items: items, row: row)
       } header: {
-        FloSectionHeader(title)
+        SectionHeader(title)
       }
     }
   }

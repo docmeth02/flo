@@ -37,7 +37,7 @@ struct WatchSettingsView: View {
     List {
       server
         .padding(.vertical, 8)
-        .floJoinedRow(.alone)
+        .joinedRow(.alone)
 
       Section {
         Group {
@@ -72,32 +72,32 @@ struct WatchSettingsView: View {
             : "Keep Playing continues with Smart Shuffle when the queue ends. Cellular is used only without Wi-Fi or iPhone."
         )
       } header: {
-        FloSectionHeader("Playback")
+        SectionHeader("Playback")
       }
 
       Section {
         storageBar
           .padding(.top, 9)
           .padding(.bottom, 6)
-          .floJoinedRow(.first)
+          .joinedRow(.first)
         Group {
           ChoiceRow(title: "Cache limit", options: Self.cacheLimits, selection: $cacheLimit)
-            .floJoinedRow(.middle, hairlineInset: FloLayout.joinedRowInsets.leading)
+            .joinedRow(.middle, hairlineInset: WatchLayout.joinedRowInsets.leading)
             .onChange(of: cacheLimit) {
               // Trims the cache at once.
               StreamCacheManager.shared.setLimit(Int64(cacheLimit))
               storageChanges += 1
             }
           actionRow("Clear Cache") { showClearCacheAlert = true }
-            .floJoinedRow(.middle, hairlineInset: FloLayout.joinedRowInsets.leading)
+            .joinedRow(.middle, hairlineInset: WatchLayout.joinedRowInsets.leading)
           actionRow("Clear Downloads") { showClearAlert = true }
-            .floJoinedRow(.last, hairlineInset: FloLayout.joinedRowInsets.leading)
+            .joinedRow(.last, hairlineInset: WatchLayout.joinedRowInsets.leading)
         }
         if CoreDataManager.shared.isUsingVolatileStore {
           StorageWarningRow()
         }
       } header: {
-        FloSectionHeader("Storage")
+        SectionHeader("Storage")
       }
 
       Section {
@@ -131,7 +131,7 @@ struct WatchSettingsView: View {
     .listStyle(.plain)
     // Not 0, at which watchOS leaves the list's last row undrawn.
     .environment(\.defaultMinListRowHeight, 1)
-    .floNavigationTitle("Settings")
+    .brandNavigationTitle("Settings")
     .measuresStorage($storage, trigger: storageChanges)
     // Deleting the downloads finishes later.
     .onReceive(downloads.downloadsRemoved) { storageChanges += 1 }
@@ -177,9 +177,9 @@ struct WatchSettingsView: View {
       Image(systemName: "server.rack")
         .font(.system(size: 14))
         .foregroundStyle(Dusk.fill)
-        .frame(width: FloLayout.smallThumbnail, height: FloLayout.smallThumbnail)
+        .frame(width: WatchLayout.smallThumbnail, height: WatchLayout.smallThumbnail)
         .background(
-          RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous)
+          RoundedRectangle(cornerRadius: WatchLayout.thumbnailRadius, style: .continuous)
             .fill(Dusk.tile))
       VStack(alignment: .leading, spacing: 1) {
         Text(ServerAccount.authority)
@@ -298,8 +298,8 @@ extension View {
   /// A Settings row joined on its group's platter, its hairline under the
   /// title past the icon.
   fileprivate func joined(_ position: RowPosition) -> some View {
-    floJoinedRow(
+    joinedRow(
       position,
-      hairlineInset: FloLayout.joinedRowInsets.leading + IconRowLabel.titleInset)
+      hairlineInset: WatchLayout.joinedRowInsets.leading + IconRowLabel.titleInset)
   }
 }

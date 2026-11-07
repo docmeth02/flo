@@ -29,7 +29,7 @@ final class AppDelegate: NSObject, WKApplicationDelegate {
 }
 
 @main
-struct FloWatchApp: App {
+struct OwnwaveWatchApp: App {
   @WKApplicationDelegateAdaptor private var appDelegate: AppDelegate
 
   init() {

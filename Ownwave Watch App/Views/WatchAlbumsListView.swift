@@ -201,7 +201,7 @@ struct LibraryList<Rows: View>: View {
           .environment(\.defaultMinListRowHeight, 1)
       }
     }
-    .floNavigationTitle(title)
+    .brandNavigationTitle(title)
     .refreshable {
       await refresh()
     }

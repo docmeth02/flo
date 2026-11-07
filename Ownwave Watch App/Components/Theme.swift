@@ -35,7 +35,7 @@ enum Dusk {
 }
 
 /// Sizes shared by rows and their tiles.
-enum FloLayout {
+enum WatchLayout {
   /// How far the offline badge sits above the page dots: as far as the
   /// player's bottom row leaves room, 10 pt on the Ultra, less on 44-46 mm,
   /// none (over the dots) on 41-42 mm.
@@ -93,7 +93,7 @@ extension Font {
 
 /// Filled capsule with an ink label: Play, Play Something, Login. Lilac,
 /// or the cover tint on an album.
-struct FloPrimaryButtonStyle: ButtonStyle {
+struct PrimaryButtonStyle: ButtonStyle {
   var fill: Color = Dusk.fill
   var height: CGFloat = 44
 
@@ -103,12 +103,12 @@ struct FloPrimaryButtonStyle: ButtonStyle {
       .foregroundStyle(Dusk.ink)
       .frame(maxWidth: .infinity, minHeight: height)
       .background(Capsule().fill(fill))
-      .opacity(configuration.isPressed ? FloLayout.pressedOpacity : 1)
+      .opacity(configuration.isPressed ? WatchLayout.pressedOpacity : 1)
   }
 }
 
 /// Platter capsule with a tinted label: Try Again, Cancel.
-struct FloTintedButtonStyle: ButtonStyle {
+struct TintedButtonStyle: ButtonStyle {
   var tint: Color = Dusk.fill
   var platter: Color = Dusk.surface
   var height: CGFloat = 44
@@ -119,16 +119,16 @@ struct FloTintedButtonStyle: ButtonStyle {
       .foregroundStyle(tint)
       .frame(maxWidth: .infinity, minHeight: height)
       .background(Capsule().fill(platter))
-      .opacity(configuration.isPressed ? FloLayout.pressedOpacity : 1)
+      .opacity(configuration.isPressed ? WatchLayout.pressedOpacity : 1)
   }
 }
 
 /// A platter tile with its icon above its label (a `Label`): Home's library
 /// grid leading, the hold menu's actions centered.
-struct FloTileButtonStyle: ButtonStyle {
+struct TileButtonStyle: ButtonStyle {
   var alignment: HorizontalAlignment = .leading
   var tint: Color = Dusk.fill
-  var height = FloLayout.tileHeight
+  var height = WatchLayout.tileHeight
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
@@ -139,11 +139,11 @@ struct FloTileButtonStyle: ButtonStyle {
       )
       .padding(.horizontal, 9)
       .background(
-        RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: WatchLayout.rowRadius, style: .continuous)
           .fill(Dusk.surface)
       )
-      .contentShape(RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous))
-      .opacity(configuration.isPressed ? FloLayout.pressedOpacity : 1)
+      .contentShape(RoundedRectangle(cornerRadius: WatchLayout.rowRadius, style: .continuous))
+      .opacity(configuration.isPressed ? WatchLayout.pressedOpacity : 1)
   }
 }
 
@@ -165,15 +165,15 @@ private struct TileLabelStyle: LabelStyle {
 }
 
 /// A round icon button: an album's Shuffle, the search card's Artist Radio.
-struct FloRoundButtonStyle: ButtonStyle {
+struct RoundButtonStyle: ButtonStyle {
   var tint: Color = Dusk.fill
   var fill: Color = Dusk.surface2
-  var size = FloLayout.roundButton
+  var size = WatchLayout.roundButton
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .floRoundGlyph(tint: tint, fill: fill, size: size)
-      .opacity(configuration.isPressed ? FloLayout.pressedOpacity : 1)
+      .roundGlyph(tint: tint, fill: fill, size: size)
+      .opacity(configuration.isPressed ? WatchLayout.pressedOpacity : 1)
   }
 }
 
@@ -192,7 +192,7 @@ enum RowPosition {
 
 /// Rows joined on one platter in a scroll view, with a hairline between
 /// them from `hairlineInset`: an album's tracks, the hold menu's list. In a
-/// List the rows join with `floJoinedRow` instead. Rows are told apart by
+/// List the rows join with `joinedRow` instead. Rows are told apart by
 /// position, so an item may appear twice.
 struct PlatterStack<Item, Row: View>: View {
   let items: [Item]
@@ -218,7 +218,7 @@ struct PlatterStack<Item, Row: View>: View {
       }
     }
     .background(
-      RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous)
+      RoundedRectangle(cornerRadius: WatchLayout.platterRadius, style: .continuous)
         .fill(Dusk.surface))
   }
 }
@@ -236,8 +236,8 @@ private struct RowHairline: View {
 
 extension View {
   /// A glyph on a disc, as a round button draws it.
-  func floRoundGlyph(
-    tint: Color = Dusk.fill, fill: Color = Dusk.surface2, size: CGFloat = FloLayout.roundButton
+  func roundGlyph(
+    tint: Color = Dusk.fill, fill: Color = Dusk.surface2, size: CGFloat = WatchLayout.roundButton
   ) -> some View {
     font(.system(size: size / 2, weight: .semibold))
       .foregroundStyle(tint)
@@ -253,10 +253,10 @@ extension View {
   /// shrinks the rows at the screen's edges and the platter falls apart, and
   /// `.environment(\.defaultMinListRowHeight, 1)`, so a row is as low as its
   /// content (a `CoverRow` keeps its own margins); at 0 watchOS skips rows.
-  func floJoinedRow(
-    _ position: RowPosition, hairlineInset: CGFloat = FloLayout.joinedHairlineInset
+  func joinedRow(
+    _ position: RowPosition, hairlineInset: CGFloat = WatchLayout.joinedHairlineInset
   ) -> some View {
-    let radius = FloLayout.platterRadius
+    let radius = WatchLayout.platterRadius
     let shape = UnevenRoundedRectangle(
       topLeadingRadius: position.roundsTop ? radius : 0,
       bottomLeadingRadius: position.roundsBottom ? radius : 0,
@@ -264,22 +264,22 @@ extension View {
       topTrailingRadius: position.roundsTop ? radius : 0, style: .continuous)
     return
       self
-      .listRowInsets(FloLayout.joinedRowInsets)
+      .listRowInsets(WatchLayout.joinedRowInsets)
       .listRowBackground(
         ZStack(alignment: .top) {
           shape.fill(Dusk.surface)
           if !position.roundsTop {
             RowHairline(inset: hairlineInset)
-              .offset(y: FloLayout.listRowGap / 2)
+              .offset(y: WatchLayout.listRowGap / 2)
           }
         }
-        .padding(.top, position.roundsTop ? 0 : -FloLayout.listRowGap)
+        .padding(.top, position.roundsTop ? 0 : -WatchLayout.listRowGap)
       )
   }
 
   /// The navigation title in the title face and lilac; the string form of
   /// `navigationTitle` always uses the system font.
-  func floNavigationTitle(_ title: String) -> some View {
+  func brandNavigationTitle(_ title: String) -> some View {
     navigationTitle {
       Text(title).font(.navTitle).tracking(-0.01 * 15).foregroundStyle(Dusk.fill)
     }

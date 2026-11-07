@@ -178,7 +178,7 @@ struct WatchNowPlayingView: View {
             playerViewModel.toggleStar()
             WKInterfaceDevice.current().play(.click)
           }
-          .onLongPressGesture(minimumDuration: FloLayout.holdDuration) { openRating(song) }
+          .onLongPressGesture(minimumDuration: WatchLayout.holdDuration) { openRating(song) }
           .accessibilityLabel(playerViewModel.isStarred ? "Unlike" : "Like")
           .accessibilityAddTraits(.isButton)
           .accessibilityAction(named: "Rate") { openRating(song) }

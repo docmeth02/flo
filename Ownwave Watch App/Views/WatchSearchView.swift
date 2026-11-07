@@ -57,7 +57,7 @@ struct WatchSearchView: View {
     // Plain and as low as the rows, as in `LibraryList`.
     .listStyle(.plain)
     .environment(\.defaultMinListRowHeight, 1)
-    .floNavigationTitle("Search")
+    .brandNavigationTitle("Search")
     .searchable(text: $query)
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
@@ -113,9 +113,9 @@ struct WatchSearchView: View {
     if let top {
       Section {
         topCard(top)
-          .floJoinedRow(.alone)
+          .joinedRow(.alone)
       } header: {
-        FloSectionHeader("Top result")
+        SectionHeader("Top result")
       }
     }
     rows("Artists", results.artists.map(MenuTarget.artist), without: top)
@@ -139,7 +139,7 @@ struct WatchSearchView: View {
           .listRowBackground(Color.clear)
         }
       } header: {
-        FloSectionHeader("Songs")
+        SectionHeader("Songs")
       }
     }
   }
@@ -157,7 +157,7 @@ struct WatchSearchView: View {
           LibraryRow(target: target, menu: $menu) { open(target) }
         }
       } header: {
-        FloSectionHeader(title)
+        SectionHeader(title)
       }
     }
   }
@@ -169,7 +169,7 @@ struct WatchSearchView: View {
     HStack(spacing: 4) {
       CoverRow(
         tile: CoverTile(target), title: target.title, subtitle: topSubtitle(target),
-        titleLineLimit: 2, tileSize: FloLayout.smallThumbnail
+        titleLineLimit: 2, tileSize: WatchLayout.smallThumbnail
       ) {
         if isPinned(target) { PinGlyph() }
       }
@@ -184,9 +184,9 @@ struct WatchSearchView: View {
         } label: {
           Image(systemName: Glyph.radio)
         }
-        .buttonStyle(FloRoundButtonStyle(tint: Dusk.ink, fill: Dusk.fill))
+        .buttonStyle(RoundButtonStyle(tint: Dusk.ink, fill: Dusk.fill))
         .disabled(playerViewModel.isGeneratingMix)
-        .opacity(playerViewModel.isGeneratingMix ? FloLayout.pressedOpacity : 1)
+        .opacity(playerViewModel.isGeneratingMix ? WatchLayout.pressedOpacity : 1)
         .accessibilityLabel("Artist Radio")
       }
     }

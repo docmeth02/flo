@@ -98,7 +98,7 @@ struct WatchContentView: View {
     .overlay(alignment: .bottom) {
       if !connectivity.isOnline {
         Badge(kind: .offline)
-          .padding(.bottom, FloLayout.offlineBadgeLift)
+          .padding(.bottom, WatchLayout.offlineBadgeLift)
           .ignoresSafeArea(edges: .bottom)
       }
     }

@@ -51,13 +51,13 @@ struct DownloadControl: View {
         if case .downloading = state {
           Button("Cancel", action: onCancel)
             .buttonStyle(
-              FloTintedButtonStyle(tint: .destructive, platter: Dusk.surface2, height: 36))
+              TintedButtonStyle(tint: .destructive, platter: Dusk.surface2, height: 36))
         }
       }
       .padding(.horizontal, 12)
       .padding(.vertical, 9)
       .background(
-        RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: WatchLayout.platterRadius, style: .continuous)
           .fill(Dusk.surface))
     case .partial(let missing):
       PlatterRows([

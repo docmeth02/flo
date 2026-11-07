@@ -59,9 +59,9 @@ struct TrackRowView: View {
     }
     .padding(.horizontal, Self.padding)
     .padding(.vertical, 4)
-    .frame(minHeight: FloLayout.rowHeight)
+    .frame(minHeight: WatchLayout.rowHeight)
     .background(
-      RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous)
+      RoundedRectangle(cornerRadius: WatchLayout.rowRadius, style: .continuous)
         .fill(isPlaying ? tint.opacity(0.22) : idleBackground)
     )
     .holdable(onTap: action, onHold: onHold)
@@ -85,10 +85,10 @@ struct HoldableRow: ViewModifier {
 
   func body(content: Content) -> some View {
     content
-      .opacity(isPressed ? FloLayout.pressedOpacity : 1)
+      .opacity(isPressed ? WatchLayout.pressedOpacity : 1)
       .contentShape(Rectangle())
       .onTapGesture(perform: onTap)
-      .onLongPressGesture(minimumDuration: FloLayout.holdDuration) {
+      .onLongPressGesture(minimumDuration: WatchLayout.holdDuration) {
         guard let onHold else { return }
         WKInterfaceDevice.current().play(.click)
         onHold()

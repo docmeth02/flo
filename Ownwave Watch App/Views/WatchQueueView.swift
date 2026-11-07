@@ -11,7 +11,7 @@ struct WatchQueueView: View {
   @ObservedObject private var mixes = RecommendationLog.shared
   @Environment(\.setQueueShown) private var setQueueShown
   @State private var shades: CoverShades?
-  @State private var toast: FloToast.Message?
+  @State private var toast: Toast.Message?
 
   private var albumId: String {
     playerViewModel.nowPlayingAlbumId
@@ -33,7 +33,7 @@ struct WatchQueueView: View {
         Section {
           ForEach(Array(upNext.enumerated()), id: \.element.objectID) { index, item in
             row(item)
-              .floJoinedRow(RowPosition(index: index, count: upNext.count))
+              .joinedRow(RowPosition(index: index, count: upNext.count))
               .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 Button(role: .destructive) {
                   remove(item)
@@ -44,7 +44,7 @@ struct WatchQueueView: View {
               .swipeActions(edge: .leading) {
                 Button {
                   if let index = position(of: item), playerViewModel.moveToNext(at: index) {
-                    toast = FloToast.Message(text: "Playing next")
+                    toast = Toast.Message(text: "Playing next")
                   }
                 } label: {
                   Label("Next", systemImage: "text.line.first.and.arrowtriangle.forward")
@@ -75,10 +75,10 @@ struct WatchQueueView: View {
     .listStyle(.plain)
     // As low as their content; at 0 watchOS skips a section's edge rows.
     .environment(\.defaultMinListRowHeight, 1)
-    .floToast($toast)
+    .toast($toast)
     .containerBackground(for: .navigation) { CoverBackdrop(albumId: albumId, url: coverURL) }
     .coverShades($shades, albumId: albumId, url: coverURL)
-    .floNavigationTitle("Up Next")
+    .brandNavigationTitle("Up Next")
     .onAppear { setQueueShown(true) }
     .onDisappear { setQueueShown(false) }
   }
@@ -86,7 +86,7 @@ struct WatchQueueView: View {
   /// The playing song on its cover's shade, with the time it has left.
   private func current(_ song: QueueEntity) -> some View {
     let tint = shades?.tint ?? Dusk.fill
-    return HStack(spacing: FloLayout.tileSpacing) {
+    return HStack(spacing: WatchLayout.tileSpacing) {
       Image(systemName: playerViewModel.isPlaying ? "waveform" : "pause.fill")
         .font(.system(size: 16, weight: .semibold))
         .foregroundStyle(tint)
@@ -107,7 +107,7 @@ struct WatchQueueView: View {
     .padding(.horizontal, 12)
     .padding(.vertical, 10)
     .background(
-      RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous)
+      RoundedRectangle(cornerRadius: WatchLayout.platterRadius, style: .continuous)
         .fill(shades?.background ?? Dusk.surface2)
     )
     .holdable(
@@ -115,8 +115,8 @@ struct WatchQueueView: View {
   }
 
   private func row(_ item: QueueEntity) -> some View {
-    HStack(spacing: FloLayout.tileSpacing) {
-      CoverTile.cover(albumId: item.albumId ?? "").view(size: FloLayout.smallThumbnail)
+    HStack(spacing: WatchLayout.tileSpacing) {
+      CoverTile.cover(albumId: item.albumId ?? "").view(size: WatchLayout.smallThumbnail)
       VStack(alignment: .leading, spacing: 1) {
         Text(item.songName ?? "Unknown")
           .font(.rowTitle)
@@ -127,7 +127,7 @@ struct WatchQueueView: View {
       .lineLimit(1)
       Spacer(minLength: 0)
     }
-    .frame(minHeight: FloLayout.joinedRowHeight)
+    .frame(minHeight: WatchLayout.joinedRowHeight)
     .holdable(
       onTap: {
         if let index = position(of: item) { playerViewModel.playFromQueue(idx: index) }
@@ -153,7 +153,7 @@ struct WatchQueueView: View {
     guard let index = position(of: item),
       let removed = playerViewModel.removeFromQueue(at: index)
     else { return }
-    toast = FloToast.Message(text: "Removed \(removed.song.title)") {
+    toast = Toast.Message(text: "Removed \(removed.song.title)") {
       playerViewModel.undoRemove(removed)
     }
   }

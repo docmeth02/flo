@@ -70,7 +70,7 @@ struct ItemMenu: View {
                 // the room for "Play Next".
                 .padding(.horizontal, -6)
               }
-              .buttonStyle(FloTileButtonStyle(alignment: .center))
+              .buttonStyle(TileButtonStyle(alignment: .center))
             }
           }
         }
@@ -174,7 +174,7 @@ struct PlatterRows: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, Self.padding)
     .padding(.vertical, 4)
-    .frame(minHeight: FloLayout.rowHeight)
+    .frame(minHeight: WatchLayout.rowHeight)
     .contentShape(Rectangle())
   }
 }
@@ -211,7 +211,7 @@ private struct ItemMenuPresenter: ViewModifier {
   @ObservedObject private var starStore = StarStore.shared
   // Boost and Avoid name what a tap does, so their titles follow the store.
   @ObservedObject private var ratingStore = RatingStore.shared
-  @State private var toast: FloToast.Message?
+  @State private var toast: Toast.Message?
   /// The presented album or playlist when none of it is on the watch,
   /// looked up once per menu rather than on every render.
   @State private var absentCollection: String?
@@ -236,7 +236,7 @@ private struct ItemMenuPresenter: ViewModifier {
         }
       }
       .onChange(of: target?.id, initial: true) { lookUpDownload(target) }
-      .floToast($toast)
+      .toast($toast)
       #if DEBUG
         .modifier(DebugMenuRunner(target: $target, goTo: goTo, select: select))
       #endif
@@ -260,7 +260,7 @@ private struct ItemMenuPresenter: ViewModifier {
     Task {
       if let text = await perform() {
         debugLog("menu toast: \(text)")
-        toast = FloToast.Message(text: text)
+        toast = Toast.Message(text: text)
       }
     }
   }
@@ -311,7 +311,7 @@ private struct ItemMenuPresenter: ViewModifier {
     guard let (choice, target) = pendingGo else { return }
     pendingGo = nil
     Task {
-      if let text = await go(choice, from: target) { toast = FloToast.Message(text: text) }
+      if let text = await go(choice, from: target) { toast = Toast.Message(text: text) }
     }
   }
 

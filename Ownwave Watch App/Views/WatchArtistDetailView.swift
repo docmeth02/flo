@@ -73,7 +73,7 @@ struct WatchArtistDetailView: View {
           }
         }
       }
-      .buttonStyle(FloTileButtonStyle(alignment: .center))
+      .buttonStyle(TileButtonStyle(alignment: .center))
       .disabled(artistDetailViewModel.isLoadingRadio || playerViewModel.isGeneratingMix)
       .listRowBackground(Color.clear)
       .listRowInsets(EdgeInsets())
@@ -84,13 +84,13 @@ struct WatchArtistDetailView: View {
             tile: .cover(albumId: album.id),
             title: album.name,
             subtitle: album.minYear > 0 ? String(album.minYear) : "",
-            tileSize: FloLayout.smallThumbnail
+            tileSize: WatchLayout.smallThumbnail
           )
           .holdable(onTap: { openedAlbum = album }, onHold: { menu = .album(album) })
-          .floJoinedRow(RowPosition(index: index, count: albums.count))
+          .joinedRow(RowPosition(index: index, count: albums.count))
         }
       } header: {
-        FloSectionHeader("Albums")
+        SectionHeader("Albums")
       }
     }
     .listStyle(.plain)
@@ -114,7 +114,7 @@ struct WatchArtistDetailView: View {
 
   /// The artist stands in for a navigation title.
   private var header: some View {
-    HStack(spacing: FloLayout.tileSpacing) {
+    HStack(spacing: WatchLayout.tileSpacing) {
       Image(systemName: Glyph.artist)
         .font(.system(size: 22))
         .foregroundStyle(Dusk.fill)

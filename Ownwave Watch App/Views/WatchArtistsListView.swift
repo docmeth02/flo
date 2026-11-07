@@ -37,7 +37,7 @@ struct WatchArtistsListView: View {
             Section {
               rows(section.artists)
             } header: {
-              FloSectionHeader(section.letter)
+              SectionHeader(section.letter)
             }
           }
         } else {

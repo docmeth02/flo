@@ -34,7 +34,7 @@ struct WatchCachedSongsView: View {
       }
     }
     .listStyle(.plain)
-    .floNavigationTitle("Cached")
+    .brandNavigationTitle("Cached")
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .itemMenu($menu, openedAlbum: $openedAlbum, openedArtist: $openedArtist)

@@ -44,7 +44,7 @@ enum CoverTile {
     switch self {
     case .cover(let albumId, let artId):
       WatchAlbumArtView(albumId: albumId, artId: artId, size: size)
-        .clipShape(RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: WatchLayout.thumbnailRadius, style: .continuous))
     case .glyph(let systemImage, let round):
       Image(systemName: systemImage)
         .font(.system(size: 16))
@@ -54,7 +54,7 @@ enum CoverTile {
           (round
             ? AnyShape(Circle())
             : AnyShape(
-              RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous)))
+              RoundedRectangle(cornerRadius: WatchLayout.thumbnailRadius, style: .continuous)))
             .fill(Dusk.tile))
     }
   }
@@ -68,11 +68,11 @@ struct CoverRow<Trailing: View>: View {
   let subtitle: String
   /// Nil: two lines without a subtitle, else one.
   var titleLineLimit: Int? = nil
-  var tileSize = FloLayout.thumbnail
+  var tileSize = WatchLayout.thumbnail
   @ViewBuilder var trailing: Trailing
 
   var body: some View {
-    HStack(spacing: FloLayout.tileSpacing) {
+    HStack(spacing: WatchLayout.tileSpacing) {
       tile.view(size: tileSize)
       VStack(alignment: .leading, spacing: 1) {
         Text(title)
@@ -89,14 +89,14 @@ struct CoverRow<Trailing: View>: View {
       Spacer(minLength: 0)
       trailing
     }
-    .frame(minHeight: FloLayout.coverRowHeight(tile: tileSize))
+    .frame(minHeight: WatchLayout.coverRowHeight(tile: tileSize))
   }
 }
 
 extension CoverRow where Trailing == EmptyView {
   init(
     tile: CoverTile, title: String, subtitle: String, titleLineLimit: Int? = nil,
-    tileSize: CGFloat = FloLayout.thumbnail
+    tileSize: CGFloat = WatchLayout.thumbnail
   ) {
     self.init(
       tile: tile, title: title, subtitle: subtitle, titleLineLimit: titleLineLimit,
@@ -184,7 +184,7 @@ struct StatusDot: View {
 }
 
 /// The title above a list section.
-struct FloSectionHeader: View {
+struct SectionHeader: View {
   let title: String
 
   init(_ title: String) {
@@ -209,12 +209,12 @@ struct StorageWarningRow: View {
     .font(.meta)
     .foregroundStyle(Dusk.warningText)
     .padding(.vertical, 8)
-    .floJoinedRow(.alone)
+    .joinedRow(.alone)
   }
 }
 
 /// A label over its value: settings and diagnostics.
-struct FloInfoRow: View {
+struct InfoRow: View {
   let label: String
   let value: String
 
@@ -303,7 +303,7 @@ struct StateView: View {
           systemImage: "icloud.slash", tint: .warning, circle: .warning.opacity(0.18),
           title: "Can't reach server", text: "Downloads still play offline.")
         Button("Try Again", action: retry)
-          .buttonStyle(FloTintedButtonStyle(height: 40))
+          .buttonStyle(TintedButtonStyle(height: 40))
           .padding(.top, 6)
       }
     }
@@ -332,8 +332,8 @@ struct StateView: View {
 
   private var skeletonRow: some View {
     HStack(spacing: 10) {
-      RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius).fill(Dusk.skeleton)
-        .frame(width: FloLayout.thumbnail, height: FloLayout.thumbnail)
+      RoundedRectangle(cornerRadius: WatchLayout.thumbnailRadius).fill(Dusk.skeleton)
+        .frame(width: WatchLayout.thumbnail, height: WatchLayout.thumbnail)
       VStack(alignment: .leading, spacing: 6) {
         Capsule().fill(Dusk.skeleton).frame(height: 9).frame(maxWidth: 110)
         Capsule().fill(Dusk.skeleton.opacity(0.8)).frame(height: 8).frame(maxWidth: 70)
@@ -341,9 +341,9 @@ struct StateView: View {
       Spacer(minLength: 0)
     }
     .padding(.horizontal, 10)
-    .frame(minHeight: FloLayout.coverRowHeight)
+    .frame(minHeight: WatchLayout.coverRowHeight)
     .background(
-      RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous).fill(Dusk.surface)
+      RoundedRectangle(cornerRadius: WatchLayout.rowRadius, style: .continuous).fill(Dusk.surface)
     )
   }
 }
@@ -371,16 +371,16 @@ struct ChoiceList<Value: Hashable>: View {
               Image(systemName: "checkmark").foregroundStyle(Dusk.fill)
             }
           }
-          .frame(minHeight: FloLayout.rowHeight)
+          .frame(minHeight: WatchLayout.rowHeight)
         }
         .accessibilityAddTraits(value == selection ? .isSelected : [])
-        .floJoinedRow(
+        .joinedRow(
           RowPosition(index: index, count: options.count),
-          hairlineInset: FloLayout.joinedRowInsets.leading)
+          hairlineInset: WatchLayout.joinedRowInsets.leading)
       }
     }
     .listStyle(.plain)
     .environment(\.defaultMinListRowHeight, 1)
-    .floNavigationTitle(title)
+    .brandNavigationTitle(title)
   }
 }

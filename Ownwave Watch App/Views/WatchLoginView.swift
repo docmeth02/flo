@@ -91,7 +91,7 @@ struct WatchLoginView: View {
               ? "Signing in…" : viewModel.loginError == nil ? "Sign In" : "Try Again")
         }
       }
-      .buttonStyle(FloPrimaryButtonStyle())
+      .buttonStyle(PrimaryButtonStyle())
       .opacity(isSubmitDisabled ? 0.6 : 1)
       .disabled(isSubmitDisabled)
       .padding(.top, 5)

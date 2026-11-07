@@ -22,9 +22,10 @@ struct NowPlayingIndicator: View {
   private func content(_ song: QueueEntity) -> some View {
     let tint = shades?.tint ?? Dusk.fill
     return VStack(spacing: 8) {
-      HStack(spacing: FloLayout.tileSpacing) {
+      HStack(spacing: WatchLayout.tileSpacing) {
         WatchAlbumArtView(albumId: playerViewModel.nowPlayingAlbumId)
-          .clipShape(RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous))
+          .clipShape(
+            RoundedRectangle(cornerRadius: WatchLayout.thumbnailRadius, style: .continuous))
         VStack(alignment: .leading, spacing: 1) {
           CapsLabel(playerViewModel.isPlaying ? "Now Playing" : "Paused", tint: tint)
           Text(song.songName ?? "Unknown")

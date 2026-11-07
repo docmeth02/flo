@@ -27,7 +27,7 @@ struct WatchDownloadsView: View {
         list
       }
     }
-    .floNavigationTitle("Downloads")
+    .brandNavigationTitle("Downloads")
     .measuresStorage($storage, trigger: storageChanges)
     .onAppear {
       albumViewModel.fetchDownloadedAlbums()
@@ -50,18 +50,18 @@ struct WatchDownloadsView: View {
     List {
       storageCard
         .padding(.vertical, 9)
-        .floJoinedRow(.alone)
+        .joinedRow(.alone)
 
       if !cachedSongs.isEmpty {
         NavigationLink(destination: WatchCachedSongsView(songs: cachedSongs)) {
           CoverRow(
             tile: .glyph(Glyph.playlist), title: "Cached songs",
-            subtitle: counted(cachedSongs.count, "song"), tileSize: FloLayout.smallThumbnail
+            subtitle: counted(cachedSongs.count, "song"), tileSize: WatchLayout.smallThumbnail
           ) {
             Chevron()
           }
         }
-        .floJoinedRow(.alone)
+        .joinedRow(.alone)
       }
 
       let albums = albumViewModel.downloadedAlbums
@@ -71,10 +71,10 @@ struct WatchDownloadsView: View {
             NavigationLink(destination: WatchAlbumDetailView(album: album)) {
               albumRow(album)
             }
-            .floJoinedRow(RowPosition(index: index, count: albums.count))
+            .joinedRow(RowPosition(index: index, count: albums.count))
           }
         } header: {
-          FloSectionHeader("Albums")
+          SectionHeader("Albums")
         }
       }
     }
@@ -106,7 +106,7 @@ struct WatchDownloadsView: View {
       .filter { !$0.isEmpty }.joined(separator: " · ")
     return CoverRow(
       tile: .cover(albumId: album.id), title: album.name, subtitle: subtitle,
-      titleLineLimit: 2, tileSize: FloLayout.smallThumbnail
+      titleLineLimit: 2, tileSize: WatchLayout.smallThumbnail
     ) {
       // An album shows up here with its first song, so the check waits until
       // its download has finished without a failure.

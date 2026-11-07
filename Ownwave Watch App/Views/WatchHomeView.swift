@@ -51,10 +51,10 @@ struct WatchHomeView: View {
         Section {
           ForEach(Array(pinned.enumerated()), id: \.element.id) { index, target in
             pinRow(target)
-              .floJoinedRow(RowPosition(index: index, count: pinned.count))
+              .joinedRow(RowPosition(index: index, count: pinned.count))
           }
         } header: {
-          FloSectionHeader("Pinned").id(Anchor.pinned)
+          SectionHeader("Pinned").id(Anchor.pinned)
         }
       }
 
@@ -64,13 +64,13 @@ struct WatchHomeView: View {
           ForEach(Array(recent.enumerated()), id: \.element.id) { index, album in
             CoverRow(
               tile: .cover(albumId: album.id), title: album.name, subtitle: album.albumArtist,
-              tileSize: FloLayout.smallThumbnail
+              tileSize: WatchLayout.smallThumbnail
             )
             .holdable(onTap: { openedAlbum = album }, onHold: { menu = .album(album) })
-            .floJoinedRow(RowPosition(index: index, count: recent.count))
+            .joinedRow(RowPosition(index: index, count: recent.count))
           }
         } header: {
-          FloSectionHeader("Recently Played").id(Anchor.recent)
+          SectionHeader("Recently Played").id(Anchor.recent)
         }
       }
 
@@ -80,7 +80,7 @@ struct WatchHomeView: View {
           .listRowInsets(EdgeInsets())
           .id(Anchor.settings)
       } header: {
-        FloSectionHeader("Library").id(Anchor.library)
+        SectionHeader("Library").id(Anchor.library)
       }
     }
     // Joined rows: the default style shrinks the rows at the screen's edges
@@ -143,13 +143,13 @@ struct WatchHomeView: View {
       playSomething
     }
     .background(Dusk.surface)
-    .clipShape(RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: WatchLayout.platterRadius, style: .continuous))
   }
 
   /// The whole strip plays; its round mark says so. One tap target, so a
   /// tap never starts two mixes.
   private var playSomething: some View {
-    HStack(spacing: FloLayout.tileSpacing) {
+    HStack(spacing: WatchLayout.tileSpacing) {
       Image(systemName: "sparkles")
         .font(.system(size: 20))
         .foregroundStyle(Dusk.fill)
@@ -166,7 +166,7 @@ struct WatchHomeView: View {
       }
       Spacer(minLength: 0)
       Image(systemName: "play.fill")
-        .floRoundGlyph()
+        .roundGlyph()
     }
     .padding(.leading, 12)
     .padding(.trailing, 10)
@@ -186,7 +186,7 @@ struct WatchHomeView: View {
   private func pinRow(_ target: MenuTarget) -> some View {
     CoverRow(
       tile: CoverTile(target), title: target.title, subtitle: target.subtitle,
-      tileSize: FloLayout.smallThumbnail
+      tileSize: WatchLayout.smallThumbnail
     )
     .holdable(
       onTap: {
@@ -205,8 +205,8 @@ struct WatchHomeView: View {
   /// a list draws a link in a row as the row itself, without the tile style.
   private var library: some View {
     LazyVGrid(
-      columns: Array(repeating: GridItem(spacing: FloLayout.listRowGap), count: 2),
-      spacing: FloLayout.listRowGap
+      columns: Array(repeating: GridItem(spacing: WatchLayout.listRowGap), count: 2),
+      spacing: WatchLayout.listRowGap
     ) {
       ForEach(LibraryScreen.allCases, id: \.self) { screen in
         Button {
@@ -214,7 +214,7 @@ struct WatchHomeView: View {
         } label: {
           Label(screen.title, systemImage: screen.systemImage)
         }
-        .buttonStyle(FloTileButtonStyle(tint: screen.tint))
+        .buttonStyle(TileButtonStyle(tint: screen.tint))
       }
     }
   }

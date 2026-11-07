@@ -29,13 +29,13 @@ struct PinnedList<Item: Identifiable, Rows: View>: View where Item.ID == String 
       Section {
         rows(pinned, true)
       } header: {
-        FloSectionHeader("Pinned")
+        SectionHeader("Pinned")
       }
       if let allLabel {
         Section {
           rows(items, false)
         } header: {
-          FloSectionHeader(allLabel)
+          SectionHeader(allLabel)
         }
       } else {
         rows(items, false)
@@ -51,7 +51,7 @@ struct JoinedRows<Item: Identifiable, Row: View>: View {
 
   var body: some View {
     ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-      row(item).floJoinedRow(RowPosition(index: index, count: items.count))
+      row(item).joinedRow(RowPosition(index: index, count: items.count))
     }
   }
 }
@@ -75,7 +75,7 @@ struct LibraryRow: View {
   var body: some View {
     CoverRow(
       tile: CoverTile(target), title: target.title, subtitle: subtitle, titleLineLimit: 2,
-      tileSize: FloLayout.smallThumbnail
+      tileSize: WatchLayout.smallThumbnail
     ) {
       if isPinned {
         PinGlyph()

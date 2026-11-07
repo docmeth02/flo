@@ -51,8 +51,8 @@ private struct RadioRow: View {
   let radio: Radio
 
   var body: some View {
-    HStack(spacing: FloLayout.tileSpacing) {
-      CoverTile.radio.view(size: FloLayout.smallThumbnail)
+    HStack(spacing: WatchLayout.tileSpacing) {
+      CoverTile.radio.view(size: WatchLayout.smallThumbnail)
       VStack(alignment: .leading, spacing: 1) {
         Text(radio.name)
           .font(.rowTitle)
@@ -69,7 +69,7 @@ private struct RadioRow: View {
         PinGlyph()
       }
     }
-    .frame(minHeight: FloLayout.joinedRowHeight)
+    .frame(minHeight: WatchLayout.joinedRowHeight)
     .accessibilityElement(children: .combine)
   }
 }

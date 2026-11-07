@@ -93,7 +93,7 @@ struct CollectionDetailView: View {
           } label: {
             Label("Play", systemImage: "play.fill")
           }
-          .buttonStyle(FloPrimaryButtonStyle(fill: tint, height: Self.buttonHeight))
+          .buttonStyle(PrimaryButtonStyle(fill: tint, height: Self.buttonHeight))
 
           Button {
             if playerViewModel.shuffleItem(item: playable()) { showPlayer() }
@@ -101,7 +101,7 @@ struct CollectionDetailView: View {
             Image(systemName: "shuffle")
           }
           .buttonStyle(
-            FloRoundButtonStyle(tint: tint, fill: tint.opacity(0.18), size: Self.buttonHeight)
+            RoundButtonStyle(tint: tint, fill: tint.opacity(0.18), size: Self.buttonHeight)
           )
           .accessibilityLabel("Shuffle")
         }

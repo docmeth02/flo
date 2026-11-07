@@ -22,7 +22,7 @@ struct WatchDiagnosticsView: View {
           Label("Share log", systemImage: "square.and.arrow.up")
             .font(.row)
             .foregroundStyle(Dusk.fill)
-            .frame(minHeight: FloLayout.rowHeight)
+            .frame(minHeight: WatchLayout.rowHeight)
         }
         .joined(.alone)
       }
@@ -34,7 +34,7 @@ struct WatchDiagnosticsView: View {
       Section {
         rows(DiagnosticsReport.historyLines(history.state))
       } header: {
-        FloSectionHeader("History")
+        SectionHeader("History")
       }
 
       Section {
@@ -46,7 +46,7 @@ struct WatchDiagnosticsView: View {
             .padding(.vertical, 2)
             .joined(RowPosition(index: 0, count: count))
           ForEach(Array(mix.picks.enumerated()), id: \.offset) { index, pick in
-            FloInfoRow("\(pick.slot) · \(pick.reason)", "\(pick.title) — \(pick.artist)")
+            InfoRow("\(pick.slot) · \(pick.reason)", "\(pick.title) — \(pick.artist)")
               .joined(RowPosition(index: index + 1, count: count))
           }
         } else {
@@ -57,7 +57,7 @@ struct WatchDiagnosticsView: View {
             .joined(.alone)
         }
       } header: {
-        FloSectionHeader("Last mix")
+        SectionHeader("Last mix")
       }
 
       Section {
@@ -77,20 +77,20 @@ struct WatchDiagnosticsView: View {
           .joined(RowPosition(index: index, count: entries.count))
         }
       } header: {
-        FloSectionHeader("Requests")
+        SectionHeader("Requests")
       }
     }
     // Joined rows, as in Settings: plain, and as low as their content (at 0
     // watchOS skips a section's first or last row).
     .listStyle(.plain)
     .environment(\.defaultMinListRowHeight, 1)
-    .floNavigationTitle("Diagnostics")
+    .brandNavigationTitle("Diagnostics")
     .task { await ListeningHistoryStore.shared.publishStoredState() }
   }
 
   private func rows(_ lines: [(String, String)]) -> some View {
     ForEach(Array(lines.enumerated()), id: \.element.0) { index, line in
-      FloInfoRow(line.0, line.1).joined(RowPosition(index: index, count: lines.count))
+      InfoRow(line.0, line.1).joined(RowPosition(index: index, count: lines.count))
     }
   }
 }
@@ -98,6 +98,6 @@ struct WatchDiagnosticsView: View {
 extension View {
   /// A row joined on its section's platter, its hairline from the text.
   fileprivate func joined(_ position: RowPosition) -> some View {
-    floJoinedRow(position, hairlineInset: FloLayout.joinedRowInsets.leading)
+    joinedRow(position, hairlineInset: WatchLayout.joinedRowInsets.leading)
   }
 }
