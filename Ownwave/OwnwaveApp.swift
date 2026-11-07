@@ -26,6 +26,8 @@ struct OwnwaveApp: App {
   @UIApplicationDelegateAdaptor private var appDelegate: AppDelegate
 
   init() {
+    // First, since an intent can run right after a launch it caused.
+    PlayRequest.handler = { try await AppModel.shared.perform($0) }
     AppLaunch.warmUp()
     _ = WatchSend.shared
     WatchLink.shared.activate()

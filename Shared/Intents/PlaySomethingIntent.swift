@@ -5,32 +5,43 @@
 
 import AppIntents
 
-/// Play Something for Siri, Shortcuts and the Action Button. The mix is built
-/// by the player the app's root view owns, so the intent only asks for it.
-struct PlaySomethingIntent: AppIntent {
+/// Play Something for Siri, Shortcuts and the Action Button. The iPhone plays
+/// it in the background, also while locked; the watch opens the app, whose
+/// audio activation may need to show the route picker.
+struct PlaySomethingIntent: AudioPlaybackIntent {
   static var title: LocalizedStringResource = "Play Something"
   static var description = IntentDescription("Plays a smart mix from your library.")
-  static var openAppWhenRun = true
+  // A literal per platform: the intent metadata is extracted at build time
+  // and cannot evaluate an expression.
+  #if os(watchOS)
+    static var openAppWhenRun = true
+  #else
+    static var openAppWhenRun = false
+  #endif
 
   @MainActor
   func perform() async throws -> some IntentResult {
-    PlayRequest.post(.something)
+    try await PlayRequest.run(.something)
     return .result()
   }
 }
 
-/// Plays an artist's top songs, or offline their songs on the watch.
-struct PlayArtistIntent: AppIntent {
+/// Plays an artist's top songs, or offline their songs on the device.
+struct PlayArtistIntent: AudioPlaybackIntent {
   static var title: LocalizedStringResource = "Play Artist"
   static var description = IntentDescription("Plays an artist's top songs.")
-  static var openAppWhenRun = true
+  #if os(watchOS)
+    static var openAppWhenRun = true
+  #else
+    static var openAppWhenRun = false
+  #endif
 
   @Parameter(title: "Artist")
   var artist: ArtistAppEntity
 
   @MainActor
   func perform() async throws -> some IntentResult {
-    PlayRequest.post(.artist(id: artist.id, name: artist.name))
+    try await PlayRequest.run(.artist(id: artist.id, name: artist.name))
     return .result()
   }
 }
@@ -77,14 +88,28 @@ extension Notification.Name {
   static let playRequested = Notification.Name("flo.playRequested")
 }
 
-/// What an intent asked the app to play. The app's root view takes it; a launch
-/// by the intent can run perform() before the view subscribed to the
+/// What an intent asked the app to play. An app that registered a `handler`
+/// (the iPhone) plays it while the intent waits. Otherwise the watch's root
+/// view takes it; a
+/// launch by the intent can run perform() before the view subscribed to the
 /// notification, so the view also takes a pending request when it appears.
 enum PlayRequest {
   case something
   case artist(id: String, name: String)
 
+  /// Plays a request to the end, throwing what Siri should say when nothing
+  /// plays. Set at launch by an app that plays without opening.
+  @MainActor static var handler: (@MainActor (PlayRequest) async throws -> Void)?
+
   @MainActor private static var pending: PlayRequest?
+
+  @MainActor static func run(_ request: PlayRequest) async throws {
+    if let handler {
+      try await handler(request)
+    } else {
+      post(request)
+    }
+  }
 
   @MainActor static func post(_ request: PlayRequest) {
     pending = request
@@ -96,4 +121,14 @@ enum PlayRequest {
     defer { pending = nil }
     return pending
   }
+}
+
+/// Why a play request played nothing, in the words Siri says.
+struct PlayFailure: Error, CustomLocalizedStringResourceConvertible {
+  let localizedStringResource: LocalizedStringResource
+
+  static let signedOut = PlayFailure(
+    localizedStringResource: "Sign in to Ownwave on your iPhone first.")
+  static let nothingPlayed = PlayFailure(
+    localizedStringResource: "Ownwave couldn't start playing.")
 }

@@ -91,12 +91,32 @@
         }
       }
     },
+    "Ownwave couldn't start playing.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ownwave konnte die Wiedergabe nicht starten."
+          }
+        }
+      }
+    },
     "Removed %@ from your likes.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ gefällt dir nicht mehr."
+          }
+        }
+      }
+    },
+    "Sign in to Ownwave on your iPhone first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Melde dich zuerst auf deinem iPhone bei Ownwave an."
           }
         }
       }

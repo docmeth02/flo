@@ -57,10 +57,6 @@ struct RootView: View {
       RequestLog.shared.note("app \(phase)")
       if phase != .active { AuthService.shared.persistRenewedToken() }
     }
-    .onAppear { app.takePlayRequest() }
-    .onReceive(NotificationCenter.default.publisher(for: .playRequested)) { _ in
-      app.takePlayRequest()
-    }
     .environmentObject(app)
     .environmentObject(app.auth)
     .environmentObject(app.player)
@@ -117,7 +113,8 @@ struct AppTabs: View {
         libraryChip = chip
         paths[.library] = nil
         tab = .library
-      })
+      }
+    )
     .tabBarMinimizeBehavior(.onScrollDown)
     .tabViewBottomAccessory { MiniPlayer() }
     .toastOverlay(app.toast, bottom: 140)
@@ -130,6 +127,7 @@ struct AppTabs: View {
     .task { await startTourOnce() }
     #if DEBUG
       .task { await runDebugScreen() }
+      .task { await runDebugIntent() }
     #endif
   }
 

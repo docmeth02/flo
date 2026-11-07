@@ -8,8 +8,8 @@ import AppIntents
 /// Play Something from a widget or the Control Center control, without
 /// opening the app. An audio playback intent runs in the app's process (the
 /// system launches it in the background when needed), so the extension only
-/// needs the type for its buttons. Siri and Shortcuts keep the one that opens
-/// the app, `PlaySomethingIntent`.
+/// needs the type for its buttons. Siri and Shortcuts use
+/// `PlaySomethingIntent`, which plays the same way on the iPhone.
 struct PlaySomethingNowIntent: AudioPlaybackIntent {
   static var title: LocalizedStringResource = "Play Something"
   static var description = IntentDescription("Plays a smart mix from your library.")
