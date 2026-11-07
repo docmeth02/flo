@@ -1,6 +1,6 @@
 //
 //  SmartPlaybackService.swift
-//  flo
+//  Ownwave
 //
 
 import CoreData

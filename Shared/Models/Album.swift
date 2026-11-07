@@ -1,6 +1,6 @@
 //
 //  Album.swift
-//  flo
+//  Ownwave
 //
 
 import Foundation

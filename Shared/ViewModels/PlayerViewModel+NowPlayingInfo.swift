@@ -1,6 +1,6 @@
 //
 //  PlayerViewModel+NowPlayingInfo.swift
-//  flo
+//  Ownwave
 //
 
 import MediaPlayer

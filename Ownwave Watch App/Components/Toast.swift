@@ -1,5 +1,5 @@
 //
-//  FloToast.swift
+//  Toast.swift
 //  Ownwave Watch App
 //
 

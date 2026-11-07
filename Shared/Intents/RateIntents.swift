@@ -1,6 +1,6 @@
 //
 //  RateIntents.swift
-//  flo
+//  Ownwave
 //
 
 import AppIntents

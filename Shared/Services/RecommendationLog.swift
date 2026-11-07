@@ -1,6 +1,6 @@
 //
 //  RecommendationLog.swift
-//  flo
+//  Ownwave
 //
 
 import Foundation

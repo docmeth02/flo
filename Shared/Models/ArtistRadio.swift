@@ -1,6 +1,6 @@
 //
 //  ArtistRadio.swift
-//  flo
+//  Ownwave
 //
 
 import Foundation

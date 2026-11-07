@@ -1,6 +1,6 @@
 //
 //  Timeout.swift
-//  flo
+//  Ownwave
 //
 
 import Foundation

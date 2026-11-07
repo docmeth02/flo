@@ -1,6 +1,6 @@
 //
 //  Subsonic.swift
-//  flo
+//  Ownwave
 //
 
 protocol SubsonicResponseData: Decodable {

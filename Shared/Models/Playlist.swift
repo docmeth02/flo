@@ -1,6 +1,6 @@
 //
 //  Playlist.swift
-//  flo
+//  Ownwave
 //
 
 import Foundation

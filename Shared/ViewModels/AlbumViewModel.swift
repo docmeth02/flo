@@ -1,6 +1,6 @@
 //
 //  AlbumViewModel.swift
-//  flo
+//  Ownwave
 //
 
 import Foundation

@@ -1,6 +1,6 @@
 //
 //  Palette.swift
-//  flo
+//  Ownwave
 //
 
 import SwiftUI
