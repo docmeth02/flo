@@ -239,7 +239,7 @@ struct LibraryView: View {
   }
 
   private var heart: some View {
-    Image(systemName: "heart.fill").foregroundStyle(Color.floLiked)
+    Image(systemName: "heart.fill").foregroundStyle(Color.liked)
   }
 
   /// The stream cache, then the downloaded albums and playlists with their
@@ -260,7 +260,7 @@ struct LibraryView: View {
               art: .glyph(.playlist), title: "Cached", subtitle: counted(cachedSongs.count, "song"),
               artSize: 46
             ) {
-              Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.floDownloaded)
+              Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.downloaded)
             }
           }
           .buttonStyle(.plain)
@@ -373,7 +373,7 @@ private struct DownloadRow: View {
         Text(album.name).font(.rowTitle).foregroundStyle(palette.text)
         Group {
           if failed {
-            Text("Failed · tap to retry").foregroundStyle(Color.floDestructive)
+            Text("Failed · tap to retry").foregroundStyle(Color.destructive)
           } else if downloading {
             Text("Downloading · \(Int(percent))%")
           } else {
@@ -392,9 +392,9 @@ private struct DownloadRow: View {
       Spacer(minLength: 0)
       Group {
         if failed {
-          Image(systemName: "exclamationmark.circle.fill").foregroundStyle(Color.floDestructive)
+          Image(systemName: "exclamationmark.circle.fill").foregroundStyle(Color.destructive)
         } else if !downloading {
-          Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.floDownloaded)
+          Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.downloaded)
         }
       }
       .font(.system(size: 20))

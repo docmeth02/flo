@@ -20,8 +20,8 @@ struct WatchDiagnosticsView: View {
       Section {
         ShareLink(item: DiagnosticsReport.text(), subject: Text("Ownwave log")) {
           Label("Share log", systemImage: "square.and.arrow.up")
-            .font(.floRow)
-            .foregroundStyle(Color.floLilac)
+            .font(.row)
+            .foregroundStyle(Dusk.fill)
             .frame(minHeight: FloLayout.rowHeight)
         }
         .joined(.alone)
@@ -42,7 +42,7 @@ struct WatchDiagnosticsView: View {
           // The summary first, then one row per pick.
           let count = mix.picks.count + 1
           Text(DiagnosticsReport.summary(of: mix))
-            .font(.floMeta)
+            .font(.meta)
             .padding(.vertical, 2)
             .joined(RowPosition(index: 0, count: count))
           ForEach(Array(mix.picks.enumerated()), id: \.offset) { index, pick in
@@ -51,8 +51,8 @@ struct WatchDiagnosticsView: View {
           }
         } else {
           Text("No mix yet")
-            .font(.floMeta)
-            .foregroundStyle(Color.floSecondary)
+            .font(.meta)
+            .foregroundStyle(Dusk.secondary)
             .padding(.vertical, 2)
             .joined(.alone)
         }
@@ -66,11 +66,11 @@ struct WatchDiagnosticsView: View {
           VStack(alignment: .leading, spacing: 2) {
             Text(entry.text)
               .font(.caption2)
-              .foregroundStyle(Color.floSecondary)
+              .foregroundStyle(Dusk.secondary)
               .lineLimit(2)
             Text(DiagnosticsReport.details(of: entry))
-              .font(.floMeta)
-              .foregroundStyle(entry.isFailure ? Color.floDestructive : .white)
+              .font(.meta)
+              .foregroundStyle(entry.isFailure ? Color.destructive : .white)
               .lineLimit(2)
           }
           .padding(.vertical, 2)

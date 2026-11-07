@@ -35,7 +35,7 @@ struct ServerView: View {
         SettingsGroup {
           Button("Sign Out", role: .destructive) { confirmsLogout = true }
             .font(.rowTitle.weight(.semibold))
-            .foregroundStyle(Color.floDestructive)
+            .foregroundStyle(Color.destructive)
             .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
             .contentShape(Rectangle())
             .buttonStyle(.plain)

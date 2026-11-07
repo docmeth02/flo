@@ -203,7 +203,7 @@ struct SettingsView: View {
     Button(action: action) {
       Text(title)
         .font(.rowSubtitle.weight(.semibold))
-        .foregroundStyle(Color.floDestructive)
+        .foregroundStyle(Color.destructive)
         .frame(maxWidth: .infinity, minHeight: 36)
         .background(palette.surface2, in: Capsule())
         .contentShape(Capsule())
@@ -364,7 +364,7 @@ private struct StorageBar: View {
   private func parts(width: CGFloat) -> [(color: Color, width: CGFloat)] {
     let parts = [
       (color: palette.accent, bytes: sizes.cache),
-      (color: Color.floDownloaded, bytes: sizes.downloads),
+      (color: Color.downloaded, bytes: sizes.downloads),
       (color: palette.surface2, bytes: sizes.free),
     ].filter { $0.bytes > 0 }
     let widths = StorageUsage.barWidths(
@@ -375,7 +375,7 @@ private struct StorageBar: View {
   private var legend: some View {
     HStack(spacing: 14) {
       key("Cache", sizes.cache, palette.accent)
-      key("Downloads", sizes.downloads, Color.floDownloaded)
+      key("Downloads", sizes.downloads, Color.downloaded)
     }
   }
 
@@ -419,7 +419,7 @@ struct DiagnosticsView: View {
             Text(entry.text).font(.meta).foregroundStyle(palette.secondary).lineLimit(2)
             Text(DiagnosticsReport.details(of: entry))
               .font(.rowSubtitle)
-              .foregroundStyle(entry.isFailure ? Color.floDestructive : palette.text)
+              .foregroundStyle(entry.isFailure ? Color.destructive : palette.text)
               .lineLimit(2)
           }
         }

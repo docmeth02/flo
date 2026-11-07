@@ -64,7 +64,7 @@ struct WatchSettingsView: View {
             if !settingsFollowPhone { DownloadSession.shared.cellularAccessChanged() }
           }
         }
-        .tint(.floLilac)
+        .tint(Dusk.fill)
         .disabled(settingsFollowPhone)
         footer(
           settingsFollowPhone
@@ -123,7 +123,7 @@ struct WatchSettingsView: View {
         } label: {
           IconRowLabel(
             title: "Log Out", systemImage: "rectangle.portrait.and.arrow.right",
-            tint: .floDestructive, label: .floDestructive)
+            tint: .destructive, label: .destructive)
         }
         .joined(.alone)
       }
@@ -176,21 +176,21 @@ struct WatchSettingsView: View {
     return HStack(spacing: 8) {
       Image(systemName: "server.rack")
         .font(.system(size: 14))
-        .foregroundStyle(Color.floLilac)
+        .foregroundStyle(Dusk.fill)
         .frame(width: FloLayout.smallThumbnail, height: FloLayout.smallThumbnail)
         .background(
           RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous)
-            .fill(Color.floTile))
+            .fill(Dusk.tile))
       VStack(alignment: .leading, spacing: 1) {
         Text(ServerAccount.authority)
-          .font(.floRowTitle)
+          .font(.rowTitle)
         HStack(spacing: 4) {
-          StatusDot(color: connectivity.isServerReachable ? .floDownloaded : .floSecondary)
+          StatusDot(color: connectivity.isServerReachable ? .downloaded : Dusk.secondary)
           // A server at the root of its host has no path to show.
           Text(ServerAccount.path.isEmpty ? status : ServerAccount.path)
         }
-        .font(.floMeta)
-        .foregroundStyle(Color.floSecondary)
+        .font(.meta)
+        .foregroundStyle(Dusk.secondary)
       }
       .lineLimit(1)
       Spacer(minLength: 0)
@@ -205,23 +205,23 @@ struct WatchSettingsView: View {
       StorageBar(
         usage: storage,
         parts: [
-          .init(color: .floLilac, bytes: storage.cache),
-          .init(color: .floDownloaded, bytes: storage.downloads),
+          .init(color: Dusk.fill, bytes: storage.cache),
+          .init(color: .downloaded, bytes: storage.downloads),
         ])
       // One key under the other when they do not fit side by side.
       ViewThatFits(in: .horizontal) {
         HStack(alignment: .firstTextBaseline, spacing: 8) { legend }
         VStack(alignment: .leading, spacing: 2) { legend }
       }
-      .font(.floMeta)
-      .foregroundStyle(Color.floSecondary)
+      .font(.meta)
+      .foregroundStyle(Dusk.secondary)
     }
     .accessibilityElement(children: .combine)
   }
 
   @ViewBuilder private var legend: some View {
-    key("Cache", storage.cache, .floLilac)
-    key("Downloads", storage.downloads, .floDownloaded)
+    key("Cache", storage.cache, Dusk.fill)
+    key("Downloads", storage.downloads, .downloaded)
   }
 
   private func key(_ title: String, _ bytes: Int64, _ color: Color) -> some View {
@@ -234,7 +234,7 @@ struct WatchSettingsView: View {
   private func footer(_ text: String) -> some View {
     Text(text)
       .font(.caption2)
-      .foregroundStyle(Color.floSecondary)
+      .foregroundStyle(Dusk.secondary)
       .listRowBackground(Color.clear)
       .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
   }
@@ -248,7 +248,7 @@ struct WatchSettingsView: View {
 
   private func actionRow(_ title: String, action: @escaping () -> Void) -> some View {
     Button(role: .destructive, action: action) {
-      IconRowLabel(title: title, label: .floDestructive)
+      IconRowLabel(title: title, label: .destructive)
     }
   }
 }
@@ -289,8 +289,8 @@ private struct ChoiceRow<Value: Hashable>: View {
 
   private var value: some View {
     Text(options.first { $0.0 == selection }?.1 ?? "")
-      .font(.floMeta)
-      .foregroundStyle(Color.floSecondary)
+      .font(.meta)
+      .foregroundStyle(Dusk.secondary)
   }
 }
 

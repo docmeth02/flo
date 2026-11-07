@@ -49,7 +49,7 @@ struct WatchQueueView: View {
                 } label: {
                   Label("Next", systemImage: "text.line.first.and.arrowtriangle.forward")
                 }
-                .tint(.floLilacDeep)
+                .tint(Dusk.deepFill)
               }
           }
 
@@ -59,8 +59,8 @@ struct WatchQueueView: View {
                 ? "Nothing up next. Keep Playing will continue with Smart Shuffle."
                 : "Nothing up next."
             )
-            .font(.floMeta)
-            .foregroundStyle(Color.floSecondary)
+            .font(.meta)
+            .foregroundStyle(Dusk.secondary)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
             .listRowBackground(Color.clear)
@@ -85,18 +85,18 @@ struct WatchQueueView: View {
 
   /// The playing song on its cover's shade, with the time it has left.
   private func current(_ song: QueueEntity) -> some View {
-    let tint = shades?.tint ?? .floLilac
+    let tint = shades?.tint ?? Dusk.fill
     return HStack(spacing: FloLayout.tileSpacing) {
       Image(systemName: playerViewModel.isPlaying ? "waveform" : "pause.fill")
         .font(.system(size: 16, weight: .semibold))
         .foregroundStyle(tint)
       VStack(alignment: .leading, spacing: 1) {
         Text(song.songName ?? "Unknown")
-          .font(.floSong)
+          .font(.song)
           .foregroundStyle(tint)
         Text(song.artistName ?? "Unknown")
-          .font(.floMeta)
-          .foregroundStyle(Color.floSecondary)
+          .font(.meta)
+          .foregroundStyle(Dusk.secondary)
       }
       .lineLimit(1)
       Spacer(minLength: 0)
@@ -108,7 +108,7 @@ struct WatchQueueView: View {
     .padding(.vertical, 10)
     .background(
       RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous)
-        .fill(shades?.background ?? .floSurface2)
+        .fill(shades?.background ?? Dusk.surface2)
     )
     .holdable(
       onTap: { playerViewModel.playFromQueue(idx: playerViewModel.activeQueueIdx) }, onHold: nil)
@@ -119,10 +119,10 @@ struct WatchQueueView: View {
       CoverTile.cover(albumId: item.albumId ?? "").view(size: FloLayout.smallThumbnail)
       VStack(alignment: .leading, spacing: 1) {
         Text(item.songName ?? "Unknown")
-          .font(.floRowTitle)
+          .font(.rowTitle)
         subtitle(item)
-          .font(.floMeta)
-          .foregroundStyle(Color.floSecondary)
+          .font(.meta)
+          .foregroundStyle(Dusk.secondary)
       }
       .lineLimit(1)
       Spacer(minLength: 0)
@@ -167,7 +167,7 @@ private struct Remaining: View {
 
   var body: some View {
     Text("-" + (duration * (1 - clock.clampedProgress)).minuteSecond)
-      .font(.floTime)
-      .foregroundStyle(Color.floSecondary)
+      .font(.time)
+      .foregroundStyle(Dusk.secondary)
   }
 }

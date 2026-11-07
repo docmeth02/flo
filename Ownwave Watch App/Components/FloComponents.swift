@@ -9,8 +9,8 @@ import SwiftUI
 /// Home and the login screen.
 struct Wordmark: View {
   var body: some View {
-    (Text("Own").foregroundStyle(Color.floText) + Text("wave").foregroundStyle(Color.floWave))
-      .font(.floWordmark)
+    (Text("Own").foregroundStyle(Dusk.text) + Text("wave").foregroundStyle(Dusk.accent))
+      .font(.wordmark)
       // 0.035 em tighter at 18 pt, as in the design.
       .tracking(-0.035 * 18)
   }
@@ -48,14 +48,14 @@ enum CoverTile {
     case .glyph(let systemImage, let round):
       Image(systemName: systemImage)
         .font(.system(size: 16))
-        .foregroundStyle(Color.floLilac)
+        .foregroundStyle(Dusk.fill)
         .frame(width: size, height: size)
         .background(
           (round
             ? AnyShape(Circle())
             : AnyShape(
               RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius, style: .continuous)))
-            .fill(Color.floTile))
+            .fill(Dusk.tile))
     }
   }
 }
@@ -76,13 +76,13 @@ struct CoverRow<Trailing: View>: View {
       tile.view(size: tileSize)
       VStack(alignment: .leading, spacing: 1) {
         Text(title)
-          .font(.floRowTitle)
+          .font(.rowTitle)
           // Without a subtitle there is room for a long name.
           .lineLimit(titleLineLimit ?? (subtitle.isEmpty ? 2 : 1))
         if !subtitle.isEmpty {
           Text(subtitle)
-            .font(.floMeta)
-            .foregroundStyle(Color.floSecondary)
+            .font(.meta)
+            .foregroundStyle(Dusk.secondary)
             .lineLimit(1)
         }
       }
@@ -111,16 +111,16 @@ extension CoverRow where Trailing == EmptyView {
 /// over Up Next, the sign-in field labels.
 struct CapsLabel: View {
   let text: String
-  var tint: Color = .floSecondary
+  var tint: Color = Dusk.secondary
 
-  init(_ text: String, tint: Color = .floSecondary) {
+  init(_ text: String, tint: Color = Dusk.secondary) {
     self.text = text
     self.tint = tint
   }
 
   var body: some View {
     Text(text.uppercased())
-      .font(.floCaps)
+      .font(.caps)
       .tracking(1)
       .foregroundStyle(tint)
       .lineLimit(1)
@@ -132,7 +132,7 @@ struct Chevron: View {
   var body: some View {
     Image(systemName: "chevron.right")
       .font(.system(size: 12, weight: .semibold))
-      .foregroundStyle(Color.floSecondary)
+      .foregroundStyle(Dusk.secondary)
   }
 }
 
@@ -142,8 +142,8 @@ struct IconRowLabel: View {
   let title: String
   var detail = ""
   var systemImage: String?
-  var tint: Color = .floLilac
-  var label: Color = .floText
+  var tint: Color = Dusk.fill
+  var label: Color = Dusk.text
 
   private static let iconWidth: CGFloat = 22
   private static let spacing: CGFloat = 8
@@ -161,12 +161,12 @@ struct IconRowLabel: View {
       }
       VStack(alignment: .leading, spacing: 1) {
         Text(title)
-          .font(.floRow)
+          .font(.row)
           .foregroundStyle(label)
         if !detail.isEmpty {
           Text(detail)
-            .font(.floMeta)
-            .foregroundStyle(Color.floSecondary)
+            .font(.meta)
+            .foregroundStyle(Dusk.secondary)
         }
       }
     }
@@ -193,8 +193,8 @@ struct FloSectionHeader: View {
 
   var body: some View {
     Text(title)
-      .font(.floSection)
-      .foregroundStyle(Color.floSecondary)
+      .font(.section)
+      .foregroundStyle(Dusk.secondary)
       .textCase(nil)
   }
 }
@@ -206,8 +206,8 @@ struct StorageWarningRow: View {
       "Storage unavailable: history, downloads and queued scrobbles are not saved until the app restarts.",
       systemImage: "exclamationmark.triangle"
     )
-    .font(.floMeta)
-    .foregroundStyle(Color.floWarningText)
+    .font(.meta)
+    .foregroundStyle(Dusk.warningText)
     .padding(.vertical, 8)
     .floJoinedRow(.alone)
   }
@@ -226,10 +226,10 @@ struct FloInfoRow: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 2) {
       Text(label)
-        .font(.floMeta)
-        .foregroundStyle(Color.floSecondary)
+        .font(.meta)
+        .foregroundStyle(Dusk.secondary)
       Text(value)
-        .font(.floMeta.weight(.medium))
+        .font(.meta.weight(.medium))
     }
     .padding(.vertical, 2)
   }
@@ -247,14 +247,14 @@ struct Badge: View {
     HStack(spacing: 4) {
       switch kind {
       case .live:
-        StatusDot(color: .floLiked)
+        StatusDot(color: .liked)
         Text("LIVE").fontWeight(.bold).tracking(0.4)
       case .offline:
         Image(systemName: "wifi.slash").font(.system(size: 10, weight: .semibold))
         Text("Offline")
       }
     }
-    .font(.floCaption)
+    .font(.captionLabel)
     .foregroundStyle(foreground)
     .padding(.horizontal, 8)
     .padding(.vertical, 3)
@@ -263,15 +263,15 @@ struct Badge: View {
 
   private var foreground: Color {
     switch kind {
-    case .live: .floDestructive
-    case .offline: .floWarningText
+    case .live: .destructive
+    case .offline: Dusk.warningText
     }
   }
 
   private var background: Color {
     switch kind {
-    case .live: .floLiked.opacity(0.22)
-    case .offline: .floWarning.opacity(0.22)
+    case .live: .liked.opacity(0.22)
+    case .offline: .warning.opacity(0.22)
     }
   }
 }
@@ -296,11 +296,11 @@ struct StateView: View {
       }
     case .empty(let systemImage, let tint, let title, let message):
       messageView(
-        systemImage: systemImage, tint: tint, circle: .floSurface, title: title, text: message)
+        systemImage: systemImage, tint: tint, circle: Dusk.surface, title: title, text: message)
     case .error(let retry):
       VStack(spacing: 6) {
         messageView(
-          systemImage: "icloud.slash", tint: .floWarning, circle: .floWarning.opacity(0.18),
+          systemImage: "icloud.slash", tint: .warning, circle: .warning.opacity(0.18),
           title: "Can't reach server", text: "Downloads still play offline.")
         Button("Try Again", action: retry)
           .buttonStyle(FloTintedButtonStyle(height: 40))
@@ -320,11 +320,11 @@ struct StateView: View {
         .background(Circle().fill(circle))
         .padding(.bottom, 4)
       Text(title)
-        .font(.floSong)
+        .font(.song)
         .multilineTextAlignment(.center)
       Text(text)
-        .font(.floMeta)
-        .foregroundStyle(Color.floSecondary)
+        .font(.meta)
+        .foregroundStyle(Dusk.secondary)
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity)
@@ -332,18 +332,18 @@ struct StateView: View {
 
   private var skeletonRow: some View {
     HStack(spacing: 10) {
-      RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius).fill(Color.floSkeleton)
+      RoundedRectangle(cornerRadius: FloLayout.thumbnailRadius).fill(Dusk.skeleton)
         .frame(width: FloLayout.thumbnail, height: FloLayout.thumbnail)
       VStack(alignment: .leading, spacing: 6) {
-        Capsule().fill(Color.floSkeleton).frame(height: 9).frame(maxWidth: 110)
-        Capsule().fill(Color.floSkeleton.opacity(0.8)).frame(height: 8).frame(maxWidth: 70)
+        Capsule().fill(Dusk.skeleton).frame(height: 9).frame(maxWidth: 110)
+        Capsule().fill(Dusk.skeleton.opacity(0.8)).frame(height: 8).frame(maxWidth: 70)
       }
       Spacer(minLength: 0)
     }
     .padding(.horizontal, 10)
     .frame(minHeight: FloLayout.coverRowHeight)
     .background(
-      RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous).fill(Color.floSurface)
+      RoundedRectangle(cornerRadius: FloLayout.rowRadius, style: .continuous).fill(Dusk.surface)
     )
   }
 }
@@ -365,10 +365,10 @@ struct ChoiceList<Value: Hashable>: View {
           dismiss()
         } label: {
           HStack {
-            Text(label).font(.floRow)
+            Text(label).font(.row)
             Spacer(minLength: 4)
             if value == selection {
-              Image(systemName: "checkmark").foregroundStyle(Color.floLilac)
+              Image(systemName: "checkmark").foregroundStyle(Dusk.fill)
             }
           }
           .frame(minHeight: FloLayout.rowHeight)

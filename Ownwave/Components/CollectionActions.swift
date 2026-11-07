@@ -121,7 +121,7 @@ struct CollectionActions: View {
         .accessibilityLabel("Download")
     case .failed:
       Button(action: download) { Image(systemName: "exclamationmark.circle") }
-        .buttonStyle(CircleButtonStyle(size: Self.size, foreground: .floDestructive))
+        .buttonStyle(CircleButtonStyle(size: Self.size, foreground: .destructive))
         .accessibilityLabel("Retry Download")
     case .downloading(let percent):
       Menu {
@@ -142,7 +142,7 @@ struct CollectionActions: View {
       } label: {
         Image(systemName: "checkmark.circle.fill")
       }
-      .buttonStyle(CircleButtonStyle(size: Self.size, foreground: .floDownloaded))
+      .buttonStyle(CircleButtonStyle(size: Self.size, foreground: .downloaded))
       .accessibilityLabel("Downloaded")
     }
   }
@@ -153,7 +153,7 @@ struct CollectionActions: View {
       note("Downloading", detail: "\(percent)%", color: palette.accent, progress: Double(percent))
     case .failed:
       note(
-        "Download failed", detail: "Tap download to retry", color: .floDestructive, progress: 100)
+        "Download failed", detail: "Tap download to retry", color: .destructive, progress: 100)
     case .none, .done:
       EmptyView()
     }

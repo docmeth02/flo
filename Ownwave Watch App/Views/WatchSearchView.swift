@@ -44,13 +44,13 @@ struct WatchSearchView: View {
       if let found {
         if found.results.isEmpty {
           placeholder(
-            tint: .floSecondary, title: "No results",
+            tint: Dusk.secondary, title: "No results",
             message: "Nothing in your library matches \u{201C}\(found.query)\u{201D}.")
         }
         sections(found)
       } else {
         placeholder(
-          tint: .floLilac, title: "Search your library",
+          tint: Dusk.fill, title: "Search your library",
           message: "Artists, albums and songs on your server.")
       }
     }
@@ -184,7 +184,7 @@ struct WatchSearchView: View {
         } label: {
           Image(systemName: Glyph.radio)
         }
-        .buttonStyle(FloRoundButtonStyle(tint: .floInk, fill: .floLilac))
+        .buttonStyle(FloRoundButtonStyle(tint: Dusk.ink, fill: Dusk.fill))
         .disabled(playerViewModel.isGeneratingMix)
         .opacity(playerViewModel.isGeneratingMix ? FloLayout.pressedOpacity : 1)
         .accessibilityLabel("Artist Radio")

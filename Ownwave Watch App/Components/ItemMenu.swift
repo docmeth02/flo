@@ -96,30 +96,30 @@ struct ItemMenu: View {
   private func look(_ choice: Choice) -> (title: String, systemImage: String, tint: Color) {
     switch choice {
     case .action(.pin):
-      isPinned == true ? ("Unpin", "pin.slash", .floLilac) : ("Pin", "pin", .floLilac)
+      isPinned == true ? ("Unpin", "pin.slash", Dusk.fill) : ("Pin", "pin", Dusk.fill)
     case .action(.playNext):
-      ("Play Next", "text.line.first.and.arrowtriangle.forward", .floLilac)
+      ("Play Next", "text.line.first.and.arrowtriangle.forward", Dusk.fill)
     case .action(.addToQueue):
-      ("Queue", "text.line.last.and.arrowtriangle.forward", .floLilac)
+      ("Queue", "text.line.last.and.arrowtriangle.forward", Dusk.fill)
     case .action(.like):
       actions.isLiked(target)
-        ? ("Unlike", "heart.fill", .floLiked) : ("Like", "heart", .floLiked)
+        ? ("Unlike", "heart.fill", .liked) : ("Like", "heart", .liked)
     case .action(.boost):
       (
         actions.ratingTitle(.boost, on: target),
-        actions.ownRating(target) == 5 ? "hand.thumbsup.fill" : "hand.thumbsup", .floLilac
+        actions.ownRating(target) == 5 ? "hand.thumbsup.fill" : "hand.thumbsup", Dusk.fill
       )
     case .action(.avoid):
       (
         actions.ratingTitle(.avoid, on: target),
-        actions.ownRating(target) == 1 ? "hand.thumbsdown.fill" : "hand.thumbsdown", .floLilac
+        actions.ownRating(target) == 1 ? "hand.thumbsdown.fill" : "hand.thumbsdown", Dusk.fill
       )
     case .download:
-      ("Download", "arrow.down.circle", .floLilac)
+      ("Download", "arrow.down.circle", Dusk.fill)
     case .goToAlbum:
-      ("Go to Album", Glyph.album, .floLilac)
+      ("Go to Album", Glyph.album, Dusk.fill)
     case .goToArtist:
-      ("Go to Artist", Glyph.artist, .floLilac)
+      ("Go to Artist", Glyph.artist, Dusk.fill)
     }
   }
 }
@@ -131,8 +131,8 @@ struct PlatterRows: View {
     let title: String
     var detail = ""
     let systemImage: String
-    var tint: Color = .floLilac
-    var label: Color = .floText
+    var tint: Color = Dusk.fill
+    var label: Color = Dusk.text
     /// A chevron says the row opens another screen.
     var opens = false
     /// Nil for a line that only tells a state.

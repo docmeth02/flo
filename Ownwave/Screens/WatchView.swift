@@ -256,7 +256,7 @@ private struct ShelfTile: View {
           if album.progress == nil {
             Image(systemName: "checkmark.circle.fill")
               .font(.system(size: 18))
-              .foregroundStyle(Color.floDownloaded)
+              .foregroundStyle(Color.downloaded)
               .frame(width: 22, height: 22)
               .background(palette.background, in: Circle())
               .padding(6)

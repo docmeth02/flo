@@ -46,7 +46,7 @@ struct WatchLikedView: View {
       title: "Liked", state: state,
       isEmpty: songs.isEmpty && albums.isEmpty && artists.isEmpty,
       empty: .empty(
-        systemImage: "heart.fill", tint: .floLiked, title: "Nothing liked yet",
+        systemImage: "heart.fill", tint: .liked, title: "Nothing liked yet",
         message: "Liked songs, albums and artists show up here."),
       refresh: refresh
     ) {
@@ -81,15 +81,15 @@ struct WatchLikedView: View {
       HStack(spacing: FloLayout.tileSpacing) {
         Image(systemName: "heart.fill")
           .font(.system(size: 16))
-          .foregroundStyle(Color.floLiked)
+          .foregroundStyle(Color.liked)
           .frame(width: FloLayout.smallThumbnail, height: FloLayout.smallThumbnail)
-          .background(Circle().fill(Color.floLiked.opacity(0.22)))
+          .background(Circle().fill(Color.liked.opacity(0.22)))
         VStack(alignment: .leading, spacing: 1) {
           Text("Liked Songs")
-            .font(.floRowTitle)
+            .font(.rowTitle)
           Text("Play or shuffle")
-            .font(.floMeta)
-            .foregroundStyle(Color.floSecondary)
+            .font(.meta)
+            .foregroundStyle(Dusk.secondary)
         }
         .lineLimit(1)
       }

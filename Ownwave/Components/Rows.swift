@@ -149,7 +149,7 @@ struct StatusDot: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    Circle().fill(isOn ? Color.floDownloaded : palette.secondary).frame(width: 7, height: 7)
+    Circle().fill(isOn ? Color.downloaded : palette.secondary).frame(width: 7, height: 7)
   }
 }
 

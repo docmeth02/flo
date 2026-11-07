@@ -117,17 +117,17 @@ struct WatchArtistDetailView: View {
     HStack(spacing: FloLayout.tileSpacing) {
       Image(systemName: Glyph.artist)
         .font(.system(size: 22))
-        .foregroundStyle(Color.floLilac)
+        .foregroundStyle(Dusk.fill)
         .frame(width: Self.glyphSize, height: Self.glyphSize)
-        .background(Circle().fill(Color.floSurface2))
+        .background(Circle().fill(Dusk.surface2))
       VStack(alignment: .leading, spacing: 1) {
         Text(artist.name)
-          .font(.floSong)
+          .font(.song)
           .lineLimit(2)
         if artist.albumCount > 0 {
           Text(counted(artist.albumCount, "album"))
-            .font(.floMeta)
-            .foregroundStyle(Color.floSecondary)
+            .font(.meta)
+            .foregroundStyle(Dusk.secondary)
         }
       }
       Spacer(minLength: 0)

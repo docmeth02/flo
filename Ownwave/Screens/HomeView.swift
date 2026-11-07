@@ -198,7 +198,7 @@ struct HomeView: View {
             SongRow(song: song, menu: menu) {
               app.play(SongCollection.liked(songs), startingAt: index)
             } trailing: {
-              Image(systemName: "heart.fill").foregroundStyle(Color.floLiked)
+              Image(systemName: "heart.fill").foregroundStyle(Color.liked)
             }
           }
         }

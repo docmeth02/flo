@@ -21,9 +21,9 @@ struct TrackRowView: View {
   let title: String
   let artist: String
   var isPlaying: Bool = false
-  var tint: Color = .floLilac
+  var tint: Color = Dusk.fill
   /// Over a cover backdrop the opaque surface would hide the cover.
-  var idleBackground: Color = .floSurface
+  var idleBackground: Color = Dusk.surface
   var onHold: (() -> Void)?
   var action: () -> Void
 
@@ -37,7 +37,7 @@ struct TrackRowView: View {
         } else {
           Text("\(trackNumber)")
             .font(.counter)
-            .foregroundStyle(Color.floSecondary)
+            .foregroundStyle(Dusk.secondary)
         }
       }
       .frame(width: Self.numberWidth)
@@ -49,8 +49,8 @@ struct TrackRowView: View {
           .lineLimit(1)
         if !artist.isEmpty {
           Text(artist)
-            .font(.floMeta)
-            .foregroundStyle(Color.floSecondary)
+            .font(.meta)
+            .foregroundStyle(Dusk.secondary)
             .lineLimit(1)
         }
       }

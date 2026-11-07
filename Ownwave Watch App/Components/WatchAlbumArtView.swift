@@ -58,8 +58,8 @@ struct WatchAlbumArtView: View {
   private var placeholderView: some View {
     Image(systemName: "music.note")
       .font(.system(size: size * 0.4))
-      .foregroundStyle(Color.floSecondary)
+      .foregroundStyle(Dusk.secondary)
       .frame(width: size, height: size)
-      .background(Color.floSkeleton)
+      .background(Dusk.skeleton)
   }
 }

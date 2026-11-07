@@ -142,7 +142,7 @@ struct WatchHomeView: View {
       }
       playSomething
     }
-    .background(Color.floSurface)
+    .background(Dusk.surface)
     .clipShape(RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous))
   }
 
@@ -152,16 +152,16 @@ struct WatchHomeView: View {
     HStack(spacing: FloLayout.tileSpacing) {
       Image(systemName: "sparkles")
         .font(.system(size: 20))
-        .foregroundStyle(Color.floLilac)
+        .foregroundStyle(Dusk.fill)
       VStack(alignment: .leading, spacing: 1) {
         Text(playerViewModel.isGeneratingMix ? "Building mix…" : "Play Something")
-          .font(.floSong)
+          .font(.song)
           .lineLimit(1)
           // Whole on 41 and 42 mm too.
           .minimumScaleFactor(0.7)
         Text("From your whole taste")
-          .font(.floMeta)
-          .foregroundStyle(Color.floSecondary)
+          .font(.meta)
+          .foregroundStyle(Dusk.secondary)
           .fixedSize(horizontal: false, vertical: true)
       }
       Spacer(minLength: 0)
@@ -252,9 +252,9 @@ private enum LibraryScreen: CaseIterable {
 
   var tint: Color {
     switch self {
-    case .liked: .floLiked
-    case .settings: .floSecondary
-    default: .floLilac
+    case .liked: .liked
+    case .settings: Dusk.secondary
+    default: Dusk.fill
     }
   }
 

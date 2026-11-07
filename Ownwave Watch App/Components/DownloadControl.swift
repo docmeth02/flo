@@ -27,8 +27,8 @@ struct DownloadControl: View {
 
   private var remove: PlatterRows.Row {
     PlatterRows.Row(
-      title: "Remove Download", systemImage: "trash", tint: .floDestructive,
-      label: .floDestructive, action: onRemove)
+      title: "Remove Download", systemImage: "trash", tint: .destructive,
+      label: .destructive, action: onRemove)
   }
 
   var body: some View {
@@ -40,30 +40,30 @@ struct DownloadControl: View {
     case .downloading(let percent), .receiving(let percent):
       VStack(spacing: 6) {
         HStack(alignment: .firstTextBaseline) {
-          Text("Downloading").font(.floRow)
+          Text("Downloading").font(.row)
           Spacer()
           Text("\(percent)%")
             .font(.counter)
-            .foregroundStyle(Color.floLilac)
+            .foregroundStyle(Dusk.fill)
         }
         ProgressView(value: Double(percent), total: 100)
-          .tint(.floLilac)
+          .tint(Dusk.fill)
         if case .downloading = state {
           Button("Cancel", action: onCancel)
             .buttonStyle(
-              FloTintedButtonStyle(tint: .floDestructive, platter: .floSurface2, height: 36))
+              FloTintedButtonStyle(tint: .destructive, platter: Dusk.surface2, height: 36))
         }
       }
       .padding(.horizontal, 12)
       .padding(.vertical, 9)
       .background(
         RoundedRectangle(cornerRadius: FloLayout.platterRadius, style: .continuous)
-          .fill(Color.floSurface))
+          .fill(Dusk.surface))
     case .partial(let missing):
       PlatterRows([
         PlatterRows.Row(
           title: "\(counted(missing, "song")) missing", systemImage: "exclamationmark.circle.fill",
-          tint: .floWarning, label: .floWarningText),
+          tint: .warning, label: Dusk.warningText),
         PlatterRows.Row(
           title: "Download Missing", systemImage: "arrow.down.circle", action: onDownload),
         remove,
@@ -72,14 +72,14 @@ struct DownloadControl: View {
       PlatterRows([
         PlatterRows.Row(
           title: "Download failed", detail: "Try again", systemImage: "xmark.circle.fill",
-          tint: .floDestructive, action: onDownload),
+          tint: .destructive, action: onDownload),
         remove,
       ])
     case .done:
       PlatterRows([
         PlatterRows.Row(
-          title: "Downloaded", systemImage: "checkmark.circle.fill", tint: .floDownloaded,
-          label: .floDownloadedText),
+          title: "Downloaded", systemImage: "checkmark.circle.fill", tint: .downloaded,
+          label: Dusk.downloadedText),
         remove,
       ])
     }

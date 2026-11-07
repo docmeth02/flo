@@ -24,21 +24,21 @@ struct FloToast: View {
     if let current = message {
       HStack(spacing: 6) {
         Text(current.text)
-          .font(.floMeta.weight(.medium))
+          .font(.meta.weight(.medium))
           .lineLimit(1)
         if let undo = current.undo {
           Button("Undo") {
             undo()
             message = nil
           }
-          .font(.floMeta.weight(.semibold))
-          .foregroundStyle(Color.floLilac)
+          .font(.meta.weight(.semibold))
+          .foregroundStyle(Dusk.fill)
           .buttonStyle(.plain)
         }
       }
       .padding(.horizontal, 14)
       .padding(.vertical, 8)
-      .background(Capsule().fill(Color.floSurface))
+      .background(Capsule().fill(Dusk.surface))
       .shadow(color: .black.opacity(0.6), radius: 9, y: 6)
       .task(id: current.id) {
         try? await Task.sleep(for: Self.duration)

@@ -33,7 +33,7 @@ struct StorageBar: View {
 
   /// The parts that hold something and the room left, with their widths.
   private func widths(in width: CGFloat) -> [(color: Color, width: CGFloat)] {
-    let shown = (parts + [Part(color: .floSurface2, bytes: usage.free)]).filter { $0.bytes > 0 }
+    let shown = (parts + [Part(color: Dusk.surface2, bytes: usage.free)]).filter { $0.bytes > 0 }
     let widths = StorageUsage.barWidths(
       shown.map(\.bytes), in: width, gap: Self.gap, minimum: Self.height)
     return zip(shown, widths).map { ($0.color, $1) }

@@ -99,7 +99,7 @@ struct PinGlyph: View {
   var body: some View {
     Image(systemName: "pin.fill")
       .font(.system(size: 13))
-      .foregroundStyle(Color.floLilac)
+      .foregroundStyle(Dusk.fill)
       .accessibilityLabel("Pinned")
   }
 }

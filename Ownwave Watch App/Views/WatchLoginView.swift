@@ -28,8 +28,8 @@ struct WatchLoginView: View {
             VStack(alignment: .leading, spacing: 1) {
               Wordmark()
               Text("Sign in to Navidrome")
-                .font(.floMeta)
-                .foregroundStyle(Color.floSecondary)
+                .font(.meta)
+                .foregroundStyle(Dusk.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 4)
@@ -70,8 +70,8 @@ struct WatchLoginView: View {
 
       if let error = viewModel.loginError {
         Label(error.loginMessage, systemImage: "exclamationmark.circle.fill")
-          .font(.floMeta)
-          .foregroundStyle(Color.floDestructive)
+          .font(.meta)
+          .foregroundStyle(Color.destructive)
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(.horizontal, 4)
           .padding(.top, 2)
@@ -83,7 +83,7 @@ struct WatchLoginView: View {
         HStack(spacing: 6) {
           if viewModel.isSubmitting {
             ProgressView()
-              .tint(Color.floInk)
+              .tint(Dusk.ink)
               .frame(width: 18, height: 18)
           }
           Text(
@@ -102,7 +102,7 @@ struct WatchLoginView: View {
   /// A soft light of the accent behind the wordmark.
   private var glow: some View {
     RadialGradient(
-      colors: [Color.floWave.opacity(0.28), .clear], center: .center, startRadius: 0,
+      colors: [Dusk.accent.opacity(0.28), .clear], center: .center, startRadius: 0,
       endRadius: 140
     )
     .frame(width: 330, height: 280)
@@ -112,7 +112,7 @@ struct WatchLoginView: View {
   }
 
   private func prompt(_ text: String) -> Text {
-    Text(text).foregroundStyle(Color.floSecondary)
+    Text(text).foregroundStyle(Dusk.secondary)
   }
 
   /// An input under its mono label: the focused one ringed in the accent, a
@@ -122,10 +122,10 @@ struct WatchLoginView: View {
     _ field: Field, _ label: String, isRejected: Bool = false,
     @ViewBuilder input: () -> some View
   ) -> some View {
-    let ring: Color? = isRejected ? .floDestructive : focus == field ? .floWave : nil
+    let ring: Color? = isRejected ? .destructive : focus == field ? Dusk.accent : nil
     let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
     return VStack(alignment: .leading, spacing: 3) {
-      CapsLabel(label, tint: ring ?? .floSecondary)
+      CapsLabel(label, tint: ring ?? Dusk.secondary)
         .padding(.horizontal, 10)
         // The field says its own name.
         .accessibilityHidden(true)
@@ -133,7 +133,7 @@ struct WatchLoginView: View {
         .focused($focus, equals: field)
         // Under the system's translucent field, so the glow does not show
         // through it.
-        .background(Color.floSurface, in: shape)
+        .background(Dusk.surface, in: shape)
         .overlay {
           if let ring { shape.strokeBorder(ring, lineWidth: 1.5) }
         }
