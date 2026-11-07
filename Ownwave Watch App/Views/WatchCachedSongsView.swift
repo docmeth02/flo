@@ -11,6 +11,8 @@ struct WatchCachedSongsView: View {
   let songs: [Song]
 
   @Environment(\.showPlayer) private var showPlayer
+  @State private var openedAlbum: Album?
+  @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
 
   var body: some View {
@@ -33,6 +35,8 @@ struct WatchCachedSongsView: View {
     }
     .listStyle(.plain)
     .floNavigationTitle("Cached")
-    .itemMenu($menu)
+    .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
+    .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
+    .itemMenu($menu, openedAlbum: $openedAlbum, openedArtist: $openedArtist)
   }
 }

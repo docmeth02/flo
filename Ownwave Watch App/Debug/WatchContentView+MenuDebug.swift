@@ -13,8 +13,17 @@
     /// still waiting from the last session.
     /// FLO_DEBUG_MENU=song|album|artist|playlist|radio opens the hold menu for
     /// the first track of the first album, or the first album, artist,
-    /// playlist or station over its screen, for screenshots.
+    /// playlist or station over its screen, for screenshots;
+    /// FLO_DEBUG_MENU_SCREEN=home|search opens a song or album menu over Home
+    /// or Search instead. FLO_DEBUG_MENU_ACTION=boost|avoid|album|artist then
+    /// runs that row a second later; a comma list runs the next on the
+    /// screen the row opened, on the same item (song over Home with
+    /// album,artist pushes its album, then its artist on top).
     func runDebugMenuActions() async {
+      // A closing sheet makes the root view appear again, which reruns the
+      // launch hooks: a pin would toggle back, the menu's rows run again.
+      guard !DebugMenuScript.hasRun else { return }
+      DebugMenuScript.hasRun = true
       let env = ProcessInfo.processInfo.environment
       if env["FLO_DEBUG_STAR_PENDING"] == "1" {
         let pending = UserDefaults.standard.dictionary(forKey: UserDefaultsKeys.pendingStars) ?? [:]
@@ -44,7 +53,7 @@
         }
       }
 
-      let screen: AnyView
+      var screen: AnyView
       let target: MenuTarget
       switch env["FLO_DEBUG_MENU"] {
       case "song":
@@ -76,8 +85,18 @@
       case nil: return
       case let other?: return debugLog("menu hook: unknown item \(other)")
       }
-      debugLog("menu hook: showing \(target.id)")
-      debugScreen = DebugScreen(view: AnyView(DebugMenuScreen(content: screen, target: target)))
+      switch env["FLO_DEBUG_MENU_SCREEN"] {
+      case "home": screen = AnyView(WatchHomeView())
+      case "search": screen = AnyView(WatchSearchView(query: target.title))
+      default: break
+      }
+      let rating = MenuActions(player: playerViewModel, pins: .shared, stars: .shared)
+        .ownRating(target)
+      debugLog("menu hook: showing \(target.id) rating=\(rating.map(String.init) ?? "-")")
+      DebugMenuScript.target = target
+      DebugMenuScript.actions =
+        env["FLO_DEBUG_MENU_ACTION"]?.split(separator: ",").map(String.init) ?? []
+      debugScreen = DebugScreen(view: screen)
     }
 
     /// "<kind>:<id>", a `PinStore.Kind` such as "album:<id>".
@@ -88,19 +107,60 @@
     }
   }
 
-  /// A screen that opens the hold menu for `target` once it is on screen.
-  private struct DebugMenuScreen: View {
-    let content: AnyView
-    let target: MenuTarget
-    @State private var menu: MenuTarget?
+  extension View {
+    /// FLO_DEBUG_MENU_SCROLL=1 opens the hold menu scrolled to its end, for
+    /// screenshots of the rows below the fold.
+    func debugMenuScroll() -> some View {
+      defaultScrollAnchor(
+        ProcessInfo.processInfo.environment["FLO_DEBUG_MENU_SCROLL"] == "1" ? .bottom : nil)
+    }
+  }
 
-    var body: some View {
-      content
-        .itemMenu($menu)
-        .task {
-          try? await Task.sleep(nanoseconds: 1_500_000_000)
-          menu = target
+  /// What FLO_DEBUG_MENU opens and the rows it runs, taken by the screen on
+  /// top.
+  @MainActor enum DebugMenuScript {
+    static var target: MenuTarget?
+    static var actions: [String] = []
+    static var hasRun = false
+  }
+
+  /// On each screen with a hold menu: once the screen has been on top for a
+  /// moment, opens the scripted menu over it and runs its next row there.
+  struct DebugMenuRunner: ViewModifier {
+    @Binding var target: MenuTarget?
+    let goTo: (MenuTarget) -> [ItemMenu.Choice]
+    let select: (ItemMenu.Choice, MenuTarget) -> Void
+
+    func body(content: Content) -> some View {
+      content.task {
+        // Cancelled when another screen is pushed meanwhile.
+        try? await Task.sleep(for: .seconds(1.5))
+        guard !Task.isCancelled, let menu = DebugMenuScript.target else { return }
+        target = menu
+        guard !DebugMenuScript.actions.isEmpty else {
+          DebugMenuScript.target = nil
+          return
         }
+        let action = DebugMenuScript.actions.removeFirst()
+        if DebugMenuScript.actions.isEmpty { DebugMenuScript.target = nil }
+        let choice: ItemMenu.Choice
+        switch action {
+        case "boost": choice = .action(.boost)
+        case "avoid": choice = .action(.avoid)
+        case "album": choice = .goToAlbum
+        case "artist": choice = .goToArtist
+        default: return debugLog("menu hook: unknown action \(action)")
+        }
+        if choice.opens, !goTo(menu).contains(choice) {
+          return debugLog("menu hook: \(action) is not offered here")
+        }
+        // Not this task: the sheet may count as leaving the screen.
+        Task {
+          try? await Task.sleep(for: .seconds(1))
+          debugLog("menu hook: runs \(action) on \(menu.id)")
+          select(choice, menu)
+        }
+      }
     }
   }
 #endif
