@@ -1,6 +1,6 @@
 //
 //  PlayerViewModel+KeepPlaying.swift
-//  flo
+//  Ownwave
 //
 
 import Foundation
@@ -51,7 +51,7 @@ extension PlayerViewModel {
         + "\(String(format: "%.0f", totalDuration))s")
     PlaybackJournal.shared.recordHeard(
       song, origin: song.playbackOrigin, listenedSeconds: secondsListened)
-    FloooViewModel.shared.scrobble(submission: true, nowPlaying: song)
+    PlaybackReporter.shared.scrobble(submission: true, nowPlaying: song)
     acceptNowPlaying()
   }
 

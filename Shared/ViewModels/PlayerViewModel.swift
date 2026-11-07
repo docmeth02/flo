@@ -1,6 +1,6 @@
 //
 //  PlayerViewModel.swift
-//  flo
+//  Ownwave
 //
 
 import AVFoundation
@@ -406,7 +406,7 @@ class PlayerViewModel: ObservableObject {
     // restored at launch.
     MainActor.assumeIsolated { loadStarred(refresh: true) }
 
-    FloooViewModel.shared.reportPlayback(
+    PlaybackReporter.shared.reportPlayback(
       state: .starting, nowPlaying: song, positionSeconds: self.pendingStartPosition)
   }
 
@@ -415,7 +415,7 @@ class PlayerViewModel: ObservableObject {
   private func reportPlayback(_ state: PlaybackReportState, at position: Double? = nil) {
     guard !needsNowPlayingAnnouncement, let song = nowPlaying, !isLiveRadio
     else { return }
-    FloooViewModel.shared.reportPlayback(
+    PlaybackReporter.shared.reportPlayback(
       state: state, nowPlaying: song,
       positionSeconds: position ?? (playerItem == nil ? pendingStartPosition : lastObservedTime))
   }

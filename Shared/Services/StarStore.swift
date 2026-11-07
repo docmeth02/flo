@@ -1,6 +1,6 @@
 //
 //  StarStore.swift
-//  flo
+//  Ownwave
 //
 
 import Foundation

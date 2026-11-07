@@ -1,6 +1,6 @@
 //
 //  Strings.swift
-//  flo
+//  Ownwave
 //
 
 import Foundation

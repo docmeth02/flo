@@ -229,11 +229,11 @@ private struct TasteProfile: View {
       LazyVGrid(
         columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12
       ) {
-        StatTile(value: likedCount, label: "Liked", color: .floLiked, action: openLiked)
-        StatTile(value: summary.boosted.count, label: "Boosted", color: .floWarning) {
+        StatTile(value: likedCount, label: "Liked", color: .liked, action: openLiked)
+        StatTile(value: summary.boosted.count, label: "Boosted", color: .warning) {
           open(.boosted)
         }
-        StatTile(value: summary.avoided.count, label: "Avoided", color: .floDestructive) {
+        StatTile(value: summary.avoided.count, label: "Avoided", color: .destructive) {
           open(.avoided)
         }
         // Skips make a song less likely for a while; nothing is held back.

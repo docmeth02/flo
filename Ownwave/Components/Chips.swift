@@ -39,7 +39,7 @@ struct ChipBar<Value: Hashable>: View {
         if let systemImage = option.systemImage {
           Image(systemName: systemImage)
             .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(isOn ? palette.background : Color.floLiked)
+            .foregroundStyle(isOn ? palette.background : Color.liked)
         }
         Text(option.label)
       }

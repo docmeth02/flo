@@ -21,7 +21,7 @@ struct WatchContentView: View {
   @StateObject var albumViewModel = AlbumViewModel()
   // Playback and scrobbling use the shared instance; Settings must show the
   // same state.
-  @ObservedObject private var floooViewModel = FloooViewModel.shared
+  @ObservedObject private var downloadStorage = DownloadStorage.shared
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @ObservedObject private var phone = PhoneLink.shared
   @Environment(\.scenePhase) private var scenePhase
@@ -98,7 +98,7 @@ struct WatchContentView: View {
     .overlay(alignment: .bottom) {
       if !connectivity.isOnline {
         Badge(kind: .offline)
-          .padding(.bottom, FloLayout.offlineBadgeLift)
+          .padding(.bottom, WatchLayout.offlineBadgeLift)
           .ignoresSafeArea(edges: .bottom)
       }
     }
@@ -151,7 +151,7 @@ struct WatchContentView: View {
     .environmentObject(authViewModel)
     .environmentObject(playerViewModel)
     .environmentObject(albumViewModel)
-    .environmentObject(floooViewModel)
+    .environmentObject(downloadStorage)
     .environmentObject(DownloadSession.shared)
     .environmentObject(PinStore.shared)
     #if DEBUG

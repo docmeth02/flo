@@ -35,7 +35,7 @@ struct WatchAlbumDetailView: View {
       title: album.name,
       meta: meta,
       songs: loader.songs,
-      tint: shades?.tint ?? .floLilac,
+      tint: shades?.tint ?? Dusk.fill,
       // The design's dark shade of the cover's hue, at half strength.
       shade: shades?.background.opacity(0.5),
       blursCover: true,

@@ -1,6 +1,6 @@
 //
 //  AuthViewModel.swift
-//  flo
+//  Ownwave
 //
 
 import Foundation

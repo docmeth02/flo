@@ -1,6 +1,6 @@
 //
 //  ArtistAppEntity.swift
-//  flo
+//  Ownwave
 //
 
 import AppIntents

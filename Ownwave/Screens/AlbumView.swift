@@ -148,7 +148,7 @@ private struct TrackRow: View {
       if player.isStarred(song) {
         Image(systemName: "heart.fill")
           .font(.system(size: 12))
-          .foregroundStyle(Color.floLiked)
+          .foregroundStyle(Color.liked)
       }
       Text(song.duration.minuteSecond)
         .font(.rowSubtitle.monospacedDigit())

@@ -155,7 +155,7 @@ private struct PlayerPage: View {
       if player.isLiveRadio {
         Text("Live")
           .font(.meta.weight(.semibold))
-          .foregroundStyle(Color.floLiked)
+          .foregroundStyle(Color.liked)
           .frame(height: 43)
       } else {
         Scrubber(
@@ -218,7 +218,7 @@ private struct PlayerPage: View {
     } label: {
       Image(systemName: player.isStarred ? "heart.fill" : "heart")
         .font(.system(size: 20, weight: .semibold))
-        .foregroundStyle(player.isStarred ? Color.floLiked : palette.text)
+        .foregroundStyle(player.isStarred ? Color.liked : palette.text)
         .frame(width: 46, height: 46)
         .glassEffect(.regular.interactive(), in: Circle())
     }
@@ -324,8 +324,8 @@ private struct PlayerPage: View {
 
   private var ratingColor: Color {
     switch rating {
-    case 1: .floDestructive
-    case 5: .floWarning
+    case 1: .destructive
+    case 5: .warning
     default: palette.secondary
     }
   }
@@ -341,7 +341,7 @@ private struct PlayerPage: View {
             Image(systemName: n <= rating ? "star.fill" : "star")
               .font(.system(size: 18, weight: .medium))
               .foregroundStyle(
-                n > rating ? palette.secondary : rating == 1 ? Color.floDestructive : .floWarning
+                n > rating ? palette.secondary : rating == 1 ? Color.destructive : .warning
               )
               .frame(width: 28, height: 44)
               .contentShape(Rectangle())
@@ -511,7 +511,7 @@ private struct Scrubber: View {
         Text((shown * duration).minuteSecond)
         Spacer()
         if let status {
-          Text(status).foregroundStyle(Color.floWarning)
+          Text(status).foregroundStyle(Color.warning)
           Spacer()
         }
         Text("-" + (duration * (1 - shown)).minuteSecond)

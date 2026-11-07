@@ -485,7 +485,7 @@ extension CarPlayController {
       let item = CPListItem(
         text: "Cached", detailText: counted(cached.count, "song"),
         image: images.tile(Glyph.playlist, size: size),
-        accessoryImage: images.status("checkmark.circle.fill", color: .floDownloaded),
+        accessoryImage: images.status("checkmark.circle.fill", color: .downloaded),
         accessoryType: .none)
       item.handler = { [weak self] _, completion in
         self?.openCached()
@@ -504,10 +504,10 @@ extension CarPlayController {
         (detail, status) = (Self.downloadingText(album.id), nil)
       } else if session.hasFailed(collectionId: album.id) {
         detail = "Download failed · retry on iPhone"
-        status = images.status("exclamationmark.circle.fill", color: .floDestructive)
+        status = images.status("exclamationmark.circle.fill", color: .destructive)
       } else {
         detail = counted(songCounts[album.id, default: 0], "song")
-        status = images.status("checkmark.circle.fill", color: .floDownloaded)
+        status = images.status("checkmark.circle.fill", color: .downloaded)
       }
       let item = albumRow(album, detail: detail)
       item.accessoryType = .none

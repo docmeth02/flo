@@ -9,7 +9,7 @@ struct WatchAlbumArtView: View {
   let albumId: String
   /// A cover of its own, such as a playlist's mosaic; the album's when nil.
   var artId: String?
-  var size: CGFloat = FloLayout.thumbnail
+  var size: CGFloat = WatchLayout.thumbnail
 
   // The decoded cover, remembered together with the cover it is, so a view
   // reused for another album never shows the previous cover.
@@ -58,8 +58,8 @@ struct WatchAlbumArtView: View {
   private var placeholderView: some View {
     Image(systemName: "music.note")
       .font(.system(size: size * 0.4))
-      .foregroundStyle(Color.floSecondary)
+      .foregroundStyle(Dusk.secondary)
       .frame(width: size, height: size)
-      .background(Color.floSkeleton)
+      .background(Dusk.skeleton)
   }
 }

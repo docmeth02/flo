@@ -73,7 +73,7 @@ struct WatchArtistDetailView: View {
           }
         }
       }
-      .buttonStyle(FloTileButtonStyle(alignment: .center))
+      .buttonStyle(TileButtonStyle(alignment: .center))
       .disabled(artistDetailViewModel.isLoadingRadio || playerViewModel.isGeneratingMix)
       .listRowBackground(Color.clear)
       .listRowInsets(EdgeInsets())
@@ -84,13 +84,13 @@ struct WatchArtistDetailView: View {
             tile: .cover(albumId: album.id),
             title: album.name,
             subtitle: album.minYear > 0 ? String(album.minYear) : "",
-            tileSize: FloLayout.smallThumbnail
+            tileSize: WatchLayout.smallThumbnail
           )
           .holdable(onTap: { openedAlbum = album }, onHold: { menu = .album(album) })
-          .floJoinedRow(RowPosition(index: index, count: albums.count))
+          .joinedRow(RowPosition(index: index, count: albums.count))
         }
       } header: {
-        FloSectionHeader("Albums")
+        SectionHeader("Albums")
       }
     }
     .listStyle(.plain)
@@ -114,20 +114,20 @@ struct WatchArtistDetailView: View {
 
   /// The artist stands in for a navigation title.
   private var header: some View {
-    HStack(spacing: FloLayout.tileSpacing) {
+    HStack(spacing: WatchLayout.tileSpacing) {
       Image(systemName: Glyph.artist)
         .font(.system(size: 22))
-        .foregroundStyle(Color.floLilac)
+        .foregroundStyle(Dusk.fill)
         .frame(width: Self.glyphSize, height: Self.glyphSize)
-        .background(Circle().fill(Color.floSurface2))
+        .background(Circle().fill(Dusk.surface2))
       VStack(alignment: .leading, spacing: 1) {
         Text(artist.name)
-          .font(.floSong)
+          .font(.song)
           .lineLimit(2)
         if artist.albumCount > 0 {
           Text(counted(artist.albumCount, "album"))
-            .font(.floMeta)
-            .foregroundStyle(Color.floSecondary)
+            .font(.meta)
+            .foregroundStyle(Dusk.secondary)
         }
       }
       Spacer(minLength: 0)

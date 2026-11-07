@@ -27,7 +27,7 @@ struct WatchNowPlayingView: View {
 
   @State private var tint: Color?
 
-  private var accent: Color { tint ?? .floLilac }
+  private var accent: Color { tint ?? Dusk.fill }
   private var albumId: String {
     playerViewModel.nowPlayingAlbumId
   }
@@ -44,7 +44,7 @@ struct WatchNowPlayingView: View {
           .padding(.top, 18)
       } else {
         Text("Nothing playing")
-          .foregroundStyle(Color.floSecondary)
+          .foregroundStyle(Dusk.secondary)
       }
     }
     .background { CoverBackdrop(albumId: albumId, url: coverURL) }
@@ -100,15 +100,15 @@ struct WatchNowPlayingView: View {
             .padding(.horizontal, Self.compact ? 22 : 0)
         }
         Text(song.songName ?? "Unknown")
-          .font(.floSong)
+          .font(.song)
           .foregroundStyle(.white)
         if playerViewModel.isWaitingForConnection {
           Text("Offline")
-            .font(.floMeta)
-            .foregroundStyle(Color.floWarningText)
+            .font(.meta)
+            .foregroundStyle(Dusk.warningText)
         } else {
           Text(song.artistName ?? "Unknown")
-            .font(.floMeta)
+            .font(.meta)
             .foregroundStyle(accent)
         }
       }
@@ -161,7 +161,7 @@ struct WatchNowPlayingView: View {
             playerViewModel.shuffleCurrentQueue()
             WKInterfaceDevice.current().play(.click)
           }) {
-            utilityGlyph("shuffle", color: playerViewModel.isShuffling ? accent : .floSecondary)
+            utilityGlyph("shuffle", color: playerViewModel.isShuffling ? accent : Dusk.secondary)
           }
           .buttonStyle(.plain)
           .accessibilityLabel("Shuffle")
@@ -172,13 +172,13 @@ struct WatchNowPlayingView: View {
           // long press on it never arrives. A tap stars, a hold rates.
           utilityGlyph(
             playerViewModel.isStarred ? "heart.fill" : "heart",
-            color: playerViewModel.isStarred ? .floLiked : .floSecondary
+            color: playerViewModel.isStarred ? .liked : Dusk.secondary
           )
           .onTapGesture {
             playerViewModel.toggleStar()
             WKInterfaceDevice.current().play(.click)
           }
-          .onLongPressGesture(minimumDuration: FloLayout.holdDuration) { openRating(song) }
+          .onLongPressGesture(minimumDuration: WatchLayout.holdDuration) { openRating(song) }
           .accessibilityLabel(playerViewModel.isStarred ? "Unlike" : "Like")
           .accessibilityAddTraits(.isButton)
           .accessibilityAction(named: "Rate") { openRating(song) }
@@ -202,7 +202,7 @@ struct WatchNowPlayingView: View {
             utilityGlyph(
               playerViewModel.playbackMode == PlaybackMode.repeatOnce ? "repeat.1" : "repeat",
               color: playerViewModel.playbackMode != PlaybackMode.defaultPlayback
-                ? accent : .floSecondary)
+                ? accent : Dusk.secondary)
           }
           .buttonStyle(.plain)
           .accessibilityLabel("Repeat")
@@ -261,7 +261,7 @@ struct WatchNowPlayingView: View {
       Circle()
         .trim(from: 0, to: 0.25)
         .stroke(
-          playerViewModel.isLiveRadio ? Color.floLiked : accent,
+          playerViewModel.isLiveRadio ? Color.liked : accent,
           style: StrokeStyle(lineWidth: 4, lineCap: .round)
         )
         .rotationEffect(.degrees(turn * 360 - 90))
@@ -280,7 +280,7 @@ struct WatchNowPlayingView: View {
           .fill(.white)
         Image(systemName: playerViewModel.isPlaying ? "pause.fill" : "play.fill")
           .font(.system(size: Self.compact ? 28 : 32))
-          .foregroundStyle(Color.floInk)
+          .foregroundStyle(Dusk.ink)
       }
       .frame(width: Self.disc, height: Self.disc)
       .overlay {
@@ -313,8 +313,8 @@ private struct RatingChip: View {
 
   init?(rating: Int) {
     switch rating {
-    case 5: (title, systemImage, color) = ("Boosted", "star.fill", .floWarning)
-    case 1: (title, systemImage, color) = ("Avoided", "hand.thumbsdown.fill", .floDestructive)
+    case 5: (title, systemImage, color) = ("Boosted", "star.fill", .warning)
+    case 1: (title, systemImage, color) = ("Avoided", "hand.thumbsdown.fill", .destructive)
     default: return nil
     }
   }
@@ -339,12 +339,12 @@ private struct RatingChip: View {
 
   private func chip(_ content: some View) -> some View {
     content
-      .font(.floCaption)
+      .font(.captionLabel)
       .foregroundStyle(color)
       .lineLimit(1)
       .padding(.horizontal, 8)
       .frame(minHeight: 28)
-      .background(Capsule().fill(Color.floSurface2))
+      .background(Capsule().fill(Dusk.surface2))
       .fixedSize()
   }
 }
@@ -400,8 +400,8 @@ private struct SeekBar: View {
       .frame(height: 22)
       Text("-" + (duration * (1 - shown)).minuteSecond)
     }
-    .font(.floTime)
-    .foregroundStyle(Color.floTimeText)
+    .font(.time)
+    .foregroundStyle(Dusk.timeText)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("Position")
     .accessibilityValue("\((shown * duration).minuteSecond) of \(duration.minuteSecond)")

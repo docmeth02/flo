@@ -1,6 +1,6 @@
 //
 //  NowPlayingTarget.swift
-//  flo
+//  Ownwave
 //
 
 import Foundation

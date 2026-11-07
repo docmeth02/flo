@@ -1,6 +1,6 @@
 //
 //  PlaySomethingIntent.swift
-//  flo
+//  Ownwave
 //
 
 import AppIntents
@@ -49,7 +49,7 @@ struct PlayArtistIntent: AudioPlaybackIntent {
 /// The phrases are English; AppShortcuts.xcstrings holds their German
 /// versions, since Siri on the watch only runs a phrase spoken exactly. The
 /// targets' German names are in Localizable.xcstrings.
-struct FloShortcuts: AppShortcutsProvider {
+struct OwnwaveShortcuts: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
     AppShortcut(
       intent: PlaySomethingIntent(),

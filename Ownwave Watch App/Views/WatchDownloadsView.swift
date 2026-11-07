@@ -21,13 +21,13 @@ struct WatchDownloadsView: View {
       if albumViewModel.downloadedAlbums.isEmpty && cachedSongs.isEmpty {
         LibraryPlaceholder(
           kind: .empty(
-            systemImage: "arrow.down.circle", tint: .floLilac, title: "No downloads yet",
+            systemImage: "arrow.down.circle", tint: Dusk.fill, title: "No downloads yet",
             message: "Download an album or playlist to play it without a connection."))
       } else {
         list
       }
     }
-    .floNavigationTitle("Downloads")
+    .brandNavigationTitle("Downloads")
     .measuresStorage($storage, trigger: storageChanges)
     .onAppear {
       albumViewModel.fetchDownloadedAlbums()
@@ -50,18 +50,18 @@ struct WatchDownloadsView: View {
     List {
       storageCard
         .padding(.vertical, 9)
-        .floJoinedRow(.alone)
+        .joinedRow(.alone)
 
       if !cachedSongs.isEmpty {
         NavigationLink(destination: WatchCachedSongsView(songs: cachedSongs)) {
           CoverRow(
             tile: .glyph(Glyph.playlist), title: "Cached songs",
-            subtitle: counted(cachedSongs.count, "song"), tileSize: FloLayout.smallThumbnail
+            subtitle: counted(cachedSongs.count, "song"), tileSize: WatchLayout.smallThumbnail
           ) {
             Chevron()
           }
         }
-        .floJoinedRow(.alone)
+        .joinedRow(.alone)
       }
 
       let albums = albumViewModel.downloadedAlbums
@@ -71,10 +71,10 @@ struct WatchDownloadsView: View {
             NavigationLink(destination: WatchAlbumDetailView(album: album)) {
               albumRow(album)
             }
-            .floJoinedRow(RowPosition(index: index, count: albums.count))
+            .joinedRow(RowPosition(index: index, count: albums.count))
           }
         } header: {
-          FloSectionHeader("Albums")
+          SectionHeader("Albums")
         }
       }
     }
@@ -91,11 +91,11 @@ struct WatchDownloadsView: View {
           .font(.mono(13, relativeTo: .footnote))
         Spacer(minLength: 4)
         Text("\(storage.free.fileSize) free")
-          .font(.floMeta)
-          .foregroundStyle(Color.floSecondary)
+          .font(.meta)
+          .foregroundStyle(Dusk.secondary)
       }
       .lineLimit(1)
-      StorageBar(usage: storage, parts: [.init(color: .floLilac, bytes: storage.downloads)])
+      StorageBar(usage: storage, parts: [.init(color: Dusk.fill, bytes: storage.downloads)])
     }
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("Downloads \(storage.downloads.fileSize), \(storage.free.fileSize) free")
@@ -106,26 +106,26 @@ struct WatchDownloadsView: View {
       .filter { !$0.isEmpty }.joined(separator: " · ")
     return CoverRow(
       tile: .cover(albumId: album.id), title: album.name, subtitle: subtitle,
-      titleLineLimit: 2, tileSize: FloLayout.smallThumbnail
+      titleLineLimit: 2, tileSize: WatchLayout.smallThumbnail
     ) {
       // An album shows up here with its first song, so the check waits until
       // its download has finished without a failure.
       if downloads.isDownloading(collectionId: album.id) {
         Text("\(Int(downloads.progress(collectionId: album.id) * 100))%")
           .font(.system(.footnote, weight: .semibold).monospacedDigit())
-          .foregroundStyle(Color.floLilac)
+          .foregroundStyle(Dusk.fill)
       } else if phone.isReceiving(collectionId: album.id) {
         Image(systemName: "iphone.and.arrow.forward")
           .font(.system(size: 14))
-          .foregroundStyle(Color.floLilac)
+          .foregroundStyle(Dusk.fill)
       } else if downloads.hasFailed(collectionId: album.id) {
         Image(systemName: "xmark.circle.fill")
           .font(.system(size: 16))
-          .foregroundStyle(Color.floDestructive)
+          .foregroundStyle(Color.destructive)
       } else {
         Image(systemName: "checkmark.circle.fill")
           .font(.system(size: 16))
-          .foregroundStyle(Color.floDownloaded)
+          .foregroundStyle(Color.downloaded)
       }
     }
   }

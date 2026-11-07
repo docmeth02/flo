@@ -20,9 +20,9 @@ struct WatchDiagnosticsView: View {
       Section {
         ShareLink(item: DiagnosticsReport.text(), subject: Text("Ownwave log")) {
           Label("Share log", systemImage: "square.and.arrow.up")
-            .font(.floRow)
-            .foregroundStyle(Color.floLilac)
-            .frame(minHeight: FloLayout.rowHeight)
+            .font(.row)
+            .foregroundStyle(Dusk.fill)
+            .frame(minHeight: WatchLayout.rowHeight)
         }
         .joined(.alone)
       }
@@ -34,7 +34,7 @@ struct WatchDiagnosticsView: View {
       Section {
         rows(DiagnosticsReport.historyLines(history.state))
       } header: {
-        FloSectionHeader("History")
+        SectionHeader("History")
       }
 
       Section {
@@ -42,22 +42,22 @@ struct WatchDiagnosticsView: View {
           // The summary first, then one row per pick.
           let count = mix.picks.count + 1
           Text(DiagnosticsReport.summary(of: mix))
-            .font(.floMeta)
+            .font(.meta)
             .padding(.vertical, 2)
             .joined(RowPosition(index: 0, count: count))
           ForEach(Array(mix.picks.enumerated()), id: \.offset) { index, pick in
-            FloInfoRow("\(pick.slot) · \(pick.reason)", "\(pick.title) — \(pick.artist)")
+            InfoRow("\(pick.slot) · \(pick.reason)", "\(pick.title) — \(pick.artist)")
               .joined(RowPosition(index: index + 1, count: count))
           }
         } else {
           Text("No mix yet")
-            .font(.floMeta)
-            .foregroundStyle(Color.floSecondary)
+            .font(.meta)
+            .foregroundStyle(Dusk.secondary)
             .padding(.vertical, 2)
             .joined(.alone)
         }
       } header: {
-        FloSectionHeader("Last mix")
+        SectionHeader("Last mix")
       }
 
       Section {
@@ -66,31 +66,31 @@ struct WatchDiagnosticsView: View {
           VStack(alignment: .leading, spacing: 2) {
             Text(entry.text)
               .font(.caption2)
-              .foregroundStyle(Color.floSecondary)
+              .foregroundStyle(Dusk.secondary)
               .lineLimit(2)
             Text(DiagnosticsReport.details(of: entry))
-              .font(.floMeta)
-              .foregroundStyle(entry.isFailure ? Color.floDestructive : .white)
+              .font(.meta)
+              .foregroundStyle(entry.isFailure ? Color.destructive : .white)
               .lineLimit(2)
           }
           .padding(.vertical, 2)
           .joined(RowPosition(index: index, count: entries.count))
         }
       } header: {
-        FloSectionHeader("Requests")
+        SectionHeader("Requests")
       }
     }
     // Joined rows, as in Settings: plain, and as low as their content (at 0
     // watchOS skips a section's first or last row).
     .listStyle(.plain)
     .environment(\.defaultMinListRowHeight, 1)
-    .floNavigationTitle("Diagnostics")
+    .brandNavigationTitle("Diagnostics")
     .task { await ListeningHistoryStore.shared.publishStoredState() }
   }
 
   private func rows(_ lines: [(String, String)]) -> some View {
     ForEach(Array(lines.enumerated()), id: \.element.0) { index, line in
-      FloInfoRow(line.0, line.1).joined(RowPosition(index: index, count: lines.count))
+      InfoRow(line.0, line.1).joined(RowPosition(index: index, count: lines.count))
     }
   }
 }
@@ -98,6 +98,6 @@ struct WatchDiagnosticsView: View {
 extension View {
   /// A row joined on its section's platter, its hairline from the text.
   fileprivate func joined(_ position: RowPosition) -> some View {
-    floJoinedRow(position, hairlineInset: FloLayout.joinedRowInsets.leading)
+    joinedRow(position, hairlineInset: WatchLayout.joinedRowInsets.leading)
   }
 }

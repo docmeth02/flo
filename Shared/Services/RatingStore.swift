@@ -1,6 +1,6 @@
 //
 //  RatingStore.swift
-//  flo
+//  Ownwave
 //
 
 import Combine

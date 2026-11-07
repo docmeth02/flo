@@ -24,7 +24,7 @@ import SwiftUI
       switch self {
       case .glyph: (palette.surface2, palette.accent)
       case .filled: (palette.fill, palette.ink)
-      case .liked: (palette.surface2, .floLiked)
+      case .liked: (palette.surface2, .liked)
       }
     }
   }

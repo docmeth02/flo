@@ -60,7 +60,7 @@ struct LoginView: View {
           if let error = auth.loginError {
             Label(error.loginMessage, systemImage: "exclamationmark.circle.fill")
               .font(.meta)
-              .foregroundStyle(Color.floDestructive)
+              .foregroundStyle(Color.destructive)
               .frame(maxWidth: .infinity, alignment: .leading)
               .padding(.horizontal, 4)
               .padding(.top, 10)
@@ -129,7 +129,7 @@ struct LoginView: View {
     _ field: Field, _ label: String, isRejected: Bool = false,
     @ViewBuilder input: () -> some View
   ) -> some View {
-    let ring = isRejected ? Color.floDestructive : focus == field ? palette.accent : nil
+    let ring = isRejected ? Color.destructive : focus == field ? palette.accent : nil
     return VStack(alignment: .leading, spacing: 3) {
       Text(label)
         .font(.counter)

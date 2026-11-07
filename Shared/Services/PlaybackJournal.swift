@@ -1,6 +1,6 @@
 //
 //  PlaybackJournal.swift
-//  flo
+//  Ownwave
 //
 
 import CoreData

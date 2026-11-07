@@ -30,7 +30,7 @@ struct WatchAlbumsView: View {
               ) {
                 // The subtitle says how far one on its way is.
                 if album.progress == nil {
-                  Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.floDownloaded)
+                  Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.downloaded)
                 }
               }
               .watchAlbumMenu(album)

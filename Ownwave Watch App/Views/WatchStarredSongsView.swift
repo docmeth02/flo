@@ -26,7 +26,7 @@ struct WatchStarredSongsView: View {
       title: "Liked Songs", state: albumViewModel.state(.starredSongs),
       isEmpty: songs.isEmpty,
       empty: .empty(
-        systemImage: "heart.fill", tint: .floLiked, title: "No liked songs yet",
+        systemImage: "heart.fill", tint: .liked, title: "No liked songs yet",
         message: "Tap the heart on Now Playing to add a song here."),
       refresh: albumViewModel.refreshStarredSongs
     ) {

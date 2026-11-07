@@ -35,7 +35,7 @@ struct AlbumTile: View {
             switch mark {
             case .downloaded:
               Image(systemName: "arrow.down.circle.fill")
-                .foregroundStyle(Color.floDownloaded)
+                .foregroundStyle(Color.downloaded)
                 .accessibilityLabel("Downloaded")
             case .pinned:
               Image(systemName: "pin.fill")

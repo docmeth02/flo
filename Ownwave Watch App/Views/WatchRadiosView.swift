@@ -20,7 +20,7 @@ struct WatchRadiosView: View {
       state: viewModel.state,
       isEmpty: radios.isEmpty,
       empty: .empty(
-        systemImage: Glyph.radio, tint: .floLilac, title: "No radios",
+        systemImage: Glyph.radio, tint: Dusk.fill, title: "No radios",
         message: "Add internet radio stations on your Navidrome server."),
       refresh: viewModel.refresh
     ) {
@@ -51,17 +51,17 @@ private struct RadioRow: View {
   let radio: Radio
 
   var body: some View {
-    HStack(spacing: FloLayout.tileSpacing) {
-      CoverTile.radio.view(size: FloLayout.smallThumbnail)
+    HStack(spacing: WatchLayout.tileSpacing) {
+      CoverTile.radio.view(size: WatchLayout.smallThumbnail)
       VStack(alignment: .leading, spacing: 1) {
         Text(radio.name)
-          .font(.floRowTitle)
+          .font(.rowTitle)
           .lineLimit(2)
         HStack(spacing: 4) {
-          StatusDot(color: .floLiked)
+          StatusDot(color: .liked)
           Text("Live stream")
-            .font(.floMeta)
-            .foregroundStyle(Color.floSecondary)
+            .font(.meta)
+            .foregroundStyle(Dusk.secondary)
         }
       }
       Spacer(minLength: 0)
@@ -69,7 +69,7 @@ private struct RadioRow: View {
         PinGlyph()
       }
     }
-    .frame(minHeight: FloLayout.joinedRowHeight)
+    .frame(minHeight: WatchLayout.joinedRowHeight)
     .accessibilityElement(children: .combine)
   }
 }

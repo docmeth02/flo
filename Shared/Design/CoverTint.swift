@@ -1,6 +1,6 @@
 //
 //  CoverTint.swift
-//  flo
+//  Ownwave
 //
 
 import SwiftUI

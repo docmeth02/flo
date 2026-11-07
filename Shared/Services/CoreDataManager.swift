@@ -1,6 +1,6 @@
 //
 //  CoreDataManager.swift
-//  flo
+//  Ownwave
 //
 
 @preconcurrency import CoreData

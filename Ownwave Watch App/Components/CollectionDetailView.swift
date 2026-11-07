@@ -24,7 +24,7 @@ struct CollectionDetailView: View {
   let title: String
   let meta: String
   let songs: [Song]
-  var tint: Color = .floLilac
+  var tint: Color = Dusk.fill
   /// The top of the backdrop, fading to black; a lilac wash when nil.
   var shade: Color?
   /// An album's cover also lies blurred behind the header.
@@ -74,13 +74,13 @@ struct CollectionDetailView: View {
             .shadow(color: .black.opacity(0.7), radius: 10, y: 6)
             .padding(.bottom, 6)
           Text(title)
-            .font(.floSong)
+            .font(.song)
             .lineLimit(2)
             .multilineTextAlignment(.center)
           if !meta.isEmpty {
             Text(meta)
-              .font(.floMeta)
-              .foregroundStyle(Color.floSecondary)
+              .font(.meta)
+              .foregroundStyle(Dusk.secondary)
               .lineLimit(1)
               .minimumScaleFactor(0.8)
           }
@@ -93,7 +93,7 @@ struct CollectionDetailView: View {
           } label: {
             Label("Play", systemImage: "play.fill")
           }
-          .buttonStyle(FloPrimaryButtonStyle(fill: tint, height: Self.buttonHeight))
+          .buttonStyle(PrimaryButtonStyle(fill: tint, height: Self.buttonHeight))
 
           Button {
             if playerViewModel.shuffleItem(item: playable()) { showPlayer() }
@@ -101,7 +101,7 @@ struct CollectionDetailView: View {
             Image(systemName: "shuffle")
           }
           .buttonStyle(
-            FloRoundButtonStyle(tint: tint, fill: tint.opacity(0.18), size: Self.buttonHeight)
+            RoundButtonStyle(tint: tint, fill: tint.opacity(0.18), size: Self.buttonHeight)
           )
           .accessibilityLabel("Shuffle")
         }
@@ -162,7 +162,7 @@ struct CollectionDetailView: View {
       }
       LinearGradient(
         stops: [
-          .init(color: shade ?? .floWave.opacity(0.18), location: 0),
+          .init(color: shade ?? Dusk.accent.opacity(0.18), location: 0),
           .init(color: .black, location: 0.7),
         ],
         startPoint: .top, endPoint: .bottom)

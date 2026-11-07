@@ -21,7 +21,7 @@ struct WatchAlbumsListView: View {
       title: "Albums", state: albumViewModel.state(.albums),
       isEmpty: albums.isEmpty,
       empty: .empty(
-        systemImage: Glyph.album, tint: .floLilac, title: "No albums",
+        systemImage: Glyph.album, tint: Dusk.fill, title: "No albums",
         message: "Albums on your Navidrome server show up here."),
       refresh: albumViewModel.refreshAlbums
     ) {
@@ -79,7 +79,7 @@ private struct AlbumTile: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
-      Color.floSkeleton
+      Dusk.skeleton
         .aspectRatio(1, contentMode: .fit)
         .overlay {
           GeometryReader { WatchAlbumArtView(albumId: album.id, size: $0.size.width) }
@@ -89,16 +89,16 @@ private struct AlbumTile: View {
           if pinStore.isPinned(album.id, .album) {
             PinGlyph()
               .padding(5)
-              .background(Circle().fill(Color.floSurface))
+              .background(Circle().fill(Dusk.surface))
               .padding(4)
           }
         }
       VStack(alignment: .leading, spacing: 0) {
         Text(album.name)
-          .font(.floRowTitle)
+          .font(.rowTitle)
         Text(album.albumArtist)
-          .font(.floMeta)
-          .foregroundStyle(Color.floSecondary)
+          .font(.meta)
+          .foregroundStyle(Dusk.secondary)
       }
       .lineLimit(1)
     }
@@ -130,14 +130,14 @@ struct SortHeader<Order: LibraryOrder & Hashable>: View {
           orderLabel
         }
       }
-      .font(.floRow)
+      .font(.row)
       .lineLimit(1)
     }
     .listRowBackground(Color.clear)
   }
 
   private var countLabel: some View {
-    Text(count).foregroundStyle(Color.floSecondary)
+    Text(count).foregroundStyle(Dusk.secondary)
   }
 
   private var orderLabel: some View {
@@ -146,7 +146,7 @@ struct SortHeader<Order: LibraryOrder & Hashable>: View {
       Image(systemName: "chevron.down").font(.system(size: 11, weight: .semibold))
     }
     .fontWeight(.semibold)
-    .foregroundStyle(Color.floLilac)
+    .foregroundStyle(Dusk.fill)
   }
 }
 
@@ -163,8 +163,8 @@ struct LibraryHint: View {
 
   var body: some View {
     Text(text)
-      .font(.floMeta)
-      .foregroundStyle(Color.floSecondary)
+      .font(.meta)
+      .foregroundStyle(Dusk.secondary)
       .multilineTextAlignment(.center)
       .frame(maxWidth: .infinity)
       .padding(.top, 8)
@@ -201,7 +201,7 @@ struct LibraryList<Rows: View>: View {
           .environment(\.defaultMinListRowHeight, 1)
       }
     }
-    .floNavigationTitle(title)
+    .brandNavigationTitle(title)
     .refreshable {
       await refresh()
     }

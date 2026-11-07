@@ -223,7 +223,7 @@ private struct QueueCollection: UIViewRepresentable {
         done(self?.remove(id) ?? false)
       }
       action.image = UIImage(systemName: "minus.circle.fill")
-      action.backgroundColor = UIColor(Color.floDestructive)
+      action.backgroundColor = UIColor(Color.destructive)
       return UISwipeActionsConfiguration(actions: [action])
     }
 

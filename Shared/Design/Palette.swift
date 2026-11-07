@@ -1,6 +1,6 @@
 //
 //  Palette.swift
-//  flo
+//  Ownwave
 //
 
 import SwiftUI
@@ -40,10 +40,10 @@ struct Palette {
 
 /// The status colors, the same in both schemes.
 extension Color {
-  static let floLiked = Color(hex: 0xFF453A)
-  static let floWarning = Color(hex: 0xFF9F0A)
-  static let floDownloaded = Color(hex: 0x32D74B)
-  static let floDestructive = Color(hex: 0xFF6961)
+  static let liked = Color(hex: 0xFF453A)
+  static let warning = Color(hex: 0xFF9F0A)
+  static let downloaded = Color(hex: 0x32D74B)
+  static let destructive = Color(hex: 0xFF6961)
 
   init(hex: UInt32) {
     self.init(
