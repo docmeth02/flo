@@ -25,12 +25,9 @@ struct SearchView: View {
   /// Nil while there is nothing to search.
   @State private var found: Found?
 
-  @StateObject private var radio = ArtistDetailViewModel()
-  /// Ends with the screen, as on the artist's, so a late answer never
-  /// replaces a newer queue.
-  @State private var radioTask: Task<Void, Never>?
-  /// The artist whose radio found nothing, and whether its request failed.
-  @State private var radioMiss: (name: String, failed: Bool)?
+  @State private var isLoadingRadio = false
+  /// The artist whose radio played nothing, and why.
+  @State private var radioMiss: (name: String, message: String)?
 
   private static let maxRecents = 8
 
@@ -84,14 +81,13 @@ struct SearchView: View {
       #endif
       if query.isEmpty { isFieldFocused = true }
     }
-    .onDisappear { radioTask?.cancel() }
     .alert(
       radioMiss?.name ?? "",
       isPresented: Binding(get: { radioMiss != nil }, set: { if !$0 { radioMiss = nil } })
     ) {
       Button("OK") {}
     } message: {
-      Text(ArtistDetailViewModel.noRadioMessage(failed: radioMiss?.failed ?? false))
+      Text(radioMiss?.message ?? "")
     }
     .task {
       albums.getArtists()
@@ -387,7 +383,7 @@ struct SearchView: View {
       Button {
         startRadio(artist)
       } label: {
-        if radio.isLoadingRadio {
+        if isLoadingRadio {
           ProgressView().tint(palette.ink)
         } else {
           Image(systemName: Glyph.radio)
@@ -395,7 +391,7 @@ struct SearchView: View {
       }
       .buttonStyle(FillButtonStyle(height: 44))
       .frame(width: 44)
-      .disabled(radio.isLoadingRadio || player.isGeneratingMix)
+      .disabled(player.isGeneratingMix)
       .accessibilityLabel("Artist Radio")
     case .album(let album):
       playButton { play(album) }
@@ -439,15 +435,10 @@ struct SearchView: View {
   /// Artist Radio as the artist's screen starts it.
   private func startRadio(_ artist: Artist) {
     remember(query)
-    radioTask?.cancel()
-    radioTask = Task {
-      let songs = await radio.fetchArtistRadio(artist: artist)
-      guard !Task.isCancelled else { return }
-      if let songs, !songs.isEmpty {
-        app.play(SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs))
-      } else {
-        radioMiss = (artist.name, songs == nil)
-      }
+    Task {
+      isLoadingRadio = true
+      radioMiss = await app.playArtistRadio(artist).message.map { (artist.name, $0) }
+      isLoadingRadio = false
     }
   }
 

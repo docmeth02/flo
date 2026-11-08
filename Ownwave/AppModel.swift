@@ -133,6 +133,13 @@ final class AppModel: ObservableObject {
     if await player.playArtist(id: id, name: name) { isNowPlayingPresented = true }
   }
 
+  /// Songs similar to the artist's; the outcome tells why none played.
+  func playArtistRadio(_ artist: Artist) async -> PlayerViewModel.RadioOutcome {
+    let outcome = await player.playArtistRadio(id: artist.id, name: artist.name)
+    if outcome == .played { isNowPlayingPresented = true }
+    return outcome
+  }
+
   /// A station is a live stream, so none plays while streaming is off on
   /// cellular.
   var isRadioBlocked: Bool { TranscodingSettings.streamingBitRate == nil }

@@ -557,7 +557,7 @@ extension CarPlayController {
       let player = self?.player
       Task {
         // Holds the completion until the radio plays or has nothing to play.
-        if await player?.playArtistRadio(id: artist.id, name: artist.name) == true {
+        if await player?.playArtistRadio(id: artist.id, name: artist.name) == .played {
           self?.showNowPlaying()
         }
         completion()

@@ -21,6 +21,8 @@ struct WatchSearchView: View {
   @State private var openedAlbum: Album?
   @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
+  /// Why the top card's Artist Radio played nothing, while that shows.
+  @State private var radioMiss: (name: String, message: String)?
 
   private struct Library {
     let artists: [Artist]
@@ -62,6 +64,14 @@ struct WatchSearchView: View {
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .itemMenu($menu, openedAlbum: $openedAlbum, openedArtist: $openedArtist)
+    .alert(
+      radioMiss?.name ?? "",
+      isPresented: Binding(get: { radioMiss != nil }, set: { if !$0 { radioMiss = nil } })
+    ) {
+      Button("OK") {}
+    } message: {
+      Text(radioMiss?.message ?? "")
+    }
     .task {
       // Once: the view reappears after every pushed album or artist.
       guard library == nil else { return }
@@ -177,9 +187,9 @@ struct WatchSearchView: View {
       if case .artist(let artist) = target {
         Button {
           Task {
-            if await playerViewModel.playArtistRadio(id: artist.id, name: artist.name) {
-              showPlayer()
-            }
+            let outcome = await playerViewModel.playArtistRadio(id: artist.id, name: artist.name)
+            if outcome == .played { showPlayer() }
+            radioMiss = outcome.message.map { (artist.name, $0) }
           }
         } label: {
           Image(systemName: Glyph.radio)

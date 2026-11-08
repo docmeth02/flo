@@ -128,7 +128,6 @@
 		52A7D4689DE6255909368946 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD931F8D85EE37252BC4064F /* CarPlaySceneDelegate.swift */; };
 		5381CF61353408428776B1EC /* CarPlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAEB768A0ED75F044D09EFD8 /* CarPlayController.swift */; };
 		53CC1BEF33968130D27670BA /* RatingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17258430B8997B70CB97CC82 /* RatingStore.swift */; };
-		5400FE99025BD6DBFB215DDB /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		5493F47DE4E5039A5F602A32 /* ArtistRadio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */; };
 		55C50EB150383B9E1D113347 /* PendingEdits.swift in Sources */ = {isa = PBXBuildFile; fileRef = C82E4A2833D5B79A9B7841EB /* PendingEdits.swift */; };
 		56219B1B710720F6A7E43060 /* RecommendationLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1388C037165FF767131D19D /* RecommendationLog.swift */; };
@@ -379,7 +378,6 @@
 		DFEBF89BC2595D5993AD1C74 /* RatingStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B27B0002A1B2C3D4E5F60002 /* RatingStoreTests.swift */; };
 		E09F669977950E432ABA0F32 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B67A5AB0BB9835696DB660 /* SettingsView.swift */; };
 		E0B47156C832B1DC5EC61F3E /* StorageBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47163AC3D672641450AF2CB8 /* StorageBar.swift */; };
-		E0D9C52A13756CF9925D50C1 /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		E0E2051C2ECAE641EC151B62 /* WatchLinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21A03CD944EFA80449CFC2FC /* WatchLinkProtocol.swift */; };
 		E1442A8B84C01EE321E02C9C /* PhoneLink+Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D7E85400EE91596AC2581D9 /* PhoneLink+Debug.swift */; };
 		E183C3A643387B5FC8E469F6 /* EngineRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42E5CFC7824F74C00E75D934 /* EngineRulesTests.swift */; };
@@ -435,7 +433,6 @@
 		F9A7ACDB28E6BF251B18C16D /* WatchLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6699C44D5AD9144242023B3 /* WatchLinkTests.swift */; };
 		F9ADCE2ECE00AD1A888455FA /* TasteSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C96562CD0A8D9817861D2D2 /* TasteSummary.swift */; };
 		FA198610D686489E5659D3BC /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DE89172C2FFBC900E078CC /* CoreDataManager.swift */; };
-		FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */; };
 		FB154B9278A75B1D1C585831 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = F89057993E534F475924C7B0 /* Alamofire */; };
 		FBB2FE08B9F3A4F8541A5259 /* JSONFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912EC9E4138041A9C4A96E4C /* JSONFile.swift */; };
 		FD5394C2AF17CDBB5845718F /* MixReason.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9587C95A4A56BBCF8534381A /* MixReason.swift */; };
@@ -630,7 +627,6 @@
 		AECF8CB7692F9868CA958B5B /* TourStep.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TourStep.swift; sourceTree = "<group>"; };
 		AF66688A924A53978D5BBCA3 /* WatchDiagnosticsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDiagnosticsView.swift; sourceTree = "<group>"; };
 		B02F81DA77E17C53E948170B /* AppLaunch.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppLaunch.swift; sourceTree = "<group>"; };
-		B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistDetailViewModel.swift; sourceTree = "<group>"; };
 		B0AD2E752F4B2B6900577062 /* ArtistRadio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistRadio.swift; sourceTree = "<group>"; };
 		B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadiosViewModel.swift; sourceTree = "<group>"; };
 		B0BAAAAA2F3214F7002A5FBB /* Radio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Radio.swift; sourceTree = "<group>"; };
@@ -949,7 +945,6 @@
 			isa = PBXGroup;
 			children = (
 				C4289F472C12391300C3A4FD /* AlbumViewModel.swift */,
-				B0AD2E732F4B037C00577062 /* ArtistDetailViewModel.swift */,
 				C415F54D2C11908100E3E1D2 /* AuthViewModel.swift */,
 				B0BAAAA82F3213AB002A5FBB /* RadiosViewModel.swift */,
 				88D8350161966488618D240F /* PlayerViewModel.swift */,
@@ -1532,7 +1527,6 @@
 				47C01357AD85942388E58843 /* Errors.swift in Sources */,
 				AB128564F2F5628F184B5756 /* Strings.swift in Sources */,
 				299975E3C1980D2753E11EBB /* AlbumViewModel.swift in Sources */,
-				5400FE99025BD6DBFB215DDB /* ArtistDetailViewModel.swift in Sources */,
 				BD9E0599F88E85031B3CDCAB /* AuthViewModel.swift in Sources */,
 				7934D8994C38143773A4CE01 /* RadiosViewModel.swift in Sources */,
 				0E7069062C0087E6B0C519E3 /* PlayerViewModel.swift in Sources */,
@@ -1661,7 +1655,6 @@
 				3FED4C4043890696D075FFBC /* RadiosViewModel.swift in Sources */,
 				62F4DD11E524061F6A975D7F /* WatchRadiosView.swift in Sources */,
 				5493F47DE4E5039A5F602A32 /* ArtistRadio.swift in Sources */,
-				FAC181200A814CFBC05D905B /* ArtistDetailViewModel.swift in Sources */,
 				4F8E0BD04AC14F52D5C8E033 /* ExplicitStatus.swift in Sources */,
 				3911EF003135778456337152 /* ScrobbleQueueManager.swift in Sources */,
 				C49F698F7C861FE281739025 /* ScrobbleReceipts.swift in Sources */,
@@ -1768,7 +1761,6 @@
 				C4FB2DE7F87F422FACBA155E /* RadioService.swift in Sources */,
 				417A146C53E75C74B313D47D /* RadiosViewModel.swift in Sources */,
 				8F7A1D600A74432E2D278258 /* ArtistRadio.swift in Sources */,
-				E0D9C52A13756CF9925D50C1 /* ArtistDetailViewModel.swift in Sources */,
 				056C155907BF6274DD03FEA2 /* ExplicitStatus.swift in Sources */,
 				23C9B289FFA2871535819E8A /* ScrobbleQueueManager.swift in Sources */,
 				EB2D237702046A0D0CCAA4EA /* ScrobbleReceipts.swift in Sources */,
