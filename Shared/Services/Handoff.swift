@@ -9,9 +9,10 @@ import Foundation
 /// A handoff this device sent, and what its result means here.
 struct HandoffAttempt: Equatable {
   let id: UUID
-  /// The player's start generation and queue when it was sent.
+  /// The player's start generation, queue and song when it was sent.
   let startGeneration: Int
   let queueIds: [String?]
+  let songId: String?
 
   enum Step: Equatable {
     /// The other device plays the queue that was sent: this one pauses.
@@ -22,15 +23,16 @@ struct HandoffAttempt: Equatable {
     case ignore
   }
 
-  /// Pauses only for `.started` while the player still has the queue it
-  /// sent and started nothing since: a late result never pauses what the
-  /// user started meanwhile.
+  /// Pauses only for `.started` while the player still plays the song and
+  /// the queue it sent and started nothing since: a late result never
+  /// pauses what the user started or skipped to meanwhile.
   func step(
-    for result: Link.HandoffResult, id: UUID, startGeneration: Int, queueIds: [String?]
+    for result: Link.HandoffResult, id: UUID, startGeneration: Int, queueIds: [String?],
+    songId: String?
   ) -> Step {
     guard id == self.id else { return .ignore }
     guard result == .started, startGeneration == self.startGeneration,
-      queueIds == self.queueIds
+      queueIds == self.queueIds, songId == self.songId
     else { return .keepPlaying }
     return .pause
   }
@@ -92,7 +94,8 @@ struct HandoffAttempt: Equatable {
     // First: it moves the start generation the attempt records.
     player.handOff()
     let attempt = HandoffAttempt(
-      id: handoff.id, startGeneration: player.startGeneration, queueIds: player.queue.map(\.id))
+      id: handoff.id, startGeneration: player.startGeneration, queueIds: player.queue.map(\.id),
+      songId: player.nowPlayingId)
     self.attempt = attempt
     self.player = player
     sentAt = Date()
@@ -123,7 +126,7 @@ struct HandoffAttempt: Equatable {
     guard let attempt, let player else { return }
     let step = attempt.step(
       for: result, id: id, startGeneration: player.startGeneration,
-      queueIds: player.queue.map(\.id))
+      queueIds: player.queue.map(\.id), songId: player.nowPlayingId)
     guard step != .ignore else { return }
     if case .failed(let reason) = result { return fail(id, reason) }
     let seconds = Int(Date().timeIntervalSince(sentAt))
