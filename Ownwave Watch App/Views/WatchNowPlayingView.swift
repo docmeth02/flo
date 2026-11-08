@@ -69,9 +69,9 @@ struct WatchNowPlayingView: View {
       isPresented: $showRating, titleVisibility: .visible
     ) {
       // The song the dialog was opened for, even if playback moved on.
-      Button("Boost") { ratings.set(5, playbackID: ratingTarget) }
+      Button("Boost") { ratings.set(RatingStore.boost, playbackID: ratingTarget) }
       Button("Avoid in Smart Shuffle", role: .destructive) {
-        ratings.set(1, playbackID: ratingTarget)
+        ratings.set(RatingStore.avoid, playbackID: ratingTarget)
       }
       if ratingTargetRating > 0 {
         Button("Clear rating") { ratings.set(0, playbackID: ratingTarget) }

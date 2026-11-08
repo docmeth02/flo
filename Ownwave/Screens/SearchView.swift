@@ -26,6 +26,9 @@ struct SearchView: View {
   @State private var found: Found?
 
   @State private var isLoadingRadio = false
+  /// Ends with the screen, so a late answer never replaces a queue edited
+  /// meanwhile.
+  @State private var radioTask: Task<Void, Never>?
   /// The artist whose radio played nothing, and why.
   @State private var radioMiss: (name: String, message: String)?
 
@@ -81,6 +84,7 @@ struct SearchView: View {
       #endif
       if query.isEmpty { isFieldFocused = true }
     }
+    .onDisappear { radioTask?.cancel() }
     .alert(
       radioMiss?.name ?? "",
       isPresented: Binding(get: { radioMiss != nil }, set: { if !$0 { radioMiss = nil } })
@@ -421,7 +425,8 @@ struct SearchView: View {
   /// Artist Radio as the artist's screen starts it.
   private func startRadio(_ artist: Artist) {
     remember(query)
-    Task {
+    radioTask?.cancel()
+    radioTask = Task {
       isLoadingRadio = true
       radioMiss = await app.playArtistRadio(artist).message.map { (artist.name, $0) }
       isLoadingRadio = false

@@ -18,6 +18,9 @@ struct ArtistView: View {
   /// Why Artist Radio played nothing, while that shows.
   @State private var radioMessage: String?
   @State private var isLoadingRadio = false
+  /// Ends with the screen, so a late answer never replaces a queue edited
+  /// meanwhile.
+  @State private var radioTask: Task<Void, Never>?
 
   /// The screen takes its backdrop and tint from the artist's first album.
   private var albums: [Album] { albumViewModel.albums(byArtist: artist.id) }
@@ -62,6 +65,7 @@ struct ArtistView: View {
     }
     .navigationBarTitleDisplayMode(.inline)
     .onAppear { albumViewModel.fetchAlbumsByArtist(id: artist.id) }
+    .onDisappear { radioTask?.cancel() }
     .task(id: artist.id) { await loadTopSongs() }
     .coverShades($shades, albumId: albums.first?.id ?? "")
     .environment(\.shownItemId, artist.id)
@@ -78,7 +82,7 @@ struct ArtistView: View {
   private var buttons: some View {
     HStack(spacing: 10) {
       Button {
-        Task {
+        radioTask = Task {
           isLoadingRadio = true
           radioMessage = await app.playArtistRadio(artist).message
           isLoadingRadio = false

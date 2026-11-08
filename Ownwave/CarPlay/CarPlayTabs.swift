@@ -50,9 +50,9 @@ extension CarPlayController {
       })
   }
 
-  /// What Home shows without asking the server: the library lists from the
-  /// cache, so pins resolve, the recent albums and the liked songs, and the
-  /// stations once one is pinned.
+  /// What Home shows: the library lists (cached, asked for while empty and
+  /// the server answers), so pins resolve, the recent albums and the liked
+  /// songs, and the stations once one is pinned.
   private func loadHome() async {
     albums.fetchStarredSongsIfStale()
     guard let lists = await albums.loadHomeLists() else { return }

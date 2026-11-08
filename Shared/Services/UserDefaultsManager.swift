@@ -170,6 +170,15 @@ enum UserDefaultsManager {
     set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.pendingWorkAccount) }
   }
 
+  /// A cellular download setting changed while the downloads could not be
+  /// restarted; kept so a relaunch in between still restarts them.
+  static var downloadsRestartOnActivation: Bool {
+    get { UserDefaults.standard.bool(forKey: UserDefaultsKeys.downloadsRestartOnActivation) }
+    set {
+      UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.downloadsRestartOnActivation)
+    }
+  }
+
   /// How far smart mixes reach past the favourites (Taste's Mix variety).
   static var mixVariety: MixRanker.Variety {
     get {

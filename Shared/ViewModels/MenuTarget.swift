@@ -317,7 +317,7 @@ struct MenuActions {
       let value = Self.rating(of: action)
       let rating = current == value ? 0 : value
       // Read before the rating: an Avoid of what plays skips it at once.
-      let skips = rating == 1 && isPlaying(target) && player.leavesForAnotherSong
+      let skips = rating == RatingStore.avoid && isPlaying(target) && player.leavesForAnotherSong
       switch target {
       case .song(let song, _, _): RatingStore.shared.set(rating, playbackID: song.playbackID)
       case .artist(let artist): RatingStore.shared.setArtist(rating, artistId: artist.id)

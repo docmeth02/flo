@@ -95,7 +95,10 @@ final class DownloadSession: NSObject, ObservableObject {
   /// finished tasks still have their delivery queued.
   private var delivered = Set<Int>()
   /// A cellular setting changed while nothing could be submitted.
-  private var restartsOnActivation = false
+  private var restartsOnActivation: Bool {
+    get { UserDefaultsManager.downloadsRestartOnActivation }
+    set { UserDefaultsManager.downloadsRestartOnActivation = newValue }
+  }
 
   private init(store: JSONFile<[DownloadJob]> = jobFile) {
     self.store = store
@@ -306,12 +309,15 @@ final class DownloadSession: NSObject, ObservableObject {
   /// job without one goes again (uncounted) unless it waits for a retry, and a
   /// task without a job is cancelled.
   private func reconcile() {
-    if restartsOnActivation, canSubmit {
-      restartsOnActivation = false
-      return cellularAccessChanged()
-    }
     session.getAllTasks { running in
-      DispatchQueue.main.async { self.reconcile(running) }
+      DispatchQueue.main.async {
+        self.reconcile(running)
+        // After the snapshot, so files delivered meanwhile are saved first.
+        if self.restartsOnActivation, self.canSubmit {
+          self.restartsOnActivation = false
+          self.cellularAccessChanged()
+        }
+      }
     }
   }
 

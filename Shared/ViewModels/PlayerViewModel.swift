@@ -838,18 +838,19 @@ class PlayerViewModel: ObservableObject {
       return SongCollection.artistRadio(id: id, name: name, songs: songs ?? [])
     }
     if played { return .played }
-    return startGeneration == generation ? outcome : .dropped
+    return startGeneration == generation && !Task.isCancelled ? outcome : .dropped
   }
 
-  /// Builds a collection and plays it, unless one is already being built or
-  /// the user started something else in the meantime.
+  /// Builds a collection and plays it, unless one is already being built,
+  /// the user started something else in the meantime or the caller's task
+  /// was cancelled (a screen that ended with it).
   @MainActor private func playWhenBuilt(_ build: () async -> SongCollection) async -> Bool {
     guard !isGeneratingMix else { return false }
     isGeneratingMix = true
     let generation = startGeneration
     let item = await build()
     isGeneratingMix = false
-    guard startGeneration == generation else { return false }
+    guard startGeneration == generation, !Task.isCancelled else { return false }
     return playItem(item: item)
   }
 

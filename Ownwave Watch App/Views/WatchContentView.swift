@@ -59,8 +59,13 @@ struct WatchContentView: View {
   /// outcome goes back to the phone.
   private func runPhoneSignIn(_ request: Link.SignIn) {
     // Signed in meanwhile, or with a Keychain that would not read: the
-    // watch keeps its login, and its state tells the phone.
-    guard !authViewModel.isLoggedIn else { return phone.signInFinished(error: nil) }
+    // watch keeps its login, and its state tells the phone; signed in to
+    // another account, the phone hears why, as it would have at once.
+    guard !authViewModel.isLoggedIn else {
+      let same = AuthService.shared.accountKey == request.accountKey
+      return phone.signInFinished(
+        error: same ? nil : "The watch is signed in to another account. Log out there first.")
+    }
     authViewModel.serverUrl = request.server
     authViewModel.username = request.user
     authViewModel.password = request.password

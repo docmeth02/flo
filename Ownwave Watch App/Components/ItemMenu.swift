@@ -15,7 +15,8 @@ import WatchKit
 struct ItemMenu: View {
   enum Choice: Hashable {
     case action(MenuActions.Action)
-    /// Not a shared action: each app downloads through its own session.
+    /// Not a shared action: the phone's menu has its own Download, both
+    /// through `CollectionDownload`.
     case download
     /// The screen behind the menu opens these.
     case goToAlbum, goToArtist

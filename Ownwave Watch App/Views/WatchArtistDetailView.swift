@@ -13,6 +13,9 @@ struct WatchArtistDetailView: View {
   /// Why Artist Radio played nothing, while that shows.
   @State private var radioMessage: String?
   @State private var isLoadingRadio = false
+  /// Ends with the screen, so a late answer never replaces a queue edited
+  /// meanwhile.
+  @State private var radioTask: Task<Void, Never>?
   @State private var isLoadingTopSongs = false
   @State private var openedAlbum: Album?
   @State private var openedArtist: Artist?
@@ -30,7 +33,7 @@ struct WatchArtistDetailView: View {
 
       HStack(spacing: 6) {
         Button(action: {
-          Task {
+          radioTask = Task {
             isLoadingRadio = true
             let outcome = await playerViewModel.playArtistRadio(id: artist.id, name: artist.name)
             isLoadingRadio = false
@@ -97,6 +100,7 @@ struct WatchArtistDetailView: View {
     .onAppear {
       albumViewModel.fetchAlbumsByArtist(id: artist.id)
     }
+    .onDisappear { radioTask?.cancel() }
     .alert(
       artist.name,
       isPresented: Binding(get: { radioMessage != nil }, set: { if !$0 { radioMessage = nil } })
