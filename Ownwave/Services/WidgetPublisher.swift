@@ -77,13 +77,13 @@ import WidgetKit
     Task {
       let missing = albums.filter(Self.coverMissing)
       for albumId in missing { await Self.writeCover(albumId) }
+      let written = Set(missing.filter { !Self.coverMissing($0) })
       // A logout during the writes leaves none of the account's covers.
       guard AppModel.shared.auth.isLoggedIn else { return Self.removeAllCovers() }
       guard generation == self.generation else { return }
       Self.removeCovers(except: Set(albums))
       snapshot.save()
-      // Covers that came only now need their widgets redrawn too.
-      reload(from: missing.isEmpty ? last : WidgetSnapshot(), to: snapshot)
+      reload(from: last, to: snapshot, coversWritten: written)
       last = snapshot
     }
   }
@@ -98,17 +98,24 @@ import WidgetKit
     last = empty
   }
 
-  private func reload(from old: WidgetSnapshot, to new: WidgetSnapshot) {
+  /// Covers that came only now redraw the widgets that show them.
+  private func reload(
+    from old: WidgetSnapshot, to new: WidgetSnapshot, coversWritten written: Set<String> = []
+  ) {
     let center = WidgetCenter.shared
     let signedIn = old.signedIn != new.signedIn
     if signedIn {
       center.reloadTimelines(ofKind: WidgetSnapshot.Kind.playSomething)
       center.reloadTimelines(ofKind: WidgetSnapshot.Kind.launcher)
     }
-    if signedIn || old.nowPlaying != new.nowPlaying {
+    if signedIn || old.nowPlaying != new.nowPlaying
+      || written.contains(new.nowPlaying?.albumId ?? "")
+    {
       center.reloadTimelines(ofKind: WidgetSnapshot.Kind.nowPlaying)
     }
-    if signedIn || old.recent != new.recent {
+    if signedIn || old.recent != new.recent
+      || new.recent.contains(where: { written.contains($0.id) })
+    {
       center.reloadTimelines(ofKind: WidgetSnapshot.Kind.recentlyPlayed)
     }
   }

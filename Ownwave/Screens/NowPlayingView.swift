@@ -380,8 +380,10 @@ private struct PlayerPage: View {
   /// Tapping the current rating again clears it.
   private func rate(_ n: Int) {
     let value = rating == n ? 0 : n
+    // Read before the rating: an Avoid skips the song at once.
+    let skips = player.leavesForAnotherSong
     player.rateNowPlaying(value)
-    if value == 1 { app.show("Avoided · skipped") }
+    if value == 1 { app.show(skips ? "Avoided · skipped" : "Avoided") }
     if value == 5 { app.show("Boosted") }
   }
 
