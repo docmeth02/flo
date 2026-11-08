@@ -32,6 +32,8 @@ struct WatchContentView: View {
   @State private var leftAt: Date?
   @State private var leftTheApp = false
   @State private var queueShown = false
+  // The login running now uses the iPhone's credentials.
+  @State private var runsPhoneSignIn = false
   // State of the launch hooks in Debug/WatchContentView+Debug.swift; they
   // also use the view models, selectedTab and showPlayer, so those are not
   // private.
@@ -51,6 +53,19 @@ struct WatchContentView: View {
     selectedTab = .home
     stackID = UUID()
     DispatchQueue.main.async { selectedTab = .nowPlaying }
+  }
+
+  /// Signs in with the credentials the iPhone sent; only this attempt's
+  /// outcome goes back to the phone.
+  private func runPhoneSignIn(_ request: Link.SignIn) {
+    // Signed in meanwhile, or with a Keychain that would not read: the
+    // watch keeps its login, and its state tells the phone.
+    guard !authViewModel.isLoggedIn else { return phone.signInFinished(error: nil) }
+    authViewModel.serverUrl = request.server
+    authViewModel.username = request.user
+    authViewModel.password = request.password
+    runsPhoneSignIn = true
+    authViewModel.login()
   }
 
   /// Plays what Siri, Shortcuts or the Action Button asked for. Logged out,
@@ -127,21 +142,21 @@ struct WatchContentView: View {
     .onChange(of: playerViewModel.nowPlaying != nil) { _, hasNowPlaying in
       if !hasNowPlaying { selectedTab = .home }
     }
-    // The iPhone signs the watch in with the watch's own login.
+    // The iPhone signs the watch in with the watch's own login. A request
+    // arriving while the watch's own attempt runs waits for its end.
     .onChange(of: phone.signInRequest) { _, request in
       guard let request, !authViewModel.isSubmitting else { return }
-      // Signed in meanwhile, or with a Keychain that would not read: the
-      // watch keeps its login, and its state tells the phone.
-      guard !authViewModel.isLoggedIn else { return phone.signInFinished(error: nil) }
-      authViewModel.serverUrl = request.server
-      authViewModel.username = request.user
-      authViewModel.password = request.password
-      authViewModel.login()
+      runPhoneSignIn(request)
     }
     .onChange(of: authViewModel.isSubmitting) { _, submitting in
       guard !submitting else { return }
-      phone.signInFinished(
-        error: authViewModel.isLoggedIn ? nil : authViewModel.loginError?.loginMessage)
+      if runsPhoneSignIn {
+        runsPhoneSignIn = false
+        phone.signInFinished(
+          error: authViewModel.isLoggedIn ? nil : authViewModel.loginError?.loginMessage)
+      } else if let request = phone.signInRequest {
+        runPhoneSignIn(request)
+      }
     }
     .onChange(of: authViewModel.isLoggedIn) { phone.publishState() }
     .onAppear(perform: takePlayRequest)
