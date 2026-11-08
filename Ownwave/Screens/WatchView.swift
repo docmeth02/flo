@@ -10,7 +10,9 @@ import SwiftUI
 struct WatchView: View {
   @EnvironmentObject private var app: AppModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
+  @EnvironmentObject private var player: PlayerViewModel
   @ObservedObject private var link = WatchLink.shared
+  @ObservedObject private var handoff = WatchLink.shared.handoff
   @Environment(\.palette) private var palette
 
   @State private var shareSettings = UserDefaultsManager.shareWatchSettings
@@ -23,6 +25,9 @@ struct WatchView: View {
         status
         if link.isPaired, link.isAppInstalled {
           if !link.isSignedIn { signInCard }
+          if link.canHandOff, !player.isLiveRadio, let song = player.nowPlaying {
+            playingHereCard(song)
+          }
           shareRow
           onWatchSection
           if link.isSignedIn { suggestionsSection }
@@ -113,6 +118,33 @@ struct WatchView: View {
       if case .failed(let message) = link.signIn {
         Text(message).font(.rowSubtitle).foregroundStyle(palette.secondary)
       }
+    }
+    .padding(16)
+    .onPlatter()
+  }
+
+  /// The song queued here, with Play on Watch.
+  private func playingHereCard(_ song: QueueEntity) -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(spacing: 12) {
+        CoverArt(albumId: player.nowPlayingAlbumId, url: player.coverArt, radius: 10)
+          .frame(width: 48, height: 48)
+        VStack(alignment: .leading, spacing: 2) {
+          Text("Playing here")
+            .capsLabel()
+            .foregroundStyle(palette.accent)
+          Text(song.songName ?? "Unknown").font(.rowTitle.weight(.semibold))
+          Text(song.artistName ?? "Unknown")
+            .font(.rowSubtitle)
+            .foregroundStyle(palette.secondary)
+        }
+        .lineLimit(1)
+      }
+      Button(handoff.phase == .sending ? "Sending to watch…" : "Play on watch") {
+        Task { await link.playOnWatch() }
+      }
+      .buttonStyle(FillButtonStyle(height: 48))
+      .disabled(handoff.phase == .sending)
     }
     .padding(16)
     .onPlatter()

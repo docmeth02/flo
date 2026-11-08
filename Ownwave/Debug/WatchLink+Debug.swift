@@ -75,7 +75,7 @@
     }
 
     /// Two albums on the watch, one it downloads itself and one on its way,
-    /// from the cached library.
+    /// from the cached library; it takes handoffs.
     private func showDemo(signedIn: Bool) {
       Task { @MainActor in
         try? await Task.sleep(for: .seconds(3))
@@ -98,6 +98,7 @@
         }
         state.musicBytes = 1_400_000_000
         state.freeBytes = 18_300_000_000
+        state.handoff = true
         let sends = albums.dropFirst(3).prefix(1).map { Send(album: $0, songs: 9, progress: 0.4) }
         // The progress poll drops a send nothing is under way for, so the
         // made-up one is put back for a minute.

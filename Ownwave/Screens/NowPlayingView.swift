@@ -142,6 +142,8 @@ private struct PlayerPage: View {
   @EnvironmentObject private var player: PlayerViewModel
   @ObservedObject private var ratings = RatingStore.shared
   @ObservedObject private var mixes = RecommendationLog.shared
+  @ObservedObject private var watch = WatchLink.shared
+  @ObservedObject private var handoff = WatchLink.shared.handoff
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -174,17 +176,20 @@ private struct PlayerPage: View {
     .padding(.horizontal, 24)
   }
 
+  /// A station is neither queued nor liked like a song, so it has no •••
+  /// and AirPlay takes its place. With both, a clear slot on the left keeps
+  /// the pill centred.
   private var header: some View {
-    HStack {
+    HStack(spacing: 8) {
       GlassCircle(systemImage: "chevron.down", action: close)
-      Spacer()
+      if !player.isLiveRadio { Color.clear.frame(width: 40, height: 40) }
+      Spacer(minLength: 0)
       source
-      Spacer()
-      // A station is neither queued nor liked like a song.
-      if player.isLiveRadio {
-        Color.clear.frame(width: 40, height: 40)
-      } else {
+      Spacer(minLength: 0)
+      RoutePicker()
+      if !player.isLiveRadio {
         Menu {
+          if watch.canHandOff { playOnWatch }
           ItemMenuItems(
             target: .song(
               Song(from: song), context: song.contextName ?? "", isFromPlaylist: song.isFromPlaylist
@@ -193,6 +198,18 @@ private struct PlayerPage: View {
           GlassCircle.label("ellipsis")
         }
       }
+    }
+  }
+
+  private var playOnWatch: some View {
+    Section {
+      Button(
+        handoff.phase == .sending ? "Sending to Watch…" : "Play on Watch",
+        systemImage: "applewatch"
+      ) {
+        Task { await watch.playOnWatch() }
+      }
+      .disabled(handoff.phase == .sending)
     }
   }
 
