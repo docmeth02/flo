@@ -15,11 +15,6 @@ struct WatchLoginView: View {
 
   private static let buttonID = "signIn"
 
-  var isSubmitDisabled: Bool {
-    viewModel.serverUrl.isEmpty || viewModel.username.isEmpty || viewModel.password.isEmpty
-      || viewModel.isSubmitting
-  }
-
   var body: some View {
     NavigationStack {
       ScrollViewReader { proxy in
@@ -92,8 +87,8 @@ struct WatchLoginView: View {
         }
       }
       .buttonStyle(PrimaryButtonStyle())
-      .opacity(isSubmitDisabled ? 0.6 : 1)
-      .disabled(isSubmitDisabled)
+      .opacity(viewModel.canSubmit ? 1 : 0.6)
+      .disabled(!viewModel.canSubmit)
       .padding(.top, 5)
       .id(Self.buttonID)
     }

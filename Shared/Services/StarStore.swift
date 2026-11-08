@@ -5,13 +5,13 @@
 
 import Foundation
 
-/// Liked songs, albums and artists as the watch knows them: a like made here
+/// Liked songs, albums and artists as this device knows them: a like made here
 /// shows at once and waits, across launches and offline spells, until the
 /// server takes it.
 @MainActor final class StarStore: ObservableObject {
   static let shared = StarStore()
 
-  /// Stars set on the watch, waiting or taken by the server this session, by
+  /// Stars set here, waiting or taken by the server this session, by
   /// id; any other item keeps the state it was listed with.
   @Published private(set) var stars: [String: Bool] = [:]
 
@@ -77,7 +77,7 @@ import Foundation
     edits.flush()
   }
 
-  /// The watch's edit, else what the server took this session, else the
+  /// This device's edit, else what the server took this session, else the
   /// state the item was listed with.
   func isStarred(_ id: String, listed: Bool) -> Bool {
     stars[id] ?? listed
@@ -156,14 +156,18 @@ import Foundation
     defaults.set(Array(pendingSongs), forKey: UserDefaultsKeys.pendingStarSongs)
   }
 
-  private func forgetAccount() {
-    // A list asked for by the previous account is not this one's.
-    listRevision += 1
+  func forgetPendingEdits() {
     edits.forgetAccount()
-    confirmed = [:]
-    songIds = []
     pendingSongs = []
     defaults.removeObject(forKey: UserDefaultsKeys.pendingStarSongs)
     publish()
+  }
+
+  private func forgetAccount() {
+    // A list asked for by the previous account is not this one's.
+    listRevision += 1
+    confirmed = [:]
+    songIds = []
+    if UserDefaultsManager.pendingWorkAccount == nil { forgetPendingEdits() } else { publish() }
   }
 }

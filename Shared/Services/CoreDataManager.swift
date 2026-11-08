@@ -169,10 +169,6 @@ class CoreDataManager {
     }
   }
 
-  func deleteRecords<T: NSManagedObject>(entity: T.Type) {
-    batchDelete(entityName: String(describing: T.self))
-  }
-
   func deleteRecordByKey<T: NSManagedObject, V>(
     entity: T.Type,
     key: KeyPath<T, V>,

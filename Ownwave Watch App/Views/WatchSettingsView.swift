@@ -29,7 +29,7 @@ struct WatchSettingsView: View {
   @State private var showRebuildHistoryAlert = false
 
   private static let bitRates = TranscodingSettings.bitRates.map {
-    ($0, $0 == TranscodingSettings.sourceBitRate ? "Original" : "\($0) kbps")
+    ($0, TranscodingSettings.label($0))
   }
   private static let cacheLimits = StreamCacheManager.cacheLimits.map { (Int($0.bytes), $0.label) }
 

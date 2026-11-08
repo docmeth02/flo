@@ -19,6 +19,7 @@ enum AppLaunch {
     // knows whether it is on cellular.
     _ = AppPlatform.isOnCellular
     StreamCacheManager.shared.reconcile()
+    LocalFileManager.shared.excludeDownloadsFromBackup()
     // Responses carry credentials, which must not stay in the shared disk cache.
     URLCache.shared.removeAllCachedResponses()
 

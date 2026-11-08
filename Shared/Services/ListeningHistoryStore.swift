@@ -28,8 +28,6 @@ struct ImportState: Sendable, Equatable {
   var lastImportAt: Date?
   var watermarkId: Int64 = 0
   var bootstrapComplete = false
-  /// Pages fetched by the latest run.
-  var pages = 0
 
   /// Mirrored plays whose song was not in the library when they came in.
   var unmatchedCount: Int { importedCount - matchedCount }
@@ -53,8 +51,6 @@ struct AffinitySnapshot: Sendable {
 
   var aggregates: [Kind: [String: Aggregate]] = [:]
   var state = ImportState()
-  /// Plays the server stamped in the future; they count as played now.
-  var futurePlays = 0
 }
 
 /// The import state for SwiftUI.
@@ -252,7 +248,7 @@ actor ListeningHistoryStore {
         page = try await LibraryAPI.getScrobblePage(start: start, end: start + size)
       } catch {
         guard isCurrent(key) else { return }
-        await publishState(key, phase: .failed(Self.shortReason(error)), pages: pages)
+        await publishState(key, phase: .failed(Self.shortReason(error)))
         return
       }
       guard isCurrent(key) else { return }
@@ -284,7 +280,7 @@ actor ListeningHistoryStore {
           key: key, progress: progress, index: index, now: now, in: context)
       }
       guard let result else {
-        await publishState(key, phase: .failed("could not save"), pages: pages)
+        await publishState(key, phase: .failed("could not save"))
         return
       }
       progress = result.progress
@@ -295,7 +291,6 @@ actor ListeningHistoryStore {
           + "new=\(result.inserted) matched=\(result.matched) total=\(page.total ?? -1)")
 
       var state = result.state
-      state.pages = pages
       if done {
         lastFailedAt = nil
         state.phase = .complete
@@ -619,11 +614,6 @@ actor ListeningHistoryStore {
           weight: row.weight * Self.decay(now.timeIntervalSince(reference)),
           lastPlayAt: row.lastPlayAt, plays: Int(row.plays))
       }
-
-      let future = NSFetchRequest<PlayEntity>(entityName: "PlayEntity")
-      future.predicate = NSPredicate(
-        format: "accountKey == %@ AND submissionTime > %@", key, now as NSDate)
-      snapshot.futurePlays = (try? context.count(for: future)) ?? 0
       return snapshot
     }
   }
@@ -631,7 +621,7 @@ actor ListeningHistoryStore {
   // MARK: - Publishing
 
   /// Publishes the stored state of `key` with `phase`.
-  private func publishState(_ key: String, phase: ImportState.Phase, pages: Int = 0) async {
+  private func publishState(_ key: String, phase: ImportState.Phase) async {
     // A cancelled run (rebuild, logout) has nothing to report, least of all
     // a failure that would hold the next account's import off.
     guard isCurrent(key) else { return }
@@ -641,7 +631,6 @@ actor ListeningHistoryStore {
     }
     state.phase = phase
     state.accountKey = key
-    state.pages = pages
     await publish(state)
   }
 

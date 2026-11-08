@@ -39,8 +39,10 @@ struct SettingsView: View {
 
   /// The offered limits, highest first.
   private static let limits: [(value: String, label: String)] = TranscodingSettings.bitRates
-    .filter { $0 != TranscodingSettings.sourceBitRate }.reversed().map { ($0, "\($0) kbps") }
-  private static let limitsWithOriginal = [(TranscodingSettings.sourceBitRate, "Original")] + limits
+    .filter { $0 != TranscodingSettings.sourceBitRate }.reversed()
+    .map { ($0, TranscodingSettings.label($0)) }
+  private static let limitsWithOriginal: [(value: String, label: String)] =
+    [TranscodingSettings.sourceBitRate].map { ($0, TranscodingSettings.label($0)) } + limits
   private static let cacheLimits = StreamCacheManager.cacheLimits.map { (Int($0.bytes), $0.label) }
 
   var body: some View {

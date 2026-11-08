@@ -19,10 +19,9 @@ struct PlaySomethingNowIntent: AudioPlaybackIntent {
   @MainActor
   func perform() async throws -> some IntentResult {
     #if !WIDGET_EXTENSION
-      // Signed out, a stale cache would build a mix the app cannot play.
-      // The mix is awaited to the end: once it plays, audio keeps the
-      // process alive.
-      if AppModel.shared.auth.isLoggedIn { _ = await AppModel.shared.player.playSomething() }
+      // The mix is awaited to the end: once it plays, audio keeps the process
+      // alive. A widget has nowhere to say why nothing played.
+      try? await AppModel.shared.perform(.something)
     #endif
     return .result()
   }

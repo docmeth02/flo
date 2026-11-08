@@ -94,6 +94,8 @@ final class DownloadSession: NSObject, ObservableObject {
   /// Tasks whose delegate calls have run, so a reconcile knows which
   /// finished tasks still have their delivery queued.
   private var delivered = Set<Int>()
+  /// A cellular setting changed while nothing could be submitted.
+  private var restartsOnActivation = false
 
   private init(store: JSONFile<[DownloadJob]> = jobFile) {
     self.store = store
@@ -139,7 +141,7 @@ final class DownloadSession: NSObject, ObservableObject {
     let id = album.id
     if !album.isPlaylist || !DownloadStore.hasRecord(collectionId: id) {
       DownloadStore.saveAlbum(album)
-      let artId = album.isPlaylist ? (id.hasPrefix("pl-") ? id : "pl-\(id)") : "al-\(id)"
+      let artId = album.isPlaylist ? Playlist.mosaicId(for: id) : "al-\(id)"
       Self.downloadCover(artId: artId, as: id)
     }
     queueSongs(of: album)
@@ -149,7 +151,8 @@ final class DownloadSession: NSObject, ObservableObject {
   /// covers of its tracks' albums.
   func enqueue(_ playlist: Playlist) {
     let id = playlist.id
-    DownloadStore.savePlaylist(playlist)
+    let album = Album(from: playlist)
+    DownloadStore.saveAlbum(album)
     Self.downloadCover(artId: playlist.artId, as: id)
 
     // Once per album and one at a time, so they neither time out queued
@@ -163,7 +166,7 @@ final class DownloadSession: NSObject, ObservableObject {
           artId: "al-\(albumId)", as: albumId, overwrite: false)
       }
     }
-    queueSongs(of: Album(from: playlist))
+    queueSongs(of: album)
   }
 
   private static func downloadCover(artId: String, as id: String) {
@@ -225,8 +228,14 @@ final class DownloadSession: NSObject, ObservableObject {
   }
 
   /// A task keeps the network rule it was created with, so every unfinished
-  /// one starts over under the new setting; a transcode starts from zero.
+  /// one starts over under the new setting; a transcode starts from zero. In
+  /// the background the cancelled tasks could not be submitted again, so they
+  /// keep running under the old rule until the app is in front.
   func cellularAccessChanged() {
+    guard canSubmit else {
+      restartsOnActivation = true
+      return
+    }
     session.getAllTasks { running in
       DispatchQueue.main.async {
         running.forEach { $0.cancel() }
@@ -281,6 +290,10 @@ final class DownloadSession: NSObject, ObservableObject {
   /// job without one goes again (uncounted) unless it waits for a retry, and a
   /// task without a job is cancelled.
   private func reconcile() {
+    if restartsOnActivation, canSubmit {
+      restartsOnActivation = false
+      return cellularAccessChanged()
+    }
     session.getAllTasks { running in
       DispatchQueue.main.async { self.reconcile(running) }
     }

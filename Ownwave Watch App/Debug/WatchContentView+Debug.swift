@@ -130,13 +130,14 @@
 
       let evaluatedAt = Date()
       let snapshot = await store.snapshot()
+      let futurePlays = await store.debugFuturePlays()
       let state = HistoryStatus.shared.state
       debugLog(
-        "history state at \(String(format: "%.3f", evaluatedAt.timeIntervalSince1970)): phase=\(state.phase) pages=\(state.pages) total=\(state.serverTotal) "
+        "history state at \(String(format: "%.3f", evaluatedAt.timeIntervalSince1970)): phase=\(state.phase) total=\(state.serverTotal) "
           + "imported=\(state.importedCount) matched=\(state.matchedCount) "
           + "unmatched=\(state.unmatchedCount) watermark=\(state.watermarkId) "
           + "bootstrapComplete=\(state.bootstrapComplete) "
-          + "earliest=\(state.earliestPlayAt.map { "\($0)" } ?? "-") future=\(snapshot.futurePlays)"
+          + "earliest=\(state.earliestPlayAt.map { "\($0)" } ?? "-") future=\(futurePlays)"
       )
       debugLog("ratings: \(RatingStore.shared.ratings.count) \(RatingStore.shared.ratings)")
       for kind in [AffinitySnapshot.Kind.artist, .genre] {

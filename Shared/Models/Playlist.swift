@@ -19,7 +19,10 @@ struct Playlist: Codable, Identifiable, Hashable, Playable {
   var updatedAt = ""
   var isPlaylist: Bool { true }
   /// The server's cover for it, a mosaic of its albums.
-  var artId: String { coverArtId ?? (id.hasPrefix("pl-") ? id : "pl-\(id)") }
+  var artId: String { coverArtId ?? Self.mosaicId(for: id) }
+
+  /// The id of the server's mosaic cover for the playlist `id`.
+  static func mosaicId(for id: String) -> String { id.hasPrefix("pl-") ? id : "pl-\(id)" }
 
   enum CodingKeys: String, CodingKey {
     case id

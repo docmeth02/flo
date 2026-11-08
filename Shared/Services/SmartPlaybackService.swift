@@ -13,14 +13,15 @@ import Foundation
 final class SmartPlaybackService {
   static let shared = SmartPlaybackService()
 
-  /// Playback context for auto-continue: biases results toward the genre and
-  /// artist of the song that just finished, away from its album.
+  /// Playback context for auto-continue: biases results toward the artist of
+  /// the song that just finished, away from its album.
   struct Seed {
     let artist: String
     let albumId: String
   }
 
-  /// What a continuation knows about the session it continues.
+  /// What a continuation knows about the session it continues; its anchor
+  /// genres bias the results toward the session's genres.
   struct KeepPlayingContext {
     let seed: Seed
     let anchorGenres: Set<String>

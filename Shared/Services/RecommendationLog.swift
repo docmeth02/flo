@@ -37,8 +37,9 @@ struct MixRecord: Codable, Sendable {
 
   private static let capacity = 20
   private static let keptOnDisk = 5
-  nonisolated private static let fileURL = URL.applicationSupportDirectory
-    .appendingPathComponent("recent-mixes.json")
+  nonisolated private static let file = JSONFile<Saved?>(
+    fileURL: URL.applicationSupportDirectory.appendingPathComponent("recent-mixes.json"),
+    label: "played mixes", empty: nil)
   // One writer, so the file ends up as the newest save or removed on logout.
   nonisolated private static let io = DispatchQueue(label: "flo.recentMixes", qos: .utility)
 
@@ -54,14 +55,14 @@ struct MixRecord: Codable, Sendable {
   @Published private(set) var played: [MixRecord] = []
 
   private init() {
-    if let account = AuthService.shared.accountKey, let data = try? Data(contentsOf: Self.fileURL) {
-      played = Self.restore(data, account: account)
+    if let account = AuthService.shared.accountKey {
+      played = Self.restore(Self.file.load(), account: account)
     }
     NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
       Task { @MainActor in
         RecommendationLog.shared.mixes = []
         RecommendationLog.shared.played = []
-        Self.io.async { try? FileManager.default.removeItem(at: Self.fileURL) }
+        Self.io.async { try? FileManager.default.removeItem(at: Self.file.fileURL) }
       }
     }
   }
@@ -76,15 +77,7 @@ struct MixRecord: Codable, Sendable {
     guard let account = AuthService.shared.accountKey else { return }
     played = Array(([mix] + played).prefix(Self.keptOnDisk))
     let saved = Saved(account: account, mixes: played)
-    Self.io.async {
-      do {
-        try FileManager.default.createDirectory(
-          at: Self.fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try JSONEncoder().encode(saved).write(to: Self.fileURL, options: .atomic)
-      } catch {
-        debugLog("played mixes not saved: \(error)")
-      }
-    }
+    Self.io.async { Self.file.save(saved) }
   }
 
   /// Why the newest played mix holding the song picked it.
@@ -104,9 +97,8 @@ struct MixRecord: Codable, Sendable {
   }
 
   /// The saved mixes, if they are the account's.
-  nonisolated static func restore(_ data: Data, account: String) -> [MixRecord] {
-    guard let saved = try? JSONDecoder().decode(Saved.self, from: data), saved.account == account
-    else { return [] }
+  nonisolated static func restore(_ saved: Saved?, account: String) -> [MixRecord] {
+    guard let saved, saved.account == account else { return [] }
     return saved.mixes
   }
 }

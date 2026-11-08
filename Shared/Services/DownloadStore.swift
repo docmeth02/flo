@@ -202,19 +202,6 @@ enum DownloadStore {
     CoreDataManager.shared.saveRecord()
   }
 
-  static func savePlaylist(_ playlistToDownload: Playlist) {
-    let playlist = collectionEntity(id: playlistToDownload.id)
-
-    playlist.id = playlistToDownload.id
-    playlist.name = playlistToDownload.name
-    playlist.genre = "\(playlistToDownload.comment) by \(playlistToDownload.ownerName)"
-
-    playlist.albumArtist = "Various Artists"
-    playlist.artistName = "Various Artists"
-
-    CoreDataManager.shared.saveRecord()
-  }
-
   /// Media ids of the collection's downloaded songs.
   static func downloadedMediaFileIds(collectionId: String) -> Set<String> {
     Set(
@@ -257,9 +244,9 @@ enum DownloadStore {
   }
 
   /// Removes a downloaded album or playlist: every song file at its stored
-  /// path, the collection folder and the collection's cover, then its
-  /// records. Records go even when a folder is already missing, so nothing is
-  /// left dangling.
+  /// path, the collection folder and the covers no other download uses, then
+  /// its records. Records go even when a folder is already missing, so
+  /// nothing is left dangling.
   static func removeDownloadedCollection(
     id: String, completion: @escaping (Result<Void, Error>) -> Void
   ) {
@@ -269,8 +256,18 @@ enum DownloadStore {
     let songs = CoreDataManager.shared.getRecordByKey(
       entity: SongEntity.self, key: \SongEntity.albumId, value: id)
 
+    // Covers are kept per album id: a playlist stores those of its tracks'
+    // albums, the same files a download of such an album uses.
+    let others = CoreDataManager.shared.getRecordsByEntity(entity: SongEntity.self)
+      .filter { $0.albumId != id }
+    let records = CoreDataManager.shared.getRecordsByEntity(entity: PlaylistEntity.self)
+      .compactMap(\.id).filter { $0 != id }
+    let inUse = Set(others.compactMap(\.songAlbumId)).union(records)
+    let covers = Set([id] + songs.compactMap(\.songAlbumId)).subtracting(inUse)
+      .filter { !$0.isEmpty }
+
     var paths = songs.compactMap(\.fileURL).filter { !$0.isEmpty }
-    paths += ["Media/\(id)", Self.coverPath(id: id)]
+    paths += ["Media/\(id)"] + covers.map { Self.coverPath(id: $0) }
 
     for path in paths {
       let url = LocalFileManager.shared.fileURL(for: path)

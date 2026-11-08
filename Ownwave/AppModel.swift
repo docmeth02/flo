@@ -97,13 +97,10 @@ final class AppModel: ObservableObject {
       switch await CollectionDownload.prepare(album) {
       case .ready(let album):
         enqueue(album)
-        let bitRate = UserDefaultsManager.downloadBitRate
         if AppPlatform.isOnCellular, !UserDefaultsManager.downloadOverCellular {
           show("Downloads when on Wi-Fi")
         } else {
-          show(
-            bitRate == TranscodingSettings.sourceBitRate
-              ? "Downloading in original quality" : "Downloading at \(bitRate) kbps")
+          show("Downloading \(TranscodingSettings.phrase(UserDefaultsManager.downloadBitRate))")
         }
       case .unavailable: show("Not available offline")
       case .downloaded: show("Already on this iPhone")
@@ -142,11 +139,12 @@ final class AppModel: ObservableObject {
     if player.playRadioItem(radio: radio) { isNowPlayingPresented = true }
   }
 
-  /// Plays what Siri, Shortcuts or the Action Button asked for while the
-  /// intent waits, so it also plays on a locked phone. The player is called
-  /// directly, as the widget intent and the car do, so Now Playing does not
-  /// open over the lock screen.
+  /// Plays what Siri, Shortcuts, the Action Button or a widget asked for
+  /// while the intent waits, so it also plays on a locked phone. The player is
+  /// called directly, as the car does, so Now Playing does not open over the
+  /// lock screen.
   func perform(_ request: PlayRequest) async throws {
+    // Signed out, a stale cache would build a mix the app cannot play.
     guard auth.isLoggedIn else { throw PlayFailure.signedOut }
     let played =
       switch request {
