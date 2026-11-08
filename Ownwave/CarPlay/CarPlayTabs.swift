@@ -8,7 +8,7 @@ import Combine
 
 // The four tabs and the lists pushed from them.
 extension CarPlayController {
-  /// Whether the server answers, once per change.
+  /// `ConnectivityMonitor.canReachServer`, once per change.
   var reachability: AnyPublisher<Bool, Never> {
     let monitor = ConnectivityMonitor.shared
     return monitor.$isOnline.combineLatest(monitor.$isServerReachable)
@@ -55,16 +55,12 @@ extension CarPlayController {
   /// stations once one is pinned.
   private func loadHome() async {
     albums.fetchStarredSongsIfStale()
-    await albums.loadRecentAlbums()
-    let generation = LibraryCacheManager.shared.generation
-    let cachedAlbums = await albums.loadedOrCached(albums.albums, .albums)
-    let cachedArtists = await albums.loadedOrCached(albums.artists, .artists)
-    let cachedPlaylists = await albums.loadedOrCached(albums.playlists, .playlists)
-    // A logout meanwhile, or a list loaded since: the cached copies are stale.
-    guard LibraryCacheManager.shared.generation == generation else { return }
-    if albums.albums.isEmpty { albums.albums = cachedAlbums }
-    if albums.artists.isEmpty { albums.artists = cachedArtists }
-    if albums.playlists.isEmpty { albums.playlists = cachedPlaylists }
+    guard let lists = await albums.loadHomeLists() else { return }
+    // The car's rows read the view model, so the cached copies go there
+    // unless a list loaded since.
+    if albums.albums.isEmpty { albums.albums = lists.albums }
+    if albums.artists.isEmpty { albums.artists = lists.artists }
+    if albums.playlists.isEmpty { albums.playlists = lists.playlists }
     if !PinStore.shared.pinned(.radio).isEmpty { radios.fetchAllRadios() }
   }
 
@@ -497,22 +493,23 @@ extension CarPlayController {
     let songCounts = DownloadStore.downloadedSongCounts()
     downloading = [:]
     let albumRows = downloaded.map { album in
-      let isDownloading = session.isDownloading(collectionId: album.id)
+      let state = session.status(collectionId: album.id)
       let detail: String
       let status: UIImage?
-      if isDownloading {
+      switch state {
+      case .downloading:
         (detail, status) = (Self.downloadingText(album.id), nil)
-      } else if session.hasFailed(collectionId: album.id) {
+      case .failed:
         detail = "Download failed · retry on iPhone"
         status = images.status("exclamationmark.circle.fill", color: .destructive)
-      } else {
+      case .idle:
         detail = counted(songCounts[album.id, default: 0], "song")
         status = images.status("checkmark.circle.fill", color: .downloaded)
       }
       let item = albumRow(album, detail: detail)
       item.accessoryType = .none
       item.setAccessoryImage(status)
-      if isDownloading { downloading[album.id] = item }
+      if case .downloading = state { downloading[album.id] = item }
       return item
     }
     images.loadCovers(zip(downloaded, albumRows).map { .row($1, albumId: $0.id) }, size: size)
@@ -521,7 +518,9 @@ extension CarPlayController {
   }
 
   private static func downloadingText(_ collectionId: String) -> String {
-    "Downloading · \(Int(DownloadSession.shared.progress(collectionId: collectionId) * 100))%"
+    guard case .downloading(let percent) = DownloadSession.shared.status(collectionId: collectionId)
+    else { return "Downloading" }
+    return "Downloading · \(percent)%"
   }
 
   // MARK: - Pushed screens
@@ -557,7 +556,7 @@ extension CarPlayController {
       let player = self?.player
       Task {
         // Holds the completion until the radio plays or has nothing to play.
-        if await player?.playArtistRadio(id: artist.id, name: artist.name) == true {
+        if await player?.playArtistRadio(id: artist.id, name: artist.name) == .played {
           self?.showNowPlaying()
         }
         completion()

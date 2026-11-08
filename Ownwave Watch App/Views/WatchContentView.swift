@@ -19,6 +19,9 @@ struct WatchContentView: View {
   @StateObject private var authViewModel = AuthViewModel()
   @StateObject var playerViewModel = PlayerViewModel()
   @StateObject var albumViewModel = AlbumViewModel()
+  /// The stations for Home and Radios, kept when `showPlayer()` rebuilds the
+  /// stack, so a play action asks for none.
+  @StateObject private var radios = RadiosViewModel()
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @ObservedObject private var phone = PhoneLink.shared
   @Environment(\.scenePhase) private var scenePhase
@@ -141,6 +144,8 @@ struct WatchContentView: View {
         error: authViewModel.isLoggedIn ? nil : authViewModel.loginError?.loginMessage)
     }
     .onChange(of: authViewModel.isLoggedIn) { phone.publishState() }
+    // The next account must not see this one's stations.
+    .onReceive(NotificationCenter.default.publisher(for: .didLogout)) { _ in radios.reset() }
     .onAppear(perform: takePlayRequest)
     .onReceive(NotificationCenter.default.publisher(for: .playRequested)) { _ in
       takePlayRequest()
@@ -149,6 +154,7 @@ struct WatchContentView: View {
     .environmentObject(playerViewModel)
     .environmentObject(albumViewModel)
     .environmentObject(DownloadStorage.shared)
+    .environmentObject(radios)
     .environmentObject(DownloadSession.shared)
     .environmentObject(PinStore.shared)
     #if DEBUG

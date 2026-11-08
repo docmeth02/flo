@@ -65,7 +65,7 @@ extension CarPlayController: @preconcurrency CPNowPlayingTemplateObserver {
       isSong: true,
       hasAlbum: !player.nowPlayingAlbumId.isEmpty,
       isStarred: player.isStarred,
-      isBoosted: RatingStore.shared.rating(for: songId) >= 4)
+      isBoosted: RatingStore.shared.rating(for: songId) == RatingStore.boost)
   }
 
   /// Shuffle and repeat show what the player reports to the remote command

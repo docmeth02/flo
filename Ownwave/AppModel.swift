@@ -66,46 +66,33 @@ final class AppModel: ObservableObject {
     toast = nil
   }
 
-  /// The liked songs as last listed, less those unliked since, which leave
-  /// at once. Views showing them observe StarStore for those changes.
-  var likedSongs: [Song] { albums.starredSongs.filter { player.isStarred($0) } }
-  /// Liked albums and artists out of the library lists, StarStore's edits
-  /// over their listed stars, as on the watch.
-  var likedAlbums: [Album] {
-    albums.albums.filter { StarStore.shared.isStarred($0.id, listed: $0.starred) }
-  }
-  var likedArtists: [Artist] {
-    albums.artists.filter { StarStore.shared.isStarred($0.id, listed: $0.starred) }
-  }
+  /// The liked lists for the screens and the car, by the view model's rule.
+  var likedSongs: [Song] { albums.likedSongs(player) }
+  var likedAlbums: [Album] { albums.likedAlbums }
+  var likedArtists: [Artist] { albums.likedArtists }
 
   /// Downloads the songs of an album the phone does not have yet.
   func download(_ album: Album) {
-    download(album) { DownloadSession.shared.enqueue($0) }
+    Task { announce(await CollectionDownload.start(album)) }
   }
 
-  /// Downloads a playlist with its mosaic cover, as an album.
+  /// Downloads a playlist with its mosaic cover.
   func download(_ playlist: Playlist) {
-    download(Album(from: playlist)) { album in
-      var playlist = playlist
-      playlist.songs = album.songs
-      DownloadSession.shared.enqueue(playlist)
-    }
+    Task { announce(await CollectionDownload.start(playlist)) }
   }
 
-  private func download(_ album: Album, enqueue: @escaping (Album) -> Void) {
-    Task {
-      switch await CollectionDownload.prepare(album) {
-      case .ready(let album):
-        enqueue(album)
-        if AppPlatform.isOnCellular, !UserDefaultsManager.downloadOverCellular {
-          show("Downloads when on Wi-Fi")
-        } else {
-          show("Downloading \(TranscodingSettings.phrase(UserDefaultsManager.downloadBitRate))")
-        }
-      case .unavailable: show("Not available offline")
-      case .downloaded: show("Already on this iPhone")
-      case .accountChanged: break
+  private func announce(_ outcome: CollectionDownload.Outcome) {
+    switch outcome {
+    case .ready:
+      let bitRate = UserDefaultsManager.downloadBitRate
+      if AppPlatform.isOnCellular, !UserDefaultsManager.downloadOverCellular {
+        show("Downloads when on Wi-Fi")
+      } else {
+        show("Downloading \(TranscodingSettings.phrase(bitRate))")
       }
+    case .unavailable: show("Not available offline")
+    case .downloaded: show("Already on this iPhone")
+    case .accountChanged, .underway: break
     }
   }
 
@@ -128,6 +115,13 @@ final class AppModel: ObservableObject {
   /// Top songs online, else the artist's songs on the phone.
   func playArtist(id: String, name: String) async {
     if await player.playArtist(id: id, name: name) { isNowPlayingPresented = true }
+  }
+
+  /// Songs similar to the artist's; the outcome tells why none played.
+  func playArtistRadio(_ artist: Artist) async -> PlayerViewModel.RadioOutcome {
+    let outcome = await player.playArtistRadio(id: artist.id, name: artist.name)
+    if outcome == .played { isNowPlayingPresented = true }
+    return outcome
   }
 
   /// A station is a live stream, so none plays while streaming is off on

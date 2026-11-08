@@ -13,11 +13,14 @@ struct WatchSettingsView: View {
 
   // Stored values, so settings the iPhone applies refresh the rows. A bitrate
   // is read through offeredBitRate, as UserDefaultsManager reads it.
-  @AppStorage(UserDefaultsKeys.keepPlaying) private var keepPlaying = false
+  @AppStorage(UserDefaultsKeys.keepPlaying)
+  private var keepPlaying = UserDefaultsManager.keepPlaying
   @AppStorage(UserDefaultsKeys.enableMaxBitRate) private var maxBitRate: String?
   @AppStorage(UserDefaultsKeys.downloadBitRate) private var downloadBitRate: String?
-  @AppStorage(UserDefaultsKeys.downloadOverCellular) private var downloadOverCellular = false
-  @AppStorage(UserDefaultsKeys.settingsFollowPhone) private var settingsFollowPhone = false
+  @AppStorage(UserDefaultsKeys.downloadOverCellular)
+  private var downloadOverCellular = UserDefaultsManager.downloadOverCellular
+  @AppStorage(UserDefaultsKeys.settingsFollowPhone)
+  private var settingsFollowPhone = UserDefaultsManager.settingsFollowPhone
   @AppStorage(UserDefaultsKeys.streamCacheMaxSize)
   private var cacheLimit = Int(UserDefaultsManager.streamCacheMaxSize)
 

@@ -53,6 +53,11 @@ final class PinStore: ObservableObject {
     pinned(kind).contains(id)
   }
 
+  /// Songs are never pinned.
+  func isPinned(_ target: MenuTarget) -> Bool {
+    target.pin.map { isPinned($0.id, $0.kind) } ?? false
+  }
+
   func toggle(_ id: String, _ kind: Kind) {
     guard let key = key(kind) else { return }
     var ids = pinned(kind)

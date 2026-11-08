@@ -101,11 +101,11 @@ struct CollectionActions: View {
   /// As the watch's download control: an interrupted download leaves some
   /// songs behind and offers the rest.
   private var downloadState: DownloadState {
-    if downloads.isDownloading(collectionId: collection.id) {
-      return .downloading(
-        percent: Int(downloads.progress(collectionId: collection.id) * 100))
+    switch downloads.status(collectionId: collection.id) {
+    case .downloading(let percent): return .downloading(percent: percent)
+    case .failed: return .failed
+    case .idle: break
     }
-    if downloads.hasFailed(collectionId: collection.id) { return .failed }
     // Unknown until the songs are loaded.
     guard !collection.songs.isEmpty else { return .none }
     let missing = collection.songs.contains { !downloadedIds.contains($0.playbackID) }

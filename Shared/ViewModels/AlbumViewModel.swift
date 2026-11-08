@@ -8,7 +8,9 @@ import Foundation
 class AlbumViewModel: ObservableObject {
   @Published var artists: [Artist] = []
   @Published var playlists: [Playlist] = []
-  @Published private var artistAlbums: [Album] = []
+  /// Albums by artist id and when they came, so the screens of two artists
+  /// (the phone's and the car's) never empty each other's.
+  @Published private var artistAlbums: [String: (albums: [Album], loadedAt: Date)] = [:]
   @Published var albums: [Album] = []
   @Published var starredSongs: [Song] = []
   @Published var downloadedAlbums: [Album] = []
@@ -39,11 +41,6 @@ class AlbumViewModel: ObservableObject {
 
   @Published private(set) var listStates: [Library: ListState] = [:]
 
-  /// The artist whose albums `artistAlbums` holds, so a late answer for the
-  /// previous artist does not show on this one.
-  private var artistAlbumsId = ""
-  private var artistAlbumsLoadedAt: Date?
-
   init() {
     NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: nil) {
       [weak self] _ in
@@ -55,8 +52,7 @@ class AlbumViewModel: ObservableObject {
   private func handleLogout() {
     artists = []
     playlists = []
-    artistAlbums = []
-    artistAlbumsId = ""
+    artistAlbums = [:]
     albums = []
     starredSongs = []
     recentAlbums = []
@@ -68,7 +64,7 @@ class AlbumViewModel: ObservableObject {
   }
 
   func albums(byArtist id: String) -> [Album] {
-    id == artistAlbumsId ? artistAlbums : []
+    artistAlbums[id]?.albums ?? []
   }
 
   // MARK: - Album and playlist songs
@@ -122,12 +118,7 @@ class AlbumViewModel: ObservableObject {
   /// The downloaded songs with the server's others, in disc and track order.
   static func mergeAlbumSongs(local: [Song], remote: [Song]) -> [Song] {
     let localIds = Set(local.map(\.id))
-    return (local + remote.filter { !localIds.contains($0.id) }).sorted { lhs, rhs in
-      if lhs.discNumber == rhs.discNumber {
-        return lhs.trackNumber < rhs.trackNumber
-      }
-      return lhs.discNumber < rhs.discNumber
-    }
+    return (local + remote.filter { !localIds.contains($0.id) }).sorted(by: Song.albumOrder)
   }
 
   // MARK: - Generic cache helpers
@@ -270,22 +261,19 @@ class AlbumViewModel: ObservableObject {
   }
 
   func fetchAlbumsByArtist(id: String) {
-    if id != artistAlbumsId {
-      artistAlbumsId = id
-      artistAlbums = []
-      artistAlbumsLoadedAt = nil
-    } else if let loadedAt = artistAlbumsLoadedAt,
+    if let loadedAt = artistAlbums[id]?.loadedAt,
       Date().timeIntervalSince(loadedAt) < ListState.reloadAfter
     {
       return
     }
+    let cacheGeneration = LibraryCacheManager.shared.generation
     Task { @MainActor in
       let result = await Result { try await LibraryAPI.getAlbumsByArtist(id: id) }
-      guard id == self.artistAlbumsId else { return }
+      // A logout meanwhile: the previous account's albums.
+      guard LibraryCacheManager.shared.generation == cacheGeneration else { return }
       switch result {
       case .success(let albums):
-        self.artistAlbums = albums
-        self.artistAlbumsLoadedAt = Date()
+        self.artistAlbums[id] = (albums, Date())
       case .failure(let error):
         debugLog("artist albums failed: \(error)")
       }
@@ -381,6 +369,28 @@ class AlbumViewModel: ObservableObject {
     return await Self.cached(library)
   }
 
+  /// What Home shows on every return: the recent albums, and the lists pins
+  /// are looked up in, loaded or cached. While the server answers, a list
+  /// with no copy at all is asked for, and the artists are cached for Siri.
+  /// Nil after a logout meanwhile.
+  @MainActor func loadHomeLists() async -> (
+    albums: [Album], artists: [Artist], playlists: [Playlist]
+  )? {
+    let cacheGeneration = LibraryCacheManager.shared.generation
+    await loadRecentAlbums()
+    let albums = await loadedOrCached(self.albums, .albums)
+    let artists = await loadedOrCached(self.artists, .artists)
+    let playlists = await loadedOrCached(self.playlists, .playlists)
+    guard LibraryCacheManager.shared.generation == cacheGeneration else { return nil }
+    // Not offline: a failed load would be asked again on every return.
+    if ConnectivityMonitor.shared.canReachServer {
+      if albums.isEmpty { fetchAlbums() }
+      if playlists.isEmpty { getPlaylists() }
+    }
+    await cacheArtistsIfNeeded()
+    return (albums, artists, playlists)
+  }
+
   /// The album with this id from the downloads or the library, else one made
   /// of what the caller knows of it, so its screen can load the songs.
   @MainActor func album(id: String, name: String, artist: String) async -> Album {
@@ -402,7 +412,8 @@ class AlbumViewModel: ObservableObject {
     async let mirrored = ListeningHistoryStore.shared.recentSongIds(limit: 100)
     async let journal = PlaybackJournal.shared.snapshot()
     async let index = SmartPlaybackService.shared.libraryIndex(allowSync: false)
-    let plays = await mirrored + (await journal).lastHeardAt.map { (id: $0.key, at: $0.value) }
+    // A skip is no play: it rests the song in the mix but leaves Home alone.
+    let plays = await mirrored + (await journal).playedAt.map { (id: $0.key, at: $0.value) }
     let songs = await index.songs
     let library = await loadedOrCached(albums, .albums)
     // A logout meanwhile must not show the previous account's albums.
@@ -423,5 +434,25 @@ class AlbumViewModel: ObservableObject {
         entity: SongEntity.self, key: \SongEntity.albumId, value: album.id, limit: 1
       ).isEmpty
     }
+  }
+}
+
+// MARK: - Liked
+
+extension AlbumViewModel {
+  /// The liked songs as last listed, less those unliked since, which leave
+  /// at once. Views showing them observe StarStore for those changes.
+  @MainActor func likedSongs(_ player: PlayerViewModel) -> [Song] {
+    starredSongs.filter { player.isStarred($0) }
+  }
+
+  /// Liked albums and artists out of the library lists, StarStore's edits
+  /// over their listed stars.
+  @MainActor var likedAlbums: [Album] {
+    albums.filter { StarStore.shared.isStarred($0.id, listed: $0.starred) }
+  }
+
+  @MainActor var likedArtists: [Artist] {
+    artists.filter { StarStore.shared.isStarred($0.id, listed: $0.starred) }
   }
 }

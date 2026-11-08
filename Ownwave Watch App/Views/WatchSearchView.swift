@@ -21,6 +21,8 @@ struct WatchSearchView: View {
   @State private var openedAlbum: Album?
   @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
+  /// Why the top card's Artist Radio played nothing, while that shows.
+  @State private var radioMiss: (name: String, message: String)?
 
   private struct Library {
     let artists: [Artist]
@@ -62,6 +64,14 @@ struct WatchSearchView: View {
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .itemMenu($menu, openedAlbum: $openedAlbum, openedArtist: $openedArtist)
+    .alert(
+      radioMiss?.name ?? "",
+      isPresented: Binding(get: { radioMiss != nil }, set: { if !$0 { radioMiss = nil } })
+    ) {
+      Button("OK") {}
+    } message: {
+      Text(radioMiss?.message ?? "")
+    }
     .task {
       // Once: the view reappears after every pushed album or artist.
       guard library == nil else { return }
@@ -88,7 +98,7 @@ struct WatchSearchView: View {
       found = results.map {
         Found(
           query: query, results: $0,
-          top: LibrarySearch.topResult(query, in: $0, isPinned: isPinned))
+          top: LibrarySearch.topResult(query, in: $0, isPinned: pinStore.isPinned))
       }
       if let results {
         debugLog(
@@ -150,7 +160,7 @@ struct WatchSearchView: View {
     -> some View
   {
     let targets = LibrarySearch.pinnedFirst(
-      targets.filter { $0.id != top?.id }, isPinned: isPinned)
+      targets.filter { $0.id != top?.id }, isPinned: pinStore.isPinned)
     if !targets.isEmpty {
       Section {
         JoinedRows(items: targets) { target in
@@ -168,18 +178,18 @@ struct WatchSearchView: View {
   private func topCard(_ target: MenuTarget) -> some View {
     HStack(spacing: 4) {
       CoverRow(
-        tile: CoverTile(target), title: target.title, subtitle: topSubtitle(target),
+        tile: CoverTile(target), title: target.title, subtitle: target.searchSubtitle,
         titleLineLimit: 2, tileSize: WatchLayout.smallThumbnail
       ) {
-        if isPinned(target) { PinGlyph() }
+        if pinStore.isPinned(target) { PinGlyph() }
       }
       .holdable(onTap: { open(target) }, onHold: { menu = target })
       if case .artist(let artist) = target {
         Button {
           Task {
-            if await playerViewModel.playArtistRadio(id: artist.id, name: artist.name) {
-              showPlayer()
-            }
+            let outcome = await playerViewModel.playArtistRadio(id: artist.id, name: artist.name)
+            if outcome == .played { showPlayer() }
+            radioMiss = outcome.message.map { (artist.name, $0) }
           }
         } label: {
           Image(systemName: Glyph.radio)
@@ -190,20 +200,6 @@ struct WatchSearchView: View {
         .accessibilityLabel("Artist Radio")
       }
     }
-  }
-
-  private func topSubtitle(_ target: MenuTarget) -> String {
-    switch target {
-    case .artist(let artist):
-      artist.albumCount > 0 ? "Artist · \(counted(artist.albumCount, "album"))" : "Artist"
-    case .album(let album): "Album · \(album.albumArtist)"
-    case .song(let song, _, _): "Song · \(song.artist)"
-    case .playlist, .radio: target.subtitle
-    }
-  }
-
-  private func isPinned(_ target: MenuTarget) -> Bool {
-    target.pin.map { pinStore.isPinned($0.id, $0.kind) } ?? false
   }
 
   /// A song plays, an album or artist opens.

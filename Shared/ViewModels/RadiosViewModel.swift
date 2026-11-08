@@ -6,8 +6,8 @@
 import Combine
 import Foundation
 
-/// The server's internet radio stations. The iPhone keeps one list for its
-/// screens and the car, the watch one per screen.
+/// The server's internet radio stations, one list per app for its screens
+/// (and the car).
 @MainActor
 final class RadiosViewModel: ObservableObject {
   @Published private(set) var radios: [Radio] = []

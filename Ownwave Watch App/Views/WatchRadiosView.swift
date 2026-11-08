@@ -8,7 +8,7 @@ import SwiftUI
 struct WatchRadiosView: View {
   @EnvironmentObject var playerViewModel: PlayerViewModel
 
-  @StateObject var viewModel = RadiosViewModel()
+  @EnvironmentObject private var viewModel: RadiosViewModel
 
   @Environment(\.showPlayer) private var showPlayer
   @State private var menu: MenuTarget?

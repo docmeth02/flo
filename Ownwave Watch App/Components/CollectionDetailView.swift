@@ -34,7 +34,8 @@ struct CollectionDetailView: View {
   let trackNumber: (_ index: Int, _ song: Song) -> Int
   /// Built on demand, so a playlist is only converted when it is played.
   let playable: () -> Album
-  let onDownload: () -> Void
+  /// Starts the download and says what to show about it.
+  let onDownload: () async -> String?
   let onRemove: () -> Void
 
   @Environment(\.showPlayer) private var showPlayer
@@ -43,6 +44,7 @@ struct CollectionDetailView: View {
   @State private var openedAlbum: Album?
   @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
+  @State private var toast: Toast.Message?
 
   // From the downloaded records, so it is right as soon as a download ends.
   private var missingTrackCount: Int {
@@ -50,16 +52,14 @@ struct CollectionDetailView: View {
   }
 
   private var downloadState: DownloadControl.State {
-    if downloads.isDownloading(collectionId: collectionId) {
-      return .downloading(
-        percent: Int(downloads.progress(collectionId: collectionId) * 100))
-    }
+    let status = downloads.status(collectionId: collectionId)
+    if case .downloading(let percent) = status { return .downloading(percent: percent) }
     // Songs the iPhone is still sending are on their way, not missing.
     if phone.isReceiving(collectionId: collectionId) {
       return .receiving(
         percent: phone.progress(collectionId: collectionId, songs: downloadedIds.count))
     }
-    if downloads.hasFailed(collectionId: collectionId) { return .failed }
+    if status == .failed { return .failed }
     // An interrupted download leaves some tracks behind; offer the rest.
     if downloaded && missingTrackCount > 0 { return .partial(missing: missingTrackCount) }
     return downloaded ? .done : .none
@@ -108,7 +108,11 @@ struct CollectionDetailView: View {
 
         DownloadControl(
           state: downloadState,
-          onDownload: onDownload,
+          onDownload: {
+            Task {
+              if let text = await onDownload() { toast = Toast.Message(text: text) }
+            }
+          },
           onCancel: { downloads.cancel(collectionId: collectionId) },
           onRemove: {
             onRemove()
@@ -128,6 +132,7 @@ struct CollectionDetailView: View {
     .itemMenu(
       $menu, showing: collectionId, openedAlbum: $openedAlbum, openedArtist: $openedArtist
     )
+    .toast($toast)
     .onAppear { refreshDownloadState() }
     .onReceive(downloads.downloadFinished) { id in
       if id == collectionId { refreshDownloadState() }

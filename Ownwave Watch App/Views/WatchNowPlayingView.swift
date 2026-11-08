@@ -313,8 +313,9 @@ private struct RatingChip: View {
 
   init?(rating: Int) {
     switch rating {
-    case 5: (title, systemImage, color) = ("Boosted", "star.fill", .warning)
-    case 1: (title, systemImage, color) = ("Avoided", "hand.thumbsdown.fill", .destructive)
+    case RatingStore.boost: (title, systemImage, color) = ("Boosted", "star.fill", .warning)
+    case RatingStore.avoid:
+      (title, systemImage, color) = ("Avoided", "hand.thumbsdown.fill", .destructive)
     default: return nil
     }
   }

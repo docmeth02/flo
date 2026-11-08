@@ -78,7 +78,7 @@ struct BoostIntent: AppIntent {
     .result(dialog: IntentDialog(stringLiteral: await reply()))
   }
 
-  @MainActor func reply() async -> String { await NowPlayingEdit.rate(5, target) }
+  @MainActor func reply() async -> String { await NowPlayingEdit.rate(RatingStore.boost, target) }
 }
 
 struct AvoidIntent: AppIntent {
@@ -95,7 +95,7 @@ struct AvoidIntent: AppIntent {
     .result(dialog: IntentDialog(stringLiteral: await reply()))
   }
 
-  @MainActor func reply() async -> String { await NowPlayingEdit.rate(1, target) }
+  @MainActor func reply() async -> String { await NowPlayingEdit.rate(RatingStore.avoid, target) }
 }
 
 /// The edits behind the intents and the sentences Siri answers with.
@@ -134,7 +134,8 @@ struct AvoidIntent: AppIntent {
       } else {
         RatingStore.shared.setArtist(rating, artistId: id)
       }
-      let sentence: LocalizedStringResource = rating >= 4 ? "Boosted \(name)." : "Avoiding \(name)."
+      let sentence: LocalizedStringResource =
+        rating == RatingStore.boost ? "Boosted \(name)." : "Avoiding \(name)."
       let store = RatingStore.shared
       return await answer(
         sentence, isPending: { store.isPending(id) },

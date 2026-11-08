@@ -18,7 +18,7 @@ struct WatchHomeView: View {
   @State private var openedScreen: LibraryScreen?
   @State private var menu: MenuTarget?
 
-  @StateObject private var radios = RadiosViewModel()
+  @EnvironmentObject private var radios: RadiosViewModel
   // The lists pins are looked up in, loaded or cached, read again on every
   // return so a pin made elsewhere shows up.
   @State private var albums: [Album] = []
@@ -112,15 +112,14 @@ struct WatchHomeView: View {
         albumViewModel.playlists.isEmpty,
       ]
     ) {
-      await albumViewModel.loadRecentAlbums()
-      albums = await albumViewModel.loadedOrCached(albumViewModel.albums, .albums)
-      artists = await albumViewModel.loadedOrCached(albumViewModel.artists, .artists)
-      playlists = await albumViewModel.loadedOrCached(albumViewModel.playlists, .playlists)
-      if albums.isEmpty { albumViewModel.fetchAlbums() }
-      if playlists.isEmpty { albumViewModel.getPlaylists() }
+      guard let lists = await albumViewModel.loadHomeLists() else { return }
+      (albums, artists, playlists) = lists
       // Stations have no cache; asked once while one is pinned.
-      if !pinStore.pinned(.radio).isEmpty, radios.radios.isEmpty { radios.fetchAllRadios() }
-      await albumViewModel.cacheArtistsIfNeeded()
+      if !pinStore.pinned(.radio).isEmpty, radios.radios.isEmpty,
+        ConnectivityMonitor.shared.canReachServer
+      {
+        radios.fetchAllRadios()
+      }
     }
     .toolbar {
       ToolbarItem(placement: .topBarLeading) {

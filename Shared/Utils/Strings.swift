@@ -39,3 +39,15 @@ extension [Song] {
       count, seconds: reduce(0) { $0 + ($1.duration.isFinite ? $1.duration : 0) })
   }
 }
+
+extension Playlist {
+  /// "Playlist · 3 songs · 16 min" for its screen, from the server's counts
+  /// until `songs` are loaded.
+  func meta(loaded songs: [Song]) -> String {
+    var length = songs.countAndLength
+    if length.isEmpty, songCount > 0 {
+      length = songsAndLength(songCount, seconds: duration)
+    }
+    return length.isEmpty ? "Playlist" : "Playlist · " + length
+  }
+}

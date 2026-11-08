@@ -89,13 +89,29 @@ enum MenuTarget: Identifiable {
     }
   }
 
-  /// Whether Go to Artist can lead anywhere: a song without an id is still
-  /// found by its artist's name, an album (a downloaded playlist keeps none)
-  /// only by an id.
-  var offersArtist: Bool {
+  /// The name of the artist `carriedArtistId` names.
+  var carriedArtistName: String {
     switch self {
-    case .song: true
-    case .album: carriedArtistId != nil
+    case .song(let song, _, _): song.artist
+    case .album(let album): album.albumArtistId.isEmpty ? album.artist : album.albumArtist
+    case .artist, .playlist, .radio: ""
+    }
+  }
+
+  /// Whether Go to Album leads anywhere but `shown`, the item whose screen
+  /// the menu is on: a song's album.
+  func offersAlbum(except shown: String?) -> Bool {
+    guard case .song(let song, _, _) = self else { return false }
+    return !song.albumId.isEmpty && song.albumId != shown
+  }
+
+  /// Whether Go to Artist leads anywhere but `shown`: a song without an id
+  /// is still found by its artist's name, an album (a downloaded playlist
+  /// keeps none) only by an id.
+  func offersArtist(except shown: String?) -> Bool {
+    switch self {
+    case .song: carriedArtistId == nil || carriedArtistId != shown
+    case .album: carriedArtistId.map { $0 != shown } ?? false
     case .artist, .playlist, .radio: false
     }
   }
@@ -105,25 +121,22 @@ enum MenuTarget: Identifiable {
   /// of its name. Nil when neither knows it.
   func artistToOpen() async -> Artist? {
     let id: String?
-    let name: String
     switch self {
     case .song(let song, _, _):
-      name = song.artist
       if let carried = carriedArtistId {
         id = carried
       } else {
         id = await NowPlayingTarget.artistId(of: song.playbackID, named: song.artist)
       }
-    case .album(let album):
+    case .album:
       id = carriedArtistId
-      name = album.albumArtistId.isEmpty ? album.artist : album.albumArtist
     case .artist, .playlist, .radio:
       return nil
     }
     guard let id else { return nil }
     let artists: [Artist] = await AlbumViewModel.cached(.artists)
     return artists.first { $0.id == id }
-      ?? Artist(id: id, name: name, albumCount: 0, mbzArtistID: nil)
+      ?? Artist(id: id, name: carriedArtistName, albumCount: 0, mbzArtistID: nil)
   }
 
   /// What Play Next and Add to Queue put in the queue, in play order, and
@@ -149,7 +162,7 @@ enum MenuTarget: Identifiable {
         songs = await MainActor.run { DownloadStore.getSongsByAlbumId(albumId: album.id) }
       }
       return (
-        songs.sorted { ($0.discNumber, $0.trackNumber) < ($1.discNumber, $1.trackNumber) },
+        songs.sorted(by: Song.albumOrder),
         album.name, false
       )
     case .artist(let artist):
@@ -222,11 +235,30 @@ struct MenuActions {
     }
   }
 
+  /// What Go to Artist says when the artist is not known.
+  static let artistNotFound = "Artist not in your library"
+
+  /// The rating Boost or Avoid sets.
+  private static func rating(of action: Action) -> Int {
+    action == .boost ? RatingStore.boost : RatingStore.avoid
+  }
+
+  /// Whether the item's own rating is the one Boost or Avoid sets, so a tap
+  /// clears it.
+  private func isSet(_ action: Action, on target: MenuTarget) -> Bool {
+    ownRating(target) == Self.rating(of: action)
+  }
+
   /// "Boost" or "Clear Boost", "Avoid" or "Clear Avoid".
   func ratingTitle(_ action: Action, on target: MenuTarget) -> String {
-    let isSet = ownRating(target) == (action == .boost ? 5 : 1)
     let name = action == .boost ? "Boost" : "Avoid"
-    return isSet ? "Clear \(name)" : name
+    return isSet(action, on: target) ? "Clear \(name)" : name
+  }
+
+  /// The thumb of Boost or Avoid, filled while it is set.
+  func ratingSymbol(_ action: Action, on target: MenuTarget) -> String {
+    let symbol = action == .boost ? "hand.thumbsup" : "hand.thumbsdown"
+    return isSet(action, on: target) ? symbol + ".fill" : symbol
   }
 
   /// Whether the target is what plays: the song, or the artist of the song,
@@ -273,7 +305,7 @@ struct MenuActions {
       return starred ? "Liked" : "Removed from Liked"
     case .boost, .avoid:
       guard let current = ownRating(target) else { return nil }
-      let value = action == .boost ? 5 : 1
+      let value = Self.rating(of: action)
       let rating = current == value ? 0 : value
       // Read before the rating: an Avoid of what plays skips it at once.
       let skips = rating == 1 && isPlaying(target) && player.leavesForAnotherSong
@@ -283,8 +315,8 @@ struct MenuActions {
       case .album, .playlist, .radio: return nil
       }
       switch rating {
-      case 5: return "Boosted"
-      case 1: return skips ? "Avoided · skipped" : "Avoided"
+      case RatingStore.boost: return "Boosted"
+      case RatingStore.avoid: return skips ? "Avoided · skipped" : "Avoided"
       default: return action == .boost ? "Boost cleared" : "Avoid cleared"
       }
     }

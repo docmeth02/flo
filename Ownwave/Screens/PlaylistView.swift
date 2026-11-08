@@ -21,16 +21,6 @@ struct PlaylistView: View {
     return loaded
   }
 
-  /// "Playlist · 3 songs · 16 min", from the server's counts until the
-  /// songs are loaded.
-  private var meta: String {
-    var length = loader.songs.countAndLength
-    if length.isEmpty, playlist.songCount > 0 {
-      length = songsAndLength(playlist.songCount, seconds: playlist.duration)
-    }
-    return length.isEmpty ? "Playlist" : "Playlist · " + length
-  }
-
   var body: some View {
     ScrollView {
       VStack(spacing: 18) {
@@ -41,7 +31,7 @@ struct PlaylistView: View {
           Text(playlist.name)
             .font(.heroTitle)
             .multilineTextAlignment(.center)
-          Text(meta)
+          Text(playlist.meta(loaded: loader.songs))
             .font(.rowSubtitle)
             .foregroundStyle(palette.secondary)
             .lineLimit(1)

@@ -806,13 +806,39 @@ class PlayerViewModel: ObservableObject {
     }
   }
 
-  /// Plays songs similar to the artist's, unless the user started something
-  /// else meanwhile; false when the server had none.
-  @MainActor func playArtistRadio(id: String, name: String) async -> Bool {
-    await playWhenBuilt {
-      let songs = (try? await RadioService.shared.getSimilarSongs(id: id)) ?? []
-      return SongCollection.artistRadio(id: id, name: name, songs: songs)
+  /// How a start of Artist Radio ended.
+  enum RadioOutcome {
+    case played
+    /// The server knows no songs similar to the artist's.
+    case noSongs
+    case failed
+    /// Another start was being built, the user started or paused something
+    /// meanwhile, or the songs could not be queued: nothing to tell.
+    case dropped
+
+    /// What the screens say when nothing played; nil when there is nothing
+    /// to tell.
+    var message: String? {
+      switch self {
+      case .noSongs: "No similar songs found for this artist."
+      case .failed: "Failed to load Artist Radio. Please try again."
+      case .played, .dropped: nil
+      }
     }
+  }
+
+  /// Plays songs similar to the artist's, unless the user started or paused
+  /// something meanwhile.
+  @MainActor func playArtistRadio(id: String, name: String) async -> RadioOutcome {
+    let generation = startGeneration
+    var outcome = RadioOutcome.dropped
+    let played = await playWhenBuilt {
+      let songs = try? await RadioService.shared.getSimilarSongs(id: id)
+      if songs?.isEmpty != false { outcome = songs == nil ? .failed : .noSongs }
+      return SongCollection.artistRadio(id: id, name: name, songs: songs ?? [])
+    }
+    if played { return .played }
+    return startGeneration == generation ? outcome : .dropped
   }
 
   /// Builds a collection and plays it, unless one is already being built or

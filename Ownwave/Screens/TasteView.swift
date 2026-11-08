@@ -301,7 +301,7 @@ extension MixRanker.Variety {
 /// How far Play Something reaches past the favourites, on a slider with a
 /// stop per variety. A watch that follows the phone takes it along.
 private struct VarietyCard: View {
-  @AppStorage(UserDefaultsKeys.mixVariety) private var variety = MixRanker.Variety.balanced
+  @AppStorage(UserDefaultsKeys.mixVariety) private var variety = UserDefaultsManager.mixVariety
 
   @Environment(\.palette) private var palette
 

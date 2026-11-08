@@ -110,15 +110,16 @@ struct WatchDownloadsView: View {
     ) {
       // An album shows up here with its first song, so the check waits until
       // its download has finished without a failure.
-      if downloads.isDownloading(collectionId: album.id) {
-        Text("\(Int(downloads.progress(collectionId: album.id) * 100))%")
+      let status = downloads.status(collectionId: album.id)
+      if case .downloading(let percent) = status {
+        Text("\(percent)%")
           .font(.system(.footnote, weight: .semibold).monospacedDigit())
           .foregroundStyle(Dusk.fill)
       } else if phone.isReceiving(collectionId: album.id) {
         Image(systemName: "iphone.and.arrow.forward")
           .font(.system(size: 14))
           .foregroundStyle(Dusk.fill)
-      } else if downloads.hasFailed(collectionId: album.id) {
+      } else if status == .failed {
         Image(systemName: "xmark.circle.fill")
           .font(.system(size: 16))
           .foregroundStyle(Color.destructive)
