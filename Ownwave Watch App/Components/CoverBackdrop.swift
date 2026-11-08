@@ -17,7 +17,6 @@ struct CoverBackdrop: View {
   // Only a cover that arrived; a failed one is tried again when the server
   // comes back.
   @State private var image: (albumId: String, image: UIImage)?
-  @State private var reachable = ConnectivityMonitor.shared.isServerReachable
 
   var body: some View {
     ZStack(alignment: .top) {
@@ -42,10 +41,7 @@ struct CoverBackdrop: View {
       }
     }
     .ignoresSafeArea()
-    .onReceive(ConnectivityMonitor.shared.$isServerReachable.removeDuplicates()) {
-      reachable = $0
-    }
-    .task(id: "\(albumId)|\(reachable)") {
+    .coverTask(id: albumId) {
       guard image?.albumId != albumId else { return }
       let decoded = await CoverTint.decodedImage(albumId: albumId, url: url)
       guard !Task.isCancelled, let decoded else { return }
