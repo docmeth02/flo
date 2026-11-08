@@ -402,7 +402,10 @@ struct DiagnosticsView: View {
   var body: some View {
     List {
       Section {
-        ShareLink(item: DiagnosticsReport.text(), subject: Text("Ownwave log")) {
+        ShareLink(
+          item: DiagnosticsLog(), subject: Text("Ownwave log"),
+          preview: SharePreview("Ownwave log")
+        ) {
           Label("Share log", systemImage: "square.and.arrow.up").foregroundStyle(palette.accent)
         }
         ForEach(DiagnosticsReport.connectionLines(), id: \.0) { LabeledContent($0.0, value: $0.1) }

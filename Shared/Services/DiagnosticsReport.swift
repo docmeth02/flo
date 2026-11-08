@@ -3,7 +3,9 @@
 //  Ownwave
 //
 
+import CoreTransferable
 import Foundation
+import UniformTypeIdentifiers
 
 /// What both apps' Diagnostics show and share: connection state, the history
 /// import, the latest mixes and server requests. Shows no secrets, and
@@ -141,5 +143,15 @@ enum DiagnosticsReport {
     formatter.unitsStyle = .abbreviated
     let relative = formatter.localizedString(for: expiry, relativeTo: Date())
     return expiry < Date() ? "expired \(relative)" : relative
+  }
+}
+
+/// The shared log, written only when it is shared: Diagnostics redraws with
+/// every request it notes.
+struct DiagnosticsLog: Transferable {
+  static var transferRepresentation: some TransferRepresentation {
+    DataRepresentation(exportedContentType: .utf8PlainText) { _ in
+      Data(await DiagnosticsReport.text().utf8)
+    }
   }
 }
