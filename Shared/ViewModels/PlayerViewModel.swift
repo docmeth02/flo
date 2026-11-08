@@ -153,6 +153,11 @@ class PlayerViewModel: ObservableObject {
   // Where Play starts the song while no item is attached (restored queue,
   // stop, a load still waiting for its stream source).
   var pendingStartPosition: Double = 0
+  /// Where a song loaded again picks up: where it broke once it was under way,
+  /// else where it was meant to begin, so one that barely started starts over.
+  var resumePosition: Double {
+    lastObservedTime > 5 ? floor(lastObservedTime) : pendingStartPosition
+  }
   var currentSourceIsRemote = false
   var currentSourceIsTranscoded = false
   // Listening time at the last mid-song resume; a stream that breaks again
@@ -577,13 +582,9 @@ class PlayerViewModel: ObservableObject {
             self.reloadRadioItem()
           } else if self.reloadedFailedTrackId != trackId {
             self.reloadedFailedTrackId = trackId
-            // A song that was under way picks up where it broke, one that
-            // never started where it was meant to begin.
             self.isPlaying = true
             self.resumedAtListened = self.secondsListened
-            self.loadItem(
-              at: self.lastObservedTime > 5
-                ? floor(self.lastObservedTime) : self.pendingStartPosition)
+            self.loadItem(at: self.resumePosition)
             self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
             return
           } else {
@@ -624,7 +625,7 @@ class PlayerViewModel: ObservableObject {
     if itemHasPlayed, currentSourceIsRemote, !isLiveRadio,
       player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
     {
-      pendingStartPosition = floor(lastObservedTime)
+      pendingStartPosition = resumePosition
       RequestLog.shared.note("stall paused at \(Int(pendingStartPosition)) s, play reloads")
       detachItem()
     }
