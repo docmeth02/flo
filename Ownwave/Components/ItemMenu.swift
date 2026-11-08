@@ -68,7 +68,8 @@ struct ItemMenuItems: View {
     }
     if case .album(let album) = target {
       Button("Download", systemImage: "arrow.down.circle") { app.download(album) }
-      if watch.isAppInstalled {
+      // The watch keeps a sent collection as an album, so playlists stay here.
+      if watch.isAppInstalled, !album.isPlaylist {
         Button("Send to Watch", systemImage: "applewatch") { watch.send(album) }
       }
     }
