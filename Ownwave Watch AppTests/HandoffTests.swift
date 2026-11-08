@@ -147,6 +147,19 @@ final class HandoffTests: XCTestCase {
     XCTAssertEqual(step(.failed("no"), id, 4, ["a", "b"]), .keepPlaying)
   }
 
+  /// The receiver reports a start only for the queue handed over; anything
+  /// started there meanwhile fails the handoff, heard or not.
+  func testReceiverReportsOnlyTheHandedOverQueue() {
+    let result = { (outcome: StartOutcome, adopted: Bool) in
+      HandoffReceiver.result(outcome, stillAdopted: adopted, here: .watch)
+    }
+    XCTAssertEqual(result(.heard, true), .started)
+    XCTAssertEqual(result(.silent("start ended"), true), .ready)
+    XCTAssertEqual(result(.heard, false), .failed("Something else started on the watch."))
+    XCTAssertEqual(
+      result(.silent("start ended"), false), .failed("Something else started on the watch."))
+  }
+
   /// The sender stops counting the song it handed over, and counts it again
   /// once that is undone or another song plays.
   func testHandedOverSongStopsCounting() {

@@ -212,19 +212,24 @@ struct HandoffAttempt: Equatable {
 
   private func result(of handoff: Link.Handoff) async -> Link.HandoffResult {
     let outcome = await player.startOutcome()
-    let id = HandoffSender.short(handoff.id)
-    guard case .silent(let reason) = outcome else {
-      RequestLog.shared.trace("handoff \(id) started")
-      return .started
-    }
-    // Something else was started here meanwhile, or the account signed out.
-    guard player.queue.map(\.id) == handoff.snapshot.entries.map({ $0.song.playbackID }) else {
-      RequestLog.shared.trace("handoff \(id) failed: replaced (\(reason))")
-      return .failed("Something else started on \(here.name).")
-    }
+    let result = Self.result(
+      outcome,
+      stillAdopted: player.queue.map(\.id) == handoff.snapshot.entries.map(\.song.playbackID),
+      here: here)
     // Nothing may start it later, a kept start's settle included.
-    player.pause()
-    RequestLog.shared.trace("handoff \(id) ready: \(reason)")
-    return .ready
+    if result == .ready { player.pause() }
+    let reason = if case .silent(let reason) = outcome { ": \(reason)" } else { "" }
+    RequestLog.shared.trace("handoff \(HandoffSender.short(handoff.id)) \(result)\(reason)")
+    return result
+  }
+
+  /// Heard is started and silent is ready, as long as the queue is still the
+  /// one handed over: something the user started here meanwhile, or a
+  /// logout, fails the handoff, so the sender plays on.
+  nonisolated static func result(_ outcome: StartOutcome, stillAdopted: Bool, here: Link.Peer)
+    -> Link.HandoffResult
+  {
+    guard stillAdopted else { return .failed("Something else started on \(here.name).") }
+    return outcome == .heard ? .started : .ready
   }
 }
