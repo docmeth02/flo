@@ -3,7 +3,6 @@
 //  Ownwave
 //
 
-import Alamofire
 import Foundation
 
 /// A playback state as OpenSubsonic's reportPlayback takes it.
@@ -41,15 +40,13 @@ class ScrobbleAPI {
   }
 
   /// Whether a failed scrobble, star or rating edit can never succeed and
-  /// should be dropped instead of retried: the item is gone or the server
-  /// refuses the request itself. Offline, timeouts, server errors, rate limits
-  /// and expired sessions all stay queued.
+  /// should be dropped instead of retried: the server says the item is gone or
+  /// the request lacks a parameter. Navidrome answers those with HTTP 200 and a
+  /// Subsonic code, so an HTTP error status comes from something in front of it
+  /// (a proxy during an upgrade) and stays queued, like offline and timeouts.
   func isPermanentFailure(_ error: Error) -> Bool {
-    if let subsonicError = error as? SubsonicError {
-      // 10: required parameter missing, 70: requested data not found
-      return subsonicError.code == 10 || subsonicError.code == 70
-    }
-    guard let status = (error as? AFError)?.responseCode else { return false }
-    return (400..<500).contains(status) && ![401, 403, 408, 429].contains(status)
+    guard let subsonicError = error as? SubsonicError else { return false }
+    // 10: required parameter missing, 70: requested data not found
+    return subsonicError.code == 10 || subsonicError.code == 70
   }
 }

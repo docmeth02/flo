@@ -16,9 +16,9 @@ final class PlaybackRulesTests: XCTestCase {
     XCTAssertTrue(service.isPermanentFailure(SubsonicError(code: 10, message: nil)))
     XCTAssertTrue(service.isPermanentFailure(SubsonicError(code: 70, message: nil)))
     XCTAssertFalse(service.isPermanentFailure(SubsonicError(code: 0, message: nil)))
-    XCTAssertTrue(service.isPermanentFailure(status(404)))
-    // Auth, timeouts, throttling and server errors are worth another try.
-    for code in [401, 403, 408, 429, 500, 503] {
+    // An HTTP status comes from a proxy in front of Navidrome, never about the
+    // item, so every one is worth another try.
+    for code in [400, 401, 403, 404, 408, 410, 429, 500, 503] {
       XCTAssertFalse(service.isPermanentFailure(status(code)), "\(code)")
     }
     XCTAssertFalse(service.isPermanentFailure(URLError(.notConnectedToInternet)))
