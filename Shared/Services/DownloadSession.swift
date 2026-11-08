@@ -141,7 +141,7 @@ final class DownloadSession: NSObject, ObservableObject {
     let id = album.id
     if !album.isPlaylist || !DownloadStore.hasRecord(collectionId: id) {
       DownloadStore.saveAlbum(album)
-      let artId = album.isPlaylist ? (id.hasPrefix("pl-") ? id : "pl-\(id)") : "al-\(id)"
+      let artId = album.isPlaylist ? Playlist.mosaicId(for: id) : "al-\(id)"
       Self.downloadCover(artId: artId, as: id)
     }
     queueSongs(of: album)
@@ -151,7 +151,8 @@ final class DownloadSession: NSObject, ObservableObject {
   /// covers of its tracks' albums.
   func enqueue(_ playlist: Playlist) {
     let id = playlist.id
-    DownloadStore.savePlaylist(playlist)
+    let album = Album(from: playlist)
+    DownloadStore.saveAlbum(album)
     Self.downloadCover(artId: playlist.artId, as: id)
 
     // Once per album and one at a time, so they neither time out queued
@@ -165,7 +166,7 @@ final class DownloadSession: NSObject, ObservableObject {
           artId: "al-\(albumId)", as: albumId, overwrite: false)
       }
     }
-    queueSongs(of: Album(from: playlist))
+    queueSongs(of: album)
   }
 
   private static func downloadCover(artId: String, as id: String) {

@@ -202,19 +202,6 @@ enum DownloadStore {
     CoreDataManager.shared.saveRecord()
   }
 
-  static func savePlaylist(_ playlistToDownload: Playlist) {
-    let playlist = collectionEntity(id: playlistToDownload.id)
-
-    playlist.id = playlistToDownload.id
-    playlist.name = playlistToDownload.name
-    playlist.genre = "\(playlistToDownload.comment) by \(playlistToDownload.ownerName)"
-
-    playlist.albumArtist = "Various Artists"
-    playlist.artistName = "Various Artists"
-
-    CoreDataManager.shared.saveRecord()
-  }
-
   /// Media ids of the collection's downloaded songs.
   static func downloadedMediaFileIds(collectionId: String) -> Set<String> {
     Set(
