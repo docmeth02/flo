@@ -27,29 +27,22 @@ struct WatchStarredSongsView: View {
       empty: .empty(
         systemImage: "heart.fill", tint: .liked, title: "No liked songs yet",
         message: "Tap the heart on Now Playing to add a song here."),
-      refresh: albumViewModel.refreshStarredSongs
+      refresh: { await albumViewModel.refresh(.starredSongs) }
     ) {
-      ForEach(Array(songs.enumerated()), id: \.element.id) { idx, song in
-        TrackRowView(
-          trackNumber: idx + 1,
-          title: song.title,
-          artist: song.artist,
-          isPlaying: playerViewModel.isCurrent(song),
-          onHold: { menu = .song(song, context: SongCollection.Name.liked, isFromPlaylist: false) }
-        ) {
-          let liked = SongCollection.liked(songs)
-          if playerViewModel.playItem(item: liked, startingAt: idx) { showPlayer() }
+      SongRows(
+        songs: songs,
+        onHold: { menu = .song($0, context: SongCollection.Name.liked, isFromPlaylist: false) }
+      ) {
+        if playerViewModel.playItem(item: SongCollection.liked(songs), startingAt: $0) {
+          showPlayer()
         }
-        // The row's own platter, as wide as the platters of other lists.
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
       }
     }
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .itemMenu($menu, openedAlbum: $openedAlbum, openedArtist: $openedArtist)
     .onAppear {
-      albumViewModel.fetchStarredSongs()
+      albumViewModel.fetch(.starredSongs)
     }
   }
 }

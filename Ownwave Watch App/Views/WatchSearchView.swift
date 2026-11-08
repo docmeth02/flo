@@ -21,8 +21,7 @@ struct WatchSearchView: View {
   @State private var openedAlbum: Album?
   @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
-  /// Why the top card's Artist Radio played nothing, while that shows.
-  @State private var radioMiss: (name: String, message: String)?
+  @StateObject private var radio = ArtistRadio()
 
   private struct Library {
     let artists: [Artist]
@@ -64,14 +63,7 @@ struct WatchSearchView: View {
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .navigationDestination(item: $openedAlbum) { WatchAlbumDetailView(album: $0) }
     .itemMenu($menu, openedAlbum: $openedAlbum, openedArtist: $openedArtist)
-    .alert(
-      radioMiss?.name ?? "",
-      isPresented: Binding(get: { radioMiss != nil }, set: { if !$0 { radioMiss = nil } })
-    ) {
-      Button("OK") {}
-    } message: {
-      Text(radioMiss?.message ?? "")
-    }
+    .artistRadio(radio)
     .task {
       // Once: the view reappears after every pushed album or artist.
       guard library == nil else { return }
@@ -134,20 +126,7 @@ struct WatchSearchView: View {
     let songs = results.songs.filter { MenuTarget.searched($0).id != top?.id }
     if !songs.isEmpty {
       Section {
-        ForEach(Array(songs.enumerated()), id: \.element.id) { idx, song in
-          TrackRowView(
-            trackNumber: idx + 1,
-            title: song.title,
-            artist: song.artist,
-            isPlaying: playerViewModel.isCurrent(song),
-            onHold: { menu = .searched(song) }
-          ) {
-            play(song)
-          }
-          // The row's own platter, as wide as the joined ones above.
-          .listRowInsets(EdgeInsets())
-          .listRowBackground(Color.clear)
-        }
+        SongRows(songs: songs, onHold: { menu = .searched($0) }) { play(songs[$0]) }
       } header: {
         SectionHeader("Songs")
       }
@@ -186,11 +165,7 @@ struct WatchSearchView: View {
       .holdable(onTap: { open(target) }, onHold: { menu = target })
       if case .artist(let artist) = target {
         Button {
-          Task {
-            let outcome = await playerViewModel.playArtistRadio(id: artist.id, name: artist.name)
-            if outcome == .played { showPlayer() }
-            radioMiss = outcome.message.map { (artist.name, $0) }
-          }
+          radio.start(artist, player: playerViewModel, showPlayer: showPlayer)
         } label: {
           Image(systemName: Glyph.radio)
         }

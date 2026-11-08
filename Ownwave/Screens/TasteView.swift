@@ -47,7 +47,7 @@ struct TasteView: View {
     .toolbar(.hidden, for: .navigationBar)
     // A mix played while the tab is open changes the recipe.
     .task(id: mixes.played.first?.at) {
-      albumViewModel.fetchStarredSongsIfStale()
+      albumViewModel.fetch(.starredSongs, maxAge: ListState.reloadAfter)
       await reload()
     }
     // The tour's step here points at the recipe on Profile.

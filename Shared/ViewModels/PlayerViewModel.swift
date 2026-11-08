@@ -192,10 +192,11 @@ class PlayerViewModel: ObservableObject {
     queue.indices.contains(activeQueueIdx) ? queue[activeQueueIdx] : nil
   }
 
-  var isLiveRadio: Bool {
-    guard let song = nowPlaying else { return false }
-    return song.duration.isInfinite || song.duration.isNaN
-  }
+  var isLiveRadio: Bool { nowPlaying?.isLiveRadio ?? false }
+
+  /// The rows after the current one, in play order, as the screens list
+  /// them; what plays next under repeat is `upcomingQueueIndices`.
+  var upNext: ArraySlice<QueueEntity> { queue.dropFirst(activeQueueIdx + 1) }
 
   init() {
     self.player = AVPlayer()
@@ -237,7 +238,7 @@ class PlayerViewModel: ObservableObject {
     // A radio station stays in the stored queue while it plays (its object
     // must stay alive for isLiveRadio and the metadata), but a live stream is
     // not something to resume at launch.
-    let isRadioQueue = lastPlayData.first.map { !$0.duration.isFinite } ?? false
+    let isRadioQueue = lastPlayData.first?.isLiveRadio ?? false
 
     if !lastPlayData.isEmpty && !isRadioQueue {
       self.progress = UserDefaultsManager.nowPlayingProgress
@@ -1047,4 +1048,9 @@ extension PlayerViewModel {
     guard isSmartMix else { return sourceName }
     return UserDefaultsManager.keepPlaying ? "Smart Mix · Keep Playing on" : "Smart Mix"
   }
+}
+
+extension QueueEntity {
+  /// A radio station, which has no length.
+  var isLiveRadio: Bool { !duration.isFinite }
 }

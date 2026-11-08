@@ -62,7 +62,7 @@
         try? await Task.sleep(for: .seconds(3))
         // The album list loads with the Library, which a debug screen skips.
         let library = AppModel.shared.albums
-        if library.albums.isEmpty { library.fetchAlbums() }
+        if library.albums.isEmpty { library.fetch(.albums) }
         for _ in 0..<20 where library.albums.isEmpty {
           try? await Task.sleep(for: .milliseconds(500))
         }

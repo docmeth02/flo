@@ -108,7 +108,7 @@ import WatchConnectivity
       signInDeadline?.cancel()
       signIn = .idle
     case .otherAccount(let user, let host):
-      signIn = .failed("The watch is signed in as \(user) on \(host). Log out there first.")
+      signIn = .failed(Link.otherAccountMessage(user: user, host: host))
     case nil: signIn = .failed("The watch did not answer.")
     }
   }
@@ -141,6 +141,8 @@ import WatchConnectivity
   /// here first, into an outbox of their own, so the phone's downloads and
   /// their bitrate stay as they are.
   func send(_ album: Album) {
+    // The watch keeps a sent collection as an album, so playlists stay here.
+    guard !album.isPlaylist else { return }
     let app = AppModel.shared
     guard let watch else { return app.show("The watch has not answered yet") }
     guard isSignedIn else { return app.show("Sign the watch in first") }

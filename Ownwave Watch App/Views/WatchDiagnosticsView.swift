@@ -18,7 +18,10 @@ struct WatchDiagnosticsView: View {
   var body: some View {
     List {
       Section {
-        ShareLink(item: DiagnosticsReport.text(), subject: Text("Ownwave log")) {
+        ShareLink(
+          item: DiagnosticsLog(), subject: Text("Ownwave log"),
+          preview: SharePreview("Ownwave log")
+        ) {
           Label("Share log", systemImage: "square.and.arrow.up")
             .font(.row)
             .foregroundStyle(Dusk.fill)

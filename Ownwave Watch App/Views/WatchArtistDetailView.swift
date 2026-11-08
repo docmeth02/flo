@@ -10,12 +10,7 @@ struct WatchArtistDetailView: View {
   @EnvironmentObject var playerViewModel: PlayerViewModel
   @Environment(\.showPlayer) private var showPlayer
 
-  /// Why Artist Radio played nothing, while that shows.
-  @State private var radioMessage: String?
-  @State private var isLoadingRadio = false
-  /// Ends with the screen, so a late answer never replaces a queue edited
-  /// meanwhile.
-  @State private var radioTask: Task<Void, Never>?
+  @StateObject private var radio = ArtistRadio()
   @State private var isLoadingTopSongs = false
   @State private var openedAlbum: Album?
   @State private var openedArtist: Artist?
@@ -32,16 +27,8 @@ struct WatchArtistDetailView: View {
         .listRowBackground(Color.clear)
 
       HStack(spacing: 6) {
-        Button(action: {
-          radioTask = Task {
-            isLoadingRadio = true
-            let outcome = await playerViewModel.playArtistRadio(id: artist.id, name: artist.name)
-            isLoadingRadio = false
-            if outcome == .played { showPlayer() }
-            radioMessage = outcome.message
-          }
-        }) {
-          if isLoadingRadio {
+        Button(action: { radio.start(artist, player: playerViewModel, showPlayer: showPlayer) }) {
+          if radio.isLoading {
             ProgressView()
           } else {
             Label("Radio", systemImage: Glyph.radio)
@@ -100,15 +87,7 @@ struct WatchArtistDetailView: View {
     .onAppear {
       albumViewModel.fetchAlbumsByArtist(id: artist.id)
     }
-    .onDisappear { radioTask?.cancel() }
-    .alert(
-      artist.name,
-      isPresented: Binding(get: { radioMessage != nil }, set: { if !$0 { radioMessage = nil } })
-    ) {
-      Button("OK") {}
-    } message: {
-      Text(radioMessage ?? "")
-    }
+    .artistRadio(radio)
   }
 
   /// The artist stands in for a navigation title.
@@ -132,5 +111,59 @@ struct WatchArtistDetailView: View {
       Spacer(minLength: 0)
     }
     .accessibilityElement(children: .combine)
+  }
+}
+
+/// Artist Radio started from a screen. It ends with the screen, so a late
+/// answer never replaces a queue edited meanwhile, and `.artistRadio(_:)`
+/// says why nothing played.
+@MainActor final class ArtistRadio: ObservableObject {
+  /// Which button spins: the player's `isGeneratingMix` is also set while Top
+  /// Songs or Play Something builds.
+  @Published private(set) var isLoading = false
+  /// The artist whose radio played nothing, and why.
+  @Published fileprivate var miss: (name: String, message: String)?
+  private var task: Task<Void, Never>?
+
+  func start(_ artist: Artist, player: PlayerViewModel, showPlayer: EnvironmentAction<Void>) {
+    task?.cancel()
+    task = Task {
+      isLoading = true
+      let outcome = await player.playArtistRadio(id: artist.id, name: artist.name)
+      // A newer start or the screen's end owns the state now.
+      guard !Task.isCancelled else { return }
+      isLoading = false
+      if outcome == .played { showPlayer() }
+      miss = outcome.message.map { (artist.name, $0) }
+    }
+  }
+
+  fileprivate func cancel() {
+    task?.cancel()
+    isLoading = false
+  }
+}
+
+extension View {
+  /// Ends the screen's Artist Radio with it and shows why one played nothing.
+  func artistRadio(_ radio: ArtistRadio) -> some View {
+    modifier(ArtistRadioAlert(radio: radio))
+  }
+}
+
+private struct ArtistRadioAlert: ViewModifier {
+  @ObservedObject var radio: ArtistRadio
+
+  func body(content: Content) -> some View {
+    content
+      .onDisappear { radio.cancel() }
+      .alert(
+        radio.miss?.name ?? "",
+        isPresented: Binding(get: { radio.miss != nil }, set: { if !$0 { radio.miss = nil } })
+      ) {
+        Button("OK") {}
+      } message: {
+        Text(radio.miss?.message ?? "")
+      }
   }
 }

@@ -35,6 +35,8 @@ extension EnvironmentValues {
 enum Appearance: String, CaseIterable {
   case system, dark, light
 
+  static let storageKey = "appearance"
+
   var colorScheme: ColorScheme? {
     switch self {
     case .system: nil
@@ -47,7 +49,7 @@ enum Appearance: String, CaseIterable {
 struct RootView: View {
   @ObservedObject private var app = AppModel.shared
   @ObservedObject private var auth = AppModel.shared.auth
-  @AppStorage("appearance") private var appearance = Appearance.system
+  @AppStorage(Appearance.storageKey) private var appearance = Appearance.system
   @Environment(\.scenePhase) private var scenePhase
 
   var body: some View {
@@ -68,7 +70,6 @@ struct RootView: View {
     .environmentObject(app.player)
     .environmentObject(app.albums)
     .environmentObject(DownloadSession.shared)
-    .environmentObject(DownloadStorage.shared)
     .environmentObject(PinStore.shared)
   }
 }
@@ -96,7 +97,7 @@ struct AppTabs: View {
   @State var tab = TabID.home
   @State var paths: [TabID: NavigationPath] = [:]
   @SceneStorage("libraryChip") private var libraryChip = LibraryChip.albums
-  @AppStorage("tourSeen") private var tourSeen = false
+  @AppStorage(TourStep.seenKey) private var tourSeen = false
 
   var body: some View {
     TabView(selection: $tab) {

@@ -25,6 +25,10 @@ struct Album: Codable, Hashable, Identifiable, Playable {
   /// when unknown.
   var createdAt = ""
 
+  /// The id of the server's cover for the album `id`; a playlist's is
+  /// `Playlist.mosaicId(for:)`.
+  static func coverArtId(for id: String) -> String { "al-\(id)" }
+
   var isExplicit: Bool {
     if explicitStatus.isExplicit {
       return true

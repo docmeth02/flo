@@ -90,7 +90,7 @@ final class AppModel: ObservableObject {
       } else {
         show("Downloading \(TranscodingSettings.phrase(bitRate))")
       }
-    case .unavailable: show("Not available offline")
+    case .unavailable: show(.notAvailableOffline)
     case .downloaded: show("Already on this iPhone")
     case .accountChanged, .underway: break
     }
@@ -129,7 +129,7 @@ final class AppModel: ObservableObject {
   var isRadioBlocked: Bool { TranscodingSettings.streamingBitRate == nil }
 
   func play(_ radio: Radio) {
-    guard !isRadioBlocked else { return show("Streaming on cellular is off") }
+    guard !isRadioBlocked else { return show(.streamingBlocked) }
     if player.playRadioItem(radio: radio) { isNowPlayingPresented = true }
   }
 

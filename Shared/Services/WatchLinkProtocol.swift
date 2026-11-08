@@ -32,6 +32,15 @@ enum Link {
     case otherAccount(user: String, host: String)
   }
 
+  /// Why the phone could not sign the watch in, read on the phone. Without
+  /// a user or host the watch could tell, the account goes unnamed.
+  static func otherAccountMessage(user: String, host: String) -> String {
+    guard !user.isEmpty, !host.isEmpty else {
+      return "The watch is signed in to another account. Log out there first."
+    }
+    return "The watch is signed in as \(user) on \(host). Log out there first."
+  }
+
   /// The phone's application context: the settings the watch follows while
   /// `share` is on, and the albums on their way.
   struct PhoneState: Codable, Equatable {

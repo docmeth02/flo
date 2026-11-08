@@ -181,7 +181,7 @@ extension CarPlayController: @preconcurrency CPNowPlayingTemplateObserver {
     // more than OK, since it closes the alert too.
     let actions = [playDownloads, ok].prefix(Int(CPAlertTemplate.maximumActionCount))
     let alert = CPAlertTemplate(
-      titleVariants: ["Streaming on cellular is off"], actions: Array(actions))
+      titleVariants: [.streamingBlocked], actions: Array(actions))
     present(alert, as: .streamingBlocked)
   }
 

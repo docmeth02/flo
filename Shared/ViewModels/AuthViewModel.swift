@@ -87,9 +87,9 @@ class AuthViewModel: ObservableObject {
 
   /// Keychain items outlive an uninstall while the stored server URL does
   /// not, so the Keychain keeps a copy of it. Credentials without any server
-  /// (stored before that copy existed) are unusable and would leave the app
-  /// "logged in" with every request going nowhere: they are removed and the
-  /// result is false. An unreadable Keychain URL leaves everything as it is.
+  /// are unusable and would leave the app "logged in" with every request
+  /// going nowhere: they are removed and the result is false. An unreadable
+  /// Keychain URL leaves everything as it is.
   private static func restoreServerURL() -> Bool {
     let keychainURL: String
     do {

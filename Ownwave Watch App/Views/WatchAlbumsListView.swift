@@ -23,7 +23,7 @@ struct WatchAlbumsListView: View {
       empty: .empty(
         systemImage: Glyph.album, tint: Dusk.fill, title: "No albums",
         message: "Albums on your Navidrome server show up here."),
-      refresh: albumViewModel.refreshAlbums
+      refresh: { await albumViewModel.refresh(.albums) }
     ) {
       SortHeader(count: counted(albums.count, "album"), order: $order)
       PinnedList(items: albums, kind: .album, allLabel: "All Albums") { albums, _ in
@@ -34,7 +34,7 @@ struct WatchAlbumsListView: View {
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .itemMenu($menu, openedArtist: $openedArtist)
     .onAppear {
-      albumViewModel.fetchAlbums()
+      albumViewModel.fetch(.albums)
     }
   }
 }
