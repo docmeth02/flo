@@ -19,9 +19,6 @@ struct WatchContentView: View {
   @StateObject private var authViewModel = AuthViewModel()
   @StateObject var playerViewModel = PlayerViewModel()
   @StateObject var albumViewModel = AlbumViewModel()
-  // Playback and scrobbling use the shared instance; Settings must show the
-  // same state.
-  @ObservedObject private var downloadStorage = DownloadStorage.shared
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @ObservedObject private var phone = PhoneLink.shared
   @Environment(\.scenePhase) private var scenePhase
@@ -151,7 +148,7 @@ struct WatchContentView: View {
     .environmentObject(authViewModel)
     .environmentObject(playerViewModel)
     .environmentObject(albumViewModel)
-    .environmentObject(downloadStorage)
+    .environmentObject(DownloadStorage.shared)
     .environmentObject(DownloadSession.shared)
     .environmentObject(PinStore.shared)
     #if DEBUG

@@ -18,10 +18,6 @@ class LocalFileManager {
   }
 
   /// The size of the downloads folder, measured off the main thread.
-  func calculateDirectorySize() async -> String {
-    bytesToMBOrGB(await downloadsBytes())
-  }
-
   func downloadsBytes() async -> Int64 {
     await Task.detached(priority: .userInitiated) { self.directorySize() }.value
   }

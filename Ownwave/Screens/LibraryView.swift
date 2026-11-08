@@ -19,7 +19,6 @@ struct LibraryView: View {
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @EnvironmentObject private var downloadSession: DownloadSession
-  @EnvironmentObject private var storage: DownloadStorage
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
 
@@ -31,6 +30,8 @@ struct LibraryView: View {
   /// Songs on the phone per downloaded album, counted when Downloads shows
   /// and when the list or an album changes.
   @State private var songCounts: [String: Int] = [:]
+  /// The downloads folder, measured as Settings measures it.
+  @State private var downloadsBytes: Int64 = 0
   @AppStorage(AlbumOrder.storageKey) private var albumOrder = AlbumOrder.added
   @AppStorage(ArtistOrder.storageKey) private var artistOrder = ArtistOrder.name
   @AppStorage(PlaylistOrder.storageKey) private var playlistOrder = PlaylistOrder.name
@@ -64,10 +65,12 @@ struct LibraryView: View {
       } else if chip == .downloads {
         songCounts[id] = DownloadStore.downloadedMediaFileIds(collectionId: id).count
       }
-      if chip == .downloads { storage.refresh() }
+      if chip == .downloads { measureDownloads() }
     }
     .onChange(of: albumViewModel.downloadedAlbums) {
-      if chip == .downloads { songCounts = DownloadStore.downloadedSongCounts() }
+      guard chip == .downloads else { return }
+      songCounts = DownloadStore.downloadedSongCounts()
+      measureDownloads()
     }
     #if DEBUG
       .onAppear { applyDebugChip() }
@@ -250,7 +253,7 @@ struct LibraryView: View {
       StateView(kind: .empty("Download an album to play it without a connection."))
     } else {
       ListHeader(
-        count: "\(counted(albums.count, "album")) · \(storage.localDirectorySize)")
+        count: "\(counted(albums.count, "album")) · \(downloadsBytes.fileSize)")
       LazyPlatter {
         if !cachedSongs.isEmpty {
           NavigationLink {
@@ -315,8 +318,12 @@ struct LibraryView: View {
       albumViewModel.fetchDownloadedAlbums()
       songCounts = DownloadStore.downloadedSongCounts()
       cachedSongs = StreamCacheManager.shared.getCachedSongs()
-      storage.refresh()
+      measureDownloads()
     }
+  }
+
+  private func measureDownloads() {
+    Task { downloadsBytes = await LocalFileManager.shared.downloadsBytes() }
   }
 
   private func refresh() async {
