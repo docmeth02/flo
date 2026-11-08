@@ -273,11 +273,8 @@ struct LibraryView: View {
             .hairlineAbove(!cachedSongs.isEmpty || album.id != albums.first?.id)
         }
       }
-      let rate = UserDefaultsManager.downloadBitRate
       // The setting, not the files: earlier downloads keep their bitrate.
-      ListFooter(
-        rate == TranscodingSettings.sourceBitRate
-          ? "Downloads in original quality." : "Downloads at \(rate) kbps.")
+      ListFooter("Downloads \(TranscodingSettings.phrase(UserDefaultsManager.downloadBitRate)).")
     }
   }
 

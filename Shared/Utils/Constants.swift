@@ -98,6 +98,16 @@ enum TranscodingSettings {
   static func offeredBitRate(_ stored: String?) -> String {
     stored.flatMap { bitRates.contains($0) ? $0 : nil } ?? defaultBitRate
   }
+
+  /// "Original" or "192 kbps", as Settings lists a limit.
+  static func label(_ bitRate: String) -> String {
+    bitRate == sourceBitRate ? "Original" : "\(bitRate) kbps"
+  }
+
+  /// "in original quality" or "at 192 kbps", for a sentence.
+  static func phrase(_ bitRate: String) -> String {
+    bitRate == sourceBitRate ? "in original quality" : "at \(label(bitRate))"
+  }
   /// The limit streams and the stream cache use on the network at hand; nil
   /// while streaming is off there. Only the phone tells cellular apart.
   static var streamingBitRate: String? { streamingBitRate(onCellular: AppPlatform.isOnCellular) }

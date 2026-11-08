@@ -97,13 +97,10 @@ final class AppModel: ObservableObject {
       switch await CollectionDownload.prepare(album) {
       case .ready(let album):
         enqueue(album)
-        let bitRate = UserDefaultsManager.downloadBitRate
         if AppPlatform.isOnCellular, !UserDefaultsManager.downloadOverCellular {
           show("Downloads when on Wi-Fi")
         } else {
-          show(
-            bitRate == TranscodingSettings.sourceBitRate
-              ? "Downloading in original quality" : "Downloading at \(bitRate) kbps")
+          show("Downloading \(TranscodingSettings.phrase(UserDefaultsManager.downloadBitRate))")
         }
       case .unavailable: show("Not available offline")
       case .downloaded: show("Already on this iPhone")
