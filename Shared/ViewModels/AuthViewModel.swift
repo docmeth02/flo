@@ -16,6 +16,11 @@ class AuthViewModel: ObservableObject {
   @Published var isSubmitting: Bool = false
   @Published var isLoggedIn: Bool = false
 
+  /// Every field is filled and no sign-in runs.
+  var canSubmit: Bool {
+    !serverUrl.isEmpty && !username.isEmpty && !password.isEmpty && !isSubmitting
+  }
+
   // Bumped by every interactive login and logout; a background re-login only
   // persists its result while the generation is unchanged.
   private var sessionGeneration: Int = 0
@@ -208,10 +213,8 @@ class AuthViewModel: ObservableObject {
     isSubmitting = true
     loginError = nil
 
-    // Watch text input often adds a trailing space, and a trailing slash
-    // would double up with every endpoint path.
-    serverUrl = serverUrl.trimmingCharacters(in: .whitespacesAndNewlines)
-    while serverUrl.hasSuffix("/") { serverUrl.removeLast() }
+    // Watch text input often adds a trailing space.
+    serverUrl = UserDefaultsManager.baseURL(serverUrl)
 
     // The fields as shown at the tap.
     let (serverUrl, username, password) = (serverUrl, username, password)

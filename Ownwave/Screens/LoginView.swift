@@ -14,10 +14,6 @@ struct LoginView: View {
     case server, username, password
   }
 
-  private var isSubmitDisabled: Bool {
-    auth.serverUrl.isEmpty || auth.username.isEmpty || auth.password.isEmpty || auth.isSubmitting
-  }
-
   var body: some View {
     GeometryReader { proxy in
       ScrollView {
@@ -79,7 +75,7 @@ struct LoginView: View {
             }
           }
           .buttonStyle(FillButtonStyle())
-          .disabled(isSubmitDisabled)
+          .disabled(!auth.canSubmit)
           Text("Requires Navidrome 0.64 or newer")
             .font(.meta)
             .foregroundStyle(palette.secondary)
@@ -118,7 +114,7 @@ struct LoginView: View {
   }
 
   private func submit() {
-    guard !isSubmitDisabled else { return }
+    guard auth.canSubmit else { return }
     focus = nil
     auth.login()
   }
