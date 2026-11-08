@@ -181,9 +181,11 @@ extension PlayerViewModel {
     queueEvents.send(.synced)
   }
 
-  /// The other device did not take over: the song counts here again.
+  /// The other device did not take over: the song counts here again, and
+  /// the queue is this device's to save again.
   func handOffEnded() {
     handedOffSongId = nil
+    queueEvents.send(.changed)
   }
 
   /// Whether the current song was handed over to the other device.
