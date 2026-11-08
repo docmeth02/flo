@@ -28,7 +28,7 @@ struct UpNextList: View {
 
   var body: some View {
     QueueCollection(
-      upNext: Array(player.queue.dropFirst(player.activeQueueIdx + 1)), tint: tint,
+      upNext: Array(player.upNext), tint: tint,
       palette: palette, scheme: scheme, insets: insets, isShown: isShown, app: app,
       player: player, showPlayer: showPlayer)
   }
@@ -233,9 +233,7 @@ private struct QueueCollection: UIViewRepresentable {
     private func didReorder(_ transaction: NSDiffableDataSourceTransaction<Section, Item>) {
       let player = list.player
       let shown = transaction.initialSnapshot.itemIdentifiers(inSection: .songs)
-      let upcoming = player.queue.dropFirst(player.activeQueueIdx + 1).map {
-        Item.song($0.objectID)
-      }
+      let upcoming = player.upNext.map { Item.song($0.objectID) }
       guard shown == upcoming,
         let changes = transaction.sectionTransactions.first(where: {
           $0.sectionIdentifier == .songs
@@ -250,7 +248,7 @@ private struct QueueCollection: UIViewRepresentable {
         case .insert(let offset, _, _): to = offset
         }
       }
-      let start = player.activeQueueIdx + 1
+      let start = player.upNext.startIndex
       if let from, let to, player.moveInQueue(from: start + from, to: start + to) { return }
       applyQueue(animated: true)
     }

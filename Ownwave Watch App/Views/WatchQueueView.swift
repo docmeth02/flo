@@ -20,7 +20,7 @@ struct WatchQueueView: View {
   private var coverURL: String { playerViewModel.coverArt }
   /// The rows after the current one, in play order.
   private var upNext: [QueueEntity] {
-    Array(playerViewModel.queue.dropFirst(playerViewModel.activeQueueIdx + 1))
+    Array(playerViewModel.upNext)
   }
 
   var body: some View {
