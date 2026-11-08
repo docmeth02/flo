@@ -121,17 +121,53 @@ class AlbumViewModel: ObservableObject {
     return (local + remote.filter { !localIds.contains($0.id) }).sorted(by: Song.albumOrder)
   }
 
-  // MARK: - Generic cache helpers
+  // MARK: - Library lists
+
+  /// Shows the cached list right away when nothing is loaded yet, then
+  /// replaces it with the server's unless that is under way or younger than
+  /// `maxAge`, the list's own by default.
+  func fetch(_ library: Library, maxAge: TimeInterval? = nil) {
+    load(library, ifOlderThan: maxAge ?? library.maxAge)
+  }
+
+  /// Asks the server for the list whatever its state; returns once the
+  /// answer is shown.
+  @MainActor func refresh(_ library: Library) async {
+    await load(library, ifOlderThan: nil)?.value
+  }
+
+  /// The list's request, nil when `maxAge` says the list is fresh enough or
+  /// a request is under way; without `maxAge` it always asks.
+  @discardableResult
+  private func load(_ library: Library, ifOlderThan maxAge: TimeInterval?) -> Task<Void, Never>? {
+    switch library {
+    case .albums: load(library, \.albums, Self.albumsRequest, ifOlderThan: maxAge)
+    case .artists: load(library, \.artists, Self.artistsRequest, ifOlderThan: maxAge)
+    case .playlists: load(library, \.playlists, LibraryAPI.getPlaylists, ifOlderThan: maxAge)
+    case .starredSongs:
+      load(library, \.starredSongs, Self.starredSongsRequest, ifOlderThan: maxAge)
+    }
+  }
 
   /// Requests the list, assigns it and caches it on the main thread; the
   /// task ends when that is done. An empty answer is a real answer (e.g.
   /// every song unliked) and replaces the cached list too.
-  @discardableResult
-  private func requestCached<T: Codable>(
-    _ library: Library,
-    assign: @escaping ([T]) -> Void,
-    request: @escaping ListRequest<T>
-  ) -> Task<Void, Never> {
+  private func load<T: Codable>(
+    _ library: Library, _ list: ReferenceWritableKeyPath<AlbumViewModel, [T]>,
+    _ request: @escaping ListRequest<T>, ifOlderThan maxAge: TimeInterval?
+  ) -> Task<Void, Never>? {
+    if let maxAge {
+      let state = state(library)
+      if state.isLoading { return nil }
+      if let loadedAt = state.loadedAt, Date().timeIntervalSince(loadedAt) < maxAge {
+        return nil
+      }
+      if self[keyPath: list].isEmpty,
+        let cached = LibraryCacheManager.shared.load([T].self, forKey: library.cacheKey)
+      {
+        self[keyPath: list] = cached
+      }
+    }
     let cacheGeneration = LibraryCacheManager.shared.generation
     // A new attempt takes the list out of its error state.
     listStates[library] = ListState(isLoading: true)
@@ -143,7 +179,7 @@ class AlbumViewModel: ObservableObject {
       switch result {
       case .success(let items):
         debugLog("\(library.rawValue) loaded: \(items.count)")
-        assign(items)
+        self[keyPath: list] = items
         self.listStates[library] = ListState(loadedAt: Date())
         DispatchQueue.global(qos: .utility).async {
           LibraryCacheManager.shared.save(
@@ -155,56 +191,6 @@ class AlbumViewModel: ObservableObject {
         self.listStates[library] = ListState(failed: true)
       }
     }
-  }
-
-  /// Shows the cached list right away when nothing is loaded yet, then
-  /// replaces it with the server's unless that is under way or younger than
-  /// `maxAge`, the list's own by default.
-  private func fetchCached<T: Codable>(
-    _ library: Library,
-    maxAge: TimeInterval? = nil,
-    current: [T],
-    assign: @escaping ([T]) -> Void,
-    request: @escaping ListRequest<T>
-  ) {
-    let state = state(library)
-    if state.isLoading { return }
-    if let loadedAt = state.loadedAt,
-      Date().timeIntervalSince(loadedAt) < maxAge ?? library.maxAge
-    {
-      return
-    }
-    if current.isEmpty,
-      let cached = LibraryCacheManager.shared.load([T].self, forKey: library.cacheKey)
-    {
-      assign(cached)
-    }
-    requestCached(library, assign: assign, request: request)
-  }
-
-  @MainActor
-  private func refreshCached<T: Codable>(
-    _ library: Library,
-    assign: @escaping ([T]) -> Void,
-    request: @escaping ListRequest<T>
-  ) async {
-    await requestCached(library, assign: assign, request: request).value
-  }
-
-  func fetchStarredSongs() {
-    fetchStarredSongs(maxAge: nil)
-  }
-
-  /// Liked Songs at most every few minutes, for the iPhone's Home, which
-  /// shows them on every return; the Liked screens always reload.
-  func fetchStarredSongsIfStale() {
-    fetchStarredSongs(maxAge: ListState.reloadAfter)
-  }
-
-  private func fetchStarredSongs(maxAge: TimeInterval?) {
-    fetchCached(
-      .starredSongs, maxAge: maxAge, current: starredSongs,
-      assign: { self.starredSongs = $0 }, request: Self.starredSongsRequest)
   }
 
   /// The server's Liked Songs, which also tell StarStore what is starred now
@@ -252,12 +238,6 @@ class AlbumViewModel: ObservableObject {
         }
       }
     }
-  }
-
-  func fetchAlbums() {
-    fetchCached(
-      .albums, current: albums,
-      assign: { self.albums = $0 }, request: Self.albumsRequest)
   }
 
   func fetchAlbumsByArtist(id: String) {
@@ -311,57 +291,6 @@ class AlbumViewModel: ObservableObject {
     return merged
   }
 
-  func getPlaylists() {
-    fetchCached(
-      .playlists, current: playlists,
-      assign: { self.playlists = $0 }, request: LibraryAPI.getPlaylists)
-  }
-
-  func getArtists() {
-    fetchCached(
-      .artists, current: artists,
-      assign: { self.artists = $0 }, request: Self.artistsRequest)
-  }
-
-  /// Siri and Shortcuts know only the cached artists. After a login nothing
-  /// is cached until the Artists list loads, so Home asks for it once.
-  @MainActor func cacheArtistsIfNeeded() async {
-    guard artists.isEmpty else { return }
-    let cached: [Artist] = await Self.cached(.artists)
-    if !cached.isEmpty {
-      // Kept, so the next return to Home does not read the cache again.
-      artists = cached
-    } else if ConnectivityMonitor.shared.canReachServer {
-      // Not offline: a failed load would be asked again on every return.
-      getArtists()
-    }
-  }
-
-  // MARK: - Async refresh variants
-
-  @MainActor func refreshAlbums() async {
-    await refreshCached(
-      .albums, assign: { self.albums = $0 },
-      request: Self.albumsRequest)
-  }
-
-  @MainActor func refreshArtists() async {
-    await refreshCached(
-      .artists, assign: { self.artists = $0 },
-      request: Self.artistsRequest)
-  }
-
-  @MainActor func refreshPlaylists() async {
-    await refreshCached(
-      .playlists, assign: { self.playlists = $0 },
-      request: LibraryAPI.getPlaylists)
-  }
-
-  @MainActor func refreshStarredSongs() async {
-    await refreshCached(
-      .starredSongs, assign: { self.starredSongs = $0 }, request: Self.starredSongsRequest)
-  }
-
   /// `list` as loaded, or while it is empty its cached copy, read off the
   /// main thread. Never asks the server.
   @MainActor func loadedOrCached<T: Codable>(_ list: [T], _ library: Library) async -> [T] {
@@ -382,12 +311,14 @@ class AlbumViewModel: ObservableObject {
     let artists = await loadedOrCached(self.artists, .artists)
     let playlists = await loadedOrCached(self.playlists, .playlists)
     guard LibraryCacheManager.shared.generation == cacheGeneration else { return nil }
+    // Kept, so the next return to Home does not read the cache again.
+    if self.artists.isEmpty, !artists.isEmpty { self.artists = artists }
     // Not offline: a failed load would be asked again on every return.
     if ConnectivityMonitor.shared.canReachServer {
-      if albums.isEmpty { fetchAlbums() }
-      if playlists.isEmpty { getPlaylists() }
+      if albums.isEmpty { fetch(.albums) }
+      if artists.isEmpty { fetch(.artists) }
+      if playlists.isEmpty { fetch(.playlists) }
     }
-    await cacheArtistsIfNeeded()
     return (albums, artists, playlists)
   }
 

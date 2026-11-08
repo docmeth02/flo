@@ -24,7 +24,7 @@ struct WatchArtistsListView: View {
       empty: .empty(
         systemImage: Glyph.artist, tint: Dusk.fill, title: "No artists",
         message: "Artists on your Navidrome server show up here."),
-      refresh: albumViewModel.refreshArtists
+      refresh: { await albumViewModel.refresh(.artists) }
     ) {
       SortHeader(count: counted(artists.count, "artist"), order: $order)
       // By name the letters are the crown's landmarks; by album count they
@@ -48,7 +48,7 @@ struct WatchArtistsListView: View {
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .itemMenu($menu)
     .onAppear {
-      albumViewModel.getArtists()
+      albumViewModel.fetch(.artists)
     }
   }
 

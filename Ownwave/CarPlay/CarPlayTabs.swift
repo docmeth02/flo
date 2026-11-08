@@ -44,7 +44,7 @@ extension CarPlayController {
       changes: changes.eraseToAnyPublisher(),
       selected: { [weak self] in
         guard let self else { return }
-        albums.fetchStarredSongsIfStale()
+        albums.fetch(.starredSongs, maxAge: ListState.reloadAfter)
         let albums = albums
         Task { await albums.loadRecentAlbums() }
       })
@@ -54,7 +54,7 @@ extension CarPlayController {
   /// the server answers), so pins resolve, the recent albums and the liked
   /// songs, and the stations once one is pinned.
   private func loadHome() async {
-    albums.fetchStarredSongsIfStale()
+    albums.fetch(.starredSongs, maxAge: ListState.reloadAfter)
     guard let lists = await albums.loadHomeLists() else { return }
     // The car's rows read the view model, so the cached copies go there
     // unless a list loaded since.
@@ -200,16 +200,17 @@ extension CarPlayController {
           CPListSection(items: [
             libraryRow(
               "Albums", images.tile(Glyph.album, size: size), noun: "album",
-              count: count(albums.albums, .albums), load: albums.refreshAlbums,
-              fetch: albums.fetchAlbums, list: { $0.albumsList() }),
+              count: count(albums.albums, .albums), load: { await albums.refresh(.albums) },
+              fetch: { albums.fetch(.albums) }, list: { $0.albumsList() }),
             libraryRow(
               "Artists", images.tile(Glyph.artist, round: true, size: size), noun: "artist",
-              count: count(albums.artists, .artists), load: albums.refreshArtists,
-              fetch: albums.getArtists, list: { $0.artistsList() }),
+              count: count(albums.artists, .artists), load: { await albums.refresh(.artists) },
+              fetch: { albums.fetch(.artists) }, list: { $0.artistsList() }),
             libraryRow(
               "Playlists", images.tile(Glyph.playlist, size: size), noun: "playlist",
-              count: count(albums.playlists, .playlists), load: albums.refreshPlaylists,
-              fetch: albums.getPlaylists, list: { $0.playlistsList() }),
+              count: count(albums.playlists, .playlists),
+              load: { await albums.refresh(.playlists) },
+              fetch: { albums.fetch(.playlists) }, list: { $0.playlistsList() }),
             libraryRow(
               "Radios", images.tile(Glyph.radio, round: true, size: size), noun: "station",
               count: radios.radios.isEmpty && radios.state.loadedAt == nil
@@ -368,7 +369,7 @@ extension CarPlayController {
       template: template,
       sections: { [weak self] in self?.likedSections(songs) ?? [] },
       changes: changes.eraseToAnyPublisher(),
-      selected: { [weak self] in self?.albums.fetchStarredSongs() })
+      selected: { [weak self] in self?.albums.fetch(.starredSongs) })
   }
 
   /// Shuffle, the liked songs, then the liked albums and artists, as many as

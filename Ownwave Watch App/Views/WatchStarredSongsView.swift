@@ -27,7 +27,7 @@ struct WatchStarredSongsView: View {
       empty: .empty(
         systemImage: "heart.fill", tint: .liked, title: "No liked songs yet",
         message: "Tap the heart on Now Playing to add a song here."),
-      refresh: albumViewModel.refreshStarredSongs
+      refresh: { await albumViewModel.refresh(.starredSongs) }
     ) {
       ForEach(Array(songs.enumerated()), id: \.element.id) { idx, song in
         TrackRowView(
@@ -49,7 +49,7 @@ struct WatchStarredSongsView: View {
     .navigationDestination(item: $openedArtist) { WatchArtistDetailView(artist: $0) }
     .itemMenu($menu, openedAlbum: $openedAlbum, openedArtist: $openedArtist)
     .onAppear {
-      albumViewModel.fetchStarredSongs()
+      albumViewModel.fetch(.starredSongs)
     }
   }
 }

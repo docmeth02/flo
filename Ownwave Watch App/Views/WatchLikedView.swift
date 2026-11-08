@@ -61,9 +61,9 @@ struct WatchLikedView: View {
     .onAppear {
       // The cached lists show at once; their stars may predate a like made
       // since, so they reload unless loaded a moment ago.
-      albumViewModel.fetchStarredSongs()
-      albumViewModel.fetchAlbums()
-      albumViewModel.getArtists()
+      albumViewModel.fetch(.starredSongs)
+      albumViewModel.fetch(.albums)
+      albumViewModel.fetch(.artists)
     }
   }
 
@@ -112,9 +112,9 @@ struct WatchLikedView: View {
   }
 
   private func refresh() async {
-    async let songs: Void = albumViewModel.refreshStarredSongs()
-    async let albums: Void = albumViewModel.refreshAlbums()
-    async let artists: Void = albumViewModel.refreshArtists()
+    async let songs: Void = albumViewModel.refresh(.starredSongs)
+    async let albums: Void = albumViewModel.refresh(.albums)
+    async let artists: Void = albumViewModel.refresh(.artists)
     _ = await (songs, albums, artists)
   }
 }
