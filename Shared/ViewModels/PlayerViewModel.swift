@@ -258,10 +258,10 @@ class PlayerViewModel: ObservableObject {
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in self?.updateRatingCommands() }
       // Avoiding the song playing, or its artist, skips it, wherever it was
-      // avoided on this device.
+      // avoided on this device; a paused song stays paused.
       self?.avoidObservation = RatingStore.shared.avoided
         .sink { [weak self] id in
-          guard let self, !self.isLiveRadio,
+          guard let self, self.isPlaying, !self.isLiveRadio,
             id == self.nowPlayingId || id == NowPlayingTarget.current?.artistId
           else { return }
           self.nextSong(userInitiated: true, leaving: true)
@@ -927,11 +927,14 @@ class PlayerViewModel: ObservableObject {
     }
   }
 
-  /// Whether leaving the song playing moves on to another song: a later entry
-  /// or Keep Playing's continuation; else the song only falls silent.
+  /// Whether an Avoid of the current song moves on to another song: it plays,
+  /// and a later entry or Keep Playing's continuation follows; else nothing
+  /// skips (paused) or the song only falls silent.
   var leavesForAnotherSong: Bool {
-    UserDefaultsManager.keepPlaying
-      || Self.leavingIndex(ids: queue.map(\.id), from: activeQueueIdx, mode: playbackMode) != nil
+    isPlaying
+      && (UserDefaultsManager.keepPlaying
+        || Self.leavingIndex(ids: queue.map(\.id), from: activeQueueIdx, mode: playbackMode)
+          != nil)
   }
 
   /// The entry `leaveSong` plays: the first after `active` that is another
