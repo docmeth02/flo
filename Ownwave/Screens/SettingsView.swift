@@ -47,9 +47,11 @@ struct SettingsView: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
         PageTitle("Settings")
-        NavigationLink(value: Route.server) { server }
-          .buttonStyle(.plain)
-          .padding(.top, 14)
+        NavigationLink(value: Route.server(version: serverVersion, username: username)) {
+          server
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 14)
 
         caption("Playback")
         SettingsGroup {

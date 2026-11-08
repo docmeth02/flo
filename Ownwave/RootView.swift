@@ -14,8 +14,9 @@ enum Route: Hashable {
   case watch
   /// Home's Recently Played, all of it.
   case recent
-  /// The server card of Settings: the account and Sign Out.
-  case server
+  /// The server card of Settings: the account and Sign Out, with the
+  /// version and user Settings already read.
+  case server(version: String?, username: String)
   /// Everything on the watch.
   case watchAlbums
 }
@@ -238,7 +239,8 @@ struct AppTabs: View {
             case .settings: SettingsView()
             case .watch: WatchView()
             case .recent: RecentlyPlayedView()
-            case .server: ServerView()
+            case .server(let version, let username):
+              ServerView(username: username, version: version)
             case .watchAlbums: WatchAlbumsView()
             }
           }

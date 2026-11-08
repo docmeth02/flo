@@ -92,7 +92,9 @@
       case "taste": tab = .taste
       case "search": tab = .search
       case "settings": paths[.home, default: NavigationPath()].append(Route.settings)
-      case "server": paths[.home, default: NavigationPath()].append(Route.server)
+      case "server":
+        paths[.home, default: NavigationPath()].append(
+          Route.server(version: nil, username: ServerAccount.username))
       case "recent": paths[.home, default: NavigationPath()].append(Route.recent)
       case "watchalbums": paths[.home, default: NavigationPath()].append(Route.watchAlbums)
       case "watch":
