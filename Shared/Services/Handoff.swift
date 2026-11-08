@@ -89,6 +89,8 @@ struct HandoffAttempt: Equatable {
       let snapshot = player.snapshot(budgetBytes: Link.handoffBudget)
     else { return refuse("Nothing is playing to hand over.") }
     let handoff = Link.Handoff(id: UUID(), accountKey: account, snapshot: snapshot)
+    // First: it moves the start generation the attempt records.
+    player.handOff()
     let attempt = HandoffAttempt(
       id: handoff.id, startGeneration: player.startGeneration, queueIds: player.queue.map(\.id))
     self.attempt = attempt
@@ -96,7 +98,6 @@ struct HandoffAttempt: Equatable {
     sentAt = Date()
     settle?.cancel()
     phase = .sending
-    player.handOff()
     let bytes = (try? JSONEncoder().encode(Link.Message.play(handoff)))?.count ?? 0
     RequestLog.shared.trace(
       "handoff \(Self.short(handoff.id)) sent \(snapshot.entries.count) entries \(bytes) bytes")

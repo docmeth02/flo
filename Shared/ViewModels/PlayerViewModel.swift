@@ -794,6 +794,15 @@ class PlayerViewModel: ObservableObject {
     resetSession()
   }
 
+  /// Drops what would start later, as a pause does, while the song plays on:
+  /// an activation still under way, a mix being built, a Keep Playing
+  /// continuation, a start the output setup would resume.
+  func dropPendingStarts() {
+    playGeneration += 1
+    startGeneration += 1
+    endStart()
+  }
+
   /// Builds a smart mix and plays it, for Home's button and the intent. False
   /// while a mix is already being built, when none came together, or when the
   /// user started something else in the meantime.

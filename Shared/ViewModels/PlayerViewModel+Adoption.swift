@@ -172,8 +172,10 @@ extension PlayerViewModel {
   }
 
   /// The current song went to the other device: this one stops counting it,
-  /// and what the server holds is no longer this device's to save.
+  /// starts nothing that was pending, and what the server holds is no
+  /// longer this device's to save.
   func handOff() {
+    dropPendingStarts()
     handedOffSongId = nowPlayingId
     queueEvents.send(.synced)
   }
