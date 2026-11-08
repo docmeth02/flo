@@ -9,6 +9,8 @@ struct WatchSettingsView: View {
   @EnvironmentObject var authViewModel: AuthViewModel
   @EnvironmentObject var downloads: DownloadSession
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
+  @ObservedObject private var phone = PhoneLink.shared
+  @ObservedObject private var queueSync = PlayQueueSync.shared
 
   // Stored values, so settings the iPhone applies refresh the rows. A bitrate
   // is read through offeredBitRate, as UserDefaultsManager reads it.
@@ -62,7 +64,7 @@ struct WatchSettingsView: View {
           Toggle(isOn: $downloadOverCellular) {
             IconRowLabel(title: "Cellular downloads", systemImage: "cellularbars")
           }
-          .joined(.last)
+          .joined(.middle)
           // A value the iPhone applies restarts the downloads there.
           .onChange(of: downloadOverCellular) {
             if !settingsFollowPhone { DownloadSession.shared.cellularAccessChanged() }
@@ -70,11 +72,15 @@ struct WatchSettingsView: View {
         }
         .tint(Dusk.fill)
         .disabled(settingsFollowPhone)
-        footer(
-          settingsFollowPhone
-            ? "Follows your iPhone"
-            : "Keep Playing continues with Smart Shuffle when the queue ends. Cellular is used only without Wi-Fi or iPhone."
-        )
+        // Outside the group: an iPhone before build 51 shares the settings
+        // above but not this one.
+        Toggle(isOn: $queueSync.isEnabled) {
+          IconRowLabel(title: "Sync queue", systemImage: "arrow.triangle.2.circlepath")
+        }
+        .joined(.last)
+        .tint(Dusk.fill)
+        .disabled(phone.syncQueueFollowsPhone)
+        footer(playbackFooter)
       } header: {
         SectionHeader("Playback")
       }
@@ -232,6 +238,15 @@ struct WatchSettingsView: View {
     HStack(spacing: 4) {
       StatusDot(color: color)
       Text("\(title) \(bytes.fileSize)")
+    }
+  }
+
+  private var playbackFooter: String {
+    switch (settingsFollowPhone, phone.syncQueueFollowsPhone) {
+    case (true, true): "Follows your iPhone"
+    case (true, false): "Follows your iPhone, except Sync queue."
+    default:
+      "Keep Playing continues with Smart Shuffle when the queue ends. Sync queue lets your iPhone continue it. Cellular is used only without Wi-Fi or iPhone."
     }
   }
 
