@@ -26,6 +26,8 @@ struct WatchNowPlayingView: View {
   private var ratingTargetRating: Int { ratings.rating(for: ratingTarget) }
 
   @State private var tint: Color?
+  // A cover that failed is read again when the server comes back.
+  @State private var reachable = ConnectivityMonitor.shared.isServerReachable
 
   private var accent: Color { tint ?? Dusk.fill }
   private var albumId: String {
@@ -48,7 +50,12 @@ struct WatchNowPlayingView: View {
       }
     }
     .background { CoverBackdrop(albumId: albumId, url: coverURL) }
-    .task(id: albumId) { tint = await CoverTint.color(albumId: albumId, url: coverURL) }
+    .onReceive(ConnectivityMonitor.shared.$isServerReachable.removeDuplicates()) {
+      reachable = $0
+    }
+    .task(id: "\(albumId)|\(reachable)") {
+      tint = await CoverTint.color(albumId: albumId, url: coverURL)
+    }
     .onAppear {
       isShown = true
       focusRequest += 1

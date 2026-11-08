@@ -58,6 +58,8 @@ struct WatchSettingsView: View {
             selection: offered($downloadBitRate)
           )
           .joined(.middle)
+          // The iPhone sends albums at the bitrate the watch last reported.
+          .onChange(of: downloadBitRate) { PhoneLink.shared.publishState() }
           Toggle(isOn: $downloadOverCellular) {
             IconRowLabel(title: "Cellular downloads", systemImage: "cellularbars")
           }

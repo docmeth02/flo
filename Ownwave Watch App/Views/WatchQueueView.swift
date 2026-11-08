@@ -10,6 +10,7 @@ struct WatchQueueView: View {
   // Redraws the reasons when a played mix lands.
   @ObservedObject private var mixes = RecommendationLog.shared
   @Environment(\.setQueueShown) private var setQueueShown
+  @Environment(\.dismiss) private var dismiss
   @State private var shades: CoverShades?
   @State private var toast: Toast.Message?
 
@@ -110,8 +111,9 @@ struct WatchQueueView: View {
       RoundedRectangle(cornerRadius: WatchLayout.platterRadius, style: .continuous)
         .fill(shades?.background ?? Dusk.surface2)
     )
-    .holdable(
-      onTap: { playerViewModel.playFromQueue(idx: playerViewModel.activeQueueIdx) }, onHold: nil)
+    // The card shows what plays; a tap goes back to the player, never
+    // restarts the song.
+    .holdable(onTap: { dismiss() }, onHold: nil)
   }
 
   private func row(_ item: QueueEntity) -> some View {
