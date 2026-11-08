@@ -62,9 +62,12 @@ struct WatchContentView: View {
     // watch keeps its login, and its state tells the phone; signed in to
     // another account, the phone hears why, as it would have at once.
     guard !authViewModel.isLoggedIn else {
-      let same = AuthService.shared.accountKey == request.accountKey
+      guard AuthService.shared.accountKey != request.accountKey else {
+        return phone.signInFinished(error: nil)
+      }
+      let account = PhoneLinkReceiver.signedInAccount()
       return phone.signInFinished(
-        error: same ? nil : "The watch is signed in to another account. Log out there first.")
+        error: Link.otherAccountMessage(user: account?.user ?? "", host: account?.host ?? ""))
     }
     authViewModel.serverUrl = request.server
     authViewModel.username = request.user

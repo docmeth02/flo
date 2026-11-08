@@ -13,6 +13,12 @@ final class WatchLinkTests: XCTestCase {
 
     let reply = Link.Reply.otherAccount(user: "v", host: "music.lan")
     XCTAssertEqual(Link.decode(Link.Reply.self, from: Link.encode(reply)), reply)
+    XCTAssertEqual(
+      Link.otherAccountMessage(user: "v", host: "music.lan"),
+      "The watch is signed in as v on music.lan. Log out there first.")
+    XCTAssertEqual(
+      Link.otherAccountMessage(user: "", host: "music.lan"),
+      "The watch is signed in to another account. Log out there first.")
 
     var state = Link.WatchState()
     state.account = .init(user: "u", host: "music.lan", key: "music.lan|id")
