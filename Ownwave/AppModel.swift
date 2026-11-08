@@ -113,6 +113,11 @@ final class AppModel: ObservableObject {
     if await player.playSomething() { isNowPlayingPresented = true }
   }
 
+  /// Takes over the queue another device saved, at its position.
+  func adopt(_ offer: PlayQueueSync.Offer) {
+    if PlayQueueSync.shared.adopt(offer) { isNowPlayingPresented = true }
+  }
+
   /// Top songs online, else the artist's songs on the phone.
   func playArtist(id: String, name: String) async {
     if await player.playArtist(id: id, name: name) { isNowPlayingPresented = true }

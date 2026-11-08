@@ -68,3 +68,10 @@ struct SectionTitle: View {
       .padding(.horizontal, 4)
   }
 }
+
+extension View {
+  /// A card's small caps line in the mono face: "PLAYING · 0:09 / 8:34".
+  func capsLabel() -> some View {
+    font(.counter).tracking(1.3).textCase(.uppercase).monospacedDigit()
+  }
+}
