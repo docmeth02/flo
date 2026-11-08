@@ -217,6 +217,16 @@ class PlayerViewModel: ObservableObject {
       }
 
     let lastPlayData = PlaybackService.shared.getQueue()
+    // The index is stored just after the queue: a kill in between can leave
+    // the index of a longer queue, with the position and listening time of
+    // its song. The queue is kept and restored at its last song, from the
+    // start.
+    if !lastPlayData.isEmpty, UserDefaultsManager.queueActiveIdx >= lastPlayData.count {
+      UserDefaultsManager.queueActiveIdx = lastPlayData.count - 1
+      UserDefaultsManager.nowPlayingProgress = 0
+      UserDefaultsManager.nowPlayingQualified = false
+      UserDefaultsManager.nowPlayingListened = 0
+    }
     let queueActiveIdx = UserDefaultsManager.queueActiveIdx
 
     // A radio station stays in the stored queue while it plays (its object
@@ -224,7 +234,7 @@ class PlayerViewModel: ObservableObject {
     // not something to resume at launch.
     let isRadioQueue = lastPlayData.first.map { !$0.duration.isFinite } ?? false
 
-    if !lastPlayData.isEmpty && queueActiveIdx < lastPlayData.count && !isRadioQueue {
+    if !lastPlayData.isEmpty && !isRadioQueue {
       self.progress = UserDefaultsManager.nowPlayingProgress
       self.playbackMode = UserDefaultsManager.playbackMode
       // A queue shuffled in the player goes on in the order it was heard in;
