@@ -68,6 +68,33 @@ struct TrackRowView: View {
   }
 }
 
+/// List rows of songs numbered from 1, each on its own platter as wide as the
+/// joined platters of other lists, the playing one marked. A tap plays from
+/// that index, a hold opens the song's menu.
+struct SongRows: View {
+  @EnvironmentObject private var playerViewModel: PlayerViewModel
+
+  let songs: [Song]
+  let onHold: (Song) -> Void
+  let play: (Int) -> Void
+
+  var body: some View {
+    ForEach(Array(songs.enumerated()), id: \.element.id) { idx, song in
+      TrackRowView(
+        trackNumber: idx + 1,
+        title: song.title,
+        artist: song.artist,
+        isPlaying: playerViewModel.isCurrent(song),
+        onHold: { onHold(song) }
+      ) {
+        play(idx)
+      }
+      .listRowInsets(EdgeInsets())
+      .listRowBackground(Color.clear)
+    }
+  }
+}
+
 extension View {
   /// Tap and hold on one plain view, which a `Button` cannot do on the watch:
   /// it takes the whole touch and the hold never arrives. The row dims while

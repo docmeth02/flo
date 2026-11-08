@@ -14,8 +14,6 @@ struct WatchAlbumArtView: View {
   // The decoded cover, remembered together with the cover it is, so a view
   // reused for another album never shows the previous cover.
   @State private var loaded: (key: String, image: UIImage?)?
-  // A cover that failed is tried again when the server comes back.
-  @State private var reachable = ConnectivityMonitor.shared.isServerReachable
 
   private var key: String { albumId + "|" + (artId ?? "") }
 
@@ -29,10 +27,7 @@ struct WatchAlbumArtView: View {
 
   var body: some View {
     content
-      .onReceive(ConnectivityMonitor.shared.$isServerReachable.removeDuplicates()) {
-        reachable = $0
-      }
-      .task(id: "\(key)|\(reachable)") {
+      .coverTask(id: key) {
         let key = key
         guard !albumId.isEmpty, loaded?.key != key || loaded?.image == nil else { return }
         // The download's cover, else one download through the cover cache
@@ -66,5 +61,29 @@ struct WatchAlbumArtView: View {
       .foregroundStyle(Dusk.secondary)
       .frame(width: size, height: size)
       .background(Dusk.skeleton)
+  }
+}
+
+extension View {
+  /// Runs `load` for `id`, and again whenever the server's reachability
+  /// really changes, so a cover that failed is tried again when the server
+  /// comes back. The monitor republishes on every probe and only a change
+  /// runs it again, so offline it never loops.
+  func coverTask(id: String, _ load: @escaping @MainActor @Sendable () async -> Void) -> some View {
+    modifier(CoverTask(id: id, load: load))
+  }
+}
+
+private struct CoverTask: ViewModifier {
+  let id: String
+  let load: @MainActor @Sendable () async -> Void
+  @State private var reachable = ConnectivityMonitor.shared.isServerReachable
+
+  func body(content: Content) -> some View {
+    content
+      .onReceive(ConnectivityMonitor.shared.$isServerReachable.removeDuplicates()) {
+        reachable = $0
+      }
+      .task(id: "\(id)|\(reachable)") { await load() }
   }
 }
