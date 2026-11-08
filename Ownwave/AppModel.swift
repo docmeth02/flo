@@ -40,6 +40,7 @@ final class AppModel: ObservableObject {
     Self.onLogout { AppModel.shared.tour = nil }
     // The next account must not see this one's stations.
     Self.onLogout { AppModel.shared.radios.reset() }
+    PlayQueueSync.shared.attach(player)
   }
 
   /// Runs `action` on the main actor after every logout.

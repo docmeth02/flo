@@ -167,6 +167,8 @@ struct WatchContentView: View {
       }
     }
     .onChange(of: authViewModel.isLoggedIn) { phone.publishState() }
+    // The queue sync follows the player this view owns.
+    .onAppear { PlayQueueSync.shared.attach(playerViewModel) }
     // The next account must not see this one's stations.
     .onReceive(NotificationCenter.default.publisher(for: .didLogout)) { _ in radios.reset() }
     .onAppear(perform: takePlayRequest)

@@ -240,6 +240,7 @@ class AuthViewModel: ObservableObject {
         self.username = ""
         self.password = ""
         self.serverUrl = ""
+        NotificationCenter.default.post(name: .didLogin, object: nil)
       } catch {
         self.isSubmitting = false
         self.loginError = error

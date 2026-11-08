@@ -18,6 +18,7 @@ enum AppPlatform {
   #if os(watchOS)
     static let name = "watchOS"
     static let didBecomeActive = WKApplication.didBecomeActiveNotification
+    static let willResignActive = WKApplication.willResignActiveNotification
     /// Cover tiles are 36 to 100 points at 2x, so 200 px is the largest the
     /// watch shows.
     static let coverArtSize = 200
@@ -59,6 +60,7 @@ enum AppPlatform {
   #else
     static let name = "iOS"
     static let didBecomeActive = UIApplication.didBecomeActiveNotification
+    static let willResignActive = UIApplication.willResignActiveNotification
     /// Now Playing's cover is 322 points wide at 3x.
     static let coverArtSize = 1000
     /// Home shows the first few, Recently Played's See all the rest.
