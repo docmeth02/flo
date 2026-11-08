@@ -307,6 +307,8 @@ private struct ContinueCard: View {
     .onTapGesture { app.adopt(offer) }
     .accessibilityElement(children: .combine)
     .accessibilityAction(named: "Continue") { app.adopt(offer) }
+    // The combined element hides the × button.
+    .accessibilityAction(named: "Dismiss") { PlayQueueSync.shared.dismiss(offer) }
     .coverShades($shades, albumId: song.albumId)
   }
 }
