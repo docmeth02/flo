@@ -11,8 +11,9 @@ struct ServerView: View {
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @Environment(\.palette) private var palette
 
-  @State private var username = ""
-  @State private var version: String?
+  let username: String
+  /// Asked again only when Settings had no answer yet.
+  @State var version: String?
   @State private var confirmsLogout = false
 
   var body: some View {
@@ -45,8 +46,7 @@ struct ServerView: View {
       .padding(.bottom, 24)
     }
     .navigationBarTitleDisplayMode(.inline)
-    .onAppear { username = ServerAccount.username }
-    .task { version = await ServerAccount.version() }
+    .task { if version == nil { version = await ServerAccount.version() } }
     .alert("Sign Out?", isPresented: $confirmsLogout) {
       Button("Cancel", role: .cancel) {}
       Button("Sign Out", role: .destructive) { auth.logout() }

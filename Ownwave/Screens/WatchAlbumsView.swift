@@ -42,6 +42,7 @@ struct WatchAlbumsView: View {
       .padding(.bottom, 24)
     }
     .navigationBarTitleDisplayMode(.inline)
+    .followsSendProgress()
   }
 }
 

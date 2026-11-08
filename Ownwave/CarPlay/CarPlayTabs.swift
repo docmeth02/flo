@@ -164,14 +164,10 @@ extension CarPlayController {
 
   /// Opens the Liked tab. Offline it counts the liked songs on the phone.
   private func likedSongsRow(offline: Bool) -> CPListItem {
-    let songs = app.likedSongs
-    let detail: String
-    if offline {
-      let local = DownloadStore.localMediaFileIds()
-      detail = "\(songs.filter { local.contains($0.playbackID) }.count) downloaded"
-    } else {
-      detail = counted(songs.count, "song")
-    }
+    let detail =
+      offline
+      ? "\(playableLikedSongs(offline: true).count) downloaded"
+      : counted(app.likedSongs.count, "song")
     let item = CPListItem(
       text: "Liked Songs", detailText: detail,
       image: images.tile("heart.fill", .liked, size: CarPlayImages.rowSize))
@@ -383,10 +379,7 @@ extension CarPlayController {
     var room = CPListTemplate.maximumItemCount
     var sections: [CPListSection] = []
     if !songs.isEmpty {
-      // Offline only the songs on the phone play.
-      let local =
-        ConnectivityMonitor.shared.canReachServer ? nil : DownloadStore.localMediaFileIds()
-      let playable = local.map { local in songs.filter { local.contains($0.playbackID) } } ?? songs
+      let playable = playableLikedSongs(offline: !ConnectivityMonitor.shared.canReachServer)
       let shuffle = CPListItem(
         text: "Shuffle Liked Songs", detailText: counted(playable.count, "song"),
         image: images.tile("shuffle", size: size))
@@ -417,6 +410,14 @@ extension CarPlayController {
           items: likedArtists.map(artistRow), header: "Artists", sectionIndexTitle: nil))
     }
     return sections
+  }
+
+  /// The liked songs that play: offline only the ones on the phone.
+  private func playableLikedSongs(offline: Bool) -> [Song] {
+    let songs = app.likedSongs
+    guard offline else { return songs }
+    let local = DownloadStore.localMediaFileIds()
+    return songs.filter { local.contains($0.playbackID) }
   }
 
   // MARK: - Downloads

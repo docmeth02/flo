@@ -7,7 +7,7 @@ import SwiftUI
 
 /// What sits at the left of a row.
 enum RowArt {
-  case cover(albumId: String, url: String = "")
+  case cover(albumId: String)
   case glyph(GlyphTile)
 }
 
@@ -28,8 +28,8 @@ struct ItemRow<Trailing: View>: View {
   var body: some View {
     HStack(spacing: 12) {
       switch art {
-      case .cover(let albumId, let url):
-        CoverArt(albumId: albumId, url: url, radius: 7).frame(width: artSize, height: artSize)
+      case .cover(let albumId):
+        CoverArt(albumId: albumId, radius: 7).frame(width: artSize, height: artSize)
       case .glyph(let tile):
         tile.frame(width: artSize, height: artSize)
       }
@@ -60,28 +60,23 @@ extension ItemRow where Trailing == EmptyView {
 }
 
 /// A song with its cover, and the artist under it unless `subtitle` says
-/// otherwise. A row on a card of its own takes the card along, so the card
-/// is tappable and shows in the menu's preview.
+/// otherwise.
 struct SongRow<Trailing: View>: View {
   let song: Song
   let menu: MenuTarget
   var subtitle: String?
   var artSize: CGFloat = 44
-  var onCard = false
   let play: () -> Void
   @ViewBuilder var trailing: Trailing
 
   @EnvironmentObject private var player: PlayerViewModel
 
   var body: some View {
-    let row = ItemRow(
+    ItemRow(
       art: .cover(albumId: song.albumId), title: song.title, subtitle: subtitle ?? song.artist,
       isPlaying: player.isCurrent(song), artSize: artSize
     ) {
       trailing
-    }
-    Group {
-      if onCard { row.card() } else { row }
     }
     .songActions(menu, play: play)
   }
@@ -154,9 +149,8 @@ struct StatusDot: View {
 }
 
 extension View {
-  /// Content on its own platter: one row of a library list by default, or a
-  /// Settings card with more room.
-  func card(horizontal: CGFloat = 12, vertical: CGFloat = 2) -> some View {
+  /// Content on a platter of its own, with the room around it.
+  func card(horizontal: CGFloat, vertical: CGFloat) -> some View {
     modifier(Card(horizontal: horizontal, vertical: vertical))
   }
 }
@@ -180,19 +174,17 @@ private struct Card: ViewModifier {
 struct ProgressLine: View {
   @ObservedObject var clock: PlayerClock
   let tint: Color
-  var track: Color?
-  var height: CGFloat = 3
 
   @Environment(\.palette) private var palette
 
   var body: some View {
     GeometryReader { proxy in
-      Capsule().fill(track ?? palette.hairline)
+      Capsule().fill(palette.hairline)
         .overlay(alignment: .leading) {
           Capsule().fill(tint).frame(width: proxy.size.width * clock.clampedProgress)
         }
     }
-    .frame(height: height)
+    .frame(height: 3)
   }
 }
 

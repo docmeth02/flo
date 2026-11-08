@@ -121,14 +121,14 @@ enum UserDefaultsManager {
     set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.showMixReasons) }
   }
 
-  /// The watch's bitrates and Keep Playing follow the iPhone's.
+  /// The watch's playback and download settings follow the iPhone's (Link.PhoneState).
   static var settingsFollowPhone: Bool {
     get { UserDefaults.standard.bool(forKey: UserDefaultsKeys.settingsFollowPhone) }
     set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.settingsFollowPhone) }
   }
 
-  /// The iPhone shares its bitrates and Keep Playing with the watch. On by
-  /// default.
+  /// The iPhone shares its playback and download settings with the watch
+  /// (Link.PhoneState). On by default.
   static var shareWatchSettings: Bool {
     get {
       UserDefaults.standard.object(forKey: UserDefaultsKeys.shareWatchSettings) as? Bool ?? true

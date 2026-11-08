@@ -197,13 +197,13 @@ struct WatchView: View {
     }
   }
 
-  /// Recently played albums, then the ones downloaded here, that the watch
-  /// neither holds nor is being sent.
+  /// Recently played albums, then the ones downloaded here (not playlists),
+  /// that the watch neither holds nor is being sent.
   private var suggestions: [Album] {
     var skipped = Set((link.watch?.collections ?? []).map(\.id) + link.sends.map(\.id))
     return Array(
       (albumViewModel.recentAlbums + albumViewModel.downloadedAlbums)
-        .filter { skipped.insert($0.id).inserted }
+        .filter { !$0.isPlaylist && skipped.insert($0.id).inserted }
         .prefix(4))
   }
 }
