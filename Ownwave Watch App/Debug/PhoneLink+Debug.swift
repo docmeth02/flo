@@ -11,7 +11,9 @@
   // FLO_DEBUG_PHONE=settings:on|settings:off applies shared settings (160 kbps
   // streaming, 256 kbps downloads, Keep Playing on); signin:url|user|password
   // asks for a sign-in; file:<albumId> delivers the album's first two songs
-  // at 192 kbps as the phone would.
+  // at 192 kbps as the phone would; handoff:<albumId>[:ready] hands the
+  // album over as the phone would (ready pauses at once, so the start ends
+  // silent).
   extension PhoneLink {
     func runDebugLaunchActions() {
       guard let action = ProcessInfo.processInfo.environment["FLO_DEBUG_PHONE"] else { return }
@@ -35,6 +37,14 @@
             Link.SignIn(server: parts[0], user: parts[1], password: parts[2], accountKey: ""))
         } else if action.hasPrefix("file:") {
           await deliverDebugFiles(albumId: String(action.dropFirst(5)))
+        } else if action.hasPrefix("handoff:") {
+          let parts = action.split(separator: ":").map(String.init)
+          guard parts.count > 1, let player = handoffHandler?.player,
+            let handoff = await Link.Handoff.debug(albumId: parts[1])
+          else { return debugLog("handoff debug: no album or no player") }
+          handoff.runDebug(ready: parts.last == "ready", player: player) {
+            self.takeHandoff($0, reply: $1)
+          }
         }
       }
     }
