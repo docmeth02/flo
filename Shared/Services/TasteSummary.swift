@@ -101,8 +101,8 @@ struct TasteSummary: Sendable {
         $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
       }
     }
-    summary.boosted = rated(5)
-    summary.avoided = rated(1)
+    summary.boosted = rated(RatingStore.boost)
+    summary.avoided = rated(RatingStore.avoid)
 
     summary.skips = skipped.map {
       Skip(

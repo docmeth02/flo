@@ -33,7 +33,7 @@ struct ItemMenuItems: View {
       button(liked ? "Unlike" : "Like", liked ? "heart.slash" : "heart", .like)
     }
     Section {
-      if case .song(let song, _, _) = target, !song.albumId.isEmpty, song.albumId != shownItemId {
+      if case .song(let song, _, _) = target, target.offersAlbum(except: shownItemId) {
         Button("Go to Album", systemImage: Glyph.album) {
           Task {
             let album = await app.albums.album(
@@ -42,25 +42,21 @@ struct ItemMenuItems: View {
           }
         }
       }
-      if showsGoToArtist {
+      if target.offersArtist(except: shownItemId) {
         Button("Go to Artist", systemImage: Glyph.artist) {
           Task {
             guard let artist = await target.artistToOpen() else {
-              return app.show("Artist not in your library")
+              return app.show(MenuActions.artistNotFound)
             }
             openRoute(.artist(artist))
           }
         }
       }
       if target.canRate {
-        let boosted = actions.ownRating(target) == 5
-        let avoided = actions.ownRating(target) == 1
         button(
-          actions.ratingTitle(.boost, on: target),
-          boosted ? "hand.thumbsup.fill" : "hand.thumbsup", .boost)
+          actions.ratingTitle(.boost, on: target), actions.ratingSymbol(.boost, on: target), .boost)
         button(
-          actions.ratingTitle(.avoid, on: target),
-          avoided ? "hand.thumbsdown.fill" : "hand.thumbsdown", .avoid)
+          actions.ratingTitle(.avoid, on: target), actions.ratingSymbol(.avoid, on: target), .avoid)
       }
     }
     if case .playlist(let playlist) = target {
@@ -72,11 +68,6 @@ struct ItemMenuItems: View {
         Button("Send to Watch", systemImage: "applewatch") { watch.send(album) }
       }
     }
-  }
-
-  /// Songs and albums, unless the menu is on their artist's screen.
-  private var showsGoToArtist: Bool {
-    target.offersArtist && (target.carriedArtistId == nil || target.carriedArtistId != shownItemId)
   }
 
   private func button(_ title: String, _ systemImage: String, _ action: MenuActions.Action)

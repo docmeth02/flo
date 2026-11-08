@@ -104,4 +104,16 @@ extension MenuTarget {
   static func searched(_ song: Song) -> MenuTarget {
     .song(song, context: SongCollection.Name.search, isFromPlaylist: false)
   }
+
+  /// The top result's line under its title: what it is, then its album
+  /// count or artist.
+  var searchSubtitle: String {
+    switch self {
+    case .artist(let artist):
+      artist.albumCount > 0 ? "Artist · \(counted(artist.albumCount, "album"))" : "Artist"
+    case .album(let album): "Album · \(album.albumArtist)"
+    case .song(let song, _, _): "Song · \(song.artist)"
+    case .playlist, .radio: subtitle
+    }
+  }
 }

@@ -69,7 +69,7 @@ struct LibraryRow: View {
   let open: () -> Void
 
   private var isPinned: Bool {
-    target.pin.map { pinStore.isPinned($0.id, $0.kind) } ?? false
+    pinStore.isPinned(target)
   }
 
   var body: some View {

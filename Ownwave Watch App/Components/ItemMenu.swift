@@ -105,15 +105,9 @@ struct ItemMenu: View {
       actions.isLiked(target)
         ? ("Unlike", "heart.fill", .liked) : ("Like", "heart", .liked)
     case .action(.boost):
-      (
-        actions.ratingTitle(.boost, on: target),
-        actions.ownRating(target) == 5 ? "hand.thumbsup.fill" : "hand.thumbsup", Dusk.fill
-      )
+      (actions.ratingTitle(.boost, on: target), actions.ratingSymbol(.boost, on: target), Dusk.fill)
     case .action(.avoid):
-      (
-        actions.ratingTitle(.avoid, on: target),
-        actions.ownRating(target) == 1 ? "hand.thumbsdown.fill" : "hand.thumbsdown", Dusk.fill
-      )
+      (actions.ratingTitle(.avoid, on: target), actions.ratingSymbol(.avoid, on: target), Dusk.fill)
     case .download:
       ("Download", "arrow.down.circle", Dusk.fill)
     case .goToAlbum:
@@ -269,23 +263,15 @@ private struct ItemMenuPresenter: ViewModifier {
   /// leads to what this screen shows.
   private func goTo(_ target: MenuTarget) -> [ItemMenu.Choice] {
     var choices: [ItemMenu.Choice] = []
-    if case .song(let song, _, _) = target, openedAlbum != nil, !song.albumId.isEmpty,
-      song.albumId != showing
-    {
-      choices.append(.goToAlbum)
-    }
-    if openedArtist != nil, target.offersArtist,
-      target.carriedArtistId == nil || target.carriedArtistId != showing
-    {
-      choices.append(.goToArtist)
-    }
+    if openedAlbum != nil, target.offersAlbum(except: showing) { choices.append(.goToAlbum) }
+    if openedArtist != nil, target.offersArtist(except: showing) { choices.append(.goToArtist) }
     return choices
   }
 
   private func go(_ choice: ItemMenu.Choice, from target: MenuTarget) async -> String? {
     switch (choice, target) {
     case (.goToArtist, _):
-      guard let artist = await target.artistToOpen() else { return "Artist not in your library" }
+      guard let artist = await target.artistToOpen() else { return MenuActions.artistNotFound }
       debugLog("menu opens artist \(artist.id) \(artist.name)")
       openedArtist?.wrappedValue = artist
     case (.goToAlbum, .song(let song, _, _)):

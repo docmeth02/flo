@@ -117,7 +117,7 @@ struct SearchView: View {
       found = results.map {
         Found(
           query: query, results: $0,
-          top: LibrarySearch.topResult(query, in: $0, isPinned: isPinned))
+          top: LibrarySearch.topResult(query, in: $0, isPinned: pins.isPinned))
       }
     }
   }
@@ -203,7 +203,7 @@ struct SearchView: View {
           HStack(alignment: .top, spacing: 12) {
             ForEach(albumTargets) { target in
               if case .album(let album) = target {
-                AlbumTile(album: album, width: 120, mark: isPinned(target) ? .pinned : nil)
+                AlbumTile(album: album, width: 120, mark: pins.isPinned(target) ? .pinned : nil)
                   .simultaneousGesture(TapGesture().onEnded { remember(query) })
               }
             }
@@ -218,12 +218,8 @@ struct SearchView: View {
     rows("Songs", songs)
   }
 
-  private func isPinned(_ target: MenuTarget) -> Bool {
-    target.pin.map { pins.isPinned($0.id, $0.kind) } ?? false
-  }
-
   private func pinnedFirst(_ targets: [MenuTarget]) -> [MenuTarget] {
-    LibrarySearch.pinnedFirst(targets, isPinned: isPinned)
+    LibrarySearch.pinnedFirst(targets, isPinned: pins.isPinned)
   }
 
   private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
@@ -278,7 +274,7 @@ struct SearchView: View {
 
   @ViewBuilder
   private func pinMark(_ target: MenuTarget) -> some View {
-    if isPinned(target) {
+    if pins.isPinned(target) {
       Image(systemName: "pin.fill")
         .font(.system(size: 15, weight: .semibold))
         .foregroundStyle(palette.accent)
@@ -326,7 +322,7 @@ struct SearchView: View {
             Text(target.title)
               .font(.brand(22, relativeTo: .title2))
               .foregroundStyle(palette.text)
-            Text(topSubtitle(target))
+            Text(target.searchSubtitle)
               .font(.rowSubtitle)
               .foregroundStyle(palette.secondary)
           }
@@ -354,7 +350,7 @@ struct SearchView: View {
     }
     .frame(width: 64, height: 64)
     .overlay(alignment: .topTrailing) {
-      if isPinned(target) {
+      if pins.isPinned(target) {
         Image(systemName: "pin.fill")
           .font(.system(size: 11, weight: .semibold))
           .foregroundStyle(palette.accent)
@@ -363,16 +359,6 @@ struct SearchView: View {
           .offset(x: 4, y: -4)
           .accessibilityLabel("Pinned")
       }
-    }
-  }
-
-  private func topSubtitle(_ target: MenuTarget) -> String {
-    switch target {
-    case .artist(let artist):
-      artist.albumCount > 0 ? "Artist · \(counted(artist.albumCount, "album"))" : "Artist"
-    case .album(let album): "Album · \(album.albumArtist)"
-    case .song(let song, _, _): "Song · \(song.artist)"
-    case .playlist, .radio: target.subtitle
     }
   }
 
