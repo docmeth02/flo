@@ -76,7 +76,13 @@ struct GlassCircle: View {
   static func label(_ systemImage: String) -> some View {
     Image(systemName: systemImage)
       .font(.system(size: 17, weight: .semibold))
-      .frame(width: 40, height: 40)
-      .glassEffect(.regular.interactive(), in: Circle())
+      .glassCircle()
+  }
+}
+
+extension View {
+  /// The 40 pt round glass of `GlassCircle` and the AirPlay button.
+  func glassCircle() -> some View {
+    frame(width: 40, height: 40).glassEffect(.regular.interactive(), in: Circle())
   }
 }
