@@ -160,10 +160,13 @@ final class TasteTests: XCTestCase {
       why: MixReason.make(.init(explore: true)), reason: "r", scores: "")
     let record = MixRecord(
       at: now, mode: "playSomething", picks: [pick], eligible: 1, exploreShare: 1, notes: ["n"])
-    let data = try JSONEncoder().encode(RecommendationLog.Saved(account: "srv|u1", mixes: [record]))
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: url) }
+    let file = JSONFile<RecommendationLog.Saved?>(fileURL: url, label: "test", empty: nil)
+    file.save(RecommendationLog.Saved(account: "srv|u1", mixes: [record]))
     XCTAssertEqual(
-      RecommendationLog.restore(data, account: "srv|u1").first?.picks.first?.why, pick.why)
-    XCTAssertTrue(RecommendationLog.restore(data, account: "srv|u2").isEmpty)
-    XCTAssertTrue(RecommendationLog.restore(Data("{}".utf8), account: "srv|u1").isEmpty)
+      RecommendationLog.restore(file.load(), account: "srv|u1").first?.picks.first?.why, pick.why)
+    XCTAssertTrue(RecommendationLog.restore(file.load(), account: "srv|u2").isEmpty)
+    XCTAssertTrue(RecommendationLog.restore(nil, account: "srv|u1").isEmpty)
   }
 }
