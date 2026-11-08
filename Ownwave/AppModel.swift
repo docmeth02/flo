@@ -80,35 +80,28 @@ final class AppModel: ObservableObject {
 
   /// Downloads the songs of an album the phone does not have yet.
   func download(_ album: Album) {
-    download(album) { DownloadSession.shared.enqueue($0) }
+    Task { announce(await CollectionDownload.start(album)) }
   }
 
-  /// Downloads a playlist with its mosaic cover, as an album.
+  /// Downloads a playlist with its mosaic cover.
   func download(_ playlist: Playlist) {
-    download(Album(from: playlist)) { album in
-      var playlist = playlist
-      playlist.songs = album.songs
-      DownloadSession.shared.enqueue(playlist)
-    }
+    Task { announce(await CollectionDownload.start(playlist)) }
   }
 
-  private func download(_ album: Album, enqueue: @escaping (Album) -> Void) {
-    Task {
-      switch await CollectionDownload.prepare(album) {
-      case .ready(let album):
-        enqueue(album)
-        let bitRate = UserDefaultsManager.downloadBitRate
-        if AppPlatform.isOnCellular, !UserDefaultsManager.downloadOverCellular {
-          show("Downloads when on Wi-Fi")
-        } else {
-          show(
-            bitRate == TranscodingSettings.sourceBitRate
-              ? "Downloading in original quality" : "Downloading at \(bitRate) kbps")
-        }
-      case .unavailable: show("Not available offline")
-      case .downloaded: show("Already on this iPhone")
-      case .accountChanged: break
+  private func announce(_ outcome: CollectionDownload.Outcome) {
+    switch outcome {
+    case .ready:
+      let bitRate = UserDefaultsManager.downloadBitRate
+      if AppPlatform.isOnCellular, !UserDefaultsManager.downloadOverCellular {
+        show("Downloads when on Wi-Fi")
+      } else {
+        show(
+          bitRate == TranscodingSettings.sourceBitRate
+            ? "Downloading in original quality" : "Downloading at \(bitRate) kbps")
       }
+    case .unavailable: show("Not available offline")
+    case .downloaded: show("Already on this iPhone")
+    case .accountChanged, .underway: break
     }
   }
 

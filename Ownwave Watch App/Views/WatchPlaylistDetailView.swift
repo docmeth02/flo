@@ -7,7 +7,6 @@ import SwiftUI
 
 struct WatchPlaylistDetailView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
-  @EnvironmentObject var downloads: DownloadSession
 
   let playlist: Playlist
 
@@ -39,7 +38,7 @@ struct WatchPlaylistDetailView: View {
       songs: loader.songs,
       trackNumber: { index, _ in index + 1 },
       playable: { Album(from: loadedPlaylist) },
-      onDownload: { downloads.enqueue(loadedPlaylist) },
+      onDownload: { await CollectionDownload.startFromWatch(.playlist(loadedPlaylist)) },
       onRemove: {
         albumViewModel.removeDownload(id: playlist.id, removed: loader.reload)
       }

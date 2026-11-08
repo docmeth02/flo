@@ -345,8 +345,8 @@ private struct DownloadRow: View {
   @EnvironmentObject private var downloads: DownloadSession
   @Environment(\.palette) private var palette
 
-  private var downloading: Bool { downloads.isDownloading(collectionId: album.id) }
-  private var failed: Bool { !downloading && downloads.hasFailed(collectionId: album.id) }
+  private var status: DownloadSession.Status { downloads.status(collectionId: album.id) }
+  private var failed: Bool { status == .failed }
 
   var body: some View {
     Group {
@@ -366,24 +366,25 @@ private struct DownloadRow: View {
   }
 
   private var row: some View {
-    let percent = downloads.progress(collectionId: album.id) * 100
+    let status = self.status
     return HStack(spacing: 12) {
       CoverArt(albumId: album.id, radius: 7).frame(width: 46, height: 46)
       VStack(alignment: .leading, spacing: 2) {
         Text(album.name).font(.rowTitle).foregroundStyle(palette.text)
         Group {
-          if failed {
+          switch status {
+          case .failed:
             Text("Failed · tap to retry").foregroundStyle(Color.destructive)
-          } else if downloading {
-            Text("Downloading · \(Int(percent))%")
-          } else {
+          case .downloading(let percent):
+            Text("Downloading · \(percent)%")
+          case .idle:
             Text(counted(songCount, "song"))
           }
         }
         .font(.rowSubtitle)
         .foregroundStyle(palette.secondary)
-        if downloading {
-          ProgressView(value: percent, total: 100)
+        if case .downloading(let percent) = status {
+          ProgressView(value: Double(percent), total: 100)
             .tint(palette.accent)
             .padding(.top, 5)
         }
@@ -391,10 +392,13 @@ private struct DownloadRow: View {
       .lineLimit(1)
       Spacer(minLength: 0)
       Group {
-        if failed {
+        switch status {
+        case .failed:
           Image(systemName: "exclamationmark.circle.fill").foregroundStyle(Color.destructive)
-        } else if !downloading {
+        case .idle:
           Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.downloaded)
+        case .downloading:
+          EmptyView()
         }
       }
       .font(.system(size: 20))

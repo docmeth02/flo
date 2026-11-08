@@ -131,6 +131,22 @@ final class DownloadSession: NSObject, ObservableObject {
       pending: Set(jobs.filter { $0.collectionId == collectionId }.map(\.id)))
   }
 
+  /// A collection's download as the screens show it.
+  enum Status: Equatable {
+    case idle
+    case downloading(percent: Int)
+    /// Some songs failed after their retries and none still downloads.
+    case failed
+  }
+
+  /// Downloading while any song still goes, else failed while one failed.
+  func status(collectionId: String) -> Status {
+    if isDownloading(collectionId: collectionId) {
+      return .downloading(percent: Int(progress(collectionId: collectionId) * 100))
+    }
+    return hasFailed(collectionId: collectionId) ? .failed : .idle
+  }
+
   /// Downloads an album, or the missing songs of a downloaded playlist opened
   /// as one. The record comes first: without it the songs never show up in
   /// Downloads, and the cover may fail. A playlist removed since it was

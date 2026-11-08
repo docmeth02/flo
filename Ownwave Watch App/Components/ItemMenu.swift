@@ -245,7 +245,7 @@ private struct ItemMenuPresenter: ViewModifier {
     let perform: () async -> String?
     switch choice {
     case .action(let action): perform = { await actions.perform(action, on: target) }
-    case .download: perform = { await download(target) }
+    case .download: perform = { await CollectionDownload.startFromWatch(target) }
     case .goToAlbum, .goToArtist:
       // The sheet's dismissal pushes it.
       pendingGo = (choice, target)
@@ -315,26 +315,25 @@ private struct ItemMenuPresenter: ViewModifier {
     return !downloads.isDownloading(collectionId: id)
       && !PhoneLink.shared.isReceiving(collectionId: id)
   }
+}
 
-  /// As the screen's Download, with the songs asked first: a list row
-  /// carries none.
-  private func download(_ target: MenuTarget) async -> String? {
-    guard let collection = collection(target) else { return nil }
-    switch await CollectionDownload.prepare(collection) {
-    case .ready where PhoneLink.shared.isReceiving(collectionId: collection.id):
-      // The iPhone started sending it while the songs were asked.
-      return nil
-    case .ready(let album):
-      if case .playlist(var playlist) = target {
-        playlist.songs = album.songs
-        downloads.enqueue(playlist)
-      } else {
-        downloads.enqueue(album)
-      }
-      return "Downloading"
+extension CollectionDownload {
+  /// The watch's Download of an album or playlist, from its hold menu and
+  /// its screen, and what to say about it; nil for nothing. One the iPhone
+  /// started sending while the songs were asked is left to it.
+  @MainActor static func startFromWatch(_ target: MenuTarget) async -> String? {
+    let isReceiving = PhoneLink.shared.isReceiving(collectionId:)
+    let outcome: Outcome
+    switch target {
+    case .album(let album): outcome = await start(album, underway: isReceiving)
+    case .playlist(let playlist): outcome = await start(playlist, underway: isReceiving)
+    case .song, .artist, .radio: return nil
+    }
+    switch outcome {
+    case .ready: return "Downloading"
     case .unavailable: return "Not available offline"
     case .downloaded: return "Already on this watch"
-    case .accountChanged: return nil
+    case .accountChanged, .underway: return nil
     }
   }
 }
