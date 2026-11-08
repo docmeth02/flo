@@ -290,4 +290,20 @@ enum DownloadStore {
 
     completion(.success(()))
   }
+
+  /// Removes every download with its records, also when the media folder is
+  /// already missing.
+  static func removeAllDownloads() {
+    // A song still downloading would come back.
+    DownloadSession.shared.cancelAll()
+    LocalFileManager.shared.deleteDownloadedAlbums { result in
+      switch result {
+      case .success:
+        CoreDataManager.shared.clearDownloads()
+        DownloadSession.shared.downloadsRemoved.send()
+      case .failure(let error):
+        debugLog("removing all downloads failed: \(error)")
+      }
+    }
+  }
 }

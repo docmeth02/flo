@@ -68,7 +68,6 @@ struct RootView: View {
     .environmentObject(app.player)
     .environmentObject(app.albums)
     .environmentObject(DownloadSession.shared)
-    .environmentObject(DownloadStorage.shared)
     .environmentObject(PinStore.shared)
   }
 }

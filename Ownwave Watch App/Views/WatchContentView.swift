@@ -173,7 +173,6 @@ struct WatchContentView: View {
     .environmentObject(authViewModel)
     .environmentObject(playerViewModel)
     .environmentObject(albumViewModel)
-    .environmentObject(DownloadStorage.shared)
     .environmentObject(radios)
     .environmentObject(DownloadSession.shared)
     .environmentObject(PinStore.shared)

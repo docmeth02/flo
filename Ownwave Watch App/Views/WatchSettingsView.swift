@@ -7,7 +7,6 @@ import SwiftUI
 
 struct WatchSettingsView: View {
   @EnvironmentObject var authViewModel: AuthViewModel
-  @EnvironmentObject var downloadStorage: DownloadStorage
   @EnvironmentObject var downloads: DownloadSession
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
@@ -138,7 +137,7 @@ struct WatchSettingsView: View {
     .environment(\.defaultMinListRowHeight, 1)
     .brandNavigationTitle("Settings")
     .measuresStorage($storage, trigger: storageChanges)
-    // Deleting the downloads finishes later.
+    // Sent by Clear Downloads and by a download removed elsewhere.
     .onReceive(downloads.downloadsRemoved) { storageChanges += 1 }
     .alert("Log Out?", isPresented: $showLogoutAlert) {
       Button("Cancel", role: .cancel) {}
@@ -168,7 +167,7 @@ struct WatchSettingsView: View {
     .alert("Clear Downloads?", isPresented: $showClearAlert) {
       Button("Cancel", role: .cancel) {}
       Button("Clear", role: .destructive) {
-        downloadStorage.deleteAllDownloads()
+        DownloadStore.removeAllDownloads()
       }
     } message: {
       Text("All downloaded music will be removed.")
