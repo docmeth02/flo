@@ -8,6 +8,7 @@ import SwiftUI
 struct SettingsView: View {
   @EnvironmentObject private var app: AppModel
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
+  @ObservedObject private var queueSync = PlayQueueSync.shared
   @Environment(\.palette) private var palette
 
   @AppStorage(Appearance.storageKey) private var appearance = Appearance.system
@@ -62,9 +63,13 @@ struct SettingsView: View {
           SettingsRow("Why this song", systemImage: "questionmark.circle") {
             Toggle("Why this song", isOn: $showMixReasons)
           }
+          SettingsRow("Sync queue", systemImage: "arrow.triangle.2.circlepath") {
+            Toggle("Sync queue", isOn: $queueSync.isEnabled)
+          }
         }
         Text(
-          "Smart Shuffle continues when the queue ends. Show the reason in Now Playing and Up Next."
+          "Smart Shuffle continues when the queue ends. Show the reason in Now Playing and Up Next. "
+            + "Save your queue on the server so your other device can continue it."
         )
         .font(.meta)
         .foregroundStyle(palette.secondary)
@@ -120,10 +125,11 @@ struct SettingsView: View {
       .padding(.bottom, 24)
     }
     .navigationBarTitleDisplayMode(.inline)
-    // Keep Playing, Why this song and the cellular and download bitrates are
-    // what the watch follows.
+    // Keep Playing, Why this song, Sync queue and the cellular and download
+    // bitrates are what the watch follows.
     .onChange(of: keepPlaying) { WatchLink.shared.updateWatch() }
     .onChange(of: showMixReasons) { WatchLink.shared.updateWatch() }
+    .onChange(of: queueSync.isEnabled) { WatchLink.shared.updateWatch() }
     .onChange(of: cellularBitRate) { WatchLink.shared.updateWatch() }
     .onChange(of: downloadBitRate) { WatchLink.shared.updateWatch() }
     .onChange(of: downloadOverCellular) {
@@ -396,6 +402,7 @@ private struct StorageBar: View {
 struct DiagnosticsView: View {
   @ObservedObject private var log = RequestLog.shared
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
+  @ObservedObject private var queueSync = PlayQueueSync.shared
   @ObservedObject private var history = HistoryStatus.shared
   @Environment(\.palette) private var palette
 
