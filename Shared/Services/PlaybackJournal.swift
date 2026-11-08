@@ -29,8 +29,8 @@ struct JournalSnapshot: Sendable {
   }
 }
 
-/// The watch's own record of what it played, one HistoryEntity row per heard
-/// or skipped song and account. The server's play log knows nothing of skips
+/// This device's own record of what it played, one HistoryEntity row per
+/// heard or skipped song and account. The server's play log knows nothing of skips
 /// and hears of offline plays late; the journal covers both for cooldowns
 /// and skip penalties. Writes happen on the main thread.
 final class PlaybackJournal {

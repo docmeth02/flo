@@ -14,7 +14,7 @@ class AlbumViewModel: ObservableObject {
   @Published var downloadedAlbums: [Album] = []
   @Published private(set) var recentAlbums: [Album] = []
 
-  /// A library list loaded from the server and cached on the watch.
+  /// A library list loaded from the server and cached on this device.
   enum Library: String {
     case albums, artists, playlists, starredSongs
 

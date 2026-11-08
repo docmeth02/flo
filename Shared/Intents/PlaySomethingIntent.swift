@@ -90,9 +90,9 @@ extension Notification.Name {
 
 /// What an intent asked the app to play. An app that registered a `handler`
 /// (the iPhone) plays it while the intent waits. Otherwise the watch's root
-/// view takes it; a
-/// launch by the intent can run perform() before the view subscribed to the
-/// notification, so the view also takes a pending request when it appears.
+/// view takes it; a launch by the intent can run perform() before the view
+/// subscribed to the notification, so the view also takes a pending request
+/// when it appears.
 enum PlayRequest {
   case something
   case artist(id: String, name: String)

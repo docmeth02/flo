@@ -5,7 +5,7 @@
 
 import Foundation
 
-/// Edits made on the watch that the server has not confirmed yet, kept
+/// Edits made on this device that the server has not confirmed yet, kept
 /// across launches and sent while the server is reachable. Shared by the
 /// ratings and the stars. `Value` must be a property list type, since the
 /// edits are stored in UserDefaults.
