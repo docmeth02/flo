@@ -148,10 +148,12 @@ struct RemoteQueue: Equatable {
   private var events: AnyCancellable?
   private var rules = QueueSaveRules()
   private var debounceTask: Task<Void, Never>?
+  // Runs until its last save landed, so saves reach the server in order.
   private var writer: Task<Void, Never>?
   // A save is due; the writer takes the queue as it is when it gets to it.
   private var saveWanted = false
-  // Bumped when the pending saves are cancelled; a writer of before stops.
+  // Bumped when the pending saves are cancelled; a failure of a save sent
+  // before does not count.
   private var generation = 0
   // Bumped by every fetch and by a reset; only the newest answer counts.
   private var fetchGeneration = 0
@@ -249,16 +251,19 @@ struct RemoteQueue: Equatable {
   }
 
   /// Starts the writer unless it runs; it saves once more for a save due
-  /// while one is out. The writer starts on a later turn of the main actor,
-  /// so an adoption's own pause, which ends with `.synced`, saves nothing.
+  /// while one is out, after that one landed. The writer starts on a later
+  /// turn of the main actor, so an adoption's own pause, which ends with
+  /// `.synced`, saves nothing. Once a save landed, the other device's queue
+  /// may be asked for.
   private func requestSave() {
     debounceTask?.cancel()
     saveWanted = true
     guard writer == nil else { return }
-    let generation = generation
     writer = Task {
-      while saveWanted, generation == self.generation {
+      var landed = false
+      while saveWanted {
         saveWanted = false
+        let generation = generation
         guard AuthService.shared.accountKey != nil,
           let snapshot = player?.snapshot(budgetBytes: Self.saveBudget)
         else {
@@ -271,10 +276,11 @@ struct RemoteQueue: Equatable {
           continue
         }
         let saved = await save(snapshot)
-        guard generation == self.generation else { return }
-        if !saved { rules.saveFailed() }
+        landed = landed || saved
+        if !saved, generation == self.generation { rules.saveFailed() }
       }
-      if generation == self.generation { writer = nil }
+      writer = nil
+      if landed { fetch(force: false) }
     }
   }
 
@@ -309,12 +315,11 @@ struct RemoteQueue: Equatable {
     return true
   }
 
+  /// A save already sent still lands, before any later one.
   private func cancelSaves() {
     generation += 1
     debounceTask?.cancel()
     debounceTask = nil
-    writer?.cancel()
-    writer = nil
     saveWanted = false
   }
 
