@@ -94,7 +94,7 @@ class StreamCacheManager {
   }
 
   func cacheSong(
-    mediaFileId: String, originalSuffix: String? = nil, from queueItem: QueueEntity? = nil
+    mediaFileId: String, originalSuffix: String?, from queueItem: QueueEntity?
   ) {
     guard UserDefaultsManager.streamCacheMaxSize > 0 else { return }
     guard !mediaFileId.isEmpty else { return }
@@ -187,6 +187,7 @@ class StreamCacheManager {
 
         guard (try? LocalFileManager.shared.moveFile(source: tempFile, target: target)) != nil
         else {
+          try? self.fileManager.removeItem(at: tempFile)
           self.removeCacheRecord(key: key)
           return
         }

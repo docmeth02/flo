@@ -14,7 +14,10 @@ struct CoverBackdrop: View {
   /// Nil fills the whole screen.
   var height: CGFloat?
 
-  @State private var image: (albumId: String, image: UIImage?)?
+  // Only a cover that arrived; a failed one is tried again when the server
+  // comes back.
+  @State private var image: (albumId: String, image: UIImage)?
+  @State private var reachable = ConnectivityMonitor.shared.isServerReachable
 
   var body: some View {
     ZStack(alignment: .top) {
@@ -39,10 +42,13 @@ struct CoverBackdrop: View {
       }
     }
     .ignoresSafeArea()
-    .task(id: albumId) {
+    .onReceive(ConnectivityMonitor.shared.$isServerReachable.removeDuplicates()) {
+      reachable = $0
+    }
+    .task(id: "\(albumId)|\(reachable)") {
       guard image?.albumId != albumId else { return }
       let decoded = await CoverTint.decodedImage(albumId: albumId, url: url)
-      guard !Task.isCancelled else { return }
+      guard !Task.isCancelled, let decoded else { return }
       image = (albumId, decoded)
     }
   }

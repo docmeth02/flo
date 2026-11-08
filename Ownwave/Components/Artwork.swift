@@ -105,10 +105,4 @@ struct GlyphTile: View {
   static let artist = GlyphTile(systemImage: Glyph.artist, round: true)
   static let playlist = GlyphTile(systemImage: Glyph.playlist)
   static let radio = GlyphTile(systemImage: Glyph.radio, round: true)
-
-  /// The same glyph on a square tile, for the larger tiles of pins and the
-  /// playlist screen.
-  func squared(radius: CGFloat) -> GlyphTile {
-    GlyphTile(systemImage: systemImage, radius: radius)
-  }
 }

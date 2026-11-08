@@ -13,12 +13,13 @@ struct ArtistView: View {
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @Environment(\.palette) private var palette
 
-  @StateObject private var radio = ArtistDetailViewModel()
   @State private var topSongs: [Song] = []
   @State private var shades: CoverShades?
-  @State private var showsRadioError = false
-  @State private var radioFailed = false
-  /// Ends with the screen, so a late answer never replaces a newer queue.
+  /// Why Artist Radio played nothing, while that shows.
+  @State private var radioMessage: String?
+  @State private var isLoadingRadio = false
+  /// Ends with the screen, so a late answer never replaces a queue edited
+  /// meanwhile.
   @State private var radioTask: Task<Void, Never>?
 
   /// The screen takes its backdrop and tint from the artist's first album.
@@ -64,14 +65,17 @@ struct ArtistView: View {
     }
     .navigationBarTitleDisplayMode(.inline)
     .onAppear { albumViewModel.fetchAlbumsByArtist(id: artist.id) }
+    .onDisappear { radioTask?.cancel() }
     .task(id: artist.id) { await loadTopSongs() }
     .coverShades($shades, albumId: albums.first?.id ?? "")
-    .onDisappear { radioTask?.cancel() }
     .environment(\.shownItemId, artist.id)
-    .alert(artist.name, isPresented: $showsRadioError) {
+    .alert(
+      artist.name,
+      isPresented: Binding(get: { radioMessage != nil }, set: { if !$0 { radioMessage = nil } })
+    ) {
       Button("OK") {}
     } message: {
-      Text(ArtistDetailViewModel.noRadioMessage(failed: radioFailed))
+      Text(radioMessage ?? "")
     }
   }
 
@@ -79,17 +83,12 @@ struct ArtistView: View {
     HStack(spacing: 10) {
       Button {
         radioTask = Task {
-          let songs = await radio.fetchArtistRadio(artist: artist)
-          guard !Task.isCancelled else { return }
-          if let songs, !songs.isEmpty {
-            app.play(SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs))
-          } else {
-            radioFailed = songs == nil
-            showsRadioError = true
-          }
+          isLoadingRadio = true
+          radioMessage = await app.playArtistRadio(artist).message
+          isLoadingRadio = false
         }
       } label: {
-        if radio.isLoadingRadio {
+        if isLoadingRadio {
           ProgressView()
         } else {
           Label("Artist Radio", systemImage: Glyph.radio)
@@ -105,7 +104,7 @@ struct ArtistView: View {
       }
     }
     .buttonStyle(PlatterButtonStyle(height: 50))
-    .disabled(radio.isLoadingRadio || player.isGeneratingMix)
+    .disabled(player.isGeneratingMix)
   }
 
   private var topSongsSection: some View {

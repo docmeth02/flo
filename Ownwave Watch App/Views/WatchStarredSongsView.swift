@@ -8,6 +8,7 @@ import SwiftUI
 struct WatchStarredSongsView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
   @EnvironmentObject var playerViewModel: PlayerViewModel
+  // Redraws the lists when an item is unliked.
   @ObservedObject private var starStore = StarStore.shared
 
   @Environment(\.showPlayer) private var showPlayer
@@ -16,9 +17,7 @@ struct WatchStarredSongsView: View {
   @State private var menu: MenuTarget?
 
   /// Unliked songs leave at once, before the list reloads.
-  private var songs: [Song] {
-    albumViewModel.starredSongs.filter { playerViewModel.isStarred($0) }
-  }
+  private var songs: [Song] { albumViewModel.likedSongs(playerViewModel) }
 
   var body: some View {
     let songs = songs

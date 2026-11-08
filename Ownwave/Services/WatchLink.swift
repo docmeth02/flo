@@ -21,6 +21,8 @@ import WatchConnectivity
     let album: Album
     var songs: Int
     var progress = 0.0
+    /// False while its songs are being fetched, before any job exists.
+    var isPrepared = true
   }
 
   @Published private(set) var isPaired = false
@@ -144,7 +146,7 @@ import WatchConnectivity
     guard isSignedIn else { return app.show("Sign the watch in first") }
     guard !sends.contains(where: { $0.id == album.id }) else { return app.show("Already sending") }
     let kbps = Int(watch.downloadBitRate) ?? 0
-    sends.append(Send(album: album, songs: max(1, album.songs.count)))
+    sends.append(Send(album: album, songs: max(1, album.songs.count), isPrepared: false))
     let account = AuthService.shared.accountKey
     Task {
       let songs = await CollectionDownload.songs(of: album)
@@ -163,10 +165,11 @@ import WatchConnectivity
         sends.removeAll { $0.id == album.id }
         return app.show("Already on the watch")
       }
+      // Stopped meanwhile.
+      guard let index = sends.firstIndex(where: { $0.id == album.id }) else { return }
       app.show("Sending \(album.name) to the watch")
-      if let index = sends.firstIndex(where: { $0.id == album.id }) {
-        sends[index].songs = songs.count
-      }
+      sends[index].songs = songs.count
+      sends[index].isPrepared = true
       WatchSend.shared.enqueue(album, songs: songs, kbps: kbps)
     }
   }
@@ -184,7 +187,9 @@ import WatchConnectivity
   /// transferred, by the bytes sent. A transfer that just finished may still
   /// be listed.
   func updateProgress(_ collectionId: String, excluding finished: WCSessionFileTransfer? = nil) {
-    guard let index = sends.firstIndex(where: { $0.id == collectionId }) else { return }
+    guard let index = sends.firstIndex(where: { $0.id == collectionId }),
+      sends[index].isPrepared
+    else { return }
     let songs = sends[index].songs
     let downloading = WatchSend.shared.pending(collectionId)
     let transferring = session.outstandingFileTransfers.filter { transfer in
@@ -280,7 +285,7 @@ import WatchConnectivity
       "watch link: watch reports \(state.collections.count) albums, "
         + "\(state.incoming.values.reduce(0, +)) songs expected")
     watch = state
-    if signIn == .sending, state.account != nil {
+    if signIn == .sending, isSignedIn {
       signIn = .idle
       signInDeadline?.cancel()
       AppModel.shared.show("Watch signed in")

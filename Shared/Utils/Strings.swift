@@ -40,17 +40,14 @@ extension [Song] {
   }
 }
 
-func bytesToMBOrGB(_ bytes: Int64) -> String {
-  let gigabyte: Int64 = 1024 * 1024 * 1024
-  let megabyte: Int64 = 1024 * 1024
-
-  if bytes >= gigabyte {
-    let gb = Double(bytes) / Double(gigabyte)
-
-    return String(format: "%.0f GB", gb)
-  } else {
-    let mb = Double(bytes) / Double(megabyte)
-
-    return String(format: "%.0f MB", mb)
+extension Playlist {
+  /// "Playlist · 3 songs · 16 min" for its screen, from the server's counts
+  /// until `songs` are loaded.
+  func meta(loaded songs: [Song]) -> String {
+    var length = songs.countAndLength
+    if length.isEmpty, songCount > 0 {
+      length = songsAndLength(songCount, seconds: duration)
+    }
+    return length.isEmpty ? "Playlist" : "Playlist · " + length
   }
 }

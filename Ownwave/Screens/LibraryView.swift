@@ -19,7 +19,6 @@ struct LibraryView: View {
   @EnvironmentObject private var player: PlayerViewModel
   @EnvironmentObject private var albumViewModel: AlbumViewModel
   @EnvironmentObject private var downloadSession: DownloadSession
-  @EnvironmentObject private var storage: DownloadStorage
   @ObservedObject private var stars = StarStore.shared
   @Environment(\.palette) private var palette
 
@@ -31,6 +30,8 @@ struct LibraryView: View {
   /// Songs on the phone per downloaded album, counted when Downloads shows
   /// and when the list or an album changes.
   @State private var songCounts: [String: Int] = [:]
+  /// The downloads folder, measured as Settings measures it.
+  @State private var downloadsBytes: Int64 = 0
   @AppStorage(AlbumOrder.storageKey) private var albumOrder = AlbumOrder.added
   @AppStorage(ArtistOrder.storageKey) private var artistOrder = ArtistOrder.name
   @AppStorage(PlaylistOrder.storageKey) private var playlistOrder = PlaylistOrder.name
@@ -64,10 +65,12 @@ struct LibraryView: View {
       } else if chip == .downloads {
         songCounts[id] = DownloadStore.downloadedMediaFileIds(collectionId: id).count
       }
-      if chip == .downloads { storage.refresh() }
+      if chip == .downloads { measureDownloads() }
     }
     .onChange(of: albumViewModel.downloadedAlbums) {
-      if chip == .downloads { songCounts = DownloadStore.downloadedSongCounts() }
+      guard chip == .downloads else { return }
+      songCounts = DownloadStore.downloadedSongCounts()
+      measureDownloads()
     }
     #if DEBUG
       .onAppear { applyDebugChip() }
@@ -250,7 +253,7 @@ struct LibraryView: View {
       StateView(kind: .empty("Download an album to play it without a connection."))
     } else {
       ListHeader(
-        count: "\(counted(albums.count, "album")) · \(storage.localDirectorySize)")
+        count: "\(counted(albums.count, "album")) · \(downloadsBytes.fileSize)")
       LazyPlatter {
         if !cachedSongs.isEmpty {
           NavigationLink {
@@ -270,11 +273,8 @@ struct LibraryView: View {
             .hairlineAbove(!cachedSongs.isEmpty || album.id != albums.first?.id)
         }
       }
-      let rate = UserDefaultsManager.downloadBitRate
       // The setting, not the files: earlier downloads keep their bitrate.
-      ListFooter(
-        rate == TranscodingSettings.sourceBitRate
-          ? "Downloads in original quality." : "Downloads at \(rate) kbps.")
+      ListFooter("Downloads \(TranscodingSettings.phrase(UserDefaultsManager.downloadBitRate)).")
     }
   }
 
@@ -315,8 +315,12 @@ struct LibraryView: View {
       albumViewModel.fetchDownloadedAlbums()
       songCounts = DownloadStore.downloadedSongCounts()
       cachedSongs = StreamCacheManager.shared.getCachedSongs()
-      storage.refresh()
+      measureDownloads()
     }
+  }
+
+  private func measureDownloads() {
+    Task { downloadsBytes = await LocalFileManager.shared.downloadsBytes() }
   }
 
   private func refresh() async {
@@ -345,8 +349,8 @@ private struct DownloadRow: View {
   @EnvironmentObject private var downloads: DownloadSession
   @Environment(\.palette) private var palette
 
-  private var downloading: Bool { downloads.isDownloading(collectionId: album.id) }
-  private var failed: Bool { !downloading && downloads.hasFailed(collectionId: album.id) }
+  private var status: DownloadSession.Status { downloads.status(collectionId: album.id) }
+  private var failed: Bool { status == .failed }
 
   var body: some View {
     Group {
@@ -366,24 +370,25 @@ private struct DownloadRow: View {
   }
 
   private var row: some View {
-    let percent = downloads.progress(collectionId: album.id) * 100
+    let status = self.status
     return HStack(spacing: 12) {
       CoverArt(albumId: album.id, radius: 7).frame(width: 46, height: 46)
       VStack(alignment: .leading, spacing: 2) {
         Text(album.name).font(.rowTitle).foregroundStyle(palette.text)
         Group {
-          if failed {
+          switch status {
+          case .failed:
             Text("Failed · tap to retry").foregroundStyle(Color.destructive)
-          } else if downloading {
-            Text("Downloading · \(Int(percent))%")
-          } else {
+          case .downloading(let percent):
+            Text("Downloading · \(percent)%")
+          case .idle:
             Text(counted(songCount, "song"))
           }
         }
         .font(.rowSubtitle)
         .foregroundStyle(palette.secondary)
-        if downloading {
-          ProgressView(value: percent, total: 100)
+        if case .downloading(let percent) = status {
+          ProgressView(value: Double(percent), total: 100)
             .tint(palette.accent)
             .padding(.top, 5)
         }
@@ -391,10 +396,13 @@ private struct DownloadRow: View {
       .lineLimit(1)
       Spacer(minLength: 0)
       Group {
-        if failed {
+        switch status {
+        case .failed:
           Image(systemName: "exclamationmark.circle.fill").foregroundStyle(Color.destructive)
-        } else if !downloading {
+        case .idle:
           Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.downloaded)
+        case .downloading:
+          EmptyView()
         }
       }
       .font(.system(size: 20))

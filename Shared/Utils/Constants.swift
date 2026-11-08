@@ -76,6 +76,9 @@ enum UserDefaultsKeys {
   static let pendingStarSongs = "pendingStarSongs"
   static let confirmedRatings = "confirmedRatings"
   static let confirmedArtistRatings = "confirmedArtistRatings"
+  // The account whose queued plays and pending edits outlived its session.
+  static let pendingWorkAccount = "pendingWorkAccount"
+  static let downloadsRestartOnActivation = "downloadsRestartOnActivation"
 }
 
 enum KeychainKeys {
@@ -95,6 +98,16 @@ enum TranscodingSettings {
   /// earlier builds offered (32, 64, 96, 128) and Settings no longer lists.
   static func offeredBitRate(_ stored: String?) -> String {
     stored.flatMap { bitRates.contains($0) ? $0 : nil } ?? defaultBitRate
+  }
+
+  /// "Original" or "192 kbps", as Settings lists a limit.
+  static func label(_ bitRate: String) -> String {
+    bitRate == sourceBitRate ? "Original" : "\(bitRate) kbps"
+  }
+
+  /// "in original quality" or "at 192 kbps", for a sentence.
+  static func phrase(_ bitRate: String) -> String {
+    bitRate == sourceBitRate ? "in original quality" : "at \(label(bitRate))"
   }
   /// The limit streams and the stream cache use on the network at hand; nil
   /// while streaming is off there. Only the phone tells cellular apart.

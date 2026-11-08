@@ -26,6 +26,8 @@ struct WatchNowPlayingView: View {
   private var ratingTargetRating: Int { ratings.rating(for: ratingTarget) }
 
   @State private var tint: Color?
+  // A cover that failed is read again when the server comes back.
+  @State private var reachable = ConnectivityMonitor.shared.isServerReachable
 
   private var accent: Color { tint ?? Dusk.fill }
   private var albumId: String {
@@ -48,7 +50,12 @@ struct WatchNowPlayingView: View {
       }
     }
     .background { CoverBackdrop(albumId: albumId, url: coverURL) }
-    .task(id: albumId) { tint = await CoverTint.color(albumId: albumId, url: coverURL) }
+    .onReceive(ConnectivityMonitor.shared.$isServerReachable.removeDuplicates()) {
+      reachable = $0
+    }
+    .task(id: "\(albumId)|\(reachable)") {
+      tint = await CoverTint.color(albumId: albumId, url: coverURL)
+    }
     .onAppear {
       isShown = true
       focusRequest += 1
@@ -62,9 +69,9 @@ struct WatchNowPlayingView: View {
       isPresented: $showRating, titleVisibility: .visible
     ) {
       // The song the dialog was opened for, even if playback moved on.
-      Button("Boost") { ratings.set(5, playbackID: ratingTarget) }
+      Button("Boost") { ratings.set(RatingStore.boost, playbackID: ratingTarget) }
       Button("Avoid in Smart Shuffle", role: .destructive) {
-        ratings.set(1, playbackID: ratingTarget)
+        ratings.set(RatingStore.avoid, playbackID: ratingTarget)
       }
       if ratingTargetRating > 0 {
         Button("Clear rating") { ratings.set(0, playbackID: ratingTarget) }
@@ -313,8 +320,9 @@ private struct RatingChip: View {
 
   init?(rating: Int) {
     switch rating {
-    case 5: (title, systemImage, color) = ("Boosted", "star.fill", .warning)
-    case 1: (title, systemImage, color) = ("Avoided", "hand.thumbsdown.fill", .destructive)
+    case RatingStore.boost: (title, systemImage, color) = ("Boosted", "star.fill", .warning)
+    case RatingStore.avoid:
+      (title, systemImage, color) = ("Avoided", "hand.thumbsdown.fill", .destructive)
     default: return nil
     }
   }

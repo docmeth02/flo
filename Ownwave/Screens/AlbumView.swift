@@ -27,13 +27,13 @@ struct AlbumView: View {
 
   private var tint: Color { shades?.tint ?? palette.fill }
 
-  /// The album artist as the Artist screen takes it: the listed one when the
-  /// library has it.
+  /// The album artist as the Artist screen takes it, as Go to Artist opens
+  /// it: the listed one when the library has it.
   private var artist: Artist? {
-    let id = album.albumArtistId.isEmpty ? album.artistId : album.albumArtistId
-    guard !id.isEmpty else { return nil }
+    let target = MenuTarget.album(album)
+    guard let id = target.carriedArtistId else { return nil }
     return albumViewModel.artists.first { $0.id == id }
-      ?? Artist(id: id, name: album.albumArtist, albumCount: 0, mbzArtistID: nil)
+      ?? Artist(id: id, name: target.carriedArtistName, albumCount: 0, mbzArtistID: nil)
   }
 
   private var meta: String {

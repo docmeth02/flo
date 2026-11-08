@@ -172,7 +172,7 @@ extension PlayerViewModel {
       Task { @MainActor in
         guard let self, let song = self.nowPlaying else { return }
         let rating = RatingStore.shared.rating(for: song.id ?? "")
-        self.rateNowPlaying(rating >= 4 ? 0 : 5)
+        self.rateNowPlaying(rating == RatingStore.boost ? 0 : RatingStore.boost)
       }
       return .success
     }
@@ -183,7 +183,7 @@ extension PlayerViewModel {
       Task { @MainActor in
         guard let self, let song = self.nowPlaying else { return }
         let rating = RatingStore.shared.rating(for: song.id ?? "")
-        self.rateNowPlaying((1...2).contains(rating) ? 0 : 1)
+        self.rateNowPlaying(rating == RatingStore.avoid ? 0 : RatingStore.avoid)
       }
       return .success
     }
@@ -247,8 +247,8 @@ extension PlayerViewModel {
     let rating = isRateable ? RatingStore.shared.rating(for: nowPlayingId ?? "") : 0
     commandCenter.likeCommand.isEnabled = isRateable
     commandCenter.dislikeCommand.isEnabled = isRateable
-    commandCenter.likeCommand.isActive = rating >= 4
-    commandCenter.dislikeCommand.isActive = (1...2).contains(rating)
+    commandCenter.likeCommand.isActive = rating == RatingStore.boost
+    commandCenter.dislikeCommand.isActive = rating == RatingStore.avoid
     debugLog(
       "rating commands: rating=\(rating) like=\(commandCenter.likeCommand.isActive) "
         + "dislike=\(commandCenter.dislikeCommand.isActive)")

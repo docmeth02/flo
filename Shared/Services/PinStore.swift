@@ -7,7 +7,7 @@ import Foundation
 
 /// Albums, artists, playlists and radios the user pinned to the top, stored
 /// per account so another login sees its own pins and a logout loses nothing.
-/// The watch lists pinned albums and artists; the phone all four.
+/// Both apps list all four.
 @MainActor
 final class PinStore: ObservableObject {
   enum Kind: String {
@@ -51,6 +51,11 @@ final class PinStore: ObservableObject {
 
   func isPinned(_ id: String, _ kind: Kind) -> Bool {
     pinned(kind).contains(id)
+  }
+
+  /// Songs are never pinned.
+  func isPinned(_ target: MenuTarget) -> Bool {
+    target.pin.map { isPinned($0.id, $0.kind) } ?? false
   }
 
   func toggle(_ id: String, _ kind: Kind) {

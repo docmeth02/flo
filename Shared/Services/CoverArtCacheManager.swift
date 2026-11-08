@@ -29,6 +29,13 @@ class CoverArtCacheManager {
   /// playlist's "pl-" mosaic.
   func coverPath(albumId: String, artId: String? = nil) async -> String? {
     guard !albumId.isEmpty else { return nil }
+    if let cached = cachedFilePath(albumId: albumId) { return cached }
+    // While the server is known to be away a download could only time out,
+    // holding a connection the probe and the outbox need; before the first
+    // verdict the server counts as reachable.
+    guard await MainActor.run(body: { ConnectivityMonitor.shared.canReachServer }) else {
+      return nil
+    }
 
     let download = syncQueue.sync { () -> Task<String?, Never>? in
       if cachedFilePath(albumId: albumId) != nil { return nil }
@@ -56,6 +63,8 @@ class CoverArtCacheManager {
         _ = try? LocalFileManager.shared.moveFile(
           source: tempFile, target: fileURL(albumId: albumId))
       }
+      // Left only when it was not moved in.
+      try? FileManager.default.removeItem(at: tempFile)
     }
     // A logout cancelled it, and a newer download may hold its place.
     if !Task.isCancelled { syncQueue.sync { downloads[albumId] = nil } }

@@ -15,7 +15,8 @@ import WatchKit
 struct ItemMenu: View {
   enum Choice: Hashable {
     case action(MenuActions.Action)
-    /// Not a shared action: each app downloads through its own session.
+    /// Not a shared action: the phone's menu has its own Download, both
+    /// through `CollectionDownload`.
     case download
     /// The screen behind the menu opens these.
     case goToAlbum, goToArtist
@@ -105,15 +106,9 @@ struct ItemMenu: View {
       actions.isLiked(target)
         ? ("Unlike", "heart.fill", .liked) : ("Like", "heart", .liked)
     case .action(.boost):
-      (
-        actions.ratingTitle(.boost, on: target),
-        actions.ownRating(target) == 5 ? "hand.thumbsup.fill" : "hand.thumbsup", Dusk.fill
-      )
+      (actions.ratingTitle(.boost, on: target), actions.ratingSymbol(.boost, on: target), Dusk.fill)
     case .action(.avoid):
-      (
-        actions.ratingTitle(.avoid, on: target),
-        actions.ownRating(target) == 1 ? "hand.thumbsdown.fill" : "hand.thumbsdown", Dusk.fill
-      )
+      (actions.ratingTitle(.avoid, on: target), actions.ratingSymbol(.avoid, on: target), Dusk.fill)
     case .download:
       ("Download", "arrow.down.circle", Dusk.fill)
     case .goToAlbum:
@@ -251,7 +246,7 @@ private struct ItemMenuPresenter: ViewModifier {
     let perform: () async -> String?
     switch choice {
     case .action(let action): perform = { await actions.perform(action, on: target) }
-    case .download: perform = { await download(target) }
+    case .download: perform = { await CollectionDownload.startFromWatch(target) }
     case .goToAlbum, .goToArtist:
       // The sheet's dismissal pushes it.
       pendingGo = (choice, target)
@@ -269,23 +264,15 @@ private struct ItemMenuPresenter: ViewModifier {
   /// leads to what this screen shows.
   private func goTo(_ target: MenuTarget) -> [ItemMenu.Choice] {
     var choices: [ItemMenu.Choice] = []
-    if case .song(let song, _, _) = target, openedAlbum != nil, !song.albumId.isEmpty,
-      song.albumId != showing
-    {
-      choices.append(.goToAlbum)
-    }
-    if openedArtist != nil, target.offersArtist,
-      target.carriedArtistId == nil || target.carriedArtistId != showing
-    {
-      choices.append(.goToArtist)
-    }
+    if openedAlbum != nil, target.offersAlbum(except: showing) { choices.append(.goToAlbum) }
+    if openedArtist != nil, target.offersArtist(except: showing) { choices.append(.goToArtist) }
     return choices
   }
 
   private func go(_ choice: ItemMenu.Choice, from target: MenuTarget) async -> String? {
     switch (choice, target) {
     case (.goToArtist, _):
-      guard let artist = await target.artistToOpen() else { return "Artist not in your library" }
+      guard let artist = await target.artistToOpen() else { return MenuActions.artistNotFound }
       debugLog("menu opens artist \(artist.id) \(artist.name)")
       openedArtist?.wrappedValue = artist
     case (.goToAlbum, .song(let song, _, _)):
@@ -329,26 +316,25 @@ private struct ItemMenuPresenter: ViewModifier {
     return !downloads.isDownloading(collectionId: id)
       && !PhoneLink.shared.isReceiving(collectionId: id)
   }
+}
 
-  /// As the screen's Download, with the songs asked first: a list row
-  /// carries none.
-  private func download(_ target: MenuTarget) async -> String? {
-    guard let collection = collection(target) else { return nil }
-    switch await CollectionDownload.prepare(collection) {
-    case .ready where PhoneLink.shared.isReceiving(collectionId: collection.id):
-      // The iPhone started sending it while the songs were asked.
-      return nil
-    case .ready(let album):
-      if case .playlist(var playlist) = target {
-        playlist.songs = album.songs
-        downloads.enqueue(playlist)
-      } else {
-        downloads.enqueue(album)
-      }
-      return "Downloading"
+extension CollectionDownload {
+  /// The watch's Download of an album or playlist, from its hold menu and
+  /// its screen, and what to say about it; nil for nothing. One the iPhone
+  /// started sending while the songs were asked is left to it.
+  @MainActor static func startFromWatch(_ target: MenuTarget) async -> String? {
+    let isReceiving = PhoneLink.shared.isReceiving(collectionId:)
+    let outcome: Outcome
+    switch target {
+    case .album(let album): outcome = await start(album, underway: isReceiving)
+    case .playlist(let playlist): outcome = await start(playlist, underway: isReceiving)
+    case .song, .artist, .radio: return nil
+    }
+    switch outcome {
+    case .ready: return "Downloading"
     case .unavailable: return "Not available offline"
     case .downloaded: return "Already on this watch"
-    case .accountChanged: return nil
+    case .accountChanged, .underway: return nil
     }
   }
 }

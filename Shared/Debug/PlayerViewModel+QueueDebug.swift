@@ -31,7 +31,7 @@
             changed = song.map { self.playNext([$0], context: "Debug") } ?? false
           case "append":
             let songs = library.filter { $0.albumId == argument }
-              .sorted { ($0.discNumber, $0.trackNumber) < ($1.discNumber, $1.trackNumber) }
+              .sorted(by: Song.albumOrder)
             changed = self.appendToQueue(songs, context: "Debug")
           case "remove":
             changed = index.flatMap(self.removeFromQueue(at:)) != nil

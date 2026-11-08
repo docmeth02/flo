@@ -47,11 +47,11 @@ import SwiftUI
 
   /// The album's cover, decoded off the main thread at `size`; nil when
   /// there is none.
-  func cover(albumId: String, url: String = "", size: CGSize) async -> UIImage? {
+  func cover(albumId: String, size: CGSize) async -> UIImage? {
     let pixels = Int(max(size.width, size.height) * scale)
     let key = "cover:\(albumId)@\(pixels)" as NSString
     if let cached = cache.object(forKey: key) { return cached }
-    let path = await CoverTint.coverFile(albumId: albumId, url: url)
+    let path = await CoverTint.coverFile(albumId: albumId)
     guard
       let cgImage = await Task.detached(
         priority: .userInitiated,

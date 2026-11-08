@@ -14,6 +14,8 @@ struct WatchAlbumArtView: View {
   // The decoded cover, remembered together with the cover it is, so a view
   // reused for another album never shows the previous cover.
   @State private var loaded: (key: String, image: UIImage?)?
+  // A cover that failed is tried again when the server comes back.
+  @State private var reachable = ConnectivityMonitor.shared.isServerReachable
 
   private var key: String { albumId + "|" + (artId ?? "") }
 
@@ -27,9 +29,12 @@ struct WatchAlbumArtView: View {
 
   var body: some View {
     content
-      .task(id: key) {
+      .onReceive(ConnectivityMonitor.shared.$isServerReachable.removeDuplicates()) {
+        reachable = $0
+      }
+      .task(id: "\(key)|\(reachable)") {
         let key = key
-        guard !albumId.isEmpty, loaded?.key != key else { return }
+        guard !albumId.isEmpty, loaded?.key != key || loaded?.image == nil else { return }
         // The download's cover, else one download through the cover cache
         // that serves this view, every other view of the album and the Now
         // Playing artwork.

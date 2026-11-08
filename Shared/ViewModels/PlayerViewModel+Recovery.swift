@@ -209,7 +209,7 @@ extension PlayerViewModel {
   /// probe reaches the server and pauses after `connectionWaitLimit`.
   /// Internal for the debug hooks.
   func enterConnectionWait(cause: String) {
-    let position = itemHasPlayed ? floor(lastObservedTime) : pendingStartPosition
+    let position = resumePosition
     detachItem()
     pendingStartPosition = position
     isMediaLoading = false
@@ -503,7 +503,7 @@ extension PlayerViewModel {
     // trust. A song that never got going is asked for once more: the server
     // rejects a decision's token after a rescan touched the file.
     if remoteSong, !isPlaying {
-      if lastObservedTime > 5 { pendingStartPosition = floor(lastObservedTime) }
+      pendingStartPosition = resumePosition
       detachItem()
       isMediaFailed = true
       return

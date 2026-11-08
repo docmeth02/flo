@@ -125,7 +125,7 @@ final class PlaybackReporter {
 
   private func processScrobble(submission: Bool, payload: ScrobblePayload) {
     // Navidrome records every scrobble for its own play counts and forwards it
-    // to Last.fm or ListenBrainz when the user linked them there, so the watch
+    // to Last.fm or ListenBrainz when the user linked them there, so the app
     // always scrobbles to the server. A submission goes through the outbox, so
     // it survives the app being killed while the request is in flight.
     if submission {

@@ -10,11 +10,11 @@ struct WatchArtistDetailView: View {
   @EnvironmentObject var playerViewModel: PlayerViewModel
   @Environment(\.showPlayer) private var showPlayer
 
-  @StateObject var artistDetailViewModel = ArtistDetailViewModel()
-
-  @State private var displayAlert: Bool = false
-  @State private var radioFailed = false
-  /// Ends with the screen, so a late answer never replaces a newer queue.
+  /// Why Artist Radio played nothing, while that shows.
+  @State private var radioMessage: String?
+  @State private var isLoadingRadio = false
+  /// Ends with the screen, so a late answer never replaces a queue edited
+  /// meanwhile.
   @State private var radioTask: Task<Void, Never>?
   @State private var isLoadingTopSongs = false
   @State private var openedAlbum: Album?
@@ -34,18 +34,14 @@ struct WatchArtistDetailView: View {
       HStack(spacing: 6) {
         Button(action: {
           radioTask = Task {
-            let songs = await artistDetailViewModel.fetchArtistRadio(artist: artist)
-            guard !Task.isCancelled else { return }
-            if let songs, !songs.isEmpty {
-              let radio = SongCollection.artistRadio(id: artist.id, name: artist.name, songs: songs)
-              if playerViewModel.playItem(item: radio) { showPlayer() }
-            } else {
-              radioFailed = songs == nil
-              displayAlert = true
-            }
+            isLoadingRadio = true
+            let outcome = await playerViewModel.playArtistRadio(id: artist.id, name: artist.name)
+            isLoadingRadio = false
+            if outcome == .played { showPlayer() }
+            radioMessage = outcome.message
           }
         }) {
-          if artistDetailViewModel.isLoadingRadio {
+          if isLoadingRadio {
             ProgressView()
           } else {
             Label("Radio", systemImage: Glyph.radio)
@@ -74,7 +70,7 @@ struct WatchArtistDetailView: View {
         }
       }
       .buttonStyle(TileButtonStyle(alignment: .center))
-      .disabled(artistDetailViewModel.isLoadingRadio || playerViewModel.isGeneratingMix)
+      .disabled(playerViewModel.isGeneratingMix)
       .listRowBackground(Color.clear)
       .listRowInsets(EdgeInsets())
 
@@ -105,10 +101,13 @@ struct WatchArtistDetailView: View {
       albumViewModel.fetchAlbumsByArtist(id: artist.id)
     }
     .onDisappear { radioTask?.cancel() }
-    .alert(artist.name, isPresented: $displayAlert) {
+    .alert(
+      artist.name,
+      isPresented: Binding(get: { radioMessage != nil }, set: { if !$0 { radioMessage = nil } })
+    ) {
       Button("OK") {}
     } message: {
-      Text(ArtistDetailViewModel.noRadioMessage(failed: radioFailed))
+      Text(radioMessage ?? "")
     }
   }
 

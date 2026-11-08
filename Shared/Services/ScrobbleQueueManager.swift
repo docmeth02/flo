@@ -143,6 +143,7 @@ struct ScrobblePayload {
   func clearAll() {
     accountGeneration += 1
     cancelRetry()
+    retryDelay = Self.initialRetryDelay
     scrobbles.forEach { store.viewContext.delete($0) }
     // Rows a failed delete brings back keep their receipts.
     if store.saveRecord() { receipts.removeAll() }

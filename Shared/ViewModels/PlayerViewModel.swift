@@ -153,6 +153,11 @@ class PlayerViewModel: ObservableObject {
   // Where Play starts the song while no item is attached (restored queue,
   // stop, a load still waiting for its stream source).
   var pendingStartPosition: Double = 0
+  /// Where a song loaded again picks up: where it broke once it was under way,
+  /// else where it was meant to begin, so one that barely started starts over.
+  var resumePosition: Double {
+    lastObservedTime > 5 ? floor(lastObservedTime) : pendingStartPosition
+  }
   var currentSourceIsRemote = false
   var currentSourceIsTranscoded = false
   // Listening time at the last mid-song resume; a stream that breaks again
@@ -217,6 +222,16 @@ class PlayerViewModel: ObservableObject {
       }
 
     let lastPlayData = PlaybackService.shared.getQueue()
+    // The index is stored just after the queue: a kill in between can leave
+    // the index of a longer queue, with the position and listening time of
+    // its song. The queue is kept and restored at its last song, from the
+    // start.
+    if !lastPlayData.isEmpty, UserDefaultsManager.queueActiveIdx >= lastPlayData.count {
+      UserDefaultsManager.queueActiveIdx = lastPlayData.count - 1
+      UserDefaultsManager.nowPlayingProgress = 0
+      UserDefaultsManager.nowPlayingQualified = false
+      UserDefaultsManager.nowPlayingListened = 0
+    }
     let queueActiveIdx = UserDefaultsManager.queueActiveIdx
 
     // A radio station stays in the stored queue while it plays (its object
@@ -224,7 +239,7 @@ class PlayerViewModel: ObservableObject {
     // not something to resume at launch.
     let isRadioQueue = lastPlayData.first.map { !$0.duration.isFinite } ?? false
 
-    if !lastPlayData.isEmpty && queueActiveIdx < lastPlayData.count && !isRadioQueue {
+    if !lastPlayData.isEmpty && !isRadioQueue {
       self.progress = UserDefaultsManager.nowPlayingProgress
       self.playbackMode = UserDefaultsManager.playbackMode
       // A queue shuffled in the player goes on in the order it was heard in;
@@ -258,10 +273,10 @@ class PlayerViewModel: ObservableObject {
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in self?.updateRatingCommands() }
       // Avoiding the song playing, or its artist, skips it, wherever it was
-      // avoided on this device.
+      // avoided on this device; a paused song stays paused.
       self?.avoidObservation = RatingStore.shared.avoided
         .sink { [weak self] id in
-          guard let self, !self.isLiveRadio,
+          guard let self, self.isPlaying, !self.isLiveRadio,
             id == self.nowPlayingId || id == NowPlayingTarget.current?.artistId
           else { return }
           self.nextSong(userInitiated: true, leaving: true)
@@ -410,7 +425,7 @@ class PlayerViewModel: ObservableObject {
       state: .starting, nowPlaying: song, positionSeconds: self.pendingStartPosition)
   }
 
-  /// Tells the server where the announced song stands; the ViewModel drops a
+  /// Tells the server where the announced song stands; PlaybackReporter drops a
   /// playing report within 30 s of the last one.
   private func reportPlayback(_ state: PlaybackReportState, at position: Double? = nil) {
     guard !needsNowPlayingAnnouncement, let song = nowPlaying, !isLiveRadio
@@ -567,13 +582,9 @@ class PlayerViewModel: ObservableObject {
             self.reloadRadioItem()
           } else if self.reloadedFailedTrackId != trackId {
             self.reloadedFailedTrackId = trackId
-            // A song that was under way picks up where it broke, one that
-            // never started where it was meant to begin.
             self.isPlaying = true
             self.resumedAtListened = self.secondsListened
-            self.loadItem(
-              at: self.lastObservedTime > 5
-                ? floor(self.lastObservedTime) : self.pendingStartPosition)
+            self.loadItem(at: self.resumePosition)
             self.updateNowPlayingInfo(progress: self.progress, rate: 1.0)
             return
           } else {
@@ -614,7 +625,7 @@ class PlayerViewModel: ObservableObject {
     if itemHasPlayed, currentSourceIsRemote, !isLiveRadio,
       player?.timeControlStatus == .waitingToPlayAtSpecifiedRate
     {
-      pendingStartPosition = floor(lastObservedTime)
+      pendingStartPosition = resumePosition
       RequestLog.shared.note("stall paused at \(Int(pendingStartPosition)) s, play reloads")
       detachItem()
     }
@@ -795,24 +806,51 @@ class PlayerViewModel: ObservableObject {
     }
   }
 
-  /// Plays songs similar to the artist's, unless the user started something
-  /// else meanwhile; false when the server had none.
-  @MainActor func playArtistRadio(id: String, name: String) async -> Bool {
-    await playWhenBuilt {
-      let songs = (try? await RadioService.shared.getSimilarSongs(id: id)) ?? []
-      return SongCollection.artistRadio(id: id, name: name, songs: songs)
+  /// How a start of Artist Radio ended.
+  enum RadioOutcome {
+    case played
+    /// The server knows no songs similar to the artist's.
+    case noSongs
+    case failed
+    /// Another start was being built, the user started or paused something
+    /// meanwhile, or the songs could not be queued: nothing to tell.
+    case dropped
+
+    /// What the screens say when nothing played; nil when there is nothing
+    /// to tell.
+    var message: String? {
+      switch self {
+      case .noSongs: "No similar songs found for this artist."
+      case .failed: "Failed to load Artist Radio. Please try again."
+      case .played, .dropped: nil
+      }
     }
   }
 
-  /// Builds a collection and plays it, unless one is already being built or
-  /// the user started something else in the meantime.
+  /// Plays songs similar to the artist's, unless the user started or paused
+  /// something meanwhile.
+  @MainActor func playArtistRadio(id: String, name: String) async -> RadioOutcome {
+    let generation = startGeneration
+    var outcome = RadioOutcome.dropped
+    let played = await playWhenBuilt {
+      let songs = try? await RadioService.shared.getSimilarSongs(id: id)
+      if songs?.isEmpty != false { outcome = songs == nil ? .failed : .noSongs }
+      return SongCollection.artistRadio(id: id, name: name, songs: songs ?? [])
+    }
+    if played { return .played }
+    return startGeneration == generation && !Task.isCancelled ? outcome : .dropped
+  }
+
+  /// Builds a collection and plays it, unless one is already being built,
+  /// the user started something else in the meantime or the caller's task
+  /// was cancelled (a screen that ended with it).
   @MainActor private func playWhenBuilt(_ build: () async -> SongCollection) async -> Bool {
     guard !isGeneratingMix else { return false }
     isGeneratingMix = true
     let generation = startGeneration
     let item = await build()
     isGeneratingMix = false
-    guard startGeneration == generation else { return false }
+    guard startGeneration == generation, !Task.isCancelled else { return false }
     return playItem(item: item)
   }
 
@@ -927,11 +965,14 @@ class PlayerViewModel: ObservableObject {
     }
   }
 
-  /// Whether leaving the song playing moves on to another song: a later entry
-  /// or Keep Playing's continuation; else the song only falls silent.
+  /// Whether an Avoid of the current song moves on to another song: it plays,
+  /// and a later entry or Keep Playing's continuation follows; else nothing
+  /// skips (paused) or the song only falls silent.
   var leavesForAnotherSong: Bool {
-    UserDefaultsManager.keepPlaying
-      || Self.leavingIndex(ids: queue.map(\.id), from: activeQueueIdx, mode: playbackMode) != nil
+    isPlaying
+      && (UserDefaultsManager.keepPlaying
+        || Self.leavingIndex(ids: queue.map(\.id), from: activeQueueIdx, mode: playbackMode)
+          != nil)
   }
 
   /// The entry `leaveSong` plays: the first after `active` that is another

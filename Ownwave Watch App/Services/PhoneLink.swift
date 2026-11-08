@@ -24,6 +24,8 @@ import WatchKit
   private let session = WCSession.default
   let receiver = PhoneLinkReceiver()
   private var lastState: Link.WatchState?
+  // Inventories can finish out of order; only the newest publish sends.
+  private var publishGeneration = 0
   private var heldTasks: [WKWatchConnectivityRefreshBackgroundTask] = []
   private var observations: [NSKeyValueObservation] = []
   private var downloads: AnyCancellable?
@@ -97,8 +99,11 @@ import WatchKit
     let account = PhoneLinkReceiver.signedInAccount()
     let downloading = DownloadSession.shared.jobs.filter { !$0.failed }
       .reduce(into: [String: Int]()) { $0[$1.collectionId, default: 0] += 1 }
+    publishGeneration += 1
+    let generation = publishGeneration
     Task {
       var state = await Self.inventory(downloading: downloading)
+      guard generation == self.publishGeneration else { return }
       state.account = account
       state.downloadBitRate = downloadBitRate
       state.incoming = incoming

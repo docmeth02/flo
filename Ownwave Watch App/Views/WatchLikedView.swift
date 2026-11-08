@@ -10,6 +10,7 @@ import SwiftUI
 struct WatchLikedView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
   @EnvironmentObject var playerViewModel: PlayerViewModel
+  // Redraws the lists when an item is unliked.
   @ObservedObject private var starStore = StarStore.shared
 
   @Environment(\.showPlayer) private var showPlayer
@@ -19,17 +20,9 @@ struct WatchLikedView: View {
   @State private var menu: MenuTarget?
 
   /// Unliked songs leave at once, before the list reloads.
-  private var songs: [Song] {
-    albumViewModel.starredSongs.filter { playerViewModel.isStarred($0) }
-  }
-
-  private var albums: [Album] {
-    albumViewModel.albums.filter { starStore.isStarred($0.id, listed: $0.starred) }
-  }
-
-  private var artists: [Artist] {
-    albumViewModel.artists.filter { starStore.isStarred($0.id, listed: $0.starred) }
-  }
+  private var songs: [Song] { albumViewModel.likedSongs(playerViewModel) }
+  private var albums: [Album] { albumViewModel.likedAlbums }
+  private var artists: [Artist] { albumViewModel.likedArtists }
 
   /// Loading while any of the three lists loads, failed when any failed.
   private var state: ListState {

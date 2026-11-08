@@ -19,7 +19,13 @@ import Foundation
     return store
   }()
 
-  /// A song or artist rated 1 here, by its id; the player skips it while it
+  /// The ratings that boost and avoid a song or artist in Smart Shuffle.
+  /// Every surface reads Boosted and Avoided by these alone, so a 4 set in
+  /// another client is neither.
+  nonisolated static let boost = 5
+  nonisolated static let avoid = 1
+
+  /// A song or artist avoided here, by its id; the player skips it while it
   /// plays. Edits from other clients never send it.
   let avoided = PassthroughSubject<String, Never>()
   /// 1 to 5 per playback id; unrated songs are absent.
@@ -114,7 +120,7 @@ import Foundation
     artistConfirmed[id] = nil
     defaults.set(artistConfirmed, forKey: UserDefaultsKeys.confirmedArtistRatings)
     publish()
-    if rating == 1, skipsPlaying { avoided.send(id) }
+    if rating == Self.avoid, skipsPlaying { avoided.send(id) }
   }
 
   /// Whether a rating edit for this song or artist waits for the server.
@@ -136,13 +142,13 @@ import Foundation
     confirmed[id] = nil
     defaults.set(confirmed, forKey: UserDefaultsKeys.confirmedRatings)
     publish()
-    if rating == 1, skipsPlaying { avoided.send(id) }
+    if rating == Self.avoid, skipsPlaying { avoided.send(id) }
   }
 
   /// Replaces the server's song, album and artist ratings with its current
   /// lists. A failed request keeps the ones known; edits not confirmed yet
   /// stay on top either way.
-  func refreshFromServer() async {
+  private func refreshFromServer() async {
     await startRefresh().value
   }
 
@@ -295,6 +301,12 @@ import Foundation
     if edits.isIdle, artistEdits.isIdle { Task { await refreshFromServer() } }
   }
 
+  func forgetPendingEdits() {
+    edits.forgetAccount()
+    artistEdits.forgetAccount()
+    publish()
+  }
+
   /// Called on logout; internal for tests.
   func forgetAccount() {
     account += 1
@@ -303,8 +315,7 @@ import Foundation
     refreshedAt = nil
     refreshing = nil
     artistServer = [:]
-    edits.forgetAccount()
-    artistEdits.forgetAccount()
+    if UserDefaultsManager.pendingWorkAccount == nil { forgetPendingEdits() }
     confirmed = [:]
     artistConfirmed = [:]
     defaults.removeObject(forKey: UserDefaultsKeys.confirmedRatings)

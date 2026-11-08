@@ -50,15 +50,11 @@ struct HomeView: View {
       ]
     ) {
       albumViewModel.fetchStarredSongsIfStale()
-      await albumViewModel.loadRecentAlbums()
-      albums = await albumViewModel.loadedOrCached(albumViewModel.albums, .albums)
-      artists = await albumViewModel.loadedOrCached(albumViewModel.artists, .artists)
-      playlists = await albumViewModel.loadedOrCached(albumViewModel.playlists, .playlists)
-      if albums.isEmpty { albumViewModel.fetchAlbums() }
-      if playlists.isEmpty { albumViewModel.getPlaylists() }
-      if !pins.pinned(.radio).isEmpty { radios.fetchAllRadios() }
-      // Siri and Shortcuts read the artist names from this cache.
-      await albumViewModel.cacheArtistsIfNeeded()
+      guard let lists = await albumViewModel.loadHomeLists() else { return }
+      (albums, artists, playlists) = lists
+      if !pins.pinned(.radio).isEmpty, ConnectivityMonitor.shared.canReachServer {
+        radios.fetchAllRadios()
+      }
     }
   }
 
