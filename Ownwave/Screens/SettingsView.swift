@@ -10,8 +10,8 @@ struct SettingsView: View {
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @Environment(\.palette) private var palette
 
-  @AppStorage("appearance") private var appearance = Appearance.system
-  @AppStorage("tourSeen") private var tourSeen = false
+  @AppStorage(Appearance.storageKey) private var appearance = Appearance.system
+  @AppStorage(TourStep.seenKey) private var tourSeen = false
   // UserDefaultsManager's settings, with its defaults. The bitrates are
   // shown through `offered`, which reads a retired value as it does.
   @AppStorage(UserDefaultsKeys.keepPlaying)

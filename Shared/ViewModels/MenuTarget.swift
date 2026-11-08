@@ -295,7 +295,7 @@ struct MenuActions {
       let (songs, context, isFromPlaylist) = await target.queueSongs(serverReachable: reachable)
       // A logout meanwhile: these are the previous account's songs.
       guard LibraryCacheManager.shared.generation == generation else { return nil }
-      guard !songs.isEmpty else { return reachable ? "Nothing to queue" : "Not available offline" }
+      guard !songs.isEmpty else { return reachable ? "Nothing to queue" : .notAvailableOffline }
       let next = action == .playNext
       let queued =
         next

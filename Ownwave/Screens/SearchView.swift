@@ -417,7 +417,7 @@ struct SearchView: View {
       album.songs = await MenuTarget.album(album).queueSongs(
         serverReachable: ConnectivityMonitor.shared.canReachServer
       ).songs
-      guard !album.songs.isEmpty else { return app.show("Not available offline") }
+      guard !album.songs.isEmpty else { return app.show(.notAvailableOffline) }
       app.play(album)
     }
   }

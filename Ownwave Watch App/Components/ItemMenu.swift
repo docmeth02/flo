@@ -332,7 +332,7 @@ extension CollectionDownload {
     }
     switch outcome {
     case .ready: return "Downloading"
-    case .unavailable: return "Not available offline"
+    case .unavailable: return .notAvailableOffline
     case .downloaded: return "Already on this watch"
     case .accountChanged, .underway: return nil
     }

@@ -9,6 +9,9 @@ import Foundation
 enum TourStep: Int, CaseIterable {
   case play, rate, why, peek, taste, send
 
+  /// Set once the tour ended, so it starts by itself only once.
+  static let seenKey = "tourSeen"
+
   var title: String {
     switch self {
     case .play: "Play Something"

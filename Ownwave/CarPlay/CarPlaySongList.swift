@@ -137,7 +137,7 @@ import Combine
       guard let self else { return }
       template.showsSpinnerWhileEmpty = false
       if !ConnectivityMonitor.shared.canReachServer {
-        template.emptyViewTitleVariants = ["Not available offline"]
+        template.emptyViewTitleVariants = [.notAvailableOffline]
       }
     }
     subscriptions.insert(AnyCancellable(task.cancel))

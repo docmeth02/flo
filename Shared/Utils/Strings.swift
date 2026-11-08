@@ -18,6 +18,11 @@ extension Int64 {
 }
 
 extension String {
+  /// Songs neither on the device nor reachable on the server.
+  static let notAvailableOffline = "Not available offline"
+  /// The phone while `TranscodingSettings.streamingBitRate` is nil.
+  static let streamingBlocked = "Streaming on cellular is off"
+
   /// The string cut to at most `length` characters, the last one an ellipsis.
   func truncated(to length: Int) -> String {
     count > length ? String(prefix(length - 1)) + "…" : self
