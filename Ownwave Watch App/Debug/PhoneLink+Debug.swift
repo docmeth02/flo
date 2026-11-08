@@ -9,7 +9,8 @@
   // Simulator verification only; the simulators' WatchConnectivity cannot
   // pair here, so these feed the link what the phone would send.
   // FLO_DEBUG_PHONE=settings:on|settings:off applies shared settings (160 kbps
-  // streaming, 256 kbps downloads, Keep Playing on); signin:url|user|password
+  // streaming, 256 kbps downloads, Keep Playing and Sync queue on) from a
+  // phone that takes handoffs; signin:url|user|password
   // asks for a sign-in; file:<albumId> delivers the album's first two songs
   // at 192 kbps as the phone would; handoff:<albumId>[:ready] hands the
   // album over as the phone would (ready pauses at once, so the start ends
@@ -24,7 +25,7 @@
             Link.encode(
               Link.PhoneState(
                 share: action == "settings:on", streamingBitRate: "160", downloadBitRate: "256",
-                keepPlaying: true)))
+                keepPlaying: true, handoff: true, syncQueue: true)))
           debugLog(
             "phone link: follows=\(UserDefaultsManager.settingsFollowPhone) "
               + "streaming=\(UserDefaultsManager.maxBitRate) "
