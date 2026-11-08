@@ -10,6 +10,8 @@ class LocalFileManager {
 
   let fileManager = FileManager.default
   let documentsDirectory = URL.documentsDirectory
+  /// The downloads' folder in the documents.
+  static let mediaFolder = "Media"
 
   private init() {}
 
@@ -25,7 +27,7 @@ class LocalFileManager {
   private func directorySize() -> Int64 {
     guard
       let enumerator = fileManager.enumerator(
-        at: fileURL(for: "Media"),
+        at: fileURL(for: Self.mediaFolder),
         includingPropertiesForKeys: [.totalFileAllocatedSizeKey],
         options: [.skipsHiddenFiles])
     else {
@@ -93,7 +95,7 @@ class LocalFileManager {
     let key = URLResourceKey.isExcludedFromBackupKey
     guard
       let enumerator = fileManager.enumerator(
-        at: fileURL(for: "Media"), includingPropertiesForKeys: [key])
+        at: fileURL(for: Self.mediaFolder), includingPropertiesForKeys: [key])
     else { return }
     for case let file as URL in enumerator
     where (try? file.resourceValues(forKeys: [key]))?.isExcludedFromBackup != true {
@@ -102,7 +104,7 @@ class LocalFileManager {
   }
 
   func deleteDownloadedAlbums(completion: @escaping (Result<Void, Error>) -> Void) {
-    let folderURL = fileURL(for: "Media")
+    let folderURL = fileURL(for: Self.mediaFolder)
     do {
       if fileManager.fileExists(atPath: folderURL.path) {
         try fileManager.removeItem(at: folderURL)

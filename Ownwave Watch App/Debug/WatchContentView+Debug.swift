@@ -370,7 +370,7 @@
     }
 
     private func logMediaFiles(_ label: String) {
-      let media = LocalFileManager.shared.fileURL(for: "Media")
+      let media = LocalFileManager.shared.fileURL(for: LocalFileManager.mediaFolder)
       let files =
         FileManager.default.enumerator(atPath: media.path)?
         .compactMap { $0 as? String } ?? []

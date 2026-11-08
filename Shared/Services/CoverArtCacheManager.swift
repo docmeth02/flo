@@ -42,7 +42,7 @@ class CoverArtCacheManager {
       if let running = downloads[albumId] { return running }
       let task = Task { [generation] in
         await self.download(
-          albumId: albumId, artId: artId ?? "al-\(albumId)", generation: generation)
+          albumId: albumId, artId: artId ?? Album.coverArtId(for: albumId), generation: generation)
       }
       downloads[albumId] = task
       return task
