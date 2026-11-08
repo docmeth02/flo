@@ -9,10 +9,9 @@ import Foundation
 /// A handoff this device sent, and what its result means here.
 struct HandoffAttempt: Equatable {
   let id: UUID
-  /// The player's start generation, queue and song when it was sent.
+  /// The player's start generation and queue when it was sent.
   let startGeneration: Int
   let queueIds: [String?]
-  let songId: String?
 
   enum Step: Equatable {
     /// The other device plays the queue that was sent: this one pauses.
@@ -23,16 +22,17 @@ struct HandoffAttempt: Equatable {
     case ignore
   }
 
-  /// Pauses only for `.started` while the player still plays the song and
-  /// the queue it sent and started nothing since: a late result never
-  /// pauses what the user started or skipped to meanwhile.
+  /// Pauses only for `.started` while the player still has the queue it
+  /// sent, the user started nothing and skipped nowhere since: a late
+  /// result never pauses what the user chose meanwhile, but a song that
+  /// ended on its own still gives way.
   func step(
     for result: Link.HandoffResult, id: UUID, startGeneration: Int, queueIds: [String?],
-    songId: String?
+    skipped: Bool
   ) -> Step {
     guard id == self.id else { return .ignore }
     guard result == .started, startGeneration == self.startGeneration,
-      queueIds == self.queueIds, songId == self.songId
+      queueIds == self.queueIds, !skipped
     else { return .keepPlaying }
     return .pause
   }
@@ -131,8 +131,7 @@ struct HandoffAttempts: Equatable {
     // First: it moves the start generation the attempt records.
     player.handOff()
     let attempt = HandoffAttempt(
-      id: handoff.id, startGeneration: player.startGeneration, queueIds: player.queue.map(\.id),
-      songId: player.nowPlayingId)
+      id: handoff.id, startGeneration: player.startGeneration, queueIds: player.queue.map(\.id))
     attempts.begin(attempt)
     self.player = player
     sentAt = Date()
@@ -164,7 +163,7 @@ struct HandoffAttempts: Equatable {
     guard let player, let attempt = attempts.take(id) else { return }
     let step = attempt.step(
       for: result, id: id, startGeneration: player.startGeneration,
-      queueIds: player.queue.map(\.id), songId: player.nowPlayingId)
+      queueIds: player.queue.map(\.id), skipped: player.skippedSinceHandOff)
     if case .failed(let reason) = result {
       RequestLog.shared.trace("handoff \(Self.short(id)) failed: \(reason)")
       player.handOffEnded()

@@ -130,40 +130,46 @@ final class HandoffTests: XCTestCase {
         serverReachable: true))
   }
 
-  /// Only the attempt's own start pauses, and only while the song, the queue
-  /// and the start generation are what was sent; anything else keeps the
-  /// song here.
+  /// Only the attempt's own start pauses, and only while the queue and the
+  /// start generation are what was sent and the user did not skip; anything
+  /// else keeps the song here.
   func testSenderPausesOnlyForItsOwnStart() {
     let id = UUID()
-    let attempt = HandoffAttempt(id: id, startGeneration: 4, queueIds: ["a", "b"], songId: "a")
-    let step = {
-      (result: Link.HandoffResult, id: UUID, generation: Int, ids: [String?], song: String?) in
-      attempt.step(for: result, id: id, startGeneration: generation, queueIds: ids, songId: song)
+    let attempt = HandoffAttempt(id: id, startGeneration: 4, queueIds: ["a", "b"])
+    let step = { (result: Link.HandoffResult, id: UUID, generation: Int, ids: [String?]) in
+      attempt.step(
+        for: result, id: id, startGeneration: generation, queueIds: ids, skipped: false)
     }
-    XCTAssertEqual(step(.started, id, 4, ["a", "b"], "a"), .pause)
-    XCTAssertEqual(step(.started, UUID(), 4, ["a", "b"], "a"), .ignore)
-    XCTAssertEqual(step(.ready, UUID(), 4, ["a", "b"], "a"), .ignore)
-    XCTAssertEqual(step(.started, id, 5, ["a", "b"], "a"), .keepPlaying)
-    XCTAssertEqual(step(.started, id, 4, ["c"], "a"), .keepPlaying)
-    XCTAssertEqual(step(.ready, id, 4, ["a", "b"], "a"), .keepPlaying)
-    XCTAssertEqual(step(.failed("no"), id, 4, ["a", "b"], "a"), .keepPlaying)
+    XCTAssertEqual(step(.started, id, 4, ["a", "b"]), .pause)
+    XCTAssertEqual(step(.started, UUID(), 4, ["a", "b"]), .ignore)
+    XCTAssertEqual(step(.ready, UUID(), 4, ["a", "b"]), .ignore)
+    XCTAssertEqual(step(.started, id, 5, ["a", "b"]), .keepPlaying)
+    XCTAssertEqual(step(.started, id, 4, ["c"]), .keepPlaying)
+    XCTAssertEqual(step(.ready, id, 4, ["a", "b"]), .keepPlaying)
+    XCTAssertEqual(step(.failed("no"), id, 4, ["a", "b"]), .keepPlaying)
   }
 
   /// A skip on the sender meanwhile, which moves no start generation, keeps
-  /// the song skipped to playing.
+  /// the song skipped to playing, also when it is the same song again; a
+  /// song that ended on its own and moved on still gives way.
   func testSkipOnTheSenderKeepsPlaying() {
     let id = UUID()
-    let attempt = HandoffAttempt(id: id, startGeneration: 4, queueIds: ["a", "b"], songId: "a")
-    XCTAssertEqual(
-      attempt.step(for: .started, id: id, startGeneration: 4, queueIds: ["a", "b"], songId: "b"),
-      .keepPlaying)
+    let attempt = HandoffAttempt(id: id, startGeneration: 4, queueIds: ["a", "a", "b"])
+    let step = { (skipped: Bool) in
+      attempt.step(
+        for: .started, id: id, startGeneration: 4, queueIds: ["a", "a", "b"], skipped: skipped)
+    }
+    // Skipped from the first "a" to the second: same song, same queue.
+    XCTAssertEqual(step(true), .keepPlaying)
+    // The first "a" ended and the next song began on its own.
+    XCTAssertEqual(step(false), .pause)
   }
 
   /// A result counts once, also after the wait for it ended; a copy of it
   /// and the result of an older attempt change nothing.
   func testLateResultCountsOnce() {
-    let first = HandoffAttempt(id: UUID(), startGeneration: 1, queueIds: ["a"], songId: "a")
-    let second = HandoffAttempt(id: UUID(), startGeneration: 2, queueIds: ["a"], songId: "a")
+    let first = HandoffAttempt(id: UUID(), startGeneration: 1, queueIds: ["a"])
+    let second = HandoffAttempt(id: UUID(), startGeneration: 2, queueIds: ["a"])
     var attempts = HandoffAttempts()
     attempts.begin(first)
     XCTAssertNil(attempts.take(second.id))

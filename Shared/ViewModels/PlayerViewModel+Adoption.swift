@@ -176,6 +176,7 @@ extension PlayerViewModel {
   /// longer this device's to save.
   func handOff() {
     dropPendingStarts()
+    skippedSinceHandOff = false
     handedOffSongId = nowPlayingId
     queueEvents.send(.synced)
   }

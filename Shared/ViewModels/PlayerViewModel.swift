@@ -107,6 +107,9 @@ class PlayerViewModel: ObservableObject {
   /// The song handed over to the other device, which counts it from the
   /// handover on; this one stops counting it (PlayerViewModel+Adoption).
   var handedOffSongId: String?
+  /// The user skipped since the last handoff, which moves no start
+  /// generation; a late `.started` must not pause the song skipped to.
+  var skippedSinceHandOff = false
   /// An adopted start whose outcome a handoff waits for.
   var startWatch: StartWatch?
   /// What the queue sync goes by: the player says when the queue changed,
@@ -969,6 +972,7 @@ class PlayerViewModel: ObservableObject {
   func prevSong() {
     // Live radio has no tracks; rebuilding it as a song would stop the stream.
     guard !isLiveRadio else { return }
+    skippedSinceHandOff = true
     reportStopped()
     if playbackMode != PlaybackMode.repeatOnce, activeQueueIdx > 0 {
       activeQueueIdx -= 1
@@ -981,6 +985,7 @@ class PlayerViewModel: ObservableObject {
   func nextSong(userInitiated: Bool = false, leaving: Bool = false) {
     guard !isLiveRadio else { return }
     if userInitiated {
+      skippedSinceHandOff = true
       logSkipIfAbandoned()
     }
     reportStopped()
