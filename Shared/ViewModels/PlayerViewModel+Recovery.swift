@@ -197,6 +197,7 @@ extension PlayerViewModel {
   /// The current item played on: its load and any stall are over.
   func noteProgress() {
     itemHasPlayed = true
+    finishStartWatch(.heard)
     consecutiveFailures = 0
     reloadedFailedTrackId = nil
     loadWatchdog?.cancel()

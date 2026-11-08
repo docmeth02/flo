@@ -87,7 +87,7 @@ class PlayerViewModel: ObservableObject {
   var bufferGrewAt: Date?
 
   var hasQualified: Bool = false
-  private(set) var isFinished: Bool = false
+  var isFinished: Bool = false
   var isAutoContinuing: Bool = false
   var totalDuration: Double = 0.0
   var playerItemObservation: AnyCancellable?
@@ -104,6 +104,16 @@ class PlayerViewModel: ObservableObject {
   // Audible playback of the current item; unlike the playhead position,
   // seeking cannot inflate or erase it.
   private(set) var secondsListened: Double = 0
+  /// The song handed over to the other device, which counts it from the
+  /// handover on; this one stops counting it (PlayerViewModel+Adoption).
+  var handedOffSongId: String?
+  /// An adopted start whose outcome a handoff waits for.
+  var startWatch: StartWatch?
+  /// What the queue sync goes by: the player says when the queue changed,
+  /// when it was heard further, when it paused, and when it matches what
+  /// another device or the server holds.
+  enum QueueEvent { case changed, advanced, paused, synced }
+  let queueEvents = PassthroughSubject<QueueEvent, Never>()
   private(set) var lastObservedTime: Double = 0
   private(set) var playGeneration: Int = 0
   var consecutiveFailures: Int = 0
@@ -184,7 +194,7 @@ class PlayerViewModel: ObservableObject {
   private var avoidObservation: AnyCancellable?
   /// Bumped whenever the user starts something new; a mix built in the
   /// meantime is stale.
-  private var startGeneration = 0
+  private(set) var startGeneration = 0
   @Published private(set) var isGeneratingMix = false
 
   /// The queue entry in the player, nil while the queue is empty.
@@ -352,11 +362,12 @@ class PlayerViewModel: ObservableObject {
     isCurrentTrack(song.playbackID)
   }
 
-  private func setNowPlaying(playAudio: Bool = true) {
+  func setNowPlaying(playAudio: Bool = true) {
     endConnectionWait(because: "song change")
     guard let song = nowPlaying else { return }
 
     self.persistActiveIndex()
+    self.handedOffSongId = nil
     self.hasQualified = false
     self.hasTriggeredCache = false
     self.secondsListened = 0
@@ -410,6 +421,23 @@ class PlayerViewModel: ObservableObject {
 
     // Also for a restored queue, so the first tap on the heart is the right way.
     MainActor.assumeIsolated { loadStarred() }
+    queueEvents.send(.changed)
+  }
+
+  /// Takes over the listening a song had elsewhere: what was heard there
+  /// counts toward its play here, and one that already counted does not
+  /// count again.
+  func carryOverListening(qualified: Bool, listened: Double) {
+    hasQualified = qualified
+    secondsListened = listened
+    UserDefaultsManager.nowPlayingQualified = qualified
+    UserDefaultsManager.nowPlayingListened = listened
+  }
+
+  /// Where the song stands, in seconds of the track: the playhead, or where
+  /// Play starts it while no item is attached.
+  var currentPosition: Double {
+    playerItem == nil ? pendingStartPosition : lastObservedTime
   }
 
   /// Reports the current song as playing to the server, once per song.
@@ -433,7 +461,7 @@ class PlayerViewModel: ObservableObject {
     else { return }
     PlaybackReporter.shared.reportPlayback(
       state: state, nowPlaying: song,
-      positionSeconds: position ?? (playerItem == nil ? pendingStartPosition : lastObservedTime))
+      positionSeconds: position ?? currentPosition)
   }
 
   /// Reports the song as stopped before playback moves on, while its entity
@@ -473,7 +501,11 @@ class PlayerViewModel: ObservableObject {
       // Ticks arrive every second; a larger step is a seek, or a stall whose
       // time was not heard either way.
       if isRunning, step > 0, step <= 3 {
-        self.secondsListened += step
+        // A song handed over counts on the other device from there on.
+        if !self.isHandedOff {
+          self.secondsListened += step
+          self.queueEvents.send(.advanced)
+        }
         self.countStartPlayed(step)
         self.noteProgress()
       }
@@ -528,6 +560,8 @@ class PlayerViewModel: ObservableObject {
   func play() {
     playGeneration += 1
     let gen = playGeneration
+    // Played on here, the song counts here again.
+    handedOffSongId = nil
     cancelSettle()
     pendingStart = PendingStart()
     let wasPlaying = isPlaying
@@ -555,6 +589,9 @@ class PlayerViewModel: ObservableObject {
             // A kept start tries again once the route is quiet, within its
             // resumes.
             self.armSettle()
+          } else {
+            self.finishStartWatch(
+              .silent("activation failed: \(error?.localizedDescription ?? "")"))
           }
           return
         }
@@ -635,6 +672,7 @@ class PlayerViewModel: ObservableObject {
 
     self.isPlaying = false
     self.updateNowPlayingInfo(progress: self.progress, rate: 0.0)
+    queueEvents.send(.paused)
   }
 
   func stop() {
@@ -689,6 +727,7 @@ class PlayerViewModel: ObservableObject {
       pendingStartPosition = target
       UserDefaultsManager.nowPlayingProgress = progress
       UserDefaultsManager.nowPlayingListened = self.secondsListened
+      queueEvents.send(.changed)
     } else if playerItem == nil
       || (currentSourceIsTranscoded
         && (target < streamOffset || abs(target - lastObservedTime) > 3))
@@ -723,6 +762,7 @@ class PlayerViewModel: ObservableObject {
     playbackMode = mode
     UserDefaultsManager.playbackMode = mode
     precacheUpcoming()
+    queueEvents.send(.changed)
   }
 
   // The play functions return whether playback started. An item without
@@ -880,6 +920,7 @@ class PlayerViewModel: ObservableObject {
     persistActiveIndex()
     persistShuffleOrder()
     precacheUpcoming()
+    queueEvents.send(.changed)
   }
 
   private static let shuffleOrderKey = "queueShuffleOrder"

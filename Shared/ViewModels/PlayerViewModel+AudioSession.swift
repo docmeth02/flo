@@ -107,6 +107,7 @@ extension PlayerViewModel {
 
   /// A pause, or a logout, ends a start and anything waiting to resume it.
   func endStart() {
+    finishStartWatch(.silent("start ended"))
     pendingStart = nil
     cancelSettle()
     resumeAfterInterruption = false
