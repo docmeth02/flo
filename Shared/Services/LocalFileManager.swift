@@ -57,7 +57,8 @@ class LocalFileManager {
   }
 
   /// Moves the file into place with its parent folders, replacing what is
-  /// there unless `forceOverride` is false.
+  /// there unless `forceOverride` is false. Everything moved here can be
+  /// fetched again, so it stays out of the device's backup.
   @discardableResult
   func moveFile(source: URL, target: URL, forceOverride: Bool = true) throws -> URL {
     try fileManager.createDirectory(
@@ -69,7 +70,33 @@ class LocalFileManager {
     try? fileManager.setAttributes(
       [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
       ofItemAtPath: target.path)
+    excludeFromBackup(target)
     return target
+  }
+
+  func excludeFromBackup(_ file: URL) {
+    var file = file
+    var values = URLResourceValues()
+    values.isExcludedFromBackup = true
+    try? file.setResourceValues(values)
+  }
+
+  /// Downloads saved before they were kept out of the backup, off the main
+  /// thread.
+  func excludeDownloadsFromBackup() {
+    Task.detached(priority: .utility) { self.excludeMediaFromBackup() }
+  }
+
+  private func excludeMediaFromBackup() {
+    let key = URLResourceKey.isExcludedFromBackupKey
+    guard
+      let enumerator = fileManager.enumerator(
+        at: fileURL(for: "Media"), includingPropertiesForKeys: [key])
+    else { return }
+    for case let file as URL in enumerator
+    where (try? file.resourceValues(forKeys: [key]))?.isExcludedFromBackup != true {
+      excludeFromBackup(file)
+    }
   }
 
   func deleteDownloadedAlbums(completion: @escaping (Result<Void, Error>) -> Void) {

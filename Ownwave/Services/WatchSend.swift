@@ -308,6 +308,7 @@ import Foundation
           }
         ).value
       else { return }
+      LocalFileManager.shared.excludeFromBackup(target)
       // After a logout, or once every song went: the watch keeps the album
       // without it.
       guard AuthService.shared.accountKey == account, songCount(album.id) != nil else {
