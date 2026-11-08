@@ -53,16 +53,22 @@ class LocalFileManager {
   }
 
   /// Moves the file into place with its parent folders, replacing what is
-  /// there unless `forceOverride` is false. Everything moved here can be
-  /// fetched again, so it stays out of the device's backup.
+  /// there unless `forceOverride` is false. Every caller hands over a file
+  /// of its own, so one that cannot be moved is removed. Everything moved
+  /// here can be fetched again, so it stays out of the device's backup.
   @discardableResult
   func moveFile(source: URL, target: URL, forceOverride: Bool = true) throws -> URL {
-    try fileManager.createDirectory(
-      at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-    if forceOverride, fileManager.fileExists(atPath: target.path) {
-      try fileManager.removeItem(at: target)
+    do {
+      try fileManager.createDirectory(
+        at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+      if forceOverride, fileManager.fileExists(atPath: target.path) {
+        try fileManager.removeItem(at: target)
+      }
+      try fileManager.moveItem(at: source, to: target)
+    } catch {
+      try? fileManager.removeItem(at: source)
+      throw error
     }
-    try fileManager.moveItem(at: source, to: target)
     try? fileManager.setAttributes(
       [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
       ofItemAtPath: target.path)

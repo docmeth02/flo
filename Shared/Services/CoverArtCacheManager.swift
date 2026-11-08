@@ -59,12 +59,13 @@ class CoverArtCacheManager {
       // On the queue a logout's clear runs on, so a download it outlived
       // never moves the previous account's cover in.
       syncQueue.sync {
-        guard generation == self.generation else { return }
+        guard generation == self.generation else {
+          try? FileManager.default.removeItem(at: tempFile)
+          return
+        }
         _ = try? LocalFileManager.shared.moveFile(
           source: tempFile, target: fileURL(albumId: albumId))
       }
-      // Left only when it was not moved in.
-      try? FileManager.default.removeItem(at: tempFile)
     }
     // A logout cancelled it, and a newer download may hold its place.
     if !Task.isCancelled { syncQueue.sync { downloads[albumId] = nil } }
