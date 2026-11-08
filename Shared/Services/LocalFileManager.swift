@@ -10,6 +10,8 @@ class LocalFileManager {
 
   let fileManager = FileManager.default
   let documentsDirectory = URL.documentsDirectory
+  /// The downloads' folder in the documents.
+  static let mediaFolder = "Media"
 
   private init() {}
 
@@ -25,7 +27,7 @@ class LocalFileManager {
   private func directorySize() -> Int64 {
     guard
       let enumerator = fileManager.enumerator(
-        at: fileURL(for: "Media"),
+        at: fileURL(for: Self.mediaFolder),
         includingPropertiesForKeys: [.totalFileAllocatedSizeKey],
         options: [.skipsHiddenFiles])
     else {
@@ -53,16 +55,22 @@ class LocalFileManager {
   }
 
   /// Moves the file into place with its parent folders, replacing what is
-  /// there unless `forceOverride` is false. Everything moved here can be
-  /// fetched again, so it stays out of the device's backup.
+  /// there unless `forceOverride` is false. Every caller hands over a file
+  /// of its own, so one that cannot be moved is removed. Everything moved
+  /// here can be fetched again, so it stays out of the device's backup.
   @discardableResult
   func moveFile(source: URL, target: URL, forceOverride: Bool = true) throws -> URL {
-    try fileManager.createDirectory(
-      at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-    if forceOverride, fileManager.fileExists(atPath: target.path) {
-      try fileManager.removeItem(at: target)
+    do {
+      try fileManager.createDirectory(
+        at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+      if forceOverride, fileManager.fileExists(atPath: target.path) {
+        try fileManager.removeItem(at: target)
+      }
+      try fileManager.moveItem(at: source, to: target)
+    } catch {
+      try? fileManager.removeItem(at: source)
+      throw error
     }
-    try fileManager.moveItem(at: source, to: target)
     try? fileManager.setAttributes(
       [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
       ofItemAtPath: target.path)
@@ -87,7 +95,7 @@ class LocalFileManager {
     let key = URLResourceKey.isExcludedFromBackupKey
     guard
       let enumerator = fileManager.enumerator(
-        at: fileURL(for: "Media"), includingPropertiesForKeys: [key])
+        at: fileURL(for: Self.mediaFolder), includingPropertiesForKeys: [key])
     else { return }
     for case let file as URL in enumerator
     where (try? file.resourceValues(forKeys: [key]))?.isExcludedFromBackup != true {
@@ -96,7 +104,7 @@ class LocalFileManager {
   }
 
   func deleteDownloadedAlbums(completion: @escaping (Result<Void, Error>) -> Void) {
-    let folderURL = fileURL(for: "Media")
+    let folderURL = fileURL(for: Self.mediaFolder)
     do {
       if fileManager.fileExists(atPath: folderURL.path) {
         try fileManager.removeItem(at: folderURL)

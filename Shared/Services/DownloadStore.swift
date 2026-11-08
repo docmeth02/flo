@@ -13,11 +13,15 @@ enum DownloadStore {
   // numbers can never overwrite each other. Covers are stored once per album
   // or playlist id.
   static func downloadPath(collectionId: String, mediaFileId: String, suffix: String) -> String {
-    "Media/\(collectionId)/\(mediaFileId).\(suffix)"
+    "\(collectionFolder(id: collectionId))/\(mediaFileId).\(suffix)"
+  }
+
+  private static func collectionFolder(id: String) -> String {
+    "\(LocalFileManager.mediaFolder)/\(id)"
   }
 
   static func coverPath(id: String) -> String {
-    "Media/covers/\(id).png"
+    "\(LocalFileManager.mediaFolder)/covers/\(id).png"
   }
 
   /// The downloaded file for a media id, if one exists on disk. Main thread.
@@ -69,11 +73,16 @@ enum DownloadStore {
     ).map(Song.init)
   }
 
+  /// A playlist's downloaded song is stored as "pl:<playlist>:<media file>",
+  /// so a song in two playlists, or in a playlist and its album, has a row
+  /// in each.
+  private static let playlistSongPrefix = "pl:"
+
   static func isPlaylistDownload(id: String) -> Bool {
     let songs = CoreDataManager.shared.getRecordByKey(
       entity: SongEntity.self, key: \SongEntity.albumId, value: id, limit: 1)
 
-    return songs.first?.id?.hasPrefix("pl:") ?? false
+    return songs.first?.id?.hasPrefix(playlistSongPrefix) ?? false
   }
 
   static func updatePlaylistPositions(playlistId: String, songs: [Song]) {
@@ -84,7 +93,7 @@ enum DownloadStore {
 
     var changed = false
 
-    for (index, song) in songs.enumerated() where song.id.hasPrefix("pl:") {
+    for (index, song) in songs.enumerated() where song.id.hasPrefix(playlistSongPrefix) {
       guard let entity = existing.first(where: { $0.id == song.id }) else { continue }
 
       let position = Int32(index)
@@ -112,7 +121,7 @@ enum DownloadStore {
       ?? CoverArtCacheManager.shared.cachedFilePath(albumId: albumId)
       ?? subsonicURL(
         endpoint: API.SubsonicEndpoint.coverArt,
-        parameters: ["id": "al-\(albumId)", "size": AppPlatform.coverArtSize])
+        parameters: ["id": Album.coverArtId(for: albumId), "size": AppPlatform.coverArtSize])
   }
 
   /// `suffix` and `bitRate` describe the file as downloaded, which may be
@@ -123,7 +132,7 @@ enum DownloadStore {
     albumId: String, albumName: String?, song: Song, suffix: String, bitRate: Int,
     isFromPlaylist: Bool = false, playlistIndex: Int = -1
   ) -> Bool {
-    let songId = isFromPlaylist ? "pl:\(albumId):\(song.mediaFileId)" : song.id
+    let songId = isFromPlaylist ? "\(playlistSongPrefix)\(albumId):\(song.mediaFileId)" : song.id
     let position = isFromPlaylist ? Int32(playlistIndex) : Int32(-1)
 
     let checkExistingSong = CoreDataManager.shared.getRecordByKey(
@@ -268,7 +277,7 @@ enum DownloadStore {
       .filter { !$0.isEmpty }
 
     var paths = songs.compactMap(\.fileURL).filter { !$0.isEmpty }
-    paths += ["Media/\(id)"] + covers.map { Self.coverPath(id: $0) }
+    paths += [collectionFolder(id: id)] + covers.map { Self.coverPath(id: $0) }
 
     for path in paths {
       let url = LocalFileManager.shared.fileURL(for: path)
@@ -289,5 +298,21 @@ enum DownloadStore {
     DownloadSession.shared.downloadsRemoved.send()
 
     completion(.success(()))
+  }
+
+  /// Removes every download with its records, also when the media folder is
+  /// already missing.
+  static func removeAllDownloads() {
+    // A song still downloading would come back.
+    DownloadSession.shared.cancelAll()
+    LocalFileManager.shared.deleteDownloadedAlbums { result in
+      switch result {
+      case .success:
+        CoreDataManager.shared.clearDownloads()
+        DownloadSession.shared.downloadsRemoved.send()
+      case .failure(let error):
+        debugLog("removing all downloads failed: \(error)")
+      }
+    }
   }
 }

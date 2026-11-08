@@ -315,12 +315,11 @@ import Foundation
     refreshedAt = nil
     refreshing = nil
     artistServer = [:]
-    if UserDefaultsManager.pendingWorkAccount == nil { forgetPendingEdits() }
     confirmed = [:]
     artistConfirmed = [:]
     defaults.removeObject(forKey: UserDefaultsKeys.confirmedRatings)
     defaults.removeObject(forKey: UserDefaultsKeys.confirmedArtistRatings)
-    publish()
+    if UserDefaultsManager.pendingWorkAccount == nil { forgetPendingEdits() } else { publish() }
   }
 
   /// 1 to 5 by id, without the unrated.

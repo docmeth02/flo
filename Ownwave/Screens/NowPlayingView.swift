@@ -263,7 +263,7 @@ private struct PlayerPage: View {
 
   /// Why the song is not playing, when it waits on more than its data.
   private var status: String? {
-    if player.isStreamingBlocked { return "Streaming on cellular is off" }
+    if player.isStreamingBlocked { return .streamingBlocked }
     if player.isWaitingForConnection { return "Offline" }
     return nil
   }
@@ -413,9 +413,7 @@ private struct PlayerPage: View {
   }
 
   private var nextUp: String {
-    let index = player.activeQueueIdx + 1
-    guard player.queue.indices.contains(index) else { return "End of queue" }
-    let next = player.queue[index]
+    guard let next = player.upNext.first else { return "End of queue" }
     return "\(next.songName ?? "Unknown") · \(next.artistName ?? "Unknown")"
   }
 }

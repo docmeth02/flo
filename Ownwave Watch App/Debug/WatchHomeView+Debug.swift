@@ -14,7 +14,7 @@
       let mode = ProcessInfo.processInfo.environment["FLO_DEBUG_FETCH_ALBUMS"]
       guard mode == "1" || mode == "now" else { return }
       if mode == "1" { try? await Task.sleep(nanoseconds: 2_000_000_000) }
-      albumViewModel.fetchAlbums()
+      albumViewModel.fetch(.albums)
       try? await Task.sleep(nanoseconds: 20_000_000_000)
       let entries = RequestLog.shared.entries
       debugLog("request log: \(entries.count) entries")

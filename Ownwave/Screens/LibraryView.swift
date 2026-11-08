@@ -301,16 +301,16 @@ struct LibraryView: View {
   private func load() {
     switch chip {
     case .albums:
-      albumViewModel.fetchAlbums()
+      albumViewModel.fetch(.albums)
       albumViewModel.fetchDownloadedAlbums()
-    case .artists: albumViewModel.getArtists()
-    case .playlists: albumViewModel.getPlaylists()
+    case .artists: albumViewModel.fetch(.artists)
+    case .playlists: albumViewModel.fetch(.playlists)
     case .radios: radios.fetchAllRadios()
     case .liked:
       // The listed stars may predate a like made since.
-      albumViewModel.fetchStarredSongs()
-      albumViewModel.fetchAlbums()
-      albumViewModel.getArtists()
+      albumViewModel.fetch(.starredSongs)
+      albumViewModel.fetch(.albums)
+      albumViewModel.fetch(.artists)
     case .downloads:
       albumViewModel.fetchDownloadedAlbums()
       songCounts = DownloadStore.downloadedSongCounts()
@@ -325,14 +325,14 @@ struct LibraryView: View {
 
   private func refresh() async {
     switch chip {
-    case .albums: await albumViewModel.refreshAlbums()
-    case .artists: await albumViewModel.refreshArtists()
-    case .playlists: await albumViewModel.refreshPlaylists()
+    case .albums: await albumViewModel.refresh(.albums)
+    case .artists: await albumViewModel.refresh(.artists)
+    case .playlists: await albumViewModel.refresh(.playlists)
     case .radios: await radios.refresh()
     case .liked:
-      async let songs: Void = albumViewModel.refreshStarredSongs()
-      async let albums: Void = albumViewModel.refreshAlbums()
-      async let artists: Void = albumViewModel.refreshArtists()
+      async let songs: Void = albumViewModel.refresh(.starredSongs)
+      async let albums: Void = albumViewModel.refresh(.albums)
+      async let artists: Void = albumViewModel.refresh(.artists)
       _ = await (songs, albums, artists)
     case .downloads: load()
     }

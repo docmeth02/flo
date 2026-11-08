@@ -94,9 +94,9 @@ struct SearchView: View {
       Text(radioMiss?.message ?? "")
     }
     .task {
-      albums.getArtists()
-      albums.fetchAlbums()
-      albums.getPlaylists()
+      albums.fetch(.artists)
+      albums.fetch(.albums)
+      albums.fetch(.playlists)
       // Read on every return, so a library synced meanwhile is searched. A
       // new phone has no song library before its first mix, so Search syncs
       // it then.
@@ -417,7 +417,7 @@ struct SearchView: View {
       album.songs = await MenuTarget.album(album).queueSongs(
         serverReachable: ConnectivityMonitor.shared.canReachServer
       ).songs
-      guard !album.songs.isEmpty else { return app.show("Not available offline") }
+      guard !album.songs.isEmpty else { return app.show(.notAvailableOffline) }
       app.play(album)
     }
   }

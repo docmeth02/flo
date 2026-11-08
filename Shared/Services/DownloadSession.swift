@@ -160,7 +160,7 @@ final class DownloadSession: NSObject, ObservableObject {
     let id = album.id
     if !album.isPlaylist || !DownloadStore.hasRecord(collectionId: id) {
       DownloadStore.saveAlbum(album)
-      let artId = album.isPlaylist ? Playlist.mosaicId(for: id) : "al-\(id)"
+      let artId = album.isPlaylist ? Playlist.mosaicId(for: id) : Album.coverArtId(for: id)
       Self.downloadCover(artId: artId, as: id)
     }
     queueSongs(of: album)
@@ -182,7 +182,7 @@ final class DownloadSession: NSObject, ObservableObject {
     Task {
       for albumId in albumIds {
         _ = try? await LibraryAPI.downloadCover(
-          artId: "al-\(albumId)", as: albumId, overwrite: false)
+          artId: Album.coverArtId(for: albumId), as: albumId, overwrite: false)
       }
     }
     queueSongs(of: album)

@@ -19,7 +19,7 @@ struct WatchPlaylistsListView: View {
       empty: .empty(
         systemImage: Glyph.playlist, tint: Dusk.fill, title: "No playlists",
         message: "Playlists on your Navidrome server show up here."),
-      refresh: albumViewModel.refreshPlaylists
+      refresh: { await albumViewModel.refresh(.playlists) }
     ) {
       PinnedList(items: playlists, kind: .playlist, allLabel: "All Playlists") { playlists, _ in
         JoinedRows(items: playlists) { playlist in
@@ -35,7 +35,7 @@ struct WatchPlaylistsListView: View {
     .navigationDestination(item: $openedPlaylist) { WatchPlaylistDetailView(playlist: $0) }
     .itemMenu($menu)
     .onAppear {
-      albumViewModel.getPlaylists()
+      albumViewModel.fetch(.playlists)
     }
   }
 }

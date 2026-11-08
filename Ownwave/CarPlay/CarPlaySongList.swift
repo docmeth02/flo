@@ -137,7 +137,7 @@ import Combine
       guard let self else { return }
       template.showsSpinnerWhileEmpty = false
       if !ConnectivityMonitor.shared.canReachServer {
-        template.emptyViewTitleVariants = ["Not available offline"]
+        template.emptyViewTitleVariants = [.notAvailableOffline]
       }
     }
     subscriptions.insert(AnyCancellable(task.cancel))
@@ -193,9 +193,8 @@ import Combine
     let nowPlaying = CPListSection(
       items: [row(current, at: player.activeQueueIdx, isCurrent: true)], header: "Now Playing",
       sectionIndexTitle: nil)
-    let queued = player.queue.enumerated().dropFirst(player.activeQueueIdx + 1)
-      .prefix(CPListTemplate.maximumItemCount - 1)
-      .map { row($0.element, at: $0.offset, isCurrent: false) }
+    let queued = player.upNext.indices.prefix(CPListTemplate.maximumItemCount - 1)
+      .map { row(player.queue[$0], at: $0, isCurrent: false) }
     let source = player.upNextSource
     self.rows = rows
     images.loadCovers(covers, size: size)

@@ -7,12 +7,11 @@ import SwiftUI
 
 struct SettingsView: View {
   @EnvironmentObject private var app: AppModel
-  @EnvironmentObject private var downloadStorage: DownloadStorage
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
   @Environment(\.palette) private var palette
 
-  @AppStorage("appearance") private var appearance = Appearance.system
-  @AppStorage("tourSeen") private var tourSeen = false
+  @AppStorage(Appearance.storageKey) private var appearance = Appearance.system
+  @AppStorage(TourStep.seenKey) private var tourSeen = false
   // UserDefaultsManager's settings, with its defaults. The bitrates are
   // shown through `offered`, which reads a retired value as it does.
   @AppStorage(UserDefaultsKeys.keepPlaying)
@@ -136,7 +135,7 @@ struct SettingsView: View {
       StreamCacheManager.shared.setLimit(Int64(cacheLimit))
       refreshStorage()
     }
-    // Deleting the downloads finishes later.
+    // Sent by Delete All Downloads and by a download removed elsewhere.
     .onReceive(DownloadSession.shared.downloadsRemoved) { refreshStorage() }
     .task { serverVersion = await ServerAccount.version() }
     .onAppear {
@@ -152,7 +151,7 @@ struct SettingsView: View {
       Text("Cached songs come back as you listen.")
     }
     .confirmationDialog("Delete downloads", isPresented: $confirmsDeleteDownloads) {
-      Button("Delete All Downloads", role: .destructive) { downloadStorage.deleteAllDownloads() }
+      Button("Delete All Downloads", role: .destructive) { DownloadStore.removeAllDownloads() }
     } message: {
       Text("Downloaded albums have to be downloaded again.")
     }
@@ -403,7 +402,10 @@ struct DiagnosticsView: View {
   var body: some View {
     List {
       Section {
-        ShareLink(item: DiagnosticsReport.text(), subject: Text("Ownwave log")) {
+        ShareLink(
+          item: DiagnosticsLog(), subject: Text("Ownwave log"),
+          preview: SharePreview("Ownwave log")
+        ) {
           Label("Share log", systemImage: "square.and.arrow.up").foregroundStyle(palette.accent)
         }
         ForEach(DiagnosticsReport.connectionLines(), id: \.0) { LabeledContent($0.0, value: $0.1) }

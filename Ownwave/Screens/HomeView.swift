@@ -49,7 +49,7 @@ struct HomeView: View {
         albumViewModel.playlists.isEmpty,
       ]
     ) {
-      albumViewModel.fetchStarredSongsIfStale()
+      albumViewModel.fetch(.starredSongs, maxAge: ListState.reloadAfter)
       guard let lists = await albumViewModel.loadHomeLists() else { return }
       (albums, artists, playlists) = lists
       if !pins.pinned(.radio).isEmpty, ConnectivityMonitor.shared.canReachServer {
