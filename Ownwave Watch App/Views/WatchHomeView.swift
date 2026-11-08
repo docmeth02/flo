@@ -18,6 +18,7 @@ struct WatchHomeView: View {
   @State private var openedPlaylist: Playlist?
   @State private var openedScreen: LibraryScreen?
   @State private var menu: MenuTarget?
+  @State private var toast: Toast.Message?
 
   @EnvironmentObject private var radios: RadiosViewModel
   // The lists pins are looked up in, loaded or cached, read again on every
@@ -127,6 +128,7 @@ struct WatchHomeView: View {
         Wordmark()
       }
     }
+    .toast($toast)
     #if DEBUG
       .task { await runDebugFetchAlbums() }
       .modifier(DebugHomeScroll())
@@ -205,7 +207,7 @@ struct WatchHomeView: View {
     .padding(.leading, 12)
     .padding(.trailing, 10)
     .padding(.vertical, 10)
-    .holdable(onTap: { if queueSync.adopt(offer) { showPlayer() } }, onHold: nil)
+    .holdable(onTap: { adopt(offer) }, onHold: nil)
     .overlay(alignment: .bottomTrailing) {
       Button {
         queueSync.dismiss(offer)
@@ -216,6 +218,16 @@ struct WatchHomeView: View {
       .accessibilityLabel("Dismiss")
       .padding(.trailing, 10)
       .padding(.bottom, 10)
+    }
+  }
+
+  /// Continues the other device's queue here, or says why its song cannot
+  /// play now.
+  private func adopt(_ offer: PlayQueueSync.Offer) {
+    switch queueSync.adopt(offer) {
+    case .playing: showPlayer()
+    case .unplayable(let reason): toast = Toast.Message(text: reason)
+    case .dropped: break
     }
   }
 

@@ -193,20 +193,39 @@ struct RemoteQueue: Equatable {
     }
   }
 
-  /// Takes over the offered queue and plays it; false when the offer is no
-  /// longer the one shown or something plays here meanwhile.
-  @discardableResult func adopt(_ offer: Offer) -> Bool {
+  /// How taking an offer went.
+  enum Adoption: Equatable {
+    case playing
+    /// Its song cannot play here now; the offer stays. What the screens say.
+    case unplayable(String)
+    /// The offer is no longer the one shown, something plays here
+    /// meanwhile, or the queue could not be stored.
+    case dropped
+  }
+
+  /// Takes over the offered queue and plays it, unless its song can neither
+  /// play from this device nor stream now, which would leave a queue that
+  /// cannot play in place of this one.
+  @discardableResult func adopt(_ offer: Offer) -> Adoption {
     guard offer == self.offer, offer.accountKey == AuthService.shared.accountKey, let player,
       !player.isPlaying
-    else { return false }
+    else { return .dropped }
+    if let reason = Self.unplayableReason(
+      offer.snapshot, localIds: DownloadStore.localMediaFileIds(),
+      streamingAllowed: TranscodingSettings.streamingBitRate != nil,
+      serverReachable: ConnectivityMonitor.shared.canReachServer)
+    {
+      RequestLog.shared.trace("queue sync: the queue from \(offer.device) cannot play: \(reason)")
+      return .unplayable(reason)
+    }
     self.offer = nil
     guard player.adoptQueue(offer.snapshot, play: true) else {
       RequestLog.shared.trace("queue sync: the queue from \(offer.device) could not be stored")
-      return false
+      return .dropped
     }
     remember(offer)
     RequestLog.shared.trace("queue sync: took the queue from \(offer.device)")
-    return true
+    return .playing
   }
 
   /// Turns the offer down; that save is not offered again.
@@ -418,6 +437,20 @@ extension PlayQueueSync {
       return .none(.sameAsHere)
     }
     return .offer(Offer(queue: remote, device: device(remote.changedBy), accountKey: account))
+  }
+
+  /// Why the current song of `snapshot` cannot start here, as the screens
+  /// say it; nil when it can.
+  nonisolated static func unplayableReason(
+    _ snapshot: QueueSnapshot, localIds: Set<String>, streamingAllowed: Bool,
+    serverReachable: Bool
+  ) -> String? {
+    guard
+      !PlayerViewModel.canStart(
+        snapshot, localIds: localIds, streamingAllowed: streamingAllowed,
+        serverReachable: serverReachable)
+    else { return nil }
+    return streamingAllowed ? .notAvailableOffline : .streamingBlocked
   }
 
   /// The form fields of a save; `id` is repeated, one per song.

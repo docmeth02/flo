@@ -102,6 +102,22 @@ final class QueueSyncTests: XCTestCase {
     XCTAssertNil(reason(decide(queue, tail: ["a"], position: 100)))
   }
 
+  /// An offer whose song cannot play here is not taken; the screens say
+  /// why.
+  func testOfferThatCannotPlayHereSaysWhy() throws {
+    guard case .offer(let offer) = decide(remote(["a", "b"], at: 1)) else {
+      return XCTFail("no offer")
+    }
+    let reason = { (local: Set<String>, streaming: Bool, reachable: Bool) in
+      PlayQueueSync.unplayableReason(
+        offer.snapshot, localIds: local, streamingAllowed: streaming, serverReachable: reachable)
+    }
+    XCTAssertNil(reason([], true, true))
+    XCTAssertNil(reason(["b"], false, false))
+    XCTAssertEqual(reason([], true, false), .notAvailableOffline)
+    XCTAssertEqual(reason(["a"], false, true), .streamingBlocked)
+  }
+
   func testDevicesByClientName() {
     XCTAssertEqual(PlayQueueSync.device(phone), "iPhone")
     XCTAssertEqual(PlayQueueSync.device(watch), "Apple Watch")

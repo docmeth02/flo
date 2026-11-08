@@ -113,9 +113,14 @@ final class AppModel: ObservableObject {
     if await player.playSomething() { isNowPlayingPresented = true }
   }
 
-  /// Takes over the queue another device saved, at its position.
+  /// Takes over the queue another device saved, at its position, or says
+  /// why its song cannot play here now.
   func adopt(_ offer: PlayQueueSync.Offer) {
-    if PlayQueueSync.shared.adopt(offer) { isNowPlayingPresented = true }
+    switch PlayQueueSync.shared.adopt(offer) {
+    case .playing: isNowPlayingPresented = true
+    case .unplayable(let reason): show(reason)
+    case .dropped: break
+    }
   }
 
   /// Top songs online, else the artist's songs on the phone.
