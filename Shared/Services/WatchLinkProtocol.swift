@@ -204,4 +204,21 @@ extension WCSession {
       RequestLog.shared.note("link: message not sent: \(error.localizedDescription)")
     }
   }
+
+  /// Sends `message` now when the other app is reachable, else, or when
+  /// that fails, queues it for the other app's next run
+  /// (`didReceiveUserInfo`); the receiver must take a copy that arrives
+  /// twice once.
+  func deliver(_ message: Link.Message) {
+    guard activationState == .activated else { return }
+    let payload = Link.encode(message)
+    guard isReachable else {
+      transferUserInfo(payload)
+      return
+    }
+    sendMessage(payload, replyHandler: nil) { error in
+      RequestLog.shared.note("link: message queued: \(error.localizedDescription)")
+      self.transferUserInfo(payload)
+    }
+  }
 }

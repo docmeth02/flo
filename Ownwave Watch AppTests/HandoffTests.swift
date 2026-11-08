@@ -159,6 +159,31 @@ final class HandoffTests: XCTestCase {
       .keepPlaying)
   }
 
+  /// A result counts once, also after the wait for it ended; a copy of it
+  /// and the result of an older attempt change nothing.
+  func testLateResultCountsOnce() {
+    let first = HandoffAttempt(id: UUID(), startGeneration: 1, queueIds: ["a"], songId: "a")
+    let second = HandoffAttempt(id: UUID(), startGeneration: 2, queueIds: ["a"], songId: "a")
+    var attempts = HandoffAttempts()
+    attempts.begin(first)
+    XCTAssertNil(attempts.take(second.id))
+    attempts.expire(first.id)
+    XCTAssertNil(attempts.current)
+    XCTAssertEqual(attempts.take(first.id), first)
+    XCTAssertNil(attempts.take(first.id))
+
+    attempts.begin(first)
+    attempts.expire(first.id)
+    attempts.begin(second)
+    XCTAssertNil(attempts.take(first.id))
+    XCTAssertEqual(attempts.take(second.id), second)
+
+    attempts.begin(first)
+    attempts.expire(first.id)
+    attempts.clear()
+    XCTAssertNil(attempts.take(first.id))
+  }
+
   /// The receiver reports a start only for the queue handed over; anything
   /// started there meanwhile fails the handoff, heard or not.
   func testReceiverReportsOnlyTheHandedOverQueue() {

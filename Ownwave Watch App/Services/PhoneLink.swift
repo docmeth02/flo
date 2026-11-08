@@ -214,7 +214,7 @@ import WatchKit
     handoffHandler.take(handoff) {
       reply(Link.encode($0))
     } send: {
-      WCSession.default.post($0)
+      WCSession.default.deliver($0)
     }
   }
 
@@ -329,6 +329,11 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
     guard case .handoffResult(let id, let result) = Link.decode(Link.Message.self, from: message)
     else { return }
     Task { @MainActor in PhoneLink.shared.handoff.received(id: id, result: result) }
+  }
+
+  /// A handoff result the phone could not send as a message.
+  func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+    self.session(session, didReceiveMessage: userInfo)
   }
 
   func session(

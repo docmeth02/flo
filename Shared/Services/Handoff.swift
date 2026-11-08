@@ -38,6 +38,43 @@ struct HandoffAttempt: Equatable {
   }
 }
 
+/// The handoff waiting for its result, and the one whose wait ended without
+/// it: a result that comes late, by message or by the queued copy sent when
+/// the message could not go, still counts once.
+struct HandoffAttempts: Equatable {
+  private(set) var current: HandoffAttempt?
+  private(set) var late: HandoffAttempt?
+
+  /// A new handoff; an older one's result no longer counts.
+  mutating func begin(_ attempt: HandoffAttempt) {
+    current = attempt
+    late = nil
+  }
+
+  /// The wait for `id` ended without its result: it may still come.
+  mutating func expire(_ id: UUID) {
+    guard current?.id == id else { return }
+    late = current
+    current = nil
+  }
+
+  /// The attempt `id`'s result is for, once: both are forgotten.
+  mutating func take(_ id: UUID) -> HandoffAttempt? {
+    guard let attempt = [current, late].compactMap({ $0 }).first(where: { $0.id == id }) else {
+      return nil
+    }
+    current = nil
+    late = nil
+    return attempt
+  }
+
+  /// A logout: no result counts any more.
+  mutating func clear() {
+    current = nil
+    late = nil
+  }
+}
+
 /// Sends the current queue to the other device (Play on Watch, Play on
 /// iPhone) and follows the attempt until its result. Each link owns one.
 @MainActor final class HandoffSender: ObservableObject {
@@ -49,7 +86,7 @@ struct HandoffAttempt: Equatable {
   @Published private(set) var phase = Phase.idle
   let peer: Link.Peer
 
-  private var attempt: HandoffAttempt?
+  private var attempts = HandoffAttempts()
   private weak var player: PlayerViewModel?
   private var sentAt = Date()
   private var deadline: Task<Void, Never>?
@@ -96,7 +133,7 @@ struct HandoffAttempt: Equatable {
     let attempt = HandoffAttempt(
       id: handoff.id, startGeneration: player.startGeneration, queueIds: player.queue.map(\.id),
       songId: player.nowPlayingId)
-    self.attempt = attempt
+    attempts.begin(attempt)
     self.player = player
     sentAt = Date()
     settle?.cancel()
@@ -111,8 +148,8 @@ struct HandoffAttempt: Equatable {
     } catch {
       return fail(attempt.id, error.localizedDescription)
     }
-    // A logout or a newer attempt took its place.
-    guard self.attempt?.id == attempt.id else { return }
+    // Its result came first, or a logout or a newer attempt took its place.
+    guard attempts.current?.id == attempt.id else { return }
     if let reason = Link.handoffMessage(reply, peer: peer) { return fail(attempt.id, reason) }
     RequestLog.shared.trace("handoff \(Self.short(attempt.id)) accepted")
     deadline = Task { [weak self] in
@@ -121,14 +158,18 @@ struct HandoffAttempt: Equatable {
     }
   }
 
-  /// The other device's result; late and repeated ones change nothing.
+  /// The other device's result, also one that comes after the wait for it
+  /// ended; a repeated one changes nothing.
   func received(id: UUID, result: Link.HandoffResult) {
-    guard let attempt, let player else { return }
+    guard let player, let attempt = attempts.take(id) else { return }
     let step = attempt.step(
       for: result, id: id, startGeneration: player.startGeneration,
       queueIds: player.queue.map(\.id), songId: player.nowPlayingId)
-    guard step != .ignore else { return }
-    if case .failed(let reason) = result { return fail(id, reason) }
+    if case .failed(let reason) = result {
+      RequestLog.shared.trace("handoff \(Self.short(id)) failed: \(reason)")
+      player.handOffEnded()
+      return finish(.failed(reason))
+    }
     let seconds = Int(Date().timeIntervalSince(sentAt))
     RequestLog.shared.trace(
       "handoff \(Self.short(id)) \(result == .started ? "started" : "ready") after \(seconds) s")
@@ -138,20 +179,24 @@ struct HandoffAttempt: Equatable {
 
   /// A logout drops the attempt; its result comes for the old account.
   func cancel() {
-    guard attempt != nil else { return }
+    let waiting = attempts.current != nil
+    attempts.clear()
+    guard waiting else { return }
     player?.handOffEnded()
     finish(.idle)
   }
 
+  /// The attempt did not get through, or its result did not come in time;
+  /// a result that still comes counts.
   private func fail(_ id: UUID, _ reason: String) {
-    guard attempt?.id == id else { return }
+    guard attempts.current?.id == id else { return }
+    attempts.expire(id)
     RequestLog.shared.trace("handoff \(Self.short(id)) failed: \(reason)")
     player?.handOffEnded()
     finish(.failed(reason))
   }
 
   private func finish(_ phase: Phase) {
-    attempt = nil
     deadline?.cancel()
     self.phase = phase
     settle?.cancel()

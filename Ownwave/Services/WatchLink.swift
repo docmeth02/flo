@@ -171,7 +171,7 @@ import WatchConnectivity
     HandoffReceiver(player: AppModel.shared.player, here: .iPhone).take(handoff) {
       reply(Link.encode($0))
     } send: {
-      WCSession.default.post($0)
+      WCSession.default.deliver($0)
     }
   }
 
@@ -416,6 +416,11 @@ private final class Receiver: NSObject, WCSessionDelegate {
       Task { @MainActor in WatchLink.shared.handoff.received(id: id, result: result) }
     default: break
     }
+  }
+
+  /// A handoff result the watch could not send as a message.
+  func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+    self.session(session, didReceiveMessage: userInfo)
   }
 
   func session(
