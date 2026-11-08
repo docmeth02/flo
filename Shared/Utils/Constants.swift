@@ -76,6 +76,8 @@ enum UserDefaultsKeys {
   static let pendingStarSongs = "pendingStarSongs"
   static let confirmedRatings = "confirmedRatings"
   static let confirmedArtistRatings = "confirmedArtistRatings"
+  // The account whose queued plays and pending edits outlived its session.
+  static let pendingWorkAccount = "pendingWorkAccount"
 }
 
 enum KeychainKeys {

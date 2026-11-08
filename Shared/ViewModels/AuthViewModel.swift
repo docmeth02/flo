@@ -152,7 +152,9 @@ class AuthViewModel: ObservableObject {
         self.needsReauthentication = false
         self.persistAuthData(data, serverUrl: serverUrl)
       case .failure(.invalidCredentials):
-        self.logout()
+        // The password changed on the server; the same account usually signs
+        // in again and still has to deliver what it queued.
+        self.logout(keepingPendingWork: true)
       case .failure:
         self.needsReauthentication = true
         AuthService.shared.abandonRenewal()
@@ -218,6 +220,8 @@ class AuthViewModel: ObservableObject {
       do throws(AuthError) {
         let data = try await AuthService.shared.login(
           serverUrl: serverUrl, username: username, password: password)
+        Self.settlePendingWork(
+          signingInAs: AuthService.accountKey(serverURL: serverUrl, userId: data.id))
         self.persistAuthData(data, serverUrl: serverUrl)
         self.needsReauthentication = false
 
@@ -240,8 +244,23 @@ class AuthViewModel: ObservableObject {
     }
   }
 
-  func logout() {
+  /// Plays and edits kept by `logout(keepingPendingWork:)` go to the server
+  /// only when the same account signs in again.
+  @MainActor private static func settlePendingWork(signingInAs account: String?) {
+    guard let waiting = UserDefaultsManager.pendingWorkAccount else { return }
+    UserDefaultsManager.pendingWorkAccount = nil
+    guard waiting != account else { return }
+    ScrobbleQueueManager.shared.clearAll()
+    RatingStore.shared.forgetPendingEdits()
+    StarStore.shared.forgetPendingEdits()
+  }
+
+  /// `keepingPendingWork` keeps the account's queued plays and unsent edits
+  /// for its next sign-in; the account's other data goes either way.
+  func logout(keepingPendingWork: Bool = false) {
     sessionGeneration += 1
+    UserDefaultsManager.pendingWorkAccount =
+      keepingPendingWork ? AuthService.shared.accountKey : nil
 
     // A keychain error must not skip the rest: a half logout leaves this
     // account's data and requests behind for the next.
@@ -280,7 +299,9 @@ class AuthViewModel: ObservableObject {
     // would be submitted with the next account's credentials.
     LibraryCacheManager.shared.clearCache()
     StreamCacheManager.shared.clearCache()
-    MainActor.assumeIsolated { ScrobbleQueueManager.shared.clearAll() }
+    if UserDefaultsManager.pendingWorkAccount == nil {
+      MainActor.assumeIsolated { ScrobbleQueueManager.shared.clearAll() }
+    }
     URLCache.shared.removeAllCachedResponses()
     CoverArtCacheManager.shared.clearCache()
     RequestLog.shared.clear()

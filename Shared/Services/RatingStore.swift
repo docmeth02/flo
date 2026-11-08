@@ -295,6 +295,12 @@ import Foundation
     if edits.isIdle, artistEdits.isIdle { Task { await refreshFromServer() } }
   }
 
+  func forgetPendingEdits() {
+    edits.forgetAccount()
+    artistEdits.forgetAccount()
+    publish()
+  }
+
   /// Called on logout; internal for tests.
   func forgetAccount() {
     account += 1
@@ -303,8 +309,7 @@ import Foundation
     refreshedAt = nil
     refreshing = nil
     artistServer = [:]
-    edits.forgetAccount()
-    artistEdits.forgetAccount()
+    if UserDefaultsManager.pendingWorkAccount == nil { forgetPendingEdits() }
     confirmed = [:]
     artistConfirmed = [:]
     defaults.removeObject(forKey: UserDefaultsKeys.confirmedRatings)

@@ -162,6 +162,14 @@ enum UserDefaultsManager {
     }
   }
 
+  /// The account a session ended for without dropping its queued plays and
+  /// pending edits (its password changed on the server); they wait for it to
+  /// sign in again and go when another account does.
+  static var pendingWorkAccount: String? {
+    get { UserDefaults.standard.string(forKey: UserDefaultsKeys.pendingWorkAccount) }
+    set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.pendingWorkAccount) }
+  }
+
   /// How far smart mixes reach past the favourites (Taste's Mix variety).
   static var mixVariety: MixRanker.Variety {
     get {
