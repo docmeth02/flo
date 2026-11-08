@@ -134,20 +134,7 @@ struct WatchSearchView: View {
     let songs = results.songs.filter { MenuTarget.searched($0).id != top?.id }
     if !songs.isEmpty {
       Section {
-        ForEach(Array(songs.enumerated()), id: \.element.id) { idx, song in
-          TrackRowView(
-            trackNumber: idx + 1,
-            title: song.title,
-            artist: song.artist,
-            isPlaying: playerViewModel.isCurrent(song),
-            onHold: { menu = .searched(song) }
-          ) {
-            play(song)
-          }
-          // The row's own platter, as wide as the joined ones above.
-          .listRowInsets(EdgeInsets())
-          .listRowBackground(Color.clear)
-        }
+        SongRows(songs: songs, onHold: { menu = .searched($0) }) { play(songs[$0]) }
       } header: {
         SectionHeader("Songs")
       }

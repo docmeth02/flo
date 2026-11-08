@@ -17,20 +17,13 @@ struct WatchCachedSongsView: View {
 
   var body: some View {
     List {
-      ForEach(Array(songs.enumerated()), id: \.element.id) { idx, song in
-        TrackRowView(
-          trackNumber: idx + 1,
-          title: song.title,
-          artist: song.artist,
-          isPlaying: playerViewModel.isCurrent(song),
-          onHold: { menu = .song(song, context: SongCollection.Name.cached, isFromPlaylist: false) }
-        ) {
-          let cached = SongCollection.cached(songs)
-          if playerViewModel.playItem(item: cached, startingAt: idx) { showPlayer() }
+      SongRows(
+        songs: songs,
+        onHold: { menu = .song($0, context: SongCollection.Name.cached, isFromPlaylist: false) }
+      ) {
+        if playerViewModel.playItem(item: SongCollection.cached(songs), startingAt: $0) {
+          showPlayer()
         }
-        // The row's own platter, as in Liked Songs.
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
       }
     }
     .listStyle(.plain)
