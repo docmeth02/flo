@@ -66,17 +66,10 @@ final class AppModel: ObservableObject {
     toast = nil
   }
 
-  /// The liked songs as last listed, less those unliked since, which leave
-  /// at once. Views showing them observe StarStore for those changes.
-  var likedSongs: [Song] { albums.starredSongs.filter { player.isStarred($0) } }
-  /// Liked albums and artists out of the library lists, StarStore's edits
-  /// over their listed stars, as on the watch.
-  var likedAlbums: [Album] {
-    albums.albums.filter { StarStore.shared.isStarred($0.id, listed: $0.starred) }
-  }
-  var likedArtists: [Artist] {
-    albums.artists.filter { StarStore.shared.isStarred($0.id, listed: $0.starred) }
-  }
+  /// The liked lists for the screens and the car, by the view model's rule.
+  var likedSongs: [Song] { albums.likedSongs(player) }
+  var likedAlbums: [Album] { albums.likedAlbums }
+  var likedArtists: [Artist] { albums.likedArtists }
 
   /// Downloads the songs of an album the phone does not have yet.
   func download(_ album: Album) {

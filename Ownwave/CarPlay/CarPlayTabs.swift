@@ -8,7 +8,7 @@ import Combine
 
 // The four tabs and the lists pushed from them.
 extension CarPlayController {
-  /// Whether the server answers, once per change.
+  /// `ConnectivityMonitor.canReachServer`, once per change.
   var reachability: AnyPublisher<Bool, Never> {
     let monitor = ConnectivityMonitor.shared
     return monitor.$isOnline.combineLatest(monitor.$isServerReachable)
@@ -55,16 +55,12 @@ extension CarPlayController {
   /// stations once one is pinned.
   private func loadHome() async {
     albums.fetchStarredSongsIfStale()
-    await albums.loadRecentAlbums()
-    let generation = LibraryCacheManager.shared.generation
-    let cachedAlbums = await albums.loadedOrCached(albums.albums, .albums)
-    let cachedArtists = await albums.loadedOrCached(albums.artists, .artists)
-    let cachedPlaylists = await albums.loadedOrCached(albums.playlists, .playlists)
-    // A logout meanwhile, or a list loaded since: the cached copies are stale.
-    guard LibraryCacheManager.shared.generation == generation else { return }
-    if albums.albums.isEmpty { albums.albums = cachedAlbums }
-    if albums.artists.isEmpty { albums.artists = cachedArtists }
-    if albums.playlists.isEmpty { albums.playlists = cachedPlaylists }
+    guard let lists = await albums.loadHomeLists() else { return }
+    // The car's rows read the view model, so the cached copies go there
+    // unless a list loaded since.
+    if albums.albums.isEmpty { albums.albums = lists.albums }
+    if albums.artists.isEmpty { albums.artists = lists.artists }
+    if albums.playlists.isEmpty { albums.playlists = lists.playlists }
     if !PinStore.shared.pinned(.radio).isEmpty { radios.fetchAllRadios() }
   }
 

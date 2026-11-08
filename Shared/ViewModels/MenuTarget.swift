@@ -162,7 +162,7 @@ enum MenuTarget: Identifiable {
         songs = await MainActor.run { DownloadStore.getSongsByAlbumId(albumId: album.id) }
       }
       return (
-        songs.sorted { ($0.discNumber, $0.trackNumber) < ($1.discNumber, $1.trackNumber) },
+        songs.sorted(by: Song.albumOrder),
         album.name, false
       )
     case .artist(let artist):

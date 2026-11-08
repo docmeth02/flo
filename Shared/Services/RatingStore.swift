@@ -148,7 +148,7 @@ import Foundation
   /// Replaces the server's song, album and artist ratings with its current
   /// lists. A failed request keeps the ones known; edits not confirmed yet
   /// stay on top either way.
-  func refreshFromServer() async {
+  private func refreshFromServer() async {
     await startRefresh().value
   }
 

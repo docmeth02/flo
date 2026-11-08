@@ -19,6 +19,9 @@ enum PlaybackOrigin: String {
 struct JournalSnapshot: Sendable {
   /// playbackID → latest heard or skip time, last 48 h.
   var lastHeardAt: [String: Date] = [:]
+  /// playbackID → latest heard time without the skips, last 48 h: what was
+  /// played, for Recently Played.
+  var playedAt: [String: Date] = [:]
   /// playbackID → skips in the last 14 d.
   var skips: [String: [SkipEvent]] = [:]
 
@@ -75,6 +78,7 @@ final class PlaybackJournal {
         guard let id = row.songId, !id.isEmpty, let at = row.timestamp else { continue }
         if now.timeIntervalSince(at) <= Self.heardWindow {
           snapshot.lastHeardAt[id] = max(snapshot.lastHeardAt[id] ?? at, at)
+          if !row.skipped { snapshot.playedAt[id] = max(snapshot.playedAt[id] ?? at, at) }
         }
         if row.skipped {
           snapshot.skips[id, default: []].append(

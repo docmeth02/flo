@@ -78,4 +78,36 @@ final class ModelTests: XCTestCase {
     XCTAssertEqual(bytes.last, AppPlatform.largestStreamCache)
     XCTAssertTrue(bytes.contains(524_288_000))
   }
+
+  /// Go to Album and Go to Artist lead anywhere but the screen they are on;
+  /// an album names its own artist, a compilation's track artist only
+  /// without one.
+  func testGoToRulesLeaveOutTheScreenShown() {
+    var song = Song.fixture("s", album: "al1")
+    song.artistId = "ar1"
+    let target = MenuTarget.song(song, context: "", isFromPlaylist: false)
+    XCTAssertTrue(target.offersAlbum(except: nil))
+    XCTAssertFalse(target.offersAlbum(except: "al1"))
+    XCTAssertTrue(target.offersArtist(except: "al1"))
+    XCTAssertFalse(target.offersArtist(except: "ar1"))
+
+    let compilation = MenuTarget.album(
+      Album(id: "al2", albumArtist: "Various", artist: "Band", artistId: "ar2"))
+    XCTAssertEqual(compilation.carriedArtistId, "ar2")
+    XCTAssertEqual(compilation.carriedArtistName, "Band")
+    XCTAssertFalse(compilation.offersArtist(except: "ar2"))
+    XCTAssertFalse(compilation.offersAlbum(except: nil))
+    // A downloaded playlist keeps no artist.
+    XCTAssertFalse(MenuTarget.album(Album(id: "pl-1")).offersArtist(except: nil))
+  }
+
+  /// A playlist's screen counts the songs loaded, else the server's counts.
+  func testPlaylistMetaLine() {
+    var playlist = Playlist(id: "p", name: "Mix")
+    XCTAssertEqual(playlist.meta(loaded: []), "Playlist")
+    playlist.songCount = 3
+    playlist.duration = 960
+    XCTAssertEqual(playlist.meta(loaded: []), "Playlist · 3 songs · 16 min")
+    XCTAssertEqual(playlist.meta(loaded: [.fixture("a")]), "Playlist · 1 song · 3 min")
+  }
 }

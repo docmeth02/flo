@@ -202,6 +202,11 @@ extension Song {
     mediaFileId.isEmpty ? id : mediaFileId
   }
 
+  /// An album's track order: by disc, then by track.
+  static func albumOrder(_ lhs: Song, _ rhs: Song) -> Bool {
+    (lhs.discNumber, lhs.trackNumber) < (rhs.discNumber, rhs.trackNumber)
+  }
+
   /// Whether the song is by this artist: by id, or by the same artist as
   /// ArtistIdentity tells them apart. `keys` maps server artist ids to their
   /// identity keys (LibraryIndex.artistKeys, every artist with songs in the

@@ -19,22 +19,12 @@ struct WatchPlaylistDetailView: View {
     return loaded
   }
 
-  /// "Playlist · 3 songs · 16 min", from the server's counts until the
-  /// songs are loaded.
-  private var meta: String {
-    var length = loader.songs.countAndLength
-    if length.isEmpty, playlist.songCount > 0 {
-      length = songsAndLength(playlist.songCount, seconds: playlist.duration)
-    }
-    return length.isEmpty ? "Playlist" : "Playlist · " + length
-  }
-
   var body: some View {
     CollectionDetailView(
       collectionId: playlist.id,
       artId: playlist.artId,
       title: playlist.name,
-      meta: meta,
+      meta: playlist.meta(loaded: loader.songs),
       songs: loader.songs,
       trackNumber: { index, _ in index + 1 },
       playable: { Album(from: loadedPlaylist) },
