@@ -94,7 +94,7 @@ class StreamCacheManager {
   }
 
   func cacheSong(
-    mediaFileId: String, originalSuffix: String? = nil, from queueItem: QueueEntity? = nil
+    mediaFileId: String, originalSuffix: String?, from queueItem: QueueEntity?
   ) {
     guard UserDefaultsManager.streamCacheMaxSize > 0 else { return }
     guard !mediaFileId.isEmpty else { return }
