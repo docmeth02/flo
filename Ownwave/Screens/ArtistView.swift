@@ -144,12 +144,18 @@ struct ArtistView: View {
     task?.cancel()
     task = Task {
       isLoading = true
-      miss = await app.playArtistRadio(artist).message.map { (artist.name, $0) }
+      let outcome = await app.playArtistRadio(artist)
+      // A newer start or the screen's end owns the state now.
+      guard !Task.isCancelled else { return }
+      miss = outcome.message.map { (artist.name, $0) }
       isLoading = false
     }
   }
 
-  fileprivate func cancel() { task?.cancel() }
+  fileprivate func cancel() {
+    task?.cancel()
+    isLoading = false
+  }
 }
 
 extension View {

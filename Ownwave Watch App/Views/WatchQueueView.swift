@@ -18,10 +18,6 @@ struct WatchQueueView: View {
     playerViewModel.nowPlayingAlbumId
   }
   private var coverURL: String { playerViewModel.coverArt }
-  /// The rows after the current one, in play order.
-  private var upNext: [QueueEntity] {
-    Array(playerViewModel.upNext)
-  }
 
   var body: some View {
     List {
@@ -30,7 +26,7 @@ struct WatchQueueView: View {
           .listRowBackground(Color.clear)
           .listRowInsets(EdgeInsets())
 
-        let upNext = upNext
+        let upNext = Array(playerViewModel.upNext)
         Section {
           ForEach(Array(upNext.enumerated()), id: \.element.objectID) { index, item in
             row(item)

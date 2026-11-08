@@ -153,5 +153,7 @@ struct DiagnosticsLog: Transferable {
     DataRepresentation(exportedContentType: .utf8PlainText) { _ in
       Data(await DiagnosticsReport.text().utf8)
     }
+    // Shared as a file where an app takes no text, named so it is found.
+    .suggestedFileName("Ownwave log.txt")
   }
 }
