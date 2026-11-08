@@ -63,6 +63,8 @@ class CoverArtCacheManager {
         _ = try? LocalFileManager.shared.moveFile(
           source: tempFile, target: fileURL(albumId: albumId))
       }
+      // Left only when it was not moved in.
+      try? FileManager.default.removeItem(at: tempFile)
     }
     // A logout cancelled it, and a newer download may hold its place.
     if !Task.isCancelled { syncQueue.sync { downloads[albumId] = nil } }

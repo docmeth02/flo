@@ -22,13 +22,14 @@ enum DownloadStore {
 
   /// The downloaded file for a media id, if one exists on disk. Main thread.
   static func downloadedFileURL(mediaFileId id: String) -> URL? {
+    // A song downloaded in two collections has two rows; one whose file is
+    // gone must not hide the other's.
     guard
-      let localStream = CoreDataManager.shared.getRecordByKey(
+      let localPath = CoreDataManager.shared.getRecordByKey(
         entity: SongEntity.self, key: \SongEntity.mediaFileId, value: id
-      ).first,
-      let localPath = localStream.fileURL,
-      !localPath.isEmpty,
-      LocalFileManager.shared.fileExists(fileName: localPath)
+      ).compactMap(\.fileURL).first(where: {
+        !$0.isEmpty && LocalFileManager.shared.fileExists(fileName: $0)
+      })
     else { return nil }
 
     return LocalFileManager.shared.fileURL(for: localPath)

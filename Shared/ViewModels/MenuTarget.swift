@@ -139,9 +139,18 @@ enum MenuTarget: Identifiable {
       ?? Artist(id: id, name: carriedArtistName, albumCount: 0, mbzArtistID: nil)
   }
 
+  /// The songs an album or artist is queued from: offline only those that
+  /// play without the server, as the album screen and `playArtist` take.
+  private static func library(serverReachable: Bool) async -> [Song] {
+    let service = SmartPlaybackService.shared
+    if serverReachable { return await service.loadCachedLibrary().songs }
+    return await service.offlinePlayableSongs()
+  }
+
   /// What Play Next and Add to Queue put in the queue, in play order, and
   /// the collection the queue names as their origin. Albums and artists come
-  /// from the cached library (synced first for an artist when it is empty);
+  /// from the cached library (synced first for an artist when it is empty;
+  /// offline only what plays here);
   /// an album or playlist missing there from the server, or offline from its
   /// download.
   func queueSongs(
@@ -151,7 +160,7 @@ enum MenuTarget: Identifiable {
     case .song(let song, let context, let isFromPlaylist):
       return ([song], context, isFromPlaylist)
     case .album(let album):
-      var songs = await SmartPlaybackService.shared.loadCachedLibrary().songs
+      var songs = await Self.library(serverReachable: serverReachable)
         .filter { $0.albumId == album.id }
       if songs.isEmpty, serverReachable {
         songs = (try? await LibraryAPI.getSongFromAlbum(id: album.id)) ?? []
@@ -166,7 +175,7 @@ enum MenuTarget: Identifiable {
         album.name, false
       )
     case .artist(let artist):
-      var library = await SmartPlaybackService.shared.loadCachedLibrary().songs
+      var library = await Self.library(serverReachable: serverReachable)
       if library.isEmpty, serverReachable {
         library = await SmartPlaybackService.shared.syncSongLibrary()
       }

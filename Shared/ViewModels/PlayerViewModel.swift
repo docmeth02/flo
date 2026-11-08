@@ -425,7 +425,7 @@ class PlayerViewModel: ObservableObject {
       state: .starting, nowPlaying: song, positionSeconds: self.pendingStartPosition)
   }
 
-  /// Tells the server where the announced song stands; the ViewModel drops a
+  /// Tells the server where the announced song stands; PlaybackReporter drops a
   /// playing report within 30 s of the last one.
   private func reportPlayback(_ state: PlaybackReportState, at position: Double? = nil) {
     guard !needsNowPlayingAnnouncement, let song = nowPlaying, !isLiveRadio

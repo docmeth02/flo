@@ -187,6 +187,7 @@ class StreamCacheManager {
 
         guard (try? LocalFileManager.shared.moveFile(source: tempFile, target: target)) != nil
         else {
+          try? self.fileManager.removeItem(at: tempFile)
           self.removeCacheRecord(key: key)
           return
         }

@@ -383,8 +383,8 @@ private struct PlayerPage: View {
     // Read before the rating: an Avoid skips the song at once.
     let skips = player.leavesForAnotherSong
     player.rateNowPlaying(value)
-    if value == 1 { app.show(skips ? "Avoided · skipped" : "Avoided") }
-    if value == 5 { app.show("Boosted") }
+    if value == RatingStore.avoid { app.show(skips ? "Avoided · skipped" : "Avoided") }
+    if value == RatingStore.boost { app.show("Boosted") }
   }
 
   private var peek: some View {
