@@ -13,8 +13,8 @@ struct HandoffAttempt: Equatable {
   /// makes moves it, a song that ends on its own or Keep Playing does not.
   let startGeneration: Int
   /// Whether it played when it was sent: a queue sent while paused that
-  /// the user played here meanwhile, which moves no start generation, plays
-  /// on.
+  /// the user played here meanwhile, which moves no start generation but
+  /// ends the handoff of its song, plays on.
   let wasPlaying: Bool
 
   enum Step: Equatable {
@@ -31,10 +31,11 @@ struct HandoffAttempt: Equatable {
   /// user chose meanwhile, but a song that ended on its own, and Keep
   /// Playing after it, still give way.
   func step(
-    for result: Link.HandoffResult, id: UUID, startGeneration: Int, skipped: Bool, isPlaying: Bool
+    for result: Link.HandoffResult, id: UUID, startGeneration: Int, skipped: Bool,
+    isHandedOff: Bool
   ) -> Step {
     guard id == self.id else { return .ignore }
-    guard result == .started, wasPlaying || !isPlaying,
+    guard result == .started, wasPlaying || isHandedOff,
       startGeneration == self.startGeneration, !skipped
     else { return .keepPlaying }
     return .pause
@@ -166,7 +167,7 @@ struct HandoffAttempts: Equatable {
     guard let player, let attempt = attempts.take(id) else { return }
     let step = attempt.step(
       for: result, id: id, startGeneration: player.startGeneration,
-      skipped: player.skippedSinceHandOff, isPlaying: player.isPlaying)
+      skipped: player.skippedSinceHandOff, isHandedOff: player.isHandedOff)
     if case .failed(let reason) = result {
       RequestLog.shared.trace("handoff \(Self.short(id)) failed: \(reason)")
       player.handOffEnded()

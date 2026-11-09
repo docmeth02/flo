@@ -129,6 +129,7 @@ extension PlayerViewModel {
         song: $0.song, context: $0.contextName, isFromPlaylist: $0.isFromPlaylist)
     }
     guard PlaybackService.shared.store(order: entities) else { return false }
+    userStarts += 1
     replaceQueue(entities, at: snapshot.activeIndex)
     let modes = [PlaybackMode.defaultPlayback, PlaybackMode.repeatAlbum, PlaybackMode.repeatOnce]
     setPlaybackMode(

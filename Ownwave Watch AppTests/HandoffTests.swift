@@ -138,7 +138,7 @@ final class HandoffTests: XCTestCase {
     let attempt = HandoffAttempt(id: id, startGeneration: 4, wasPlaying: true)
     let step = { (result: Link.HandoffResult, id: UUID, generation: Int) in
       attempt.step(
-        for: result, id: id, startGeneration: generation, skipped: false, isPlaying: true)
+        for: result, id: id, startGeneration: generation, skipped: false, isHandedOff: true)
     }
     XCTAssertEqual(step(.started, id, 4), .pause)
     XCTAssertEqual(step(.started, UUID(), 4), .ignore)
@@ -146,14 +146,16 @@ final class HandoffTests: XCTestCase {
     XCTAssertEqual(step(.started, id, 5), .keepPlaying)
     XCTAssertEqual(step(.ready, id, 4), .keepPlaying)
     XCTAssertEqual(step(.failed("no"), id, 4), .keepPlaying)
-    // Sent while paused: still paused, the handoff holds; a Play meanwhile,
-    // which moves no start generation, is the user's.
+    // Sent while paused and left alone, the handoff holds; a Play meanwhile,
+    // which moves no start generation but ends the song's handoff, is the
+    // user's, also while its activation is still under way.
     let paused = HandoffAttempt(id: id, startGeneration: 4, wasPlaying: false)
-    let pausedStep = { (playing: Bool) in
-      paused.step(for: .started, id: id, startGeneration: 4, skipped: false, isPlaying: playing)
+    let pausedStep = { (handedOff: Bool) in
+      paused.step(
+        for: .started, id: id, startGeneration: 4, skipped: false, isHandedOff: handedOff)
     }
-    XCTAssertEqual(pausedStep(false), .pause)
-    XCTAssertEqual(pausedStep(true), .keepPlaying)
+    XCTAssertEqual(pausedStep(true), .pause)
+    XCTAssertEqual(pausedStep(false), .keepPlaying)
   }
 
   /// A skip on the sender meanwhile, which moves no start generation, keeps
@@ -163,7 +165,7 @@ final class HandoffTests: XCTestCase {
     let id = UUID()
     let attempt = HandoffAttempt(id: id, startGeneration: 4, wasPlaying: true)
     let step = { (skipped: Bool) in
-      attempt.step(for: .started, id: id, startGeneration: 4, skipped: skipped, isPlaying: true)
+      attempt.step(for: .started, id: id, startGeneration: 4, skipped: skipped, isHandedOff: true)
     }
     XCTAssertEqual(step(true), .keepPlaying)
     XCTAssertEqual(step(false), .pause)

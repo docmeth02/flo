@@ -34,6 +34,7 @@ extension PlayerViewModel {
     let item = radio.toPlayable()
     let queue = PlaybackService.shared.addToQueue(item: item)
     guard !queue.isEmpty else { return false }
+    userStarts += 1
 
     replaceQueue(queue, at: 0)
     self.hasQualified = false

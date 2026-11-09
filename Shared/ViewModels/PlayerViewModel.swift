@@ -198,9 +198,11 @@ class PlayerViewModel: ObservableObject {
   /// Bumped whenever the user starts something new; a mix built in the
   /// meantime is stale.
   private(set) var startGeneration = 0
-  /// Bumped by a queue the user starts, a song picked in the queue and a
-  /// logout; not by a pause, a song that ends on its own or Keep Playing.
-  private(set) var userStarts = 0
+  /// Bumped once a queue the user started is in place (a collection, a
+  /// station, a queue from the other device), by a song picked in the queue
+  /// and by a logout; not by a pause, a start whose queue could not be
+  /// saved, a song that ends on its own or Keep Playing.
+  var userStarts = 0
   @Published private(set) var isGeneratingMix = false
 
   /// The queue entry in the player, nil while the queue is empty.
@@ -782,6 +784,7 @@ class PlayerViewModel: ObservableObject {
     beginUserStart()
     let queue = PlaybackService.shared.addToQueue(item: item)
     guard !queue.isEmpty else { return false }
+    userStarts += 1
     self.addToQueue(idx: idx, item: queue)
     return true
   }
@@ -797,7 +800,6 @@ class PlayerViewModel: ObservableObject {
   /// are dropped.
   func beginUserStart() {
     startGeneration += 1
-    userStarts += 1
     reportStopped()
     resetSession()
   }
