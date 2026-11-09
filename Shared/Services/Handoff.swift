@@ -9,9 +9,9 @@ import Foundation
 /// A handoff this device sent, and what its result means here.
 struct HandoffAttempt: Equatable {
   let id: UUID
-  /// The player's start generation and queue when it was sent.
+  /// The player's start generation when it was sent; every start the user
+  /// makes moves it, a song that ends on its own or Keep Playing does not.
   let startGeneration: Int
-  let queueIds: [String?]
 
   enum Step: Equatable {
     /// The other device plays the queue that was sent: this one pauses.
@@ -22,17 +22,15 @@ struct HandoffAttempt: Equatable {
     case ignore
   }
 
-  /// Pauses only for `.started` while the player still has the queue it
-  /// sent, the user started nothing and skipped nowhere since: a late
-  /// result never pauses what the user chose meanwhile, but a song that
-  /// ended on its own still gives way.
-  func step(
-    for result: Link.HandoffResult, id: UUID, startGeneration: Int, queueIds: [String?],
-    skipped: Bool
-  ) -> Step {
+  /// Pauses only for `.started` while the user started nothing, paused
+  /// nothing and skipped nowhere since: a late result never pauses what the
+  /// user chose meanwhile, but a song that ended on its own, and Keep
+  /// Playing after it, still give way.
+  func step(for result: Link.HandoffResult, id: UUID, startGeneration: Int, skipped: Bool)
+    -> Step
+  {
     guard id == self.id else { return .ignore }
-    guard result == .started, startGeneration == self.startGeneration,
-      queueIds == self.queueIds, !skipped
+    guard result == .started, startGeneration == self.startGeneration, !skipped
     else { return .keepPlaying }
     return .pause
   }
@@ -130,8 +128,7 @@ struct HandoffAttempts: Equatable {
     let handoff = Link.Handoff(id: UUID(), accountKey: account, snapshot: snapshot)
     // First: it moves the start generation the attempt records.
     player.handOff()
-    let attempt = HandoffAttempt(
-      id: handoff.id, startGeneration: player.startGeneration, queueIds: player.queue.map(\.id))
+    let attempt = HandoffAttempt(id: handoff.id, startGeneration: player.startGeneration)
     attempts.begin(attempt)
     self.player = player
     sentAt = Date()
@@ -163,7 +160,7 @@ struct HandoffAttempts: Equatable {
     guard let player, let attempt = attempts.take(id) else { return }
     let step = attempt.step(
       for: result, id: id, startGeneration: player.startGeneration,
-      queueIds: player.queue.map(\.id), skipped: player.skippedSinceHandOff)
+      skipped: player.skippedSinceHandOff)
     if case .failed(let reason) = result {
       RequestLog.shared.trace("handoff \(Self.short(id)) failed: \(reason)")
       player.handOffEnded()
@@ -238,10 +235,10 @@ struct HandoffAttempts: Equatable {
         + "\(handoff.snapshot.entries.count) entries: \(label)")
     reply(answer)
     guard answer == .accepted else { return }
-    let generation = player.startGeneration
+    let entry = player.nowPlaying
     adopted()
     Task {
-      let result = await result(of: handoff, generation: generation)
+      let result = await result(of: handoff, entry: entry)
       send(.handoffResult(id: handoff.id, result: result))
     }
   }
@@ -259,14 +256,13 @@ struct HandoffAttempts: Equatable {
     return .accepted
   }
 
-  /// Edits to the songs after it keep the adopted start its own; another
-  /// start, or the song's queue gone, does not.
-  private func result(of handoff: Link.Handoff, generation: Int) async -> Link.HandoffResult {
+  /// The start stays the handoff's while the queue holds the adopted entry:
+  /// through a pause, an automatic skip or edits to the songs after it, but
+  /// not through another queue or a logout.
+  private func result(of handoff: Link.Handoff, entry: QueueEntity?) async -> Link.HandoffResult {
     let outcome = await player.startOutcome()
-    let adoptedSong = handoff.snapshot.entries[handoff.snapshot.activeIndex].song.playbackID
     let result = Self.result(
-      outcome,
-      stillAdopted: player.startGeneration == generation && player.nowPlayingId == adoptedSong,
+      outcome, stillAdopted: entry.map { entry in player.queue.contains { $0 === entry } } ?? false,
       here: here)
     // Nothing may start it later, a kept start's settle included.
     if result == .ready { player.pause() }
