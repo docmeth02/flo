@@ -11,8 +11,8 @@ import Foundation
 /// further here since the last save or since it came from elsewhere (a
 /// launch restore, an adoption, a handoff); a few seconds after a change, at
 /// once on a pause or when the app leaves the foreground. A failed save is
-/// not retried: the queue counts as unsaved, and the next event saves it
-/// afresh.
+/// dropped: only a later edit or more listening here saves again, so a
+/// queue another device saved meanwhile is never overwritten by this one.
 struct QueueSaveRules: Equatable {
   private(set) var isDirty = false
 
@@ -44,10 +44,6 @@ struct QueueSaveRules: Equatable {
   /// The wait after a change is over.
   mutating func debounceEnded() -> Action {
     take()
-  }
-
-  mutating func saveFailed() {
-    isDirty = true
   }
 
   private mutating func take() -> Action {
@@ -152,9 +148,6 @@ struct RemoteQueue: Equatable {
   private var writer: Task<Void, Never>?
   // A save is due; the writer takes the queue as it is when it gets to it.
   private var saveWanted = false
-  // Bumped when the pending saves are cancelled; a failure of a save sent
-  // before does not count.
-  private var generation = 0
   // Bumped by every fetch and by a reset; only the newest answer counts.
   private var fetchGeneration = 0
   // Bumped by every change or playback here; a fetch from before is stale.
@@ -282,7 +275,6 @@ struct RemoteQueue: Equatable {
       var landed = false
       while saveWanted {
         saveWanted = false
-        let generation = generation
         guard AuthService.shared.accountKey != nil,
           let snapshot = player?.snapshot(budgetBytes: Self.saveBudget)
         else {
@@ -291,12 +283,9 @@ struct RemoteQueue: Equatable {
         }
         guard ConnectivityMonitor.shared.canReachServer else {
           RequestLog.shared.trace("queue sync: skipped: offline")
-          rules.saveFailed()
           continue
         }
-        let saved = await save(snapshot)
-        landed = landed || saved
-        if !saved, generation == self.generation { rules.saveFailed() }
+        landed = await save(snapshot) || landed
       }
       writer = nil
       if landed { fetch(force: false) }
@@ -336,7 +325,6 @@ struct RemoteQueue: Equatable {
 
   /// A save already sent still lands, before any later one.
   private func cancelSaves() {
-    generation += 1
     debounceTask?.cancel()
     debounceTask = nil
     saveWanted = false

@@ -730,7 +730,6 @@ class PlayerViewModel: ObservableObject {
       pendingStartPosition = target
       UserDefaultsManager.nowPlayingProgress = progress
       UserDefaultsManager.nowPlayingListened = self.secondsListened
-      queueEvents.send(.changed)
     } else if playerItem == nil
       || (currentSourceIsTranscoded
         && (target < streamOffset || abs(target - lastObservedTime) > 3))
@@ -750,7 +749,8 @@ class PlayerViewModel: ObservableObject {
       if itemHasPlayed { armStallDeadline() } else { armLoadWatchdog() }
     }
     self.updateNowPlayingInfo(progress: progress, rate: isPlaying ? 1.0 : 0.0)
-    if isPlaying { reportPlayback(.playing, at: target) }
+    // While playing, the ticks that follow tell the queue sync.
+    if isPlaying { reportPlayback(.playing, at: target) } else { queueEvents.send(.changed) }
   }
 
   func cyclePlaybackMode() {

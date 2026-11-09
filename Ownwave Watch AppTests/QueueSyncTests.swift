@@ -30,13 +30,15 @@ final class QueueSyncTests: XCTestCase {
     XCTAssertEqual(a.handle(.resignedActive), .none)
   }
 
-  /// A failed save is not retried; the next event saves the queue afresh.
-  func testFailedSaveWaitsForTheNextEvent() {
+  /// A failed save is dropped: leaving the app does not send the old queue
+  /// again, only more listening or an edit here saves anew.
+  func testFailedSaveIsNotReplayed() {
     var rules = QueueSaveRules()
     _ = rules.handle(.advanced)
     XCTAssertEqual(rules.handle(.paused), .saveNow)
-    rules.saveFailed()
-    XCTAssertTrue(rules.isDirty)
+    XCTAssertFalse(rules.isDirty)
+    XCTAssertEqual(rules.handle(.resignedActive), .none)
+    _ = rules.handle(.advanced)
     XCTAssertEqual(rules.handle(.resignedActive), .saveNow)
   }
 
