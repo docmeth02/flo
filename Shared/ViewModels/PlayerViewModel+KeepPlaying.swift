@@ -71,7 +71,10 @@ extension PlayerViewModel {
   }
 
   func autoPlayOrStop() {
-    guard UserDefaultsManager.keepPlaying, let lastPlayed = nowPlaying else {
+    // A song handed over that ended on its own: the other device plays on.
+    guard UserDefaultsManager.keepPlaying, !isHandedOff || skippedSinceHandOff,
+      let lastPlayed = nowPlaying
+    else {
       self.stop()
       return
     }

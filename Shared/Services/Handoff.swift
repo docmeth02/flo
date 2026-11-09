@@ -238,9 +238,10 @@ struct HandoffAttempts: Equatable {
         + "\(handoff.snapshot.entries.count) entries: \(label)")
     reply(answer)
     guard answer == .accepted else { return }
+    let generation = player.startGeneration
     adopted()
     Task {
-      let result = await result(of: handoff)
+      let result = await result(of: handoff, generation: generation)
       send(.handoffResult(id: handoff.id, result: result))
     }
   }
@@ -258,11 +259,14 @@ struct HandoffAttempts: Equatable {
     return .accepted
   }
 
-  private func result(of handoff: Link.Handoff) async -> Link.HandoffResult {
+  /// Edits to the songs after it keep the adopted start its own; another
+  /// start, or the song's queue gone, does not.
+  private func result(of handoff: Link.Handoff, generation: Int) async -> Link.HandoffResult {
     let outcome = await player.startOutcome()
+    let adoptedSong = handoff.snapshot.entries[handoff.snapshot.activeIndex].song.playbackID
     let result = Self.result(
       outcome,
-      stillAdopted: player.queue.map(\.id) == handoff.snapshot.entries.map(\.song.playbackID),
+      stillAdopted: player.startGeneration == generation && player.nowPlayingId == adoptedSong,
       here: here)
     // Nothing may start it later, a kept start's settle included.
     if result == .ready { player.pause() }
