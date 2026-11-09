@@ -210,6 +210,7 @@ extension PlayerViewModel {
     persistActiveIndex()
     persistShuffleOrder()
     precacheUpcoming()
+    queueEvents.send(.changed)
     return true
   }
 }

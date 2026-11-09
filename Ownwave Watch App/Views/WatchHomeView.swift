@@ -9,6 +9,7 @@ struct WatchHomeView: View {
   @EnvironmentObject var playerViewModel: PlayerViewModel
   @EnvironmentObject var albumViewModel: AlbumViewModel
   @EnvironmentObject private var pinStore: PinStore
+  @ObservedObject private var queueSync = PlayQueueSync.shared
 
   @Environment(\.showPlayer) private var showPlayer
   @Environment(\.selectPlayerPage) private var selectPlayerPage
@@ -17,6 +18,7 @@ struct WatchHomeView: View {
   @State private var openedPlaylist: Playlist?
   @State private var openedScreen: LibraryScreen?
   @State private var menu: MenuTarget?
+  @State private var toast: Toast.Message?
 
   @EnvironmentObject private var radios: RadiosViewModel
   // The lists pins are looked up in, loaded or cached, read again on every
@@ -126,15 +128,21 @@ struct WatchHomeView: View {
         Wordmark()
       }
     }
+    .toast($toast)
     #if DEBUG
       .task { await runDebugFetchAlbums() }
       .modifier(DebugHomeScroll())
     #endif
   }
 
-  /// The playing song, if any, over Play Something, on one platter.
+  /// A queue another device saved and the playing song, if any, over Play
+  /// Something, on one platter.
   private var card: some View {
     VStack(spacing: 0) {
+      if let offer = queueSync.offer {
+        continueRow(offer)
+        RowHairline(inset: 0)
+      }
       if playerViewModel.nowPlaying != nil {
         NowPlayingIndicator()
           .holdable(onTap: { selectPlayerPage() }, onHold: nil)
@@ -173,6 +181,54 @@ struct WatchHomeView: View {
     .holdable(onTap: playSomethingNow, onHold: nil)
     .opacity(playerViewModel.isGeneratingMix ? 0.6 : 1)
     .disabled(playerViewModel.isGeneratingMix)
+  }
+
+  /// The song another device saved its queue at: a tap continues the queue
+  /// here, the round button over the row's end, outside its tap, turns it
+  /// down. The label has the whole width, so it stays whole on 42 mm.
+  private func continueRow(_ offer: PlayQueueSync.Offer) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      CapsLabel("Continue from \(offer.device)", tint: Dusk.fill)
+      HStack(spacing: WatchLayout.tileSpacing) {
+        CoverTile.cover(albumId: offer.song.albumId).view(size: WatchLayout.smallThumbnail)
+        VStack(alignment: .leading, spacing: 1) {
+          Text(offer.song.title)
+            .font(.song)
+          Text(offer.queue.position.minuteSecond)
+            .font(.meta)
+            .foregroundStyle(Dusk.secondary)
+        }
+        .lineLimit(1)
+      }
+      // Clear of the round button.
+      .padding(.trailing, WatchLayout.roundButton + 4)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.leading, 12)
+    .padding(.trailing, 10)
+    .padding(.vertical, 10)
+    .holdable(onTap: { adopt(offer) }, onHold: nil)
+    .overlay(alignment: .bottomTrailing) {
+      Button {
+        queueSync.dismiss(offer)
+      } label: {
+        Image(systemName: "xmark")
+      }
+      .buttonStyle(RoundButtonStyle(tint: Dusk.secondary))
+      .accessibilityLabel("Dismiss")
+      .padding(.trailing, 10)
+      .padding(.bottom, 10)
+    }
+  }
+
+  /// Continues the other device's queue here, or says why its song cannot
+  /// play now.
+  private func adopt(_ offer: PlayQueueSync.Offer) {
+    switch queueSync.adopt(offer) {
+    case .playing: showPlayer()
+    case .unplayable(let reason): toast = Toast.Message(text: reason)
+    case .dropped: break
+    }
   }
 
   private func playSomethingNow() {

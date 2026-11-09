@@ -167,6 +167,11 @@ struct WatchContentView: View {
       }
     }
     .onChange(of: authViewModel.isLoggedIn) { phone.publishState() }
+    // The queue sync and handoffs from the iPhone use the player this view owns.
+    .onAppear {
+      PlayQueueSync.shared.attach(playerViewModel)
+      phone.handoffHandler = HandoffReceiver(player: playerViewModel, here: .watch) { showPlayer() }
+    }
     // The next account must not see this one's stations.
     .onReceive(NotificationCenter.default.publisher(for: .didLogout)) { _ in radios.reset() }
     .onAppear(perform: takePlayRequest)

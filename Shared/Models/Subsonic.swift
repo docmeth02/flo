@@ -153,6 +153,20 @@ struct SubsonicSong: Codable {
   }
 }
 
+/// The play queue the account saved last (OpenSubsonic `indexBasedQueue`).
+/// Navidrome answers an empty one with only its user and a zero `changed`.
+struct PlayQueueByIndex: SubsonicResponseData {
+  static let key = "playQueueByIndex"
+
+  let currentIndex: Int?
+  /// Milliseconds into the current song.
+  let position: Int?
+  let changed: String?
+  /// The client name (`c`) of the save.
+  let changedBy: String?
+  let entry: [SubsonicSong]?
+}
+
 /// The server's answer to "how should this watch play this song"
 /// (OpenSubsonic `transcoding` extension).
 struct TranscodeDecision: SubsonicResponseData {

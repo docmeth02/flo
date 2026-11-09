@@ -179,6 +179,23 @@ enum UserDefaultsManager {
     }
   }
 
+  /// Whether the queue is saved to the server and another device's saved
+  /// queue offered. Off by default.
+  static var syncQueue: Bool {
+    get { UserDefaults.standard.bool(forKey: UserDefaultsKeys.syncQueue) }
+    set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.syncQueue) }
+  }
+
+  /// The `changed` stamp of the saved queue each account last took over or
+  /// turned down; that queue is not offered again.
+  static var handledQueueChanges: [String: String] {
+    get {
+      UserDefaults.standard.dictionary(forKey: UserDefaultsKeys.handledQueueChanges)
+        as? [String: String] ?? [:]
+    }
+    set { UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.handledQueueChanges) }
+  }
+
   /// How far smart mixes reach past the favourites (Taste's Mix variety).
   static var mixVariety: MixRanker.Variety {
     get {

@@ -40,6 +40,7 @@ final class AppModel: ObservableObject {
     Self.onLogout { AppModel.shared.tour = nil }
     // The next account must not see this one's stations.
     Self.onLogout { AppModel.shared.radios.reset() }
+    PlayQueueSync.shared.attach(player)
   }
 
   /// Runs `action` on the main actor after every logout.
@@ -110,6 +111,16 @@ final class AppModel: ObservableObject {
 
   func playSomething() async {
     if await player.playSomething() { isNowPlayingPresented = true }
+  }
+
+  /// Takes over the queue another device saved, at its position, or says
+  /// why its song cannot play here now.
+  func adopt(_ offer: PlayQueueSync.Offer) {
+    switch PlayQueueSync.shared.adopt(offer) {
+    case .playing: isNowPlayingPresented = true
+    case .unplayable(let reason): show(reason)
+    case .dropped: break
+    }
   }
 
   /// Top songs online, else the artist's songs on the phone.

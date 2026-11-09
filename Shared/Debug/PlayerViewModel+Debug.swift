@@ -15,6 +15,9 @@
   // position, and FLO_DEBUG_DUMP_LOG=<s> logs the request log at that time.
   // FLO_DEBUG_RATE=<playbackID>:<0-5> rates a song at launch;
   // FLO_DEBUG_SKIP_AFTER=<s> presses next once the first song was heard that long.
+  // Also without a mix: FLO_DEBUG_PAUSE_AFTER=<s> pauses a song playing once
+  // it was heard that long; FLO_DEBUG_QUEUE_SYNC=on|off sets "Sync queue",
+  // =adopt|dismiss also takes or turns down the first offer.
   // FLO_DEBUG_STALL=<s> treats the remote item as stalled <s> seconds after the
   // mix started (the simulator never stalls); FLO_DEBUG_STALL=<s>:offline
   // enters the connection wait instead.
@@ -45,6 +48,37 @@
           }
         }
       }
+      if let pauseAfter = env["FLO_DEBUG_PAUSE_AFTER"].flatMap(Double.init) {
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+          guard let self, self.isPlaying, self.secondsListened >= pauseAfter else { return }
+          timer.invalidate()
+          debugLog("pausing after \(self.secondsListened)s")
+          self.pause()
+        }
+      }
+      if let sync = env["FLO_DEBUG_QUEUE_SYNC"] {
+        Task { @MainActor in
+          PlayQueueSync.shared.isEnabled = sync != "off"
+          guard sync == "adopt" || sync == "dismiss" else { return }
+          for _ in 0..<60 {
+            try? await Task.sleep(for: .milliseconds(500))
+            guard let offer = PlayQueueSync.shared.offer else { continue }
+            debugLog(
+              "queue sync debug: offer \(offer.song.title) at \(Int(offer.queue.position)) s")
+            if sync == "adopt" {
+              let taken = PlayQueueSync.shared.adopt(offer)
+              debugLog(
+                "queue sync debug: adopted=\(taken) now \(self.nowPlaying?.songName ?? "") "
+                  + "at \(Int(self.currentPosition)) s playing=\(self.isPlaying)")
+            } else {
+              PlayQueueSync.shared.dismiss(offer)
+            }
+            return
+          }
+          debugLog("queue sync debug: no offer within 30 s")
+        }
+      }
+
       runQueueDebugAction()
       guard env["FLO_DEBUG_PLAY_SOMETHING"] == "1" else { return }
 

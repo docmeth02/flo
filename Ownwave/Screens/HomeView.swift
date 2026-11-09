@@ -16,6 +16,7 @@ struct HomeView: View {
   @Environment(\.openLibrary) private var openLibrary
 
   @ObservedObject private var radios = AppModel.shared.radios
+  @ObservedObject private var queueSync = PlayQueueSync.shared
   // The lists pins are looked up in, loaded or cached, read again on every
   // return so a pin made elsewhere shows up. Home asks the server for them
   // only while there is no cache.
@@ -76,10 +77,16 @@ struct HomeView: View {
     .padding(.horizontal, 4)
   }
 
-  /// The song loaded, if any, over Play Something.
+  /// The queue another device saved and the song loaded, if any, over
+  /// Play Something.
   private var playCard: some View {
     VStack(spacing: 0) {
-      if player.nowPlaying != nil { NowPlayingCard() }
+      if let offer = queueSync.offer { ContinueCard(offer: offer) }
+      if player.nowPlaying != nil {
+        // Both cards can take the same cover's shade.
+        if queueSync.offer != nil { palette.hairline.frame(height: 1) }
+        NowPlayingCard()
+      }
       playSomething
     }
     .background(palette.surface)
@@ -254,6 +261,58 @@ private struct NowPlayingCard: View {
   }
 }
 
+/// The queue another device saved, at its song and position: a tap
+/// continues it here, × turns it down.
+private struct ContinueCard: View {
+  let offer: PlayQueueSync.Offer
+
+  @EnvironmentObject private var app: AppModel
+  @Environment(\.palette) private var palette
+
+  @State private var shades: CoverShades?
+
+  var body: some View {
+    let song = offer.song
+    let tint = shades?.tint ?? palette.accent
+    HStack(spacing: 12) {
+      CoverArt(albumId: song.albumId, radius: 10)
+        .frame(width: 56, height: 56)
+      VStack(alignment: .leading, spacing: 2) {
+        Text("Continue from \(offer.device)")
+          .capsLabel()
+          .foregroundStyle(tint)
+        Text(song.title)
+          .font(.brand(16, relativeTo: .headline))
+          .foregroundStyle(palette.text)
+        Text("\(song.artist) · \(offer.queue.position.minuteSecond)")
+          .font(.rowSubtitle)
+          .monospacedDigit()
+          .foregroundStyle(palette.secondary)
+      }
+      .lineLimit(1)
+      Spacer(minLength: 0)
+      Button {
+        PlayQueueSync.shared.dismiss(offer)
+      } label: {
+        Image(systemName: "xmark")
+      }
+      .buttonStyle(CircleButtonStyle(size: 32, foreground: palette.secondary))
+      .accessibilityLabel("Dismiss")
+    }
+    .padding(.leading, 14)
+    .padding(.trailing, 12)
+    .padding(.vertical, 12)
+    .background(shades?.background ?? palette.surface2)
+    .contentShape(Rectangle())
+    .onTapGesture { app.adopt(offer) }
+    .accessibilityElement(children: .combine)
+    .accessibilityAction(named: "Continue") { app.adopt(offer) }
+    // The combined element hides the × button.
+    .accessibilityAction(named: "Dismiss") { PlayQueueSync.shared.dismiss(offer) }
+    .coverShades($shades, albumId: song.albumId)
+  }
+}
+
 /// "PLAYING · 0:09 / 8:34", or "LIVE" for a station. It observes the clock
 /// itself, so Home does not redraw every second.
 private struct PlaybackLabel: View {
@@ -272,10 +331,7 @@ private struct PlaybackLabel: View {
         Text("Live")
       }
     }
-    .font(.counter)
-    .tracking(1.3)
-    .textCase(.uppercase)
-    .monospacedDigit()
+    .capsLabel()
   }
 }
 

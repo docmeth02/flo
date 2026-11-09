@@ -9,6 +9,8 @@ struct WatchQueueView: View {
   @EnvironmentObject var playerViewModel: PlayerViewModel
   // Redraws the reasons when a played mix lands.
   @ObservedObject private var mixes = RecommendationLog.shared
+  @ObservedObject private var phone = PhoneLink.shared
+  @ObservedObject private var handoff = PhoneLink.shared.handoff
   @Environment(\.setQueueShown) private var setQueueShown
   @Environment(\.dismiss) private var dismiss
   @State private var shades: CoverShades?
@@ -25,6 +27,17 @@ struct WatchQueueView: View {
         current(song)
           .listRowBackground(Color.clear)
           .listRowInsets(EdgeInsets())
+
+        if phone.canHandOff {
+          Button {
+            Task { await phone.playOnPhone() }
+          } label: {
+            IconRowLabel(title: "Play on iPhone", systemImage: "iphone")
+              .frame(minHeight: WatchLayout.joinedRowHeight)
+          }
+          .disabled(handoff.phase == .sending)
+          .joinedRow(.alone)
+        }
 
         let upNext = Array(playerViewModel.upNext)
         Section {
@@ -73,6 +86,9 @@ struct WatchQueueView: View {
     // As low as their content; at 0 watchOS skips a section's edge rows.
     .environment(\.defaultMinListRowHeight, 1)
     .toast($toast)
+    .onChange(of: handoff.phase) {
+      if let message = handoff.message { toast = Toast.Message(text: message) }
+    }
     .containerBackground(for: .navigation) { CoverBackdrop(albumId: albumId, url: coverURL) }
     .coverShades($shades, albumId: albumId, url: coverURL)
     .brandNavigationTitle("Up Next")

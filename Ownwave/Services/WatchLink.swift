@@ -6,7 +6,8 @@
 import WatchConnectivity
 
 /// The iPhone's side of the link with the watch app: it signs the watch in,
-/// shares the phone's settings, sends albums and shows what the watch holds.
+/// shares the phone's settings, sends albums, hands playback over both ways
+/// and shows what the watch holds.
 @MainActor final class WatchLink: ObservableObject {
   static let shared = WatchLink()
 
@@ -31,6 +32,8 @@ import WatchConnectivity
   /// What the watch said last; it outlives a relaunch in the session.
   @Published private(set) var watch: Link.WatchState?
   @Published private(set) var signIn = SignInPhase.idle
+  /// Play on Watch.
+  let handoff = HandoffSender(to: .watch)
   @Published private(set) var sends: [Send] = [] {
     // The watch counts what is still on its way from this; progress alone
     // is the phone's business.
@@ -50,7 +53,10 @@ import WatchConnectivity
     guard WCSession.isSupported() else { return }
     session.delegate = receiver
     session.activate()
-    AppModel.onLogout { WatchLink.shared.cancelSends() }
+    AppModel.onLogout {
+      WatchLink.shared.cancelSends()
+      WatchLink.shared.handoff.cancel()
+    }
     #if DEBUG
       runDebugLaunchActions()
     #endif
@@ -93,11 +99,12 @@ import WatchConnectivity
     let request = Link.SignIn(
       server: UserDefaultsManager.serverBaseURL, user: auth.username, password: password,
       accountKey: accountKey)
-    session.sendMessage(Link.encode(Link.Message.signIn(request))) { reply in
-      let reply = Link.decode(Link.Reply.self, from: reply)
-      Task { @MainActor in WatchLink.shared.answered(reply) }
-    } errorHandler: { error in
-      Task { @MainActor in WatchLink.shared.signIn = .failed(error.localizedDescription) }
+    Task {
+      do {
+        answered(try await session.request(.signIn(request)))
+      } catch {
+        signIn = .failed(error.localizedDescription)
+      }
     }
   }
 
@@ -109,7 +116,8 @@ import WatchConnectivity
       signIn = .idle
     case .otherAccount(let user, let host):
       signIn = .failed(Link.otherAccountMessage(user: user, host: host))
-    case nil: signIn = .failed("The watch did not answer.")
+    // The handoff's answers are not a sign-in's.
+    case .unavailable, .notSignedIn, nil: signIn = .failed("The watch did not answer.")
     }
   }
 
@@ -127,11 +135,43 @@ import WatchConnectivity
       downloadOverCellular: UserDefaultsManager.downloadOverCellular,
       mixVariety: UserDefaultsManager.mixVariety.rawValue,
       showMixReasons: UserDefaultsManager.showMixReasons,
+      handoff: true,
+      syncQueue: UserDefaultsManager.syncQueue,
       sending: Self.songs(of: sends))
     do {
       try session.updateApplicationContext(Link.encode(phone))
     } catch {
       RequestLog.shared.note("watch link: settings not sent: \(error.localizedDescription)")
+    }
+  }
+
+  // MARK: - Handoff
+
+  /// Whether Play on Watch can be offered: the watch is signed in to this
+  /// account and takes handoffs. It also needs the watch app in front.
+  var canHandOff: Bool { isSignedIn && watch?.handoff == true }
+
+  /// Moves playback to the watch; this phone pauses once the watch plays.
+  func playOnWatch() async {
+    guard isAppInstalled else { return handoff.refuse("Ownwave is not on this watch.") }
+    guard isSignedIn else { return handoff.refuse("Sign the watch in first.") }
+    guard watch?.handoff == true else {
+      return handoff.refuse("Update Ownwave on the watch first.")
+    }
+    guard session.isReachable else {
+      return handoff.refuse("Open Ownwave on the watch, then try again.")
+    }
+    await handoff.send(AppModel.shared.player) { try await session.request($0) }
+  }
+
+  /// Takes playback the watch handed over; a phone woken in the background
+  /// that cannot start its audio keeps the queue paused. Internal for the
+  /// debug hook.
+  func takeHandoff(_ handoff: Link.Handoff, reply: @escaping ([String: Any]) -> Void) {
+    HandoffReceiver(player: AppModel.shared.player, here: .iPhone).take(handoff) {
+      reply(Link.encode($0))
+    } send: {
+      WCSession.default.deliver($0)
     }
   }
 
@@ -369,10 +409,28 @@ private final class Receiver: NSObject, WCSessionDelegate {
   }
 
   func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-    guard case .signInFailed(let text) = Link.decode(Link.Message.self, from: message) else {
-      return
+    switch Link.decode(Link.Message.self, from: message) {
+    case .signInFailed(let text):
+      Task { @MainActor in WatchLink.shared.signInFailed(text) }
+    case .handoffResult(let id, let result):
+      Task { @MainActor in WatchLink.shared.handoff.received(id: id, result: result) }
+    default: break
     }
-    Task { @MainActor in WatchLink.shared.signInFailed(text) }
+  }
+
+  /// A handoff result the watch could not send as a message.
+  func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+    self.session(session, didReceiveMessage: userInfo)
+  }
+
+  func session(
+    _ session: WCSession, didReceiveMessage message: [String: Any],
+    replyHandler: @escaping ([String: Any]) -> Void
+  ) {
+    guard case .play(let handoff) = Link.decode(Link.Message.self, from: message) else {
+      return replyHandler([:])
+    }
+    Task { @MainActor in WatchLink.shared.takeHandoff(handoff, reply: replyHandler) }
   }
 
   func session(

@@ -32,6 +32,8 @@ enum API {
     static let getTranscodeDecision = "/rest/getTranscodeDecision"
     static let getTranscodeStream = "/rest/getTranscodeStream"
     static let ping = "/rest/ping"
+    static let savePlayQueueByIndex = "/rest/savePlayQueueByIndex"
+    static let getPlayQueueByIndex = "/rest/getPlayQueueByIndex"
   }
 }
 
@@ -67,6 +69,11 @@ enum UserDefaultsKeys {
   static let keepPlaying = "keepPlaying"
   static let showMixReasons = "showMixReasons"
   static let mixVariety = "mixVariety"
+  // The server's play queue is saved and offered (PlayQueueSync).
+  static let syncQueue = "syncQueue"
+  // Per account, the last saved queue the user took over or turned down, by
+  // its `changed` stamp.
+  static let handledQueueChanges = "handledQueueChanges"
   // Edits the server has not confirmed yet, by id (PendingEdits): ratings
   // 1 to 5 or 0 to clear, and stars.
   static let pendingRatings = "pendingRatings"

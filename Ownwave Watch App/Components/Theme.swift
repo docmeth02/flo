@@ -224,7 +224,7 @@ struct PlatterStack<Item, Row: View>: View {
 }
 
 /// The rule between two rows on one platter, starting under their text.
-private struct RowHairline: View {
+struct RowHairline: View {
   let inset: CGFloat
 
   var body: some View {

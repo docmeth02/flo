@@ -46,6 +46,13 @@ final class RequestLog: ObservableObject {
         duration: nil, bytes: 0, retries: 0))
   }
 
+  /// `note`, also printed in debug builds, for the lines the simulator
+  /// checks read.
+  func trace(_ text: String) {
+    note(text)
+    debugLog(text)
+  }
+
   func clear() {
     DispatchQueue.main.async { self.entries.removeAll() }
   }

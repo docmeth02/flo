@@ -9,7 +9,8 @@ import WatchKit
 
 /// The watch's side of the link with the iPhone app: it follows the phone's
 /// settings while sharing is on, signs in when the phone asks, takes albums
-/// the phone sends, and tells the phone what it holds.
+/// the phone sends, hands playback over both ways, and tells the phone what
+/// it holds.
 @MainActor final class PhoneLink: ObservableObject {
   static let shared = PhoneLink()
 
@@ -19,6 +20,15 @@ import WatchKit
   /// Songs still expected from the phone per collection: what the phone
   /// says it is sending, less what is here.
   @Published private(set) var incoming: [String: Int] = [:]
+  /// The iPhone app takes handoffs.
+  @Published private(set) var canHandOff = false
+  /// "Sync queue" follows the iPhone's: sharing is on and the phone says.
+  @Published private(set) var syncQueueFollowsPhone = false
+  /// Play on iPhone.
+  let handoff = HandoffSender(to: .iPhone)
+  /// Takes handoffs from the phone; set by WatchContentView, which owns the
+  /// player.
+  var handoffHandler: HandoffReceiver?
   private var sending: [String: Int] = [:]
 
   private let session = WCSession.default
@@ -59,7 +69,10 @@ import WatchKit
     // Files of the old account are dropped from now on. The login change
     // itself is published by WatchContentView.
     NotificationCenter.default.addObserver(forName: .didLogout, object: nil, queue: .main) { _ in
-      Task { @MainActor in PhoneLink.shared.forgetSends() }
+      Task { @MainActor in
+        PhoneLink.shared.forgetSends()
+        PhoneLink.shared.handoff.cancel()
+      }
     }
   }
 
@@ -85,7 +98,7 @@ import WatchKit
     guard signInRequest != nil else { return }
     signInRequest = nil
     if let error, session.isReachable {
-      session.sendMessage(Link.encode(Link.Message.signInFailed(error)), replyHandler: nil)
+      session.post(.signInFailed(error))
     }
     publishState()
   }
@@ -107,6 +120,7 @@ import WatchKit
       state.account = account
       state.downloadBitRate = downloadBitRate
       state.incoming = incoming
+      state.handoff = true
       self.send(state)
     }
   }
@@ -127,6 +141,8 @@ import WatchKit
   fileprivate func companionChanged() {
     guard !session.isCompanionAppInstalled else { return }
     UserDefaultsManager.settingsFollowPhone = false
+    canHandOff = false
+    syncQueueFollowsPhone = false
     forgetSends()
   }
 
@@ -153,8 +169,13 @@ import WatchKit
       if let showMixReasons = phone.showMixReasons {
         UserDefaultsManager.showMixReasons = showMixReasons
       }
+      if let syncQueue = phone.syncQueue {
+        PlayQueueSync.shared.isEnabled = syncQueue
+      }
     }
     UserDefaultsManager.settingsFollowPhone = phone.share
+    syncQueueFollowsPhone = phone.share && phone.syncQueue != nil
+    canHandOff = phone.handoff == true
     sending = phone.sending
     recountIncoming()
     publishState()
@@ -175,6 +196,26 @@ import WatchKit
 
   func requestSignIn(_ request: Link.SignIn) {
     signInRequest = request
+  }
+
+  /// Moves playback to the iPhone, which may be in the background; the
+  /// watch pauses once the phone plays.
+  func playOnPhone() async {
+    guard canHandOff else { return handoff.refuse("Update Ownwave on your iPhone first.") }
+    guard session.isReachable else { return handoff.refuse("Your iPhone is not in reach.") }
+    guard let player = handoffHandler?.player else { return }
+    await handoff.send(player) { try await session.request($0) }
+  }
+
+  /// Takes playback the phone handed over, through the root view's player.
+  /// Internal for the debug hook.
+  func takeHandoff(_ handoff: Link.Handoff, reply: @escaping ([String: Any]) -> Void) {
+    guard let handoffHandler else { return reply(Link.encode(Link.Reply.unavailable)) }
+    handoffHandler.take(handoff) {
+      reply(Link.encode($0))
+    } send: {
+      WCSession.default.deliver($0)
+    }
   }
 
   /// Records a song or cover whose file is already in place.
@@ -284,13 +325,27 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
     Task { @MainActor in PhoneLink.shared.apply(context) }
   }
 
+  func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+    guard case .handoffResult(let id, let result) = Link.decode(Link.Message.self, from: message)
+    else { return }
+    Task { @MainActor in PhoneLink.shared.handoff.received(id: id, result: result) }
+  }
+
+  /// A handoff result the phone could not send as a message.
+  func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+    self.session(session, didReceiveMessage: userInfo)
+  }
+
   func session(
     _ session: WCSession, didReceiveMessage message: [String: Any],
     replyHandler: @escaping ([String: Any]) -> Void
   ) {
-    guard case .signIn(let request) = Link.decode(Link.Message.self, from: message) else {
-      return replyHandler([:])
+    let decoded = Link.decode(Link.Message.self, from: message)
+    if case .play(let handoff) = decoded {
+      Task { @MainActor in PhoneLink.shared.takeHandoff(handoff, reply: replyHandler) }
+      return
     }
+    guard case .signIn(let request) = decoded else { return replyHandler([:]) }
     // A signed-in watch keeps its login; signing in again is its own choice.
     guard let account = Self.signedInAccount() else {
       replyHandler(Link.encode(Link.Reply.accepted))

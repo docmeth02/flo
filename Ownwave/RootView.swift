@@ -92,6 +92,7 @@ struct AppTabs: View {
   enum TabID { case home, library, taste, search }
 
   @EnvironmentObject var app: AppModel
+  @ObservedObject private var handoff = WatchLink.shared.handoff
   @Environment(\.palette) private var palette
   // Not private: the debug launch hook selects a tab and pushes onto it.
   @State var tab = TabID.home
@@ -133,6 +134,8 @@ struct AppTabs: View {
     .environment(\.openRoute, EnvironmentAction(push))
     .onOpenURL(perform: open)
     .onChange(of: app.tour) { follow($1) }
+    // How Play on Watch went, from Now Playing or the Watch screen.
+    .onChange(of: handoff.phase) { if let message = handoff.message { app.show(message) } }
     .task { await startTourOnce() }
     #if DEBUG
       .task { await runDebugScreen() }
