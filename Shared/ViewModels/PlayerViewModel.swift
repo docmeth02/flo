@@ -198,6 +198,9 @@ class PlayerViewModel: ObservableObject {
   /// Bumped whenever the user starts something new; a mix built in the
   /// meantime is stale.
   private(set) var startGeneration = 0
+  /// Bumped by a queue the user starts, a song picked in the queue and a
+  /// logout; not by a pause, a song that ends on its own or Keep Playing.
+  private(set) var userStarts = 0
   @Published private(set) var isGeneratingMix = false
 
   /// The queue entry in the player, nil while the queue is empty.
@@ -312,6 +315,7 @@ class PlayerViewModel: ObservableObject {
     resetSession()
     playGeneration += 1
     startGeneration += 1
+    userStarts += 1
     endStart()
     endConnectionWait(because: "logout")
     player?.pause()
@@ -793,6 +797,7 @@ class PlayerViewModel: ObservableObject {
   /// are dropped.
   func beginUserStart() {
     startGeneration += 1
+    userStarts += 1
     reportStopped()
     resetSession()
   }
@@ -964,6 +969,7 @@ class PlayerViewModel: ObservableObject {
 
   func playFromQueue(idx: Int) {
     startGeneration += 1
+    userStarts += 1
     reportStopped()
     self.activeQueueIdx = idx
     self.setNowPlaying()

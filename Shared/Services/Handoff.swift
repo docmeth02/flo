@@ -12,6 +12,10 @@ struct HandoffAttempt: Equatable {
   /// The player's start generation when it was sent; every start the user
   /// makes moves it, a song that ends on its own or Keep Playing does not.
   let startGeneration: Int
+  /// Whether it played when it was sent: a queue sent while paused that
+  /// the user played here meanwhile, which moves no start generation, plays
+  /// on.
+  let wasPlaying: Bool
 
   enum Step: Equatable {
     /// The other device plays the queue that was sent: this one pauses.
@@ -26,11 +30,12 @@ struct HandoffAttempt: Equatable {
   /// nothing and skipped nowhere since: a late result never pauses what the
   /// user chose meanwhile, but a song that ended on its own, and Keep
   /// Playing after it, still give way.
-  func step(for result: Link.HandoffResult, id: UUID, startGeneration: Int, skipped: Bool)
-    -> Step
-  {
+  func step(
+    for result: Link.HandoffResult, id: UUID, startGeneration: Int, skipped: Bool, isPlaying: Bool
+  ) -> Step {
     guard id == self.id else { return .ignore }
-    guard result == .started, startGeneration == self.startGeneration, !skipped
+    guard result == .started, wasPlaying || !isPlaying,
+      startGeneration == self.startGeneration, !skipped
     else { return .keepPlaying }
     return .pause
   }
@@ -128,7 +133,8 @@ struct HandoffAttempts: Equatable {
     let handoff = Link.Handoff(id: UUID(), accountKey: account, snapshot: snapshot)
     // First: it moves the start generation the attempt records.
     player.handOff()
-    let attempt = HandoffAttempt(id: handoff.id, startGeneration: player.startGeneration)
+    let attempt = HandoffAttempt(
+      id: handoff.id, startGeneration: player.startGeneration, wasPlaying: player.isPlaying)
     attempts.begin(attempt)
     self.player = player
     sentAt = Date()
@@ -160,7 +166,7 @@ struct HandoffAttempts: Equatable {
     guard let player, let attempt = attempts.take(id) else { return }
     let step = attempt.step(
       for: result, id: id, startGeneration: player.startGeneration,
-      skipped: player.skippedSinceHandOff)
+      skipped: player.skippedSinceHandOff, isPlaying: player.isPlaying)
     if case .failed(let reason) = result {
       RequestLog.shared.trace("handoff \(Self.short(id)) failed: \(reason)")
       player.handOffEnded()
@@ -235,10 +241,10 @@ struct HandoffAttempts: Equatable {
         + "\(handoff.snapshot.entries.count) entries: \(label)")
     reply(answer)
     guard answer == .accepted else { return }
-    let entry = player.nowPlaying
+    let starts = player.userStarts
     adopted()
     Task {
-      let result = await result(of: handoff, entry: entry)
+      let result = await result(of: handoff, userStarts: starts)
       send(.handoffResult(id: handoff.id, result: result))
     }
   }
@@ -256,14 +262,12 @@ struct HandoffAttempts: Equatable {
     return .accepted
   }
 
-  /// The start stays the handoff's while the queue holds the adopted entry:
-  /// through a pause, an automatic skip or edits to the songs after it, but
-  /// not through another queue or a logout.
-  private func result(of handoff: Link.Handoff, entry: QueueEntity?) async -> Link.HandoffResult {
+  /// The start stays the handoff's until the user starts something here:
+  /// through a pause, a song that ends or fails on its own, Keep Playing
+  /// and edits to the songs after it.
+  private func result(of handoff: Link.Handoff, userStarts: Int) async -> Link.HandoffResult {
     let outcome = await player.startOutcome()
-    let result = Self.result(
-      outcome, stillAdopted: entry.map { entry in player.queue.contains { $0 === entry } } ?? false,
-      here: here)
+    let result = Self.result(outcome, stillAdopted: player.userStarts == userStarts, here: here)
     // Nothing may start it later, a kept start's settle included.
     if result == .ready { player.pause() }
     let reason = if case .silent(let reason) = outcome { ": \(reason)" } else { "" }
@@ -271,9 +275,9 @@ struct HandoffAttempts: Equatable {
     return result
   }
 
-  /// Heard is started and silent is ready, as long as the queue is still the
-  /// one handed over: something the user started here meanwhile, or a
-  /// logout, fails the handoff, so the sender plays on.
+  /// Heard is started and silent is ready, as long as the start is still the
+  /// handoff's: something the user started here meanwhile, or a logout,
+  /// fails the handoff, so the sender plays on.
   nonisolated static func result(_ outcome: StartOutcome, stillAdopted: Bool, here: Link.Peer)
     -> Link.HandoffResult
   {

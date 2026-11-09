@@ -135,9 +135,10 @@ final class HandoffTests: XCTestCase {
   /// keeps the song here.
   func testSenderPausesOnlyForItsOwnStart() {
     let id = UUID()
-    let attempt = HandoffAttempt(id: id, startGeneration: 4)
+    let attempt = HandoffAttempt(id: id, startGeneration: 4, wasPlaying: true)
     let step = { (result: Link.HandoffResult, id: UUID, generation: Int) in
-      attempt.step(for: result, id: id, startGeneration: generation, skipped: false)
+      attempt.step(
+        for: result, id: id, startGeneration: generation, skipped: false, isPlaying: true)
     }
     XCTAssertEqual(step(.started, id, 4), .pause)
     XCTAssertEqual(step(.started, UUID(), 4), .ignore)
@@ -145,6 +146,14 @@ final class HandoffTests: XCTestCase {
     XCTAssertEqual(step(.started, id, 5), .keepPlaying)
     XCTAssertEqual(step(.ready, id, 4), .keepPlaying)
     XCTAssertEqual(step(.failed("no"), id, 4), .keepPlaying)
+    // Sent while paused: still paused, the handoff holds; a Play meanwhile,
+    // which moves no start generation, is the user's.
+    let paused = HandoffAttempt(id: id, startGeneration: 4, wasPlaying: false)
+    let pausedStep = { (playing: Bool) in
+      paused.step(for: .started, id: id, startGeneration: 4, skipped: false, isPlaying: playing)
+    }
+    XCTAssertEqual(pausedStep(false), .pause)
+    XCTAssertEqual(pausedStep(true), .keepPlaying)
   }
 
   /// A skip on the sender meanwhile, which moves no start generation, keeps
@@ -152,9 +161,9 @@ final class HandoffTests: XCTestCase {
   /// or Keep Playing after it, still gives way.
   func testSkipOnTheSenderKeepsPlaying() {
     let id = UUID()
-    let attempt = HandoffAttempt(id: id, startGeneration: 4)
+    let attempt = HandoffAttempt(id: id, startGeneration: 4, wasPlaying: true)
     let step = { (skipped: Bool) in
-      attempt.step(for: .started, id: id, startGeneration: 4, skipped: skipped)
+      attempt.step(for: .started, id: id, startGeneration: 4, skipped: skipped, isPlaying: true)
     }
     XCTAssertEqual(step(true), .keepPlaying)
     XCTAssertEqual(step(false), .pause)
@@ -163,8 +172,8 @@ final class HandoffTests: XCTestCase {
   /// A result counts once, also after the wait for it ended; a copy of it
   /// and the result of an older attempt change nothing.
   func testLateResultCountsOnce() {
-    let first = HandoffAttempt(id: UUID(), startGeneration: 1)
-    let second = HandoffAttempt(id: UUID(), startGeneration: 2)
+    let first = HandoffAttempt(id: UUID(), startGeneration: 1, wasPlaying: true)
+    let second = HandoffAttempt(id: UUID(), startGeneration: 2, wasPlaying: true)
     var attempts = HandoffAttempts()
     attempts.begin(first)
     XCTAssertNil(attempts.take(second.id))
