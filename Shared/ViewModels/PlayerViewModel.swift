@@ -195,8 +195,8 @@ class PlayerViewModel: ObservableObject {
   private static let sessionTimeout: TimeInterval = 30 * 60
   private var ratingObservation: AnyCancellable?
   private var avoidObservation: AnyCancellable?
-  /// Bumped whenever the user starts something new; a mix built in the
-  /// meantime is stale.
+  /// Bumped whenever the user starts something new, pauses or hands the
+  /// queue over; a mix built in the meantime is stale.
   private(set) var startGeneration = 0
   /// Bumped once a queue the user started is in place (a collection, a
   /// station, a queue from the other device), by a song picked in the queue

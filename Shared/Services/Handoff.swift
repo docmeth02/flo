@@ -22,8 +22,6 @@ struct HandoffAttempt: Equatable {
     case pause
     /// The song stays here and counts here again.
     case keepPlaying
-    /// Not this attempt's result.
-    case ignore
   }
 
   /// Pauses only for `.started` while the user started nothing, paused
@@ -31,10 +29,8 @@ struct HandoffAttempt: Equatable {
   /// user chose meanwhile, but a song that ended on its own, and Keep
   /// Playing after it, still give way.
   func step(
-    for result: Link.HandoffResult, id: UUID, startGeneration: Int, skipped: Bool,
-    isHandedOff: Bool
+    for result: Link.HandoffResult, startGeneration: Int, skipped: Bool, isHandedOff: Bool
   ) -> Step {
-    guard id == self.id else { return .ignore }
     guard result == .started, wasPlaying || isHandedOff,
       startGeneration == self.startGeneration, !skipped
     else { return .keepPlaying }
@@ -166,7 +162,7 @@ struct HandoffAttempts: Equatable {
   func received(id: UUID, result: Link.HandoffResult) {
     guard let player, let attempt = attempts.take(id) else { return }
     let step = attempt.step(
-      for: result, id: id, startGeneration: player.startGeneration,
+      for: result, startGeneration: player.startGeneration,
       skipped: player.skippedSinceHandOff, isHandedOff: player.isHandedOff)
     if case .failed(let reason) = result {
       RequestLog.shared.trace("handoff \(Self.short(id)) failed: \(reason)")
@@ -176,7 +172,16 @@ struct HandoffAttempts: Equatable {
     let seconds = Int(Date().timeIntervalSince(sentAt))
     RequestLog.shared.trace(
       "handoff \(Self.short(id)) \(result == .started ? "started" : "ready") after \(seconds) s")
-    if step == .pause { player.pause() } else { player.handOffEnded() }
+    if step == .pause {
+      // Its song counts on the other device now: no skip and no second play
+      // for it here, also when Play resumes it.
+      if player.isHandedOff {
+        player.carryOverListening(qualified: true, listened: player.secondsListened)
+      }
+      player.pause()
+    } else {
+      player.handOffEnded()
+    }
     finish(result == .started ? .started : .ready)
   }
 

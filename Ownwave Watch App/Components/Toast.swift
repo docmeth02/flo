@@ -25,7 +25,8 @@ struct Toast: View {
       HStack(spacing: 6) {
         Text(current.text)
           .font(.meta.weight(.medium))
-          .lineLimit(1)
+          .lineLimit(2)
+          .multilineTextAlignment(.center)
         if let undo = current.undo {
           Button("Undo") {
             undo()
@@ -38,7 +39,8 @@ struct Toast: View {
       }
       .padding(.horizontal, 14)
       .padding(.vertical, 8)
-      .background(Capsule().fill(Dusk.surface))
+      // A capsule's radius for one line, and still a platter for two.
+      .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Dusk.surface))
       .shadow(color: .black.opacity(0.6), radius: 9, y: 6)
       .task(id: current.id) {
         try? await Task.sleep(for: Self.duration)

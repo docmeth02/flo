@@ -57,7 +57,7 @@ struct QueueSnapshot: Codable, Equatable {
   }
 }
 
-/// How an adopted start went: heard through an output, or over without a
+/// How an adopted start went: heard (the song made progress), or over without a
 /// sound (the activation failed, the device list was dismissed, a pause
 /// ended it, or nothing played in time), with the reason.
 enum StartOutcome: Equatable {
@@ -183,10 +183,11 @@ extension PlayerViewModel {
   }
 
   /// The other device did not take over: the song counts here again, and
-  /// the queue is this device's to save again.
+  /// a queue that plays here is this device's to save again. A paused one
+  /// changed nothing, and saving it could replace a newer save.
   func handOffEnded() {
     handedOffSongId = nil
-    queueEvents.send(.changed)
+    if isPlaying { queueEvents.send(.changed) }
   }
 
   /// Whether the current song was handed over to the other device.

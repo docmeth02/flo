@@ -10,8 +10,9 @@ import WatchConnectivity
 /// payload travels as JSON under one key, so neither side handles loose
 /// dictionaries.
 enum Link {
-  /// Sent with `sendMessage` only: it needs the other app running, and the
-  /// system never keeps a password around for later.
+  /// A sign-in and a `play` go by `sendMessage` only: they need the other app
+  /// running, and the system never keeps a password around for later. Only a
+  /// handoff's result may be queued for a later delivery.
   enum Message: Codable, Equatable {
     case signIn(SignIn)
     case signInFailed(String)

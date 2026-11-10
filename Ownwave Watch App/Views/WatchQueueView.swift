@@ -28,7 +28,7 @@ struct WatchQueueView: View {
           .listRowBackground(Color.clear)
           .listRowInsets(EdgeInsets())
 
-        if phone.canHandOff {
+        if phone.canHandOff, !playerViewModel.isLiveRadio {
           Button {
             Task { await phone.playOnPhone() }
           } label: {

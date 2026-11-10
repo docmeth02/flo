@@ -402,7 +402,6 @@ private struct StorageBar: View {
 struct DiagnosticsView: View {
   @ObservedObject private var log = RequestLog.shared
   @ObservedObject private var connectivity = ConnectivityMonitor.shared
-  @ObservedObject private var queueSync = PlayQueueSync.shared
   @ObservedObject private var history = HistoryStatus.shared
   @Environment(\.palette) private var palette
 
