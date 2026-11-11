@@ -83,21 +83,13 @@ struct PlaylistRow<Trailing: View>: View {
 
   @Environment(\.palette) private var palette
 
-  /// "3 songs · 16 min"; the comment while the server gives no count.
-  private var subtitle: String {
-    guard playlist.songCount > 0 else {
-      return playlist.comment.isEmpty ? "Playlist" : playlist.comment
-    }
-    return songsAndLength(playlist.songCount, seconds: playlist.duration)
-  }
-
   var body: some View {
     HStack(spacing: 12) {
       CoverArt(albumId: playlist.id, artId: playlist.artId, radius: 7)
         .frame(width: 46, height: 46)
       VStack(alignment: .leading, spacing: 2) {
         Text(playlist.name).font(.rowTitle).foregroundStyle(palette.text)
-        Text(subtitle).font(.rowSubtitle).foregroundStyle(palette.secondary)
+        Text(playlist.summary).font(.rowSubtitle).foregroundStyle(palette.secondary)
       }
       .lineLimit(1)
       Spacer(minLength: 0)

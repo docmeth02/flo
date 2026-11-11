@@ -8,7 +8,7 @@ import SwiftUI
 struct WatchAlbumsListView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
 
-  @AppStorage(AlbumOrder.storageKey) private var order = AlbumOrder.added
+  @AppStorage(AlbumOrder.storageKey) private var order = AlbumOrder.initial
   // The last sort, so a redraw sorts again only when the list or order changed.
   @State private var sort = SortMemo<AlbumOrder>()
   @State private var openedAlbum: Album?

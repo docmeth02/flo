@@ -32,9 +32,9 @@ struct LibraryView: View {
   @State private var songCounts: [String: Int] = [:]
   /// The downloads folder, measured as Settings measures it.
   @State private var downloadsBytes: Int64 = 0
-  @AppStorage(AlbumOrder.storageKey) private var albumOrder = AlbumOrder.added
-  @AppStorage(ArtistOrder.storageKey) private var artistOrder = ArtistOrder.name
-  @AppStorage(PlaylistOrder.storageKey) private var playlistOrder = PlaylistOrder.name
+  @AppStorage(AlbumOrder.storageKey) private var albumOrder = AlbumOrder.initial
+  @AppStorage(ArtistOrder.storageKey) private var artistOrder = ArtistOrder.initial
+  @AppStorage(PlaylistOrder.storageKey) private var playlistOrder = PlaylistOrder.initial
   // The last sorts, so a redraw sorts again only when a list or order changed.
   @State private var albumSort = SortMemo<AlbumOrder>()
   @State private var artistSort = SortMemo<ArtistOrder>()

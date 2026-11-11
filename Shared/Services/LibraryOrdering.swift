@@ -12,6 +12,8 @@ protocol LibraryOrder: RawRepresentable<String>, CaseIterable, Equatable {
 
   /// The `@AppStorage` key of the list's order.
   static var storageKey: String { get }
+  /// The order until one is chosen.
+  static var initial: Self { get }
   var label: String { get }
   /// The items in this order; a tie falls back to the name.
   func sorted(_ items: [Item]) -> [Item]
@@ -21,6 +23,7 @@ enum AlbumOrder: String, LibraryOrder {
   case added, name, artist, year
 
   static let storageKey = "albumSort"
+  static let initial = added
 
   var label: String {
     switch self {
@@ -56,6 +59,7 @@ enum ArtistOrder: String, LibraryOrder {
   case name, albums
 
   static let storageKey = "artistSort"
+  static let initial = name
 
   var label: String { self == .name ? "A–Z" : "Most albums" }
 
@@ -75,6 +79,7 @@ enum PlaylistOrder: String, LibraryOrder {
   case name, updated
 
   static let storageKey = "playlistSort"
+  static let initial = name
 
   var label: String { self == .name ? "A–Z" : "Recently updated" }
 
@@ -86,6 +91,13 @@ enum PlaylistOrder: String, LibraryOrder {
         $0.updatedAt == $1.updatedAt ? $0.name.precedes($1.name) : $0.updatedAt > $1.updatedAt
       }
     }
+  }
+}
+
+extension LibraryOrder {
+  /// The order the list's screen stored, for a surface without its own menu.
+  static var stored: Self {
+    UserDefaults.standard.string(forKey: storageKey).flatMap { Self(rawValue: $0) } ?? initial
   }
 }
 

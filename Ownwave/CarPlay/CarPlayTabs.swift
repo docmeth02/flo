@@ -37,6 +37,7 @@ extension CarPlayController {
       radios.$radios.map { _ in }.eraseToAnyPublisher(),
       PinStore.shared.objectWillChange.eraseToAnyPublisher(),
       StarStore.shared.$stars.map { _ in }.eraseToAnyPublisher(),
+      PlayQueueSync.shared.$offer.map { _ in }.eraseToAnyPublisher(),
       reachability.map { _ in }.eraseToAnyPublisher())
     return TabScreen(
       template: template,
@@ -61,10 +62,13 @@ extension CarPlayController {
     if albums.albums.isEmpty { albums.albums = lists.albums }
     if albums.artists.isEmpty { albums.artists = lists.artists }
     if albums.playlists.isEmpty { albums.playlists = lists.playlists }
-    if !PinStore.shared.pinned(.radio).isEmpty { radios.fetchAllRadios() }
+    if !PinStore.shared.pinned(.radio).isEmpty, ConnectivityMonitor.shared.canReachServer {
+      radios.fetchAllRadios()
+    }
   }
 
-  /// Play Something, the pins, the recent albums and the liked songs.
+  /// The queue another device saved, Play Something, the pins, the recent
+  /// albums and the liked songs.
   /// Offline the pins and recent albums are the ones downloaded here.
   private func homeSections(playSomething: CPListItem) -> [CPListSection] {
     // Offline, the albums downloaded here.
@@ -75,7 +79,11 @@ extension CarPlayController {
       downloaded.map { ids in albums.recentAlbums.filter { ids.contains($0.id) } }
       ?? albums.recentAlbums
     var covers: [CarPlayImages.Cover] = []
-    var sections = [CPListSection(items: [playSomething])]
+    var plays = [playSomething]
+    if let offer = PlayQueueSync.shared.offer {
+      plays.insert(continueRow(offer), at: 0)
+    }
+    var sections = [CPListSection(items: plays)]
     for (title, targets) in [
       ("Pinned", pinned(downloaded: downloaded)), ("Recently Played", recent.map(MenuTarget.album)),
     ] where !targets.isEmpty {
@@ -84,6 +92,27 @@ extension CarPlayController {
     sections.append(CPListSection(items: [likedSongsRow(offline: downloaded != nil)]))
     images.loadCovers(covers, size: CarPlayImages.elementSize)
     return sections
+  }
+
+  /// Continues the queue another device saved, at its song and position, or
+  /// says why its song cannot play here now. Turning it down stays on the
+  /// phone; anything played here ends the offer.
+  private func continueRow(_ offer: PlayQueueSync.Offer) -> CPListItem {
+    let song = offer.song
+    let item = CPListItem(
+      text: "Continue from \(offer.device)",
+      detailText: "\(song.title) · \(song.artist) · \(offer.queue.position.minuteSecond)",
+      image: images.tile(Glyph.album, size: CarPlayImages.rowSize))
+    item.handler = { [weak self] _, completion in
+      switch PlayQueueSync.shared.adopt(offer) {
+      case .playing: self?.showNowPlaying()
+      case .unplayable(let reason): self?.presentMessage(reason)
+      case .dropped: break
+      }
+      completion()
+    }
+    images.loadCovers([.row(item, albumId: song.albumId)], size: CarPlayImages.rowSize)
+    return item
   }
 
   /// Plays a smart mix; says when one is being built or only downloaded
@@ -105,8 +134,8 @@ extension CarPlayController {
       .sink { [weak item] building, online in
         item?.setDetailText(
           building
-            ? "Building your mix…"
-            : online ? "Smart mix from your listening history" : "Offline · from downloaded songs")
+            ? "Building mix…"
+            : online ? "New mix from your whole taste" : "Offline · from downloaded songs")
       }
       .store(in: &subscriptions)
     Publishers.CombineLatest3(player.$queue, player.$activeQueueIdx, player.$isPlaying)
@@ -143,7 +172,12 @@ extension CarPlayController {
     let elements = targets.map { target in
       let element = CPListImageRowItemRowElement(
         image: tile(for: target, size: size), title: target.title, subtitle: target.subtitle)
-      if case .album(let album) = target { covers.append(.element(element, albumId: album.id)) }
+      switch target {
+      case .album(let album): covers.append(.element(element, albumId: album.id))
+      case .playlist(let playlist):
+        covers.append(.element(element, albumId: playlist.id, artId: playlist.artId))
+      case .artist, .radio, .song: break
+      }
       return element
     }
     let item = CPListImageRowItem(text: title, elements: elements, allowsMultipleLines: false)
@@ -245,17 +279,27 @@ extension CarPlayController {
   }
 
   private func albumsList() -> CPListTemplate {
-    libraryList("Albums", empty: "No albums yet", items: albums.$albums, cover: \.id) {
+    libraryList(
+      "Albums", empty: "No albums yet", items: albums.$albums,
+      order: { AlbumOrder.stored.sorted($0) }, cover: { .row($1, albumId: $0.id) }
+    ) {
       $0.albumRow($1)
     }
   }
 
   private func artistsList() -> CPListTemplate {
-    libraryList("Artists", empty: "No artists yet", items: albums.$artists) { $0.artistRow($1) }
+    libraryList(
+      "Artists", empty: "No artists yet", items: albums.$artists,
+      order: { ArtistOrder.stored.sorted($0) }
+    ) { $0.artistRow($1) }
   }
 
   private func playlistsList() -> CPListTemplate {
-    libraryList("Playlists", empty: "No playlists yet", items: albums.$playlists) {
+    libraryList(
+      "Playlists", empty: "No playlists yet", items: albums.$playlists,
+      order: { PlaylistOrder.stored.sorted($0) },
+      cover: { .row($1, albumId: $0.id, artId: $0.artId) }
+    ) {
       $0.playlistRow($1)
     }
   }
@@ -266,12 +310,14 @@ extension CarPlayController {
     }
   }
 
-  /// A pushed list of `items`, rebuilt when they change, with each item's
-  /// cover when `cover` names its album. The template keeps the
-  /// subscription.
+  /// A pushed list of `items` in the order the phone's Library chose,
+  /// rebuilt when they change, with each item's cover when `cover` makes
+  /// one. The template keeps the subscription.
   private func libraryList<Item: Equatable>(
     _ title: String, empty: String, items: Published<[Item]>.Publisher,
-    cover: ((Item) -> String)? = nil, row: @escaping (CarPlayController, Item) -> CPListItem
+    order: @escaping ([Item]) -> [Item] = { $0 },
+    cover: ((Item, CPListItem) -> CarPlayImages.Cover)? = nil,
+    row: @escaping (CarPlayController, Item) -> CPListItem
   ) -> CPListTemplate {
     let template = CPListTemplate(title: title, sections: [])
     template.emptyViewTitleVariants = [empty]
@@ -280,12 +326,11 @@ extension CarPlayController {
       .removeDuplicates()
       .sink { [weak self, weak template] items in
         guard let self, let template else { return }
-        let items = Array(items.prefix(CPListTemplate.maximumItemCount))
+        let items = Array(order(items).prefix(CPListTemplate.maximumItemCount))
         let rows = items.map { row(self, $0) }
         template.updateSections([CPListSection(items: rows)])
         guard let cover else { return }
-        images.loadCovers(
-          zip(items, rows).map { .row($1, albumId: cover($0)) }, size: CarPlayImages.rowSize)
+        images.loadCovers(zip(items, rows).map(cover), size: CarPlayImages.rowSize)
       }
     return template
   }
@@ -320,7 +365,7 @@ extension CarPlayController {
 
   private func playlistRow(_ playlist: Playlist) -> CPListItem {
     let item = CPListItem(
-      text: playlist.name, detailText: playlist.comment.isEmpty ? "Playlist" : playlist.comment,
+      text: playlist.name, detailText: playlist.summary,
       image: images.tile(Glyph.playlist, size: CarPlayImages.rowSize))
     item.accessoryType = .disclosureIndicator
     item.handler = { [weak self] _, completion in
@@ -558,9 +603,9 @@ extension CarPlayController {
       let player = self?.player
       Task {
         // Holds the completion until the radio plays or has nothing to play.
-        if await player?.playArtistRadio(id: artist.id, name: artist.name) == .played {
-          self?.showNowPlaying()
-        }
+        let outcome = await player?.playArtistRadio(id: artist.id, name: artist.name)
+        if outcome == .played { self?.showNowPlaying() }
+        if let message = outcome?.message { self?.presentMessage(message) }
         completion()
       }
     }

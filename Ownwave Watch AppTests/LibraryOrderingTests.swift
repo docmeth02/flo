@@ -125,4 +125,26 @@ final class LibraryOrderingTests: XCTestCase {
       discNumber: 1, bitRate: 0, sampleRate: 0, suffix: "mp3", duration: .nan, mediaFileId: "")
     XCTAssertEqual([Song.fixture("s0"), unknown].countAndLength, "2 songs · 3 min")
   }
+
+  func testPlaylistRowNamesItsLengthOrItsComment() {
+    var playlist = Playlist(id: "p", name: "Mix", comment: "For the road")
+    XCTAssertEqual(playlist.summary, "For the road")
+    playlist.songCount = 3
+    playlist.duration = 960
+    XCTAssertEqual(playlist.summary, "3 songs · 16 min")
+    XCTAssertEqual(Playlist(id: "p", name: "Mix").summary, "Playlist")
+  }
+
+  func testStoredOrderFallsBackToTheInitialOne() {
+    let defaults = UserDefaults.standard
+    let key = AlbumOrder.storageKey
+    let before = defaults.string(forKey: key)
+    defer { defaults.set(before, forKey: key) }
+    defaults.removeObject(forKey: key)
+    XCTAssertEqual(AlbumOrder.stored, .added)
+    defaults.set("year", forKey: key)
+    XCTAssertEqual(AlbumOrder.stored, .year)
+    defaults.set("gone", forKey: key)
+    XCTAssertEqual(AlbumOrder.stored, .added)
+  }
 }

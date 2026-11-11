@@ -46,6 +46,13 @@ extension [Song] {
 }
 
 extension Playlist {
+  /// "3 songs · 16 min" for its row; the comment while the server gives no
+  /// count.
+  var summary: String {
+    guard songCount > 0 else { return comment.isEmpty ? "Playlist" : comment }
+    return songsAndLength(songCount, seconds: duration)
+  }
+
   /// "Playlist · 3 songs · 16 min" for its screen, from the server's counts
   /// until `songs` are loaded.
   func meta(loaded songs: [Song]) -> String {
