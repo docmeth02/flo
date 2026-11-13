@@ -281,7 +281,7 @@ extension CarPlayController {
   private func albumsList() -> CPListTemplate {
     libraryList(
       "Albums", empty: "No albums yet", items: albums.$albums,
-      order: { AlbumOrder.stored.sorted($0) }, cover: { .row($1, albumId: $0.id) }
+      order: AlbumOrder.storedSort, cover: { .row($1, albumId: $0.id) }
     ) {
       $0.albumRow($1)
     }
@@ -290,14 +290,14 @@ extension CarPlayController {
   private func artistsList() -> CPListTemplate {
     libraryList(
       "Artists", empty: "No artists yet", items: albums.$artists,
-      order: { ArtistOrder.stored.sorted($0) }
+      order: ArtistOrder.storedSort
     ) { $0.artistRow($1) }
   }
 
   private func playlistsList() -> CPListTemplate {
     libraryList(
       "Playlists", empty: "No playlists yet", items: albums.$playlists,
-      order: { PlaylistOrder.stored.sorted($0) },
+      order: PlaylistOrder.storedSort,
       cover: { .row($1, albumId: $0.id, artId: $0.artId) }
     ) {
       $0.playlistRow($1)
@@ -311,11 +311,11 @@ extension CarPlayController {
   }
 
   /// A pushed list of `items` in the order the phone's Library chose,
-  /// rebuilt when they change, with each item's cover when `cover` makes
+  /// rebuilt when they or the order change, with each item's cover when `cover` makes
   /// one. The template keeps the subscription.
   private func libraryList<Item: Equatable>(
     _ title: String, empty: String, items: Published<[Item]>.Publisher,
-    order: @escaping ([Item]) -> [Item] = { $0 },
+    order: AnyPublisher<([Item]) -> [Item], Never> = Just({ $0 }).eraseToAnyPublisher(),
     cover: ((Item, CPListItem) -> CarPlayImages.Cover)? = nil,
     row: @escaping (CarPlayController, Item) -> CPListItem
   ) -> CPListTemplate {
@@ -324,7 +324,8 @@ extension CarPlayController {
     template.userInfo =
       items
       .removeDuplicates()
-      .sink { [weak self, weak template] items in
+      .combineLatest(order)
+      .sink { [weak self, weak template] items, order in
         guard let self, let template else { return }
         let items = Array(order(items).prefix(CPListTemplate.maximumItemCount))
         let rows = items.map { row(self, $0) }

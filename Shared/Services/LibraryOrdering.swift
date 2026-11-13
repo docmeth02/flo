@@ -3,6 +3,7 @@
 //  Ownwave
 //
 
+import Combine
 import Foundation
 
 /// An order a sortable library list offers, stored by its raw value under
@@ -98,6 +99,17 @@ extension LibraryOrder {
   /// The order the list's screen stored, for a surface without its own menu.
   static var stored: Self {
     UserDefaults.standard.string(forKey: storageKey).flatMap { Self(rawValue: $0) } ?? initial
+  }
+
+  /// The stored order's sort, and again each time another one is chosen.
+  static var storedSort: AnyPublisher<([Item]) -> [Item], Never> {
+    NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+      .receive(on: DispatchQueue.main)
+      .map { _ in stored }
+      .prepend(stored)
+      .removeDuplicates()
+      .map { $0.sorted }
+      .eraseToAnyPublisher()
   }
 }
 
