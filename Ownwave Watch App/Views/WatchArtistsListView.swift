@@ -8,7 +8,7 @@ import SwiftUI
 struct WatchArtistsListView: View {
   @EnvironmentObject var albumViewModel: AlbumViewModel
 
-  @AppStorage(ArtistOrder.storageKey) private var order = ArtistOrder.name
+  @AppStorage(ArtistOrder.storageKey) private var order = ArtistOrder.initial
   // The last sort and letters, so a redraw sorts and groups again only when
   // the list or order changed.
   @State private var sort = SortMemo<ArtistOrder>()

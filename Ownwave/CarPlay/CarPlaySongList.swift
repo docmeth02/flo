@@ -173,7 +173,7 @@ import Combine
       let reason = isCurrent ? nil : RecommendationLog.shared.shownReason(for: entry)
       let item = CPListItem(
         text: entry.songName ?? "Unknown",
-        detailText: reason.map { "\(artist) · \($0.note)" } ?? artist,
+        detailText: reason.map { "\(artist) · \($0.label)" } ?? artist,
         image: images.tile(Glyph.album, size: size))
       item.playingIndicatorLocation = .trailing
       item.handler = { [weak controller] _, completion in

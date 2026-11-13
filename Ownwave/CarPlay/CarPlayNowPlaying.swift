@@ -13,14 +13,13 @@ private struct NowPlayingButtons: Equatable {
   var isSong = false
   var hasAlbum = false
   var isStarred = false
-  /// Rated 4 or 5.
   var isBoosted = false
 }
 
 /// The car's sheets and alerts, kept in the template's `userInfo` so one is
 /// found again while it is presented.
 private enum Modal {
-  case rate, signedOut, streamingBlocked
+  case rate, signedOut, streamingBlocked, message
 }
 
 // Now Playing's buttons, the Rate sheet and the alerts. CarPlay calls the
@@ -183,6 +182,14 @@ extension CarPlayController: @preconcurrency CPNowPlayingTemplateObserver {
     let alert = CPAlertTemplate(
       titleVariants: [.streamingBlocked], actions: Array(actions))
     present(alert, as: .streamingBlocked)
+  }
+
+  /// Says why a tap played nothing, as the phone's alert or toast does.
+  func presentMessage(_ text: String) {
+    let ok = CPAlertAction(title: "OK", style: .cancel) { [weak self] _ in
+      self?.dismiss(.message)
+    }
+    present(CPAlertTemplate(titleVariants: [text], actions: [ok]), as: .message)
   }
 
   /// The car shows one modal template at a time. The newest replaces the one
