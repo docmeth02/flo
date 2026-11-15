@@ -49,7 +49,10 @@ struct WatchNowPlayingView: View {
     }
     .background { CoverBackdrop(albumId: albumId, url: coverURL) }
     .coverTask(id: albumId) {
-      tint = await CoverTint.color(albumId: albumId, url: coverURL)
+      let color = await CoverTint.color(albumId: albumId, url: coverURL)
+      // A cover that arrives after the song changed is not this song's.
+      guard !Task.isCancelled else { return }
+      tint = color
     }
     .onAppear {
       isShown = true
@@ -361,8 +364,9 @@ private struct SeekBar: View {
   let tint: Color
   let seek: (Double) -> Void
 
-  // The position under the finger while dragging.
-  @State private var dragged: Double?
+  // The position under the finger while dragging; gone when the drag ends
+  // or the system cancels it.
+  @GestureState private var dragged: Double?
 
   private let knob: CGFloat = 7
   /// The band around the bar that seeks; a page swipe can start above or
@@ -392,11 +396,10 @@ private struct SeekBar: View {
           // Ahead of the page swipe, which would take a sideways drag.
           .highPriorityGesture(
             DragGesture(minimumDistance: 0)
-              .onChanged { dragged = min(max($0.location.x / width, 0), 1) }
-              .onEnded { _ in
-                if let dragged { seek(dragged) }
-                dragged = nil
+              .updating($dragged) { drag, dragged, _ in
+                dragged = min(max(drag.location.x / width, 0), 1)
               }
+              .onEnded { seek(min(max($0.location.x / width, 0), 1)) }
           )
           .frame(maxHeight: .infinity)
       }

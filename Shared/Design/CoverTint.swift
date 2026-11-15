@@ -171,6 +171,8 @@ private struct CoverShading: ViewModifier {
     // The hue is memoized per album, so a new scheme only mixes the colors.
     content.task(id: Key(albumId: albumId, scheme: scheme)) {
       let hue = await CoverTint.hue(albumId: albumId, url: url)
+      // A cover that arrives after the album changed is not this album's.
+      guard !Task.isCancelled else { return }
       shades = hue.map { CoverShades(hue: $0, scheme: scheme) }
     }
   }

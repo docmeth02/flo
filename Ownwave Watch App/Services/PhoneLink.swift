@@ -37,6 +37,7 @@ import WatchKit
   // Inventories can finish out of order; only the newest publish sends.
   private var publishGeneration = 0
   private var heldTasks: [WKWatchConnectivityRefreshBackgroundTask] = []
+  private var activationAnswered = false
   private var observations: [NSKeyValueObservation] = []
   private var downloads: AnyCancellable?
 
@@ -115,7 +116,11 @@ import WatchKit
     publishGeneration += 1
     let generation = publishGeneration
     Task {
-      var state = await Self.inventory(downloading: downloading)
+      // An inventory that could not be read would tell the phone the watch
+      // holds nothing.
+      guard var state = await Self.inventory(downloading: downloading) else {
+        return RequestLog.shared.note("phone link: downloads not read, state not sent")
+      }
       guard generation == self.publishGeneration else { return }
       state.account = account
       state.downloadBitRate = downloadBitRate
@@ -128,6 +133,7 @@ import WatchKit
   // MARK: - From the receiver
 
   fileprivate func activated() {
+    activationAnswered = true
     companionChanged()
     // The last context outlives the iPhone app; only a present one is followed.
     if !session.isCompanionAppInstalled || !apply(session.receivedApplicationContext) {
@@ -149,7 +155,12 @@ import WatchKit
   /// Applies the phone's settings and sends and publishes; false for a
   /// context without them.
   @discardableResult func apply(_ context: [String: Any]) -> Bool {
-    guard let phone = Link.decode(Link.PhoneState.self, from: context) else { return false }
+    guard let phone = Link.decode(Link.PhoneState.self, from: context) else {
+      // Empty until the phone sent one; anything else is a state this build
+      // cannot read.
+      if !context.isEmpty { RequestLog.shared.note("phone link: phone state not read") }
+      return false
+    }
     RequestLog.shared.note(
       "phone link: phone share=\(phone.share) sending=\(phone.sending.values.reduce(0, +)) songs")
     // Turned off, the watch keeps the values it followed last.
@@ -218,11 +229,21 @@ import WatchKit
     }
   }
 
-  /// Records a song or cover whose file is already in place.
-  fileprivate func save(_ info: Link.FileInfo) {
+  /// Records a song or cover whose file is already in place at `file`.
+  fileprivate func save(_ info: Link.FileInfo, at file: URL) {
     defer {
       receiver.finishedDelivery()
       completeTasksIfIdle()
+    }
+    // Logged out since the receiver took the file: the file is removed,
+    // unless it replaced the file of a download that is on record.
+    guard info.accountKey == AuthService.shared.accountKey else {
+      let onRecord =
+        info.song.map {
+          DownloadStore.downloadedMediaFileIds(collectionId: info.collectionId).contains($0.id)
+        } ?? DownloadStore.hasRecord(collectionId: info.collectionId)
+      if !onRecord { try? FileManager.default.removeItem(at: file) }
+      return RequestLog.shared.note("phone link: dropped \(info.kind) for another account")
     }
     if info.kind == .song, let song = info.song {
       DownloadStore.saveAlbum(info.album)
@@ -250,21 +271,26 @@ import WatchKit
     }
   }
 
+  /// Lets the held wake-ups go once nothing is left to deliver or save; a
+  /// session that failed to activate delivers nothing.
   private func completeTasksIfIdle() {
-    guard !heldTasks.isEmpty, session.activationState == .activated, !session.hasContentPending,
-      !receiver.isDelivering
-    else { return }
+    let isIdle =
+      session.activationState == .activated
+      ? !session.hasContentPending && !receiver.isDelivering : activationAnswered
+    guard !heldTasks.isEmpty, isIdle else { return }
     heldTasks.forEach { $0.setTaskCompletedWithSnapshot(false) }
     heldTasks = []
   }
 
   /// The downloaded collections with their song counts, bitrates and songs
-  /// still downloading, the size of the downloads and the room left.
-  private static func inventory(downloading: [String: Int]) async -> Link.WatchState {
+  /// still downloading, the size of the downloads and the room left; nil
+  /// when the downloads could not be read.
+  private static func inventory(downloading: [String: Int]) async -> Link.WatchState? {
     async let bytes = LocalFileManager.shared.downloadsBytes()
-    var state = await CoreDataManager.shared.performBackground { context in
-      let collections = (try? context.fetch(PlaylistEntity.fetchRequest())) ?? []
-      let songs = (try? context.fetch(SongEntity.fetchRequest())) ?? []
+    let read = await CoreDataManager.shared.performBackground { context -> Link.WatchState? in
+      guard let collections = try? context.fetch(PlaylistEntity.fetchRequest()),
+        let songs = try? context.fetch(SongEntity.fetchRequest())
+      else { return nil }
       let byCollection = Dictionary(grouping: songs, by: \.albumId)
       var state = Link.WatchState()
       state.collections = collections.compactMap { collection in
@@ -278,6 +304,7 @@ import WatchKit
       }
       return state
     }
+    guard var state = read else { return nil }
     state.musicBytes = await bytes
     state.freeBytes = AppPlatform.freeBytes()
     return state
@@ -296,10 +323,7 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
   /// comes from the Keychain when it reads.
   static func signedInAccount() -> Link.WatchState.Account? {
     guard let key = AuthService.shared.accountKey else { return nil }
-    var user = ""
-    if case .found(let auth) = KeychainManager.loadAuth() { user = auth.username }
-    return .init(
-      user: user, host: URL(string: UserDefaultsManager.serverBaseURL)?.host ?? "", key: key)
+    return .init(user: ServerAccount.username, host: ServerAccount.host, key: key)
   }
 
   var isDelivering: Bool { lock.withLock { deliveries > 0 } }
@@ -380,15 +404,15 @@ final class PhoneLinkReceiver: NSObject, WCSessionDelegate {
       case .cover: DownloadStore.coverPath(id: info.collectionId)
       }
     guard let path else { return }
+    let target = LocalFileManager.shared.fileURL(for: path)
     do {
-      try LocalFileManager.shared.moveFile(
-        source: file, target: LocalFileManager.shared.fileURL(for: path))
+      try LocalFileManager.shared.moveFile(source: file, target: target)
     } catch {
       return RequestLog.shared.note("phone link: file not moved: \(error.localizedDescription)")
     }
     RequestLog.shared.note(
       "phone link: received \(info.kind) \(info.song?.title ?? info.album.name)")
     lock.withLock { deliveries += 1 }
-    Task { @MainActor in PhoneLink.shared.save(info) }
+    Task { @MainActor in PhoneLink.shared.save(info, at: target) }
   }
 }

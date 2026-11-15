@@ -58,13 +58,16 @@ struct WatchContentView: View {
   /// Signs in with the credentials the iPhone sent; only this attempt's
   /// outcome goes back to the phone.
   private func runPhoneSignIn(_ request: Link.SignIn) {
-    // Signed in meanwhile, or with a Keychain that would not read: the
-    // watch keeps its login, and its state tells the phone; signed in to
-    // another account, the phone hears why, as it would have at once.
+    // Signed in meanwhile: the watch keeps its login, and its state tells
+    // the phone; signed in to another account, the phone hears why, as it
+    // would have at once. A login the Keychain would not read is kept too,
+    // and has no account to name.
     guard !authViewModel.isLoggedIn else {
-      guard AuthService.shared.accountKey != request.accountKey else {
-        return phone.signInFinished(error: nil)
+      guard let key = AuthService.shared.accountKey else {
+        return phone.signInFinished(
+          error: "The watch cannot read its login right now. Try again later.")
       }
+      guard key != request.accountKey else { return phone.signInFinished(error: nil) }
       let account = PhoneLinkReceiver.signedInAccount()
       return phone.signInFinished(
         error: Link.otherAccountMessage(user: account?.user ?? "", host: account?.host ?? ""))

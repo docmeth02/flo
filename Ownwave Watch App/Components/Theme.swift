@@ -91,8 +91,8 @@ extension Font {
   static let tileLabel = Font.system(.footnote, weight: .semibold)
 }
 
-/// Filled capsule with an ink label: Play, Play Something, Login. Lilac,
-/// or the cover tint on an album.
+/// Filled capsule with an ink label: Sign In in lilac, an album's or
+/// playlist's Play in the cover tint.
 struct PrimaryButtonStyle: ButtonStyle {
   var fill: Color = Dusk.fill
   var height: CGFloat = 44
