@@ -106,8 +106,6 @@ struct PlaylistRow<Trailing: View>: View {
 struct LazyPlatter<Content: View>: View {
   @ViewBuilder var content: Content
 
-  @Environment(\.palette) private var palette
-
   var body: some View {
     LazyVStack(spacing: 0) { content }
       .padding(.horizontal, 12)

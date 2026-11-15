@@ -212,7 +212,11 @@ private struct QueueCollection: UIViewRepresentable {
       guard let index = index(of: id), let removed = player.removeFromQueue(at: index) else {
         return false
       }
-      list.app.show("Removed from Up Next") { player.undoRemove(removed) }
+      // Undo puts the song back only into the queue it came from.
+      let starts = player.userStarts
+      list.app.show("Removed from Up Next") {
+        if player.userStarts == starts { player.undoRemove(removed) }
+      }
       return true
     }
 
