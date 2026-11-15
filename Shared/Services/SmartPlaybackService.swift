@@ -116,7 +116,7 @@ final class SmartPlaybackService {
 
     // Library songs are only playable when the server answers; with the
     // network up but the server away they would all fail to stream. Offline
-    // the probe only ends with its timeout, so songs on the watch play once
+    // the probe only ends with its timeout, so songs on the device play once
     // it has not answered for a few seconds.
     let monitor = ConnectivityMonitor.shared
     var verdict = await monitor.canStream(waitingAtMost: Self.verdictWait)

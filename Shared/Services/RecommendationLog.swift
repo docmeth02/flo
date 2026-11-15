@@ -81,7 +81,7 @@ struct MixRecord: Codable, Sendable {
   }
 
   /// Why the newest played mix holding the song picked it.
-  func reason(for songId: String) -> MixReason? {
+  private func reason(for songId: String) -> MixReason? {
     for mix in played {
       if let pick = mix.picks.first(where: { $0.songId == songId }) { return pick.why }
     }
