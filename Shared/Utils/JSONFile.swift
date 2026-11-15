@@ -25,11 +25,19 @@ struct JSONFile<Value: Codable> {
 
   func load() -> Value {
     do {
-      return try JSONDecoder().decode(Value.self, from: Data(contentsOf: fileURL))
-    } catch CocoaError.fileReadNoSuchFile {
-      return empty
+      return try read()
     } catch {
       RequestLog.shared.note("\(label) unreadable: \(error)")
+      return empty
+    }
+  }
+
+  /// The file's value, `empty` without a file; throws when the file is there
+  /// but cannot be read, for an owner that must not take it for empty.
+  func read() throws -> Value {
+    do {
+      return try JSONDecoder().decode(Value.self, from: Data(contentsOf: fileURL))
+    } catch CocoaError.fileReadNoSuchFile {
       return empty
     }
   }

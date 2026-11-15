@@ -115,13 +115,11 @@ enum DownloadStore {
     return FileManager.default.fileExists(atPath: path) ? path : nil
   }
 
-  /// The album's cover: its download, else the cover cache, else the server.
+  /// The path of the album's cover on the device: its download, else the
+  /// cover cache, else empty. The views fetch a missing one themselves.
   static func coverURL(albumId: String) -> String {
     downloadedCoverPath(albumId: albumId)
-      ?? CoverArtCacheManager.shared.cachedFilePath(albumId: albumId)
-      ?? subsonicURL(
-        endpoint: API.SubsonicEndpoint.coverArt,
-        parameters: ["id": Album.coverArtId(for: albumId), "size": AppPlatform.coverArtSize])
+      ?? CoverArtCacheManager.shared.cachedFilePath(albumId: albumId) ?? ""
   }
 
   /// `suffix` and `bitRate` describe the file as downloaded, which may be

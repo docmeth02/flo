@@ -91,6 +91,11 @@ final class DownloadSession: NSObject, ObservableObject {
   /// Nothing is submitted before the session's tasks are known, or a song
   /// still downloading from before the launch would get a second task.
   private var hasReconciled = false
+  /// False while the job file is there but cannot be read (a launch before
+  /// the device was first unlocked, or a file of another format): the
+  /// session's tasks are then left alone and the file is read again at each
+  /// reconcile. A download asked for meanwhile starts the list over.
+  private var jobsKnown: Bool
   /// Tasks whose delegate calls have run, so a reconcile knows which
   /// finished tasks still have their delivery queued.
   private var delivered = Set<Int>()
@@ -102,10 +107,15 @@ final class DownloadSession: NSObject, ObservableObject {
 
   private init(store: JSONFile<[DownloadJob]> = jobFile) {
     self.store = store
-    let jobs = store.load()
-    self.jobs = jobs
-    batches = Dictionary(grouping: jobs, by: \.collectionId)
-      .mapValues { Set($0.map(\.id)) }
+    var stored: [DownloadJob]?
+    do {
+      stored = try store.read()
+    } catch {
+      RequestLog.shared.note("\(store.label) unreadable, transfers left alone: \(error)")
+    }
+    jobs = stored ?? []
+    jobsKnown = stored != nil
+    batches = Self.batches(of: stored ?? [])
     super.init()
     // Created at launch, so the events of a relaunch find their delegate.
     reconcile()
@@ -119,6 +129,19 @@ final class DownloadSession: NSObject, ObservableObject {
     center.addObserver(forName: .didLogout, object: nil, queue: .main) { [weak self] _ in
       self?.cancelAll()
     }
+  }
+
+  private static func batches(of jobs: [DownloadJob]) -> [String: Set<String>] {
+    Dictionary(grouping: jobs, by: \.collectionId).mapValues { Set($0.map(\.id)) }
+  }
+
+  /// Reads the job file again; false while it still cannot be read.
+  @discardableResult private func loadJobs() -> Bool {
+    guard let stored = try? store.read() else { return false }
+    jobs = stored
+    batches = Self.batches(of: stored)
+    jobsKnown = true
+    return true
   }
 
   func isDownloading(collectionId: String) -> Bool {
@@ -156,19 +179,20 @@ final class DownloadSession: NSObject, ObservableObject {
   /// as one. The record comes first: without it the songs never show up in
   /// Downloads, and the cover may fail. A playlist removed since it was
   /// opened gets its record back, built from what the screen shows.
-  func enqueue(_ album: Album) {
+  /// `complete` says the songs are the server's whole list of it.
+  func enqueue(_ album: Album, complete: Bool = false) {
     let id = album.id
     if !album.isPlaylist || !DownloadStore.hasRecord(collectionId: id) {
       DownloadStore.saveAlbum(album)
       let artId = album.isPlaylist ? Playlist.mosaicId(for: id) : Album.coverArtId(for: id)
       Self.downloadCover(artId: artId, as: id)
     }
-    queueSongs(of: album)
+    queueSongs(of: album, complete: complete)
   }
 
   /// Downloads a playlist with its own cover, which Downloads shows, and the
   /// covers of its tracks' albums.
-  func enqueue(_ playlist: Playlist) {
+  func enqueue(_ playlist: Playlist, complete: Bool = false) {
     let id = playlist.id
     let album = Album(from: playlist)
     DownloadStore.saveAlbum(album)
@@ -185,7 +209,7 @@ final class DownloadSession: NSObject, ObservableObject {
           artId: Album.coverArtId(for: albumId), as: albumId, overwrite: false)
       }
     }
-    queueSongs(of: album)
+    queueSongs(of: album, complete: complete)
   }
 
   private static func downloadCover(artId: String, as id: String) {
@@ -202,8 +226,17 @@ final class DownloadSession: NSObject, ObservableObject {
   /// queued already keeps its job; failed ones start over at the current
   /// bitrate, and a failed one `collection` does not list (offline a screen
   /// lists only the songs on the device) at the bitrate it had, unless the
-  /// song arrived meanwhile, from the iPhone for one.
-  private func queueSongs(of collection: Album) {
+  /// song arrived meanwhile, from the iPhone for one, or the list is
+  /// `complete`: the server no longer has that song.
+  private func queueSongs(of collection: Album, complete: Bool) {
+    // Asked for while the stored jobs were not read: the list is what the
+    // file holds now, else starts over, and the reconcile it missed runs
+    // below, which cancels the tasks the list does not hold.
+    let wasUnknown = !jobsKnown
+    if wasUnknown {
+      loadJobs()
+      jobsKnown = true
+    }
     let downloaded = DownloadStore.downloadedMediaFileIds(collectionId: collection.id)
     let wanted = DownloadJob.jobs(
       for: collection, isPlaylist: collection.isPlaylist,
@@ -213,7 +246,7 @@ final class DownloadSession: NSObject, ObservableObject {
 
     jobs.removeAll {
       $0.collectionId == collection.id && $0.failed
-        && (wantedIds.contains($0.id) || downloaded.contains($0.mediaFileId))
+        && (complete || wantedIds.contains($0.id) || downloaded.contains($0.mediaFileId))
     }
     jobs += wanted.filter { job in !jobs.contains { $0.id == job.id } }
     // A tap does not wait out a retry, and a failed song left unlisted goes
@@ -230,6 +263,7 @@ final class DownloadSession: NSObject, ObservableObject {
     batches[collection.id] = (continuing ? batches[collection.id] ?? [] : []).union(queued)
     store.save(jobs)
 
+    if wasUnknown { return reconcile() }
     for job in jobs where job.collectionId == collection.id { submit(job) }
   }
 
@@ -311,6 +345,7 @@ final class DownloadSession: NSObject, ObservableObject {
   private func reconcile() {
     session.getAllTasks { running in
       DispatchQueue.main.async {
+        guard self.jobsKnown || self.loadJobs() else { return }
         self.reconcile(running)
         // After the snapshot, so files delivered meanwhile are saved first.
         if self.restartsOnActivation, self.canSubmit {
@@ -481,7 +516,6 @@ extension DownloadSession: URLSessionDownloadDelegate {
     let bytes = downloadTask.countOfBytesReceived
     let (failure, subsonicCode) = DownloadFailure.check(response, file: location, bytes: bytes)
     log(job, "status=\(status) bytes=\(bytes)\(subsonicCode.map { " code=\($0)" } ?? "")")
-    ConnectivityMonitor.shared.record(response: response, error: nil)
 
     if let failure { return fail(job, failure) }
     do {

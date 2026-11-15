@@ -90,8 +90,12 @@ final class DownloadSessionTests: XCTestCase {
     store.save(jobs)
     XCTAssertEqual(store.load(), jobs)
 
+    // An unreadable file is told from a missing one.
     try Data("not json".utf8).write(to: store.fileURL)
     XCTAssertEqual(store.load(), [])
+    XCTAssertThrowsError(try store.read())
+    try FileManager.default.removeItem(at: store.fileURL)
+    XCTAssertEqual(try store.read(), [])
   }
 
   func testBackgroundEventsCompleteOnce() {
