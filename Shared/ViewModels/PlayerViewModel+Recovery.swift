@@ -590,10 +590,8 @@ extension PlayerViewModel {
         + "error=\(String(describing: playerItem?.error))")
     guard consecutiveFailures <= Self.maxConsecutiveFailures else {
       // Give up: nothing is playing any more, and the UI must say so.
-      isPlaying = false
       isMediaLoading = false
-      player?.pause()
-      updateNowPlayingInfo(progress: progress, rate: 0.0)
+      pause()
       // Several songs in a row failing on a reachable server usually means the
       // server rebuilt its library and the cached song ids are gone.
       if consecutiveFailures == Self.maxConsecutiveFailures + 1,
