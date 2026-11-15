@@ -219,7 +219,7 @@ actor ListeningHistoryStore {
       await publishState(key, phase: .failed("server unreachable"))
       return
     }
-    let index = await SmartPlaybackService.shared.libraryIndex()
+    var index = await SmartPlaybackService.shared.libraryIndex()
     guard isCurrent(key) else { return }
     guard !index.songs.isEmpty else {
       await publishState(key, phase: .failed("library unavailable"))
@@ -234,6 +234,7 @@ actor ListeningHistoryStore {
     var pages = 0
     var offset = progress.bootstrapComplete ? 0 : progress.bootstrapNextStart
     var newestSeen: Int64 = 0
+    var librarySynced = false
 
     await publishState(key, phase: .importing(page: 1))
     while true {
@@ -273,8 +274,23 @@ actor ListeningHistoryStore {
       let done = progress.bootstrapComplete ? isShort || reachedWatermark : isShort
       let now = Date()
 
+      // A play mirrored without its song is never folded later, so a song
+      // the server may have gained since the last sync is asked for first,
+      // once per run. A sync that fails leaves the index as it was.
+      if !librarySynced,
+        Self.holdsUnsyncedSong(
+          page.rows, above: progress.watermarkId, index: index,
+          syncedAt: LibraryCacheManager.shared.modificationDate(forKey: .songsStamp))
+      {
+        librarySynced = true
+        _ = await SmartPlaybackService.shared.syncSongLibrary()
+        let synced = await SmartPlaybackService.shared.libraryIndex()
+        guard isCurrent(key) else { return }
+        if !synced.songs.isEmpty { index = synced }
+      }
+
       let result = await CoreDataManager.shared.performBackground {
-        [progress, newestSeen] context in
+        [progress, newestSeen, index] context in
         Self.commit(
           page.rows, total: page.total, start: start, done: done, newestSeen: newestSeen,
           key: key, progress: progress, index: index, now: now, in: context)
@@ -303,6 +319,20 @@ actor ListeningHistoryStore {
       #if DEBUG
         await debugPageDelay()
       #endif
+    }
+  }
+
+  /// Whether a play above the watermark is of a song the index lacks and
+  /// was heard after the song library was last synced: such a song is
+  /// probably new on the server, an older one deleted there.
+  static func holdsUnsyncedSong(
+    _ rows: [ScrobbleRow], above watermark: Int64, index: SmartPlaybackService.LibraryIndex,
+    syncedAt: Date?
+  ) -> Bool {
+    let synced = syncedAt?.timeIntervalSince1970 ?? 0
+    return rows.contains {
+      $0.id > watermark && index.songs[$0.mediaFileId ?? ""] == nil
+        && TimeInterval($0.submissionTime) > synced
     }
   }
 

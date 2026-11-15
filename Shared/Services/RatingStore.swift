@@ -97,6 +97,10 @@ import Foundation
     center.addObserver(forName: .didLogout, object: nil, queue: .main) { [weak self] _ in
       Task { @MainActor in self?.forgetAccount() }
     }
+    // A sign-in in a running app: the next activation may be far away.
+    center.addObserver(forName: .didLogin, object: nil, queue: .main) { [weak self] _ in
+      Task { @MainActor in self?.refreshIfStale() }
+    }
 
     publish()
     edits.flush()
