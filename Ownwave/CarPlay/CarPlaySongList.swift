@@ -111,8 +111,10 @@ import Combine
       }
       item.playingIndicatorLocation = .trailing
       item.handler = { [weak controller] _, completion in
-        if controller?.player.playItem(item: collection, startingAt: index) == true {
-          controller?.showNowPlaying()
+        if let controller, controller.confirmSignedIn(),
+          controller.player.playItem(item: collection, startingAt: index)
+        {
+          controller.showNowPlaying()
         }
         completion()
       }
@@ -149,7 +151,11 @@ import Combine
       text: "Shuffle", detailText: collection.songs.countAndLength,
       image: controller.images.tile("shuffle", size: CarPlayImages.rowSize))
     shuffle.handler = { [weak controller] _, completion in
-      if controller?.player.shuffleItem(item: collection) == true { controller?.showNowPlaying() }
+      if let controller, controller.confirmSignedIn(),
+        controller.player.shuffleItem(item: collection)
+      {
+        controller.showNowPlaying()
+      }
       completion()
     }
     let songs = songSection(
