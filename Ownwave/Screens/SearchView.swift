@@ -24,6 +24,8 @@ struct SearchView: View {
   @State private var songs: [Song]?
   /// Nil while there is nothing to search.
   @State private var found: Found?
+  /// The album Play still fetching its songs; a later one replaces it.
+  @State private var albumPlay: Task<Void, Never>?
 
   @StateObject private var radio = ArtistRadio()
 
@@ -107,7 +109,8 @@ struct SearchView: View {
       guard !Task.isCancelled else { return }
       found = results.map {
         Found(
-          query: query, results: $0,
+          // Trimmed as the search trims it, for the playlists matched here.
+          query: query.trimmingCharacters(in: .whitespacesAndNewlines), results: $0,
           top: LibrarySearch.topResult(query, in: $0, isPinned: pins.isPinned))
       }
     }
@@ -396,14 +399,18 @@ struct SearchView: View {
   }
 
   /// The album's songs as Play Next would queue them: from the library or
-  /// the server, offline from its download.
+  /// the server, offline from its download. Something started while they
+  /// were asked for keeps playing.
   private func play(_ album: Album) {
     remember(query)
-    Task {
+    let starts = app.player.userStarts
+    albumPlay?.cancel()
+    albumPlay = Task {
       var album = album
       album.songs = await MenuTarget.album(album).queueSongs(
         serverReachable: ConnectivityMonitor.shared.canReachServer
       ).songs
+      guard !Task.isCancelled, app.player.userStarts == starts else { return }
       guard !album.songs.isEmpty else { return app.show(.notAvailableOffline) }
       app.play(album)
     }

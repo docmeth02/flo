@@ -29,6 +29,24 @@ final class EngineRulesTests: XCTestCase {
     }
   }
 
+  /// Only a new play of an unknown song heard since the last library sync
+  /// asks for another one.
+  func testImportSyncsTheLibraryForSongsHeardSinceItsLastSync() {
+    let index = SmartPlaybackService.LibraryIndex(songs: [:])
+    let syncedAt = Date(timeIntervalSince1970: 1_790_000_000)
+    func holds(id: Int64, heardAfter seconds: Int64, syncedAt: Date? = syncedAt) -> Bool {
+      ListeningHistoryStore.holdsUnsyncedSong(
+        [ScrobbleRow(id: id, mediaFileId: "new", submissionTime: 1_790_000_000 + seconds)],
+        above: 10, index: index, syncedAt: syncedAt)
+    }
+    XCTAssertTrue(holds(id: 11, heardAfter: 60))
+    XCTAssertTrue(holds(id: 11, heardAfter: -60, syncedAt: nil))
+    // Heard before the sync, so the song is gone from the server.
+    XCTAssertFalse(holds(id: 11, heardAfter: -60))
+    // Mirrored by an earlier run.
+    XCTAssertFalse(holds(id: 10, heardAfter: 60))
+  }
+
   /// An early skip of a song the app picked weighs most, one the user picked least.
   func testSkipWeights() {
     let early = PlaybackJournal.earlySkipSeconds

@@ -136,9 +136,11 @@ func subsonicURL(endpoint: String, parameters: [String: Any]) -> String {
     "\(UserDefaultsManager.serverBaseURL)\(endpoint)\(AuthService.shared.sessionSnapshot().subsonicCredentials)&\(query)"
 }
 
-/// One retry for transient connection failures. Time-outs are not retried,
-/// since the watch already waited the full request timeout, and scrobbles
-/// never are: a lost response would submit the same listen again.
+/// One retry for transient connection failures and, by Alamofire's defaults,
+/// for an idempotent request answered 408, 500, 502, 503 or 504. Time-outs
+/// are not retried, since the listener already waited the full request
+/// timeout, and scrobbles never are: a lost response would submit the same
+/// listen again.
 final class ConnectionRetryPolicy: RetryPolicy {
   init() {
     var codes = RetryPolicy.defaultRetryableURLErrorCodes

@@ -24,10 +24,21 @@ struct TasteView: View {
   @Environment(\.palette) private var palette
   @Environment(\.openLibrary) private var openLibrary
   @ObservedObject private var mixes = RecommendationLog.shared
+  @ObservedObject private var ratings = RatingStore.shared
+
+  /// What the summary is built from that can change while the tab stays
+  /// mounted; Now Playing stands for the skips made in it.
+  private struct Inputs: Equatable {
+    let mixPlayedAt: Date?
+    let songRatings: [String: Int]
+    let artistRatings: [String: Int]
+    let isNowPlayingShown: Bool
+  }
 
   // Not private: the debug launch hook picks the segment.
   @SceneStorage("tasteSegment") var segment = TasteSegment.profile
   @State private var summary: TasteSummary?
+  @State private var loads = 0
 
   var body: some View {
     ScrollView {
@@ -45,8 +56,14 @@ struct TasteView: View {
       .padding(.bottom, 24)
     }
     .toolbar(.hidden, for: .navigationBar)
-    // A mix played while the tab is open changes the recipe.
-    .task(id: mixes.played.first?.at) {
+    // A mix played while the tab is open changes the recipe, a rating the
+    // lists, and Now Playing closes with what was skipped in it. The load
+    // asks the server nothing.
+    .task(
+      id: Inputs(
+        mixPlayedAt: mixes.played.first?.at, songRatings: ratings.ratings,
+        artistRatings: ratings.artistRatings, isNowPlayingShown: app.isNowPlayingPresented)
+    ) {
       albumViewModel.fetch(.starredSongs, maxAge: ListState.reloadAfter)
       await reload()
     }
@@ -139,7 +156,11 @@ struct TasteView: View {
   }
 
   private func reload() async {
-    summary = await TasteSummary.load()
+    loads += 1
+    let load = loads
+    let loaded = await TasteSummary.load()
+    // A newer load is under way.
+    if load == loads { summary = loaded }
   }
 
   /// Clears the boost or the avoid; the row leaves at once, Undo rates it

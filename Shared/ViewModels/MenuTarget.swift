@@ -44,11 +44,12 @@ enum MenuTarget: Identifiable {
     }
   }
 
-  /// Songs cannot be pinned.
+  /// Songs cannot be pinned. A downloaded playlist shown as an album pins as
+  /// the playlist it is.
   var pin: (id: String, kind: PinStore.Kind)? {
     switch self {
     case .song: nil
-    case .album(let album): (album.id, .album)
+    case .album(let album): (album.id, album.isPlaylist ? .playlist : .album)
     case .artist(let artist): (artist.id, .artist)
     case .playlist(let playlist): (playlist.id, .playlist)
     case .radio(let radio): (radio.id, .radio)
@@ -64,7 +65,8 @@ enum MenuTarget: Identifiable {
   /// Navidrome stars songs, albums and artists only.
   var canLike: Bool {
     switch self {
-    case .song, .album, .artist: true
+    case .song, .artist: true
+    case .album(let album): !album.isPlaylist
     case .playlist, .radio: false
     }
   }

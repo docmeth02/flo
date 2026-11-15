@@ -140,7 +140,7 @@ struct WatchView: View {
         }
         .lineLimit(1)
       }
-      Button(handoff.phase == .sending ? "Sending to watch…" : "Play on watch") {
+      Button(handoff.phase == .sending ? "Sending to Watch…" : "Play on Watch") {
         Task { await link.playOnWatch() }
       }
       .buttonStyle(FillButtonStyle(height: 48))

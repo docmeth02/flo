@@ -23,8 +23,8 @@ enum AppLaunch {
     // Responses carry credentials, which must not stay in the shared disk cache.
     URLCache.shared.removeAllCachedResponses()
 
-    // Deliver scrobbles queued in an earlier session; the outbox otherwise only
-    // wakes up when the next listen fails.
+    // Created now, so its triggers exist and the scrobbles queued in an
+    // earlier session go out at launch.
     _ = ScrobbleQueueManager.shared
     // Request times count from here.
     _ = RequestLog.shared

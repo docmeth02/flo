@@ -91,10 +91,9 @@ import Foundation
     }
   }
 
-  /// A fresh answer from the server: newer than what it took earlier this
-  /// session and than the state lists were loaded with. An edit still
-  /// waiting stays on top.
-  /// Only songs are looked up one by one.
+  /// A fresh answer from the server for one song (only songs are looked up
+  /// one by one): newer than what it took earlier this session and than the
+  /// state lists were loaded with. An edit still waiting stays on top.
   func adoptServerState(_ starred: Bool, id: String) {
     songIds.insert(id)
     guard confirmed[id] != starred else { return }

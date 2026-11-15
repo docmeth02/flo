@@ -240,6 +240,9 @@ class AuthViewModel: ObservableObject {
         self.username = ""
         self.password = ""
         self.serverUrl = ""
+        // The probes stopped while no server was set and may have left it
+        // marked unreachable.
+        ConnectivityMonitor.shared.probeServerReachability()
         NotificationCenter.default.post(name: .didLogin, object: nil)
       } catch {
         self.isSubmitting = false

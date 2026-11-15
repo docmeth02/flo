@@ -51,7 +51,7 @@ extension PlayerViewModel {
         + "\(String(format: "%.0f", totalDuration))s")
     PlaybackJournal.shared.recordHeard(
       song, origin: song.playbackOrigin, listenedSeconds: secondsListened)
-    PlaybackReporter.shared.scrobble(submission: true, nowPlaying: song)
+    PlaybackReporter.shared.submit(song)
     acceptNowPlaying()
   }
 
@@ -77,6 +77,7 @@ extension PlayerViewModel {
     }
     guard !isAutoContinuing else { return }
     isAutoContinuing = true
+    continuationAfter = playerItem
 
     // Capture the playback context before the queue is replaced. Until a song
     // was heard out, the session continues from the one that just ended.
@@ -90,9 +91,8 @@ extension PlayerViewModel {
     let sessionMinutes = self.sessionStartedAt.map { Date().timeIntervalSince($0) / 60 } ?? 0
     let queueIdList = self.queue.compactMap { $0.id }
     let queueIds = Set(queueIdList)
-    // Any play, pause or stop while the mix is generated bumps this; the user
-    // took over and the mix must not start playing behind their back.
-    let generation = self.playGeneration
+    // The mix must not start playing behind the user's back.
+    continuationGeneration = playGeneration
 
     Task { [weak self] in
       // A session without an anchor yet keeps to the seed's genres.
@@ -120,7 +120,7 @@ extension PlayerViewModel {
         // Discard the mix if the user started something else while it was
         // being generated — the ordered queue contents are compared too, so a
         // new queue that happens to start on the same song is not overwritten.
-        guard self.isCurrentTrack(lastPlayedId), self.playGeneration == generation
+        guard self.isCurrentTrack(lastPlayedId), self.playGeneration == self.continuationGeneration
         else { return }
         guard self.queue.compactMap({ $0.id }) == queueIdList, UserDefaultsManager.keepPlaying
         else {

@@ -123,10 +123,11 @@ extension CarPlayController {
       image: images.tile("sparkles", .filled, size: CarPlayImages.rowSize))
     item.playingIndicatorLocation = .trailing
     item.handler = { [weak self] _, completion in
-      let player = self?.player
-      Task {
+      guard let self, confirmSignedIn() else { return completion() }
+      let player = player
+      Task { [weak self] in
         // Holds the completion until the mix plays or none came together.
-        if await player?.playSomething() == true { self?.showNowPlaying() }
+        if await player.playSomething() { self?.showNowPlaying() }
         completion()
       }
     }
@@ -258,7 +259,8 @@ extension CarPlayController {
   }
 
   /// A list of the library with its count once loaded. A tap pushes it and
-  /// refreshes it as the phone does; a list never loaded loads first.
+  /// refreshes it as the phone does; a list never loaded loads first, or
+  /// opens saying it is not available while the server is unreachable.
   private func libraryRow(
     _ title: String, _ image: UIImage, noun: String, count: Int?,
     load: @escaping @MainActor () async -> Void, fetch: @escaping () -> Void,
@@ -270,8 +272,13 @@ extension CarPlayController {
     item.handler = { [weak self] _, completion in
       Task {
         // Holds the completion while a list never loaded loads.
-        if count == nil { await load() } else { fetch() }
-        if let self { self.push(list(self)) }
+        let isUnavailable = count == nil && !ConnectivityMonitor.shared.canReachServer
+        if count != nil { fetch() } else if !isUnavailable { await load() }
+        if let self {
+          let template = list(self)
+          if isUnavailable { template.emptyViewTitleVariants = [.notAvailableOffline] }
+          self.push(template)
+        }
         completion()
       }
     }
@@ -560,7 +567,15 @@ extension CarPlayController {
       if case .downloading = state { downloading[album.id] = item }
       return item
     }
-    images.loadCovers(zip(downloaded, albumRows).map { .row($1, albumId: $0.id) }, size: size)
+    // A downloaded playlist without its cover file asks for the playlist's
+    // cover, not an album's: the listed playlist's, else the server's mosaic.
+    let playlistArt = Dictionary(
+      albums.playlists.map { ($0.id, $0.artId) }, uniquingKeysWith: { first, _ in first })
+    images.loadCovers(
+      zip(downloaded, albumRows).map { album, row in
+        let mosaic = album.isPlaylist ? Playlist.mosaicId(for: album.id) : nil
+        return .row(row, albumId: album.id, artId: playlistArt[album.id] ?? mosaic)
+      }, size: size)
     rows += albumRows
     return rows.isEmpty ? [] : [CPListSection(items: rows)]
   }
@@ -622,14 +637,6 @@ extension CarPlayController {
           self?.showNowPlaying()
         }
         completion()
-      }
-    }
-    if ConnectivityMonitor.shared.canReachServer {
-      Task { [weak topSongs] in
-        guard let songs = try? await RadioService.shared.getTopSongs(artistId: artist.id),
-          !songs.isEmpty
-        else { return }
-        topSongs?.setDetailText(counted(songs.count, "song"))
       }
     }
     let plays = CPListSection(items: [radio, topSongs])

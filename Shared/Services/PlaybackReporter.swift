@@ -35,11 +35,15 @@ final class PlaybackReporter {
     }
   }
 
-  /// Main thread.
-  func scrobble(submission: Bool, nowPlaying: QueueEntity) {
-    guard let payload = MainActor.assumeIsolated({ ScrobblePayload(nowPlaying: nowPlaying) })
-    else { return }
-    processScrobble(submission: submission, payload: payload)
+  /// Hands a counted play to the outbox, so it survives the app being killed
+  /// before the server has it. Navidrome records every scrobble for its own
+  /// play counts and forwards it to Last.fm or ListenBrainz when the user
+  /// linked them there. Main thread.
+  func submit(_ nowPlaying: QueueEntity) {
+    MainActor.assumeIsolated {
+      guard let payload = ScrobblePayload(nowPlaying: nowPlaying) else { return }
+      ScrobbleQueueManager.shared.enqueue(payload)
+    }
   }
 
   /// Reports the song's playback state to the server's now playing list.
@@ -53,7 +57,7 @@ final class PlaybackReporter {
       let payload = MainActor.assumeIsolated({ ScrobblePayload(nowPlaying: nowPlaying) })
     else { return }
     guard !reportPlaybackUnsupported else {
-      if state == .starting { processScrobble(submission: false, payload: payload) }
+      if state == .starting { scrobbleNowPlaying(payload) }
       return
     }
 
@@ -109,7 +113,7 @@ final class PlaybackReporter {
         self.reportPlaybackUnsupported = true
         self.waitingReports = []
         if report.state == .starting {
-          self.processScrobble(submission: false, payload: report.payload)
+          self.scrobbleNowPlaying(report.payload)
         }
         return
       }
@@ -123,16 +127,9 @@ final class PlaybackReporter {
     }
   }
 
-  private func processScrobble(submission: Bool, payload: ScrobblePayload) {
-    // Navidrome records every scrobble for its own play counts and forwards it
-    // to Last.fm or ListenBrainz when the user linked them there, so the app
-    // always scrobbles to the server. A submission goes through the outbox, so
-    // it survives the app being killed while the request is in flight.
-    if submission {
-      MainActor.assumeIsolated { ScrobbleQueueManager.shared.enqueue(payload) }
-      return
-    }
-
+  /// The now playing scrobble a server without reportPlayback gets instead;
+  /// never queued.
+  private func scrobbleNowPlaying(_ payload: ScrobblePayload) {
     guard ConnectivityMonitor.shared.canReachServer else { return }
 
     Task {

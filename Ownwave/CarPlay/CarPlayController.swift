@@ -101,6 +101,12 @@ final class CarPlayController: NSObject, CPInterfaceControllerDelegate, CPTabBar
     push(list.template)
   }
 
+  /// Back to the tabs, letting go of the song lists pushed.
+  func popToRoot() {
+    songLists.removeAll()
+    interfaceController.popToRootTemplate(animated: false, completion: nil)
+  }
+
   /// Shows Now Playing once something plays: back to it when it is on the
   /// stack already, else on top.
   func showNowPlaying() {

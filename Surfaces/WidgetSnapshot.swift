@@ -64,8 +64,9 @@ struct WidgetSnapshot: Codable, Equatable {
     return snapshot
   }
 
-  func save() {
-    guard let url = Self.fileURL, let data = try? JSONEncoder().encode(self) else { return }
-    try? data.write(to: url, options: .atomic)
+  /// Whether the snapshot was written.
+  func save() -> Bool {
+    guard let url = Self.fileURL, let data = try? JSONEncoder().encode(self) else { return false }
+    return (try? data.write(to: url, options: .atomic)) != nil
   }
 }

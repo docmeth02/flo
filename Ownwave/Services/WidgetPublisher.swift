@@ -82,9 +82,7 @@ import WidgetKit
       guard AppModel.shared.auth.isLoggedIn else { return Self.removeAllCovers() }
       guard generation == self.generation else { return }
       Self.removeCovers(except: Set(albums))
-      snapshot.save()
-      reload(from: last, to: snapshot, coversWritten: written)
-      last = snapshot
+      commit(snapshot, coversWritten: written)
     }
   }
 
@@ -93,9 +91,17 @@ import WidgetKit
     Self.removeAllCovers()
     let empty = WidgetSnapshot()
     guard last != empty else { return }
-    empty.save()
-    reload(from: last, to: empty)
-    last = empty
+    commit(empty)
+  }
+
+  /// Saves `snapshot` and redraws the widgets it changes. One that could not
+  /// be written is not remembered, so the next publish of it writes again.
+  private func commit(_ snapshot: WidgetSnapshot, coversWritten written: Set<String> = []) {
+    guard snapshot.save() else {
+      return RequestLog.shared.note("widgets: snapshot not saved")
+    }
+    reload(from: last, to: snapshot, coversWritten: written)
+    last = snapshot
   }
 
   /// Covers that came only now redraw the widgets that show them.

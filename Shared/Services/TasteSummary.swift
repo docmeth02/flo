@@ -81,7 +81,8 @@ struct TasteSummary: Sendable {
       TopArtist(
         id: $0.key, name: $0.value.name, artist: $0.value.artist, plays: $0.value.plays)
     }
-    .sorted { $0.plays != $1.plays ? $0.plays > $1.plays : $0.name < $1.name }
+    // Ties go to the lower key, as for the mix's most-played artist.
+    .sorted { $0.plays != $1.plays ? $0.plays > $1.plays : $0.id < $1.id }
     .prefix(topCount).map { $0 }
 
     func rated(_ stars: Int) -> [Rated] {

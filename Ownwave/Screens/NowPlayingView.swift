@@ -59,6 +59,7 @@ struct NowPlayingView: View {
         .offset(y: (showsQueue ? -page : 0) - drag)
         .frame(height: page, alignment: .top)
         .ignoresSafeArea()
+        .onChange(of: player.isLiveRadio) { if $1 { showsQueue = false } }
         #if DEBUG
           .task { await runDebugUpNext { show(queue: true) } }
         #endif
@@ -161,7 +162,10 @@ private struct PlayerPage: View {
           .frame(height: 43)
       } else {
         Scrubber(
-          clock: player.clock, duration: song.duration, status: status, seek: player.seek(to:))
+          clock: player.clock, duration: song.duration, status: status, seek: player.seek(to:)
+        )
+        // A drag held past the song's end dies with its song.
+        .id(song.objectID)
       }
       transport
       if !player.isLiveRadio {
@@ -488,13 +492,17 @@ private struct Scrubber: View {
   @State private var dragged: Double?
   // Decided when a drag starts: sideways seeks, up or down is the pager's.
   @State private var seeks: Bool?
+  // A gesture state, so a drag the system cancels (the phone locked
+  // mid-drag) lets go of the knob without seeking.
+  @GestureState private var isDragging = false
 
   var body: some View {
-    let shown = dragged ?? clock.clampedProgress
+    let held = isDragging ? dragged : nil
+    let shown = held ?? clock.clampedProgress
     VStack(spacing: 7) {
       GeometryReader { proxy in
         let width = max(proxy.size.width, 1)
-        let knob: CGFloat = dragged == nil ? 10 : 14
+        let knob: CGFloat = held == nil ? 10 : 14
         ZStack(alignment: .leading) {
           Capsule().fill(palette.hairline)
           Capsule().fill(palette.text).frame(width: width * shown)
@@ -511,6 +519,7 @@ private struct Scrubber: View {
         .onTapGesture { seek(min(max($0.x / width, 0), 1)) }
         .gesture(
           DragGesture(minimumDistance: 6)
+            .updating($isDragging) { _, isDragging, _ in isDragging = true }
             .onChanged {
               if seeks == nil { seeks = abs($0.translation.width) > abs($0.translation.height) }
               guard seeks == true else { return }
@@ -518,10 +527,13 @@ private struct Scrubber: View {
             }
             .onEnded { _ in
               if let dragged { seek(dragged) }
-              dragged = nil
-              seeks = nil
             }
         )
+        .onChange(of: isDragging) {
+          guard !$1 else { return }
+          dragged = nil
+          seeks = nil
+        }
       }
       .frame(height: 18)
       HStack {

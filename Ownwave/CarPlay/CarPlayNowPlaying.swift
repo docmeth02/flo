@@ -75,7 +75,8 @@ extension CarPlayController: @preconcurrency CPNowPlayingTemplateObserver {
     let template = CPNowPlayingTemplate.shared
     template.isAlbumArtistButtonEnabled = state.hasAlbum
     let player = player
-    let playSomething = CPNowPlayingImageButton(image: symbol("sparkles")) { _ in
+    let playSomething = CPNowPlayingImageButton(image: symbol("sparkles")) { [weak self] _ in
+      guard self?.confirmSignedIn() == true else { return }
       Task { _ = await player.playSomething() }
     }
     guard state.isSong else { return template.updateNowPlayingButtons([playSomething]) }
@@ -140,7 +141,7 @@ extension CarPlayController: @preconcurrency CPNowPlayingTemplateObserver {
         guard let self else { return }
         if isLoggedIn { return dismiss(.signedOut) }
         // The lists pushed were the previous account's.
-        interfaceController.popToRootTemplate(animated: false, completion: nil)
+        popToRoot()
         presentSignedOut()
       }
       .store(in: &subscriptions)
@@ -161,6 +162,14 @@ extension CarPlayController: @preconcurrency CPNowPlayingTemplateObserver {
       ],
       actions: [ok])
     present(alert, as: .signedOut)
+  }
+
+  /// Whether the phone is signed in; if not, says so. Asked before the car
+  /// plays anything: signed out, a stale cache or the downloads would play
+  /// for no account.
+  func confirmSignedIn() -> Bool {
+    if !app.auth.isLoggedIn { presentSignedOut() }
+    return app.auth.isLoggedIn
   }
 
   /// Offers the songs on the phone; the mix takes only those while streaming
