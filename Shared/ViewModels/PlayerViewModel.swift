@@ -92,6 +92,9 @@ class PlayerViewModel: ObservableObject {
   /// The item the queue ran out after, which Keep Playing's continuation
   /// follows. Play leaves it alone: it would start an ended song.
   weak var continuationAfter: AVPlayerItem?
+  /// The `playGeneration` the continuation being built starts under; any
+  /// play, pause or stop since means the user took over.
+  var continuationGeneration = 0
   var totalDuration: Double = 0.0
   var playerItemObservation: AnyCancellable?
   var bufferingObservation: AnyCancellable?
@@ -580,9 +583,10 @@ class PlayerViewModel: ObservableObject {
 
   func play() {
     // The queue ran out after this item: a continuation being built starts
-    // by itself, and one a pause dropped is asked for again.
+    // by itself, also one a pause meant to drop, and a finished build is
+    // asked for again.
     if let item = playerItem, item === continuationAfter {
-      if !isAutoContinuing { nextSong() }
+      if isAutoContinuing { continuationGeneration = playGeneration } else { nextSong() }
       return
     }
     playGeneration += 1
@@ -621,8 +625,11 @@ class PlayerViewModel: ObservableObject {
               .silent("activation failed: \(error?.localizedDescription ?? "")"))
           }
           // A song change left no item, and nothing tries again: the song
-          // waits paused instead of showing as playing.
-          if !self.resumeAfterInterruption, self.isPlaying, self.playerItem == nil {
+          // waits paused instead of showing as playing. The watch keeps a
+          // failed start for the interruption that may still follow.
+          if !self.resumeAfterInterruption, self.isPlaying, self.playerItem == nil,
+            !AppPlatform.keepsStartThroughInterruptions || error == nil
+          {
             self.pause()
           }
           return

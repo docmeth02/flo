@@ -155,7 +155,9 @@ struct TasteView: View {
   }
 
   private func reload() async {
-    summary = await TasteSummary.load()
+    let loaded = await TasteSummary.load()
+    // A newer load is under way.
+    if !Task.isCancelled { summary = loaded }
   }
 
   /// Clears the boost or the avoid; the row leaves at once, Undo rates it
