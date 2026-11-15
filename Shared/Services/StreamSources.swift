@@ -95,7 +95,8 @@ class StreamSources {
   /// Asks for the next song's decision ahead of time. Main thread.
   func prefetchTranscodeDecision(songId: String) {
     guard ConnectivityMonitor.shared.isServerReachable,
-      DownloadStore.localFileURL(mediaFileId: songId) == nil,
+      DownloadStore.downloadedFileURL(mediaFileId: songId) == nil,
+      StreamCacheManager.shared.cachedFileURL(mediaFileId: songId, touch: false) == nil,
       let bitRate = TranscodingSettings.streamingBitRate
     else { return }
     let kbps = Int(bitRate) ?? 0
