@@ -179,7 +179,6 @@ final class PlaybackJournal {
     row.trackName = item.songName
     row.artistName = item.artistName
     row.albumId = item.albumId
-    row.albumName = item.albumName
     row.origin = origin.rawValue
     row.listenedSeconds = listenedSeconds
     row.skipped = skipped
