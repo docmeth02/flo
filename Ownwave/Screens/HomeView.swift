@@ -17,6 +17,7 @@ struct HomeView: View {
 
   @ObservedObject private var radios = AppModel.shared.radios
   @ObservedObject private var queueSync = PlayQueueSync.shared
+  @ObservedObject private var connectivity = ConnectivityMonitor.shared
   // The lists pins are looked up in, loaded or cached, read again on every
   // return so a pin made elsewhere shows up. Home asks the server for them
   // only while there is no cache.
@@ -43,11 +44,12 @@ struct HomeView: View {
     }
     .toolbar(.hidden, for: .navigationBar)
     // Again as the lists arrive: right after signing in there is no cache to
-    // read yet.
+    // read yet. And once the server answers, since a missing list is only
+    // asked for then.
     .task(
       id: [
         albumViewModel.albums.isEmpty, albumViewModel.artists.isEmpty,
-        albumViewModel.playlists.isEmpty,
+        albumViewModel.playlists.isEmpty, connectivity.canReachServer,
       ]
     ) {
       albumViewModel.fetch(.starredSongs, maxAge: ListState.reloadAfter)
