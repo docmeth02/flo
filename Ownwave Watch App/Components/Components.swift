@@ -213,7 +213,7 @@ struct StorageWarningRow: View {
   }
 }
 
-/// A label over its value: settings and diagnostics.
+/// A label over its value, in Diagnostics.
 struct InfoRow: View {
   let label: String
   let value: String
