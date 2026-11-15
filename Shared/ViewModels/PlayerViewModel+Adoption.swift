@@ -134,7 +134,6 @@ extension PlayerViewModel {
     let modes = [PlaybackMode.defaultPlayback, PlaybackMode.repeatAlbum, PlaybackMode.repeatOnce]
     setPlaybackMode(
       modes.contains(snapshot.playbackMode) ? snapshot.playbackMode : PlaybackMode.defaultPlayback)
-    isFinished = false
     isMediaFailed = false
     isStreamingBlocked = false
     let duration = entities[snapshot.activeIndex].duration

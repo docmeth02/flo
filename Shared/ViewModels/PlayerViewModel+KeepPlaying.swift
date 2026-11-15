@@ -51,7 +51,7 @@ extension PlayerViewModel {
         + "\(String(format: "%.0f", totalDuration))s")
     PlaybackJournal.shared.recordHeard(
       song, origin: song.playbackOrigin, listenedSeconds: secondsListened)
-    PlaybackReporter.shared.scrobble(submission: true, nowPlaying: song)
+    PlaybackReporter.shared.submit(song)
     acceptNowPlaying()
   }
 
@@ -77,6 +77,7 @@ extension PlayerViewModel {
     }
     guard !isAutoContinuing else { return }
     isAutoContinuing = true
+    continuationAfter = playerItem
 
     // Capture the playback context before the queue is replaced. Until a song
     // was heard out, the session continues from the one that just ended.

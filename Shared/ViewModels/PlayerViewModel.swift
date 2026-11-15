@@ -89,6 +89,9 @@ class PlayerViewModel: ObservableObject {
   var hasQualified: Bool = false
   var isFinished: Bool = false
   var isAutoContinuing: Bool = false
+  /// The item the queue ran out after, which Keep Playing's continuation
+  /// follows. Play leaves it alone: it would start an ended song.
+  weak var continuationAfter: AVPlayerItem?
   var totalDuration: Double = 0.0
   var playerItemObservation: AnyCancellable?
   var bufferingObservation: AnyCancellable?
@@ -329,6 +332,10 @@ class PlayerViewModel: ObservableObject {
     isShuffling = false
     persistShuffleOrder()
     isPlaying = false
+    isMediaLoading = false
+    isMediaFailed = false
+    isStreamingBlocked = false
+    isFinished = false
     progress = 0
     coverArt = ""
     reloadedFailedTrackId = nil
@@ -336,6 +343,8 @@ class PlayerViewModel: ObservableObject {
     PlaybackService.shared.clearQueue()
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.queueActiveIdx)
     UserDefaultsManager.removeObject(key: UserDefaultsKeys.nowPlayingProgress)
+    UserDefaultsManager.nowPlayingQualified = false
+    UserDefaultsManager.nowPlayingListened = 0
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     MainActor.assumeIsolated {
       updateRatingCommands()
@@ -376,6 +385,9 @@ class PlayerViewModel: ObservableObject {
     guard let song = nowPlaying else { return }
 
     self.persistActiveIndex()
+    // A queue that ran out is over once a song is put in place, whether or
+    // not it then starts.
+    self.isFinished = false
     self.handedOffSongId = nil
     self.hasQualified = false
     self.hasTriggeredCache = false
@@ -567,6 +579,12 @@ class PlayerViewModel: ObservableObject {
   }
 
   func play() {
+    // The queue ran out after this item: a continuation being built starts
+    // by itself, and one a pause dropped is asked for again.
+    if let item = playerItem, item === continuationAfter {
+      if !isAutoContinuing { nextSong() }
+      return
+    }
     playGeneration += 1
     let gen = playGeneration
     // Played on here, the song counts here again.
@@ -602,6 +620,11 @@ class PlayerViewModel: ObservableObject {
             self.finishStartWatch(
               .silent("activation failed: \(error?.localizedDescription ?? "")"))
           }
+          // A song change left no item, and nothing tries again: the song
+          // waits paused instead of showing as playing.
+          if !self.resumeAfterInterruption, self.isPlaying, self.playerItem == nil {
+            self.pause()
+          }
           return
         }
         // Playing from here: a later end of an interruption must not restart
@@ -629,6 +652,7 @@ class PlayerViewModel: ObservableObject {
             self.reloadRadioItem()
           } else if self.reloadedFailedTrackId != trackId {
             self.reloadedFailedTrackId = trackId
+            self.isFinished = false
             self.isPlaying = true
             self.resumedAtListened = self.secondsListened
             self.loadItem(at: self.resumePosition)
@@ -715,6 +739,7 @@ class PlayerViewModel: ObservableObject {
     isMediaLoading = false
 
     self.isFinished = true
+    continuationAfter = nil
     self.isPlaying = false
     // The system's clock runs on from the last rate it was given.
     updateNowPlayingInfo(progress: 0, rate: 0.0)
@@ -726,6 +751,8 @@ class PlayerViewModel: ObservableObject {
 
     let target = progress * totalDuration
     self.progress = progress
+    // Play starts the song where the user put it.
+    continuationAfter = nil
 
     if playerItem == nil, !isPlaying {
       // A load still under way would attach at its old target, and without an

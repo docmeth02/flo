@@ -44,14 +44,17 @@ class StreamCacheManager {
 
   // MARK: - Public API
 
-  func cachedFileURL(mediaFileId: String) -> URL? {
+  /// The song's ready copy: the one at the streaming bitrate, else, while
+  /// nothing can stream, one at any bitrate. `touch` marks it as played; a
+  /// caller that only asks whether a copy exists passes false.
+  func cachedFileURL(mediaFileId: String, touch: Bool = true) -> URL? {
     let bitrate = TranscodingSettings.streamingBitRate
     if let bitrate {
       let key = cacheKey(mediaFileId: mediaFileId, bitrate: bitrate)
       let exact = CoreDataManager.shared.getRecordByKey(
         entity: CacheEntity.self, key: \CacheEntity.cacheKey, value: key, limit: 1
       ).first
-      if let exact, let url = readyFileURL(for: exact) {
+      if let exact, let url = readyFileURL(for: exact, touch: touch) {
         return url
       }
     }
@@ -63,12 +66,12 @@ class StreamCacheManager {
     return CoreDataManager.shared.getRecordByKey(
       entity: CacheEntity.self, key: \CacheEntity.mediaFileId, value: mediaFileId
     )
-    .lazy.compactMap { self.readyFileURL(for: $0) }.first
+    .lazy.compactMap { self.readyFileURL(for: $0, touch: touch) }.first
   }
 
-  /// The file of a ready cache record, refreshing its access time; records
-  /// whose file vanished are dropped.
-  private func readyFileURL(for record: CacheEntity) -> URL? {
+  /// The file of a ready cache record, refreshing its access time when
+  /// `touch`; records whose file vanished are dropped.
+  private func readyFileURL(for record: CacheEntity, touch: Bool) -> URL? {
     guard record.state == State.ready.rawValue, let filePath = record.filePath else { return nil }
 
     let fileURL = cacheDirectory.appendingPathComponent(filePath)
@@ -78,8 +81,10 @@ class StreamCacheManager {
       return nil
     }
 
-    record.lastAccessedAt = Date()
-    CoreDataManager.shared.saveRecord()
+    if touch {
+      record.lastAccessedAt = Date()
+      CoreDataManager.shared.saveRecord()
+    }
 
     return fileURL
   }
