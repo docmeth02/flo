@@ -12,6 +12,8 @@ struct WatchArtistDetailView: View {
 
   @StateObject private var radio = ArtistRadio()
   @State private var isLoadingTopSongs = false
+  /// Ends with the screen, like Artist Radio.
+  @State private var topSongs: Task<Void, Never>?
   @State private var openedAlbum: Album?
   @State private var openedArtist: Artist?
   @State private var menu: MenuTarget?
@@ -39,10 +41,13 @@ struct WatchArtistDetailView: View {
         // Top songs online, else the artist's songs on the watch, as Siri
         // plays an artist.
         Button(action: {
-          Task {
+          topSongs?.cancel()
+          topSongs = Task {
             isLoadingTopSongs = true
-            if await playerViewModel.playArtist(id: artist.id, name: artist.name) { showPlayer() }
+            let played = await playerViewModel.playArtist(id: artist.id, name: artist.name)
+            guard !Task.isCancelled else { return }
             isLoadingTopSongs = false
+            if played { showPlayer() }
           }
         }) {
           if isLoadingTopSongs {
@@ -86,6 +91,10 @@ struct WatchArtistDetailView: View {
     .itemMenu($menu, showing: artist.id, openedArtist: $openedArtist)
     .onAppear {
       albumViewModel.fetchAlbumsByArtist(id: artist.id)
+    }
+    .onDisappear {
+      topSongs?.cancel()
+      isLoadingTopSongs = false
     }
     .artistRadio(radio)
   }
