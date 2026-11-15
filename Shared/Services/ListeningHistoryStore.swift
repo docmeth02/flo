@@ -276,17 +276,24 @@ actor ListeningHistoryStore {
 
       // A play mirrored without its song is never folded later, so a song
       // the server may have gained since the last sync is asked for first,
-      // once per run. A sync that fails leaves the index as it was.
+      // once per run. A sync that reaches the server stamps the library
+      // again; after one that does not, the plays wait for the next run.
+      let syncedAt = LibraryCacheManager.shared.modificationDate(forKey: .songsStamp)
       if !librarySynced,
         Self.holdsUnsyncedSong(
-          page.rows, above: progress.watermarkId, index: index,
-          syncedAt: LibraryCacheManager.shared.modificationDate(forKey: .songsStamp))
+          page.rows, above: progress.watermarkId, index: index, syncedAt: syncedAt)
       {
         librarySynced = true
         _ = await SmartPlaybackService.shared.syncSongLibrary()
         let synced = await SmartPlaybackService.shared.libraryIndex()
         guard isCurrent(key) else { return }
-        if !synced.songs.isEmpty { index = synced }
+        guard LibraryCacheManager.shared.modificationDate(forKey: .songsStamp) != syncedAt,
+          !synced.songs.isEmpty
+        else {
+          await publishState(key, phase: .failed("library unavailable"))
+          return
+        }
+        index = synced
       }
 
       let result = await CoreDataManager.shared.performBackground {

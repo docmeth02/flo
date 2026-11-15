@@ -38,6 +38,7 @@ struct TasteView: View {
   // Not private: the debug launch hook picks the segment.
   @SceneStorage("tasteSegment") var segment = TasteSegment.profile
   @State private var summary: TasteSummary?
+  @State private var loads = 0
 
   var body: some View {
     ScrollView {
@@ -155,9 +156,11 @@ struct TasteView: View {
   }
 
   private func reload() async {
+    loads += 1
+    let load = loads
     let loaded = await TasteSummary.load()
     // A newer load is under way.
-    if !Task.isCancelled { summary = loaded }
+    if load == loads { summary = loaded }
   }
 
   /// Clears the boost or the avoid; the row leaves at once, Undo rates it

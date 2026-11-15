@@ -209,6 +209,8 @@ class PlayerViewModel: ObservableObject {
   /// and by a logout; not by a pause, a start whose queue could not be
   /// saved, a song that ends on its own or Keep Playing.
   var userStarts = 0
+  /// Bumped by every new queue; edits and picks within one leave it alone.
+  private(set) var queueReplacements = 0
   @Published private(set) var isGeneratingMix = false
 
   /// The queue entry in the player, nil while the queue is empty.
@@ -369,6 +371,7 @@ class PlayerViewModel: ObservableObject {
     consecutiveFailures = 0
     activeQueueIdx = idx
     queue = items
+    queueReplacements += 1
     persistShuffleOrder()
   }
 
@@ -586,6 +589,8 @@ class PlayerViewModel: ObservableObject {
     // by itself, also one a pause meant to drop, and a finished build is
     // asked for again.
     if let item = playerItem, item === continuationAfter {
+      // Shown as playing, so the next tap pauses and drops it again.
+      isPlaying = true
       if isAutoContinuing { continuationGeneration = playGeneration } else { nextSong() }
       return
     }

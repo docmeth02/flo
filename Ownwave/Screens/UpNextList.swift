@@ -213,9 +213,9 @@ private struct QueueCollection: UIViewRepresentable {
         return false
       }
       // Undo puts the song back only into the queue it came from.
-      let starts = player.userStarts
+      let queue = player.queueReplacements
       list.app.show("Removed from Up Next") {
-        if player.userStarts == starts { player.undoRemove(removed) }
+        if player.queueReplacements == queue { player.undoRemove(removed) }
       }
       return true
     }

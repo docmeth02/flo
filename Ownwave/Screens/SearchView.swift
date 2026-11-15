@@ -24,6 +24,8 @@ struct SearchView: View {
   @State private var songs: [Song]?
   /// Nil while there is nothing to search.
   @State private var found: Found?
+  /// The album Play still fetching its songs; a later one replaces it.
+  @State private var albumPlay: Task<Void, Never>?
 
   @StateObject private var radio = ArtistRadio()
 
@@ -402,12 +404,13 @@ struct SearchView: View {
   private func play(_ album: Album) {
     remember(query)
     let starts = app.player.userStarts
-    Task {
+    albumPlay?.cancel()
+    albumPlay = Task {
       var album = album
       album.songs = await MenuTarget.album(album).queueSongs(
         serverReachable: ConnectivityMonitor.shared.canReachServer
       ).songs
-      guard app.player.userStarts == starts else { return }
+      guard !Task.isCancelled, app.player.userStarts == starts else { return }
       guard !album.songs.isEmpty else { return app.show(.notAvailableOffline) }
       app.play(album)
     }
